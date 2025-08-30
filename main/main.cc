@@ -1,13 +1,9 @@
 #include "camera/camera.h"
 #include "pose_estimator.h"
 #include "position_sender.h"
-// #include <apriltag/frc/apriltag/AprilTag.h>
-// #include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
-// #include <apriltag/frc/apriltag/AprilTag.h>
-// #include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
 #include <fstream>
+#include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
 #include "wpilibc/frc/RuntimeType.h"
-// #include "apriltag/frc/apriltag/AprilTagFieldLayout.h"
 #include "apriltag/apriltag.h"
 #include <iostream>
 #include <networktables/DoubleArrayTopic.h>
@@ -19,7 +15,7 @@
 using json = nlohmann::json;
 
 int main() {
-  // frc::AprilTagFieldLayout a;
+  frc::AprilTagFieldLayout a;
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   inst.StartClient4("orin");
   inst.SetServerTeam(971);
