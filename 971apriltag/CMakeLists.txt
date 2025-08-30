@@ -14,4 +14,4 @@ add_library( 971apriltag SHARED
 
 target_include_directories(971apriltag PRIVATE ${CMAKE_SOURCE_DIR}/third_party/apriltag)
 target_compile_options(971apriltag PRIVATE -w)
-target_link_libraries(971apriltag PRIVATE ${CMAKE_SOURCE_DIR}/third_party/apriltag/build/libapriltag.a)
+target_link_libraries(971apriltag PRIVATE ${CMAKE_SOURCE_DIR}/third_party/apriltag/libapriltag.a)

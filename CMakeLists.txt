@@ -13,7 +13,9 @@ set(CMAKE_CUDA20_STANDARD_COMPILE_OPTION "-std=c++20")
 set(CMAKE_CUDA20_EXTENSION_COMPILE_OPTION "-std=c++20")
 set(CMAKE_CUDA_FLAGS "--expt-relaxed-constexpr")
 
-find_package(nlohmann_json REQUIRED)
+add_subdirectory(third_party/nlohmann_json)
+add_subdirectory(third_party/apriltag)
+
 find_package(wpilib REQUIRED)
 find_package(OpenCV REQUIRED)
 
