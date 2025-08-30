@@ -1,7 +1,7 @@
 #ifndef POSE_ESTIMATOR_H
 #define POSE_ESTIMATOR_H
 
-#include "971apriltag/971apriltag.h"
+#include "third_party/971apriltag/971apriltag.h"
 #include "apriltag/apriltag.h"
 #include "apriltag/tag36h11.h"
 #include <iomanip>
