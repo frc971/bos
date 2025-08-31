@@ -2,9 +2,15 @@
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
+#include <cmath>
+
 
 namespace PoseEstimator {
 using json = nlohmann::json;
+
+constexpr double RadianToDegree(double radian){
+  return radian * (180 / M_PI);
+}
 
 frc971::apriltag::CameraMatrix camera_matrix_from_json(json intrinsics) {
   frc971::apriltag::CameraMatrix camMat = {.fx = intrinsics["fx"],
@@ -85,9 +91,9 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_img) {
       estimate.translation.y = tvec.ptr<double>()[1];
       estimate.translation.z = tvec.ptr<double>()[2];
 
-      estimate.rotation.x = rvec.ptr<double>()[0];
-      estimate.rotation.y = rvec.ptr<double>()[1];
-      estimate.rotation.z = rvec.ptr<double>()[2];
+      estimate.rotation.x = RadianToDegree(rvec.ptr<double>()[0]);
+      estimate.rotation.y = RadianToDegree(rvec.ptr<double>()[1]);
+      estimate.rotation.z = RadianToDegree(rvec.ptr<double>()[2]);
 
       estimate.tag_id = gpu_detection->id;
       estimates.push_back(estimate);

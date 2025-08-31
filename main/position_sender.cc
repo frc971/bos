@@ -23,7 +23,6 @@ PositionSender::PositionSender() {
 
 void PositionSender::Send(
     std::vector<PoseEstimator::position_estimate_t> position_estimate) {
-  std::cout << "sending" << std::endl;
   // TODO
   // translation_x_publisher_.Set(position_estimate.translation.x);
   // translation_y_publisher_.Set(position_estimate.translation.y);
