@@ -5,7 +5,7 @@ include_directories(. /usr/local/cuda/include ${OpenCV_INCLUDE_DIRS})
 
 find_package(wpilib REQUIRED)
 add_library(971apriltag SHARED
-	971apriltag.cu
+971apriltag.cu
   apriltag_detect.cu
   labeling_allegretti_2019_BKE.cu
   line_fit_filter.cu

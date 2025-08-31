@@ -12,7 +12,6 @@ using json = nlohmann::json;
 
 json intrisincs_to_json(cv::Mat cameraMatrix,
                         cv::Mat distCoeffs) { // TODO get index
-  assert(cameraMatrix.ptr<float>[8] == 1);
 
   json output;
   output["fx"] = cameraMatrix.ptr<double>()[0];
@@ -29,6 +28,15 @@ json intrisincs_to_json(cv::Mat cameraMatrix,
   return output;
 }
 
+cv::Mat GenerateBoard(cv::aruco::CharucoBoard board, int squares_x, int squares_y, float pixel_per_square, int margin_squares=0){
+  cv::Mat board_image;
+  cv::Size image_size;
+  image_size.width = (squares_x + margin_squares) * pixel_per_square;
+  image_size.height = (squares_y + margin_squares) * pixel_per_square;
+  board.generateImage(image_size, board_image, margin_squares * pixel_per_square, 1);
+  return board_image;
+}
+
 int main() {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
@@ -37,9 +45,19 @@ int main() {
   cv::aruco::Dictionary dictionary =
       cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
 
-  cv::aruco::CharucoBoard board(cv::Size(5, 7), 0.04, 0.02, dictionary);
+
+  int squares_x = 5;
+  int squares_y = 7;
+  float squares_length = 0.04;
+  float pixel_per_square = 128;
+  float maker_length = 0.02;
+  float margin_size = 0;
+  cv::aruco::CharucoBoard board(cv::Size(squares_x, squares_y), squares_length, maker_length, dictionary);
   cv::aruco::CharucoParameters charucoParams;
   cv::aruco::CharucoDetector detector(board, charucoParams, detectorParams);
+
+  cv::Mat board_image = GenerateBoard(board, squares_x, squares_y, pixel_per_square);
+  cv::imwrite("calibration_board.png", board_image);
 
   std::vector<cv::Mat> allCharucoCorners, allCharucoIds;
   std::vector<std::vector<cv::Point2f>> allImagePoints;
@@ -49,7 +67,6 @@ int main() {
 
   std::vector<cv::String> image_files;
   cv::glob("data/*.jpg", image_files, false);
-  std::cout << image_files[0] << std::endl;
 
   for (const auto &file : image_files) {
     cv::Mat frame = cv::imread(file);
