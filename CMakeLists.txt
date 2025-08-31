@@ -18,6 +18,7 @@ add_subdirectory(third_party/971apriltag)
 
 find_package(wpilib REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 add_compile_options(-Wno-psabi)
 add_subdirectory(main)

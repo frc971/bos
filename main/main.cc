@@ -1,8 +1,8 @@
 #include "camera/camera.h"
 #include "pose_estimator.h"
 #include "position_sender.h"
+#include "kalman_filter.h"
 #include <fstream>
-#include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
 #include "wpilibc/frc/RuntimeType.h"
 #include "apriltag/apriltag.h"
 #include <iostream>
@@ -15,7 +15,6 @@
 using json = nlohmann::json;
 
 int main() {
-  frc::AprilTagFieldLayout a;
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   inst.StartClient4("orin");
   inst.SetServerTeam(971);
@@ -35,8 +34,8 @@ int main() {
   cv::Mat frame;
   while (true) {
     camera.getFrame(frame);
-    PoseEstimator::position_estimate_t estimate = estimator.Estimate(frame);
-    sender.Send(estimate);
+    std::vector<PoseEstimator::position_estimate_t> estimates = estimator.Estimate(frame);
+    sender.Send(estimates);
   }
 
   return 0;

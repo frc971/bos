@@ -3,6 +3,7 @@
 
 #include "third_party/971apriltag/971apriltag.h"
 #include "apriltag/apriltag.h"
+#include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
 #include "apriltag/tag36h11.h"
 #include <iomanip>
 #include <iostream>
@@ -22,6 +23,7 @@ typedef struct Point3d {
 typedef struct PositionEstimate {
   point3d_t translation;
   point3d_t rotation;
+  int tag_id;
 } position_estimate_t;
 
 constexpr double ktag_size = 6.5; // TODO
@@ -40,14 +42,18 @@ public:
                 frc971::apriltag::DistCoeffs dist_coeffs,
                 std::vector<cv::Point3f> apriltag_dimensions);
   ~PoseEstimator();
-  position_estimate_t Estimate(cv::Mat &input_img);
+  std::vector<position_estimate_t> Estimate(cv::Mat &input_img);
 
 private:
-  frc971::apriltag::GpuDetector *gpu_detector_;
+  // Changes the position estimate to be tag relitive to absolute feild position
+  void TransformPose(position_estimate_t* estimate, int tag_id);
+private:
   apriltag_detector_t *apriltag_detector_;
+  frc971::apriltag::GpuDetector *gpu_detector_;
   frc971::apriltag::CameraMatrix camera_matrix_;
   frc971::apriltag::DistCoeffs dist_coeffs_;
   std::vector<cv::Point3f> apriltag_dimensions_;
+  frc::AprilTagFieldLayout apriltag_layout_;
 };
 } // namespace PoseEstimator
 

@@ -22,14 +22,15 @@ PositionSender::PositionSender() {
 }
 
 void PositionSender::Send(
-    PoseEstimator::position_estimate_t position_estimate) {
+    std::vector<PoseEstimator::position_estimate_t> position_estimate) {
   std::cout << "sending" << std::endl;
-  translation_x_publisher_.Set(position_estimate.translation.x);
-  translation_y_publisher_.Set(position_estimate.translation.y);
-  translation_z_publisher_.Set(position_estimate.translation.z);
-
-  rotation_x_publisher_.Set(position_estimate.translation.x);
-  rotation_y_publisher_.Set(position_estimate.translation.y);
-  rotation_z_publisher_.Set(position_estimate.translation.z);
+  // TODO
+  // translation_x_publisher_.Set(position_estimate.translation.x);
+  // translation_y_publisher_.Set(position_estimate.translation.y);
+  // translation_z_publisher_.Set(position_estimate.translation.z);
+  //
+  // rotation_x_publisher_.Set(position_estimate.translation.x);
+  // rotation_y_publisher_.Set(position_estimate.translation.y);
+  // rotation_z_publisher_.Set(position_estimate.translation.z);
   // flush?
 }

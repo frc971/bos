@@ -9,7 +9,7 @@
 class PositionSender {
 public:
   PositionSender();
-  void Send(PoseEstimator::position_estimate_t position_estimate);
+  void Send(std::vector<PoseEstimator::position_estimate_t> position_estimate);
 
 private:
   nt::DoublePublisher translation_x_publisher_;

@@ -7,6 +7,6 @@ add_subdirectory(camera)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
 
-add_executable(main main.cc pose_estimator.cc position_sender.cc)
+add_executable(main main.cc pose_estimator.cc position_sender.cc kalman_filter.cc)
 target_include_directories(main PRIVATE  ${CMAKE_SOURCE_DIR} /usr/local/cuda/include)
-target_link_libraries(main PRIVATE ${OpenCV_LIBS} 971apriltag apriltag cameraserver ntcore cscore wpiutil camera nlohmann_json::nlohmann_json)
+target_link_libraries(main PRIVATE ${OpenCV_LIBS} 971apriltag apriltag cameraserver ntcore cscore wpiutil camera nlohmann_json::nlohmann_json Eigen3::Eigen)
