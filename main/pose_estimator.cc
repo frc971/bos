@@ -60,11 +60,12 @@ PoseEstimator::PoseEstimator(json intrinsics, std::vector<cv::Point3f> apriltag_
 
   apriltag_detector_->nthreads = 6;
   apriltag_detector_->wp = workerpool_create(apriltag_detector_->nthreads);
-  apriltag_detector_->qtp.min_white_black_diff = 5;
+  apriltag_detector_->qtp.min_white_black_diff = 4;
   apriltag_detector_->debug = false;
+  apriltag_detector_->quad_decimate = 1;
 
   gpu_detector_ = new frc971::apriltag::GpuDetector(
-      1456, 1088, apriltag_detector_, camera_matrix_from_json<frc971::apriltag::CameraMatrix>(intrinsics), distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(intrinsics));
+      1456, 1088, apriltag_detector_, camera_matrix_from_json<frc971::apriltag::CameraMatrix>(intrinsics), distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(intrinsics), 1);
 }
 PoseEstimator::~PoseEstimator() {
   delete gpu_detector_;
@@ -72,9 +73,9 @@ PoseEstimator::~PoseEstimator() {
   return;
 }
 
-std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_img) {
+std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_image) {
   cv::Mat gray;
-  cv::cvtColor(input_img, gray, cv::COLOR_BGR2GRAY);
+  cv::cvtColor(input_image, gray, cv::COLOR_BGR2GRAY);
   gpu_detector_->DetectGrayHost((unsigned char *)gray.ptr());
   const zarray_t *detections = gpu_detector_->Detections();
   std::vector<position_estimate_t> estimates;
