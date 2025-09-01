@@ -121,6 +121,10 @@ int main() {
             cv::Mat::zeros(4, 1, CV_64FC1); // vector of distortion coefficients
         cv::solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec,
                      tvec);
+
+        for (int i = 0; i < rvec.size[0]; i++){
+          rvec.ptr<double>()[i] = rvec.ptr<double>()[i] * (180 / M_PI);
+        }
         std::cout << "--- Pose Estimation Results ---" << std::endl;
         std::cout << "Rotation Vector (rvec):\n" << rvec << std::endl;
         std::cout << "Translation Vector (tvec):\n" << tvec << std::endl;

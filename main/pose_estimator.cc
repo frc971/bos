@@ -1,4 +1,5 @@
 #include "pose_estimator.h"
+#include <fstream>
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
@@ -12,29 +13,45 @@ constexpr double RadianToDegree(double radian){
   return radian * (180 / M_PI);
 }
 
-frc971::apriltag::CameraMatrix camera_matrix_from_json(json intrinsics) {
-  frc971::apriltag::CameraMatrix camMat = {.fx = intrinsics["fx"],
+template<>
+frc971::apriltag::CameraMatrix camera_matrix_from_json<frc971::apriltag::CameraMatrix>(json intrinsics) {
+  frc971::apriltag::CameraMatrix camera_matrix = {.fx = intrinsics["fx"],
                                            .cx = intrinsics["cx"],
                                            .fy = intrinsics["fy"],
                                            .cy = intrinsics["cy"]};
-  return camMat;
+  return camera_matrix;
 }
 
-frc971::apriltag::DistCoeffs
-distortion_coefficients_from_json(json intrinsics) {
-  frc971::apriltag::DistCoeffs dist = {.k1 = intrinsics["k1"],
+template<>
+frc971::apriltag::DistCoeffs distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(json intrinsics) {
+  frc971::apriltag::DistCoeffs distortion_coefficients = {.k1 = intrinsics["k1"],
                                        .k2 = intrinsics["k2"],
                                        .p1 = intrinsics["p1"],
                                        .p2 = intrinsics["p2"],
                                        .k3 = intrinsics["k3"]};
 
-  return dist;
+  return distortion_coefficients;
 }
 
-PoseEstimator::PoseEstimator(frc971::apriltag::CameraMatrix camera_matrix,
-                             frc971::apriltag::DistCoeffs dist_coeffs,
-                             std::vector<cv::Point3f> apriltag_dimensions)
-    : apriltag_layout_(frc::AprilTagFieldLayout::LoadField(frc::AprilTagField::k2025ReefscapeAndyMark)), camera_matrix_(camera_matrix), dist_coeffs_(dist_coeffs),
+template<>
+cv::Mat camera_matrix_from_json<cv::Mat>(json intrinsics) {
+        cv::Mat camera_matrix =
+            (cv::Mat_<double>(3, 3) << intrinsics["fx"], 0,
+             intrinsics["cx"], 0, intrinsics["fy"],
+             intrinsics["cy"], 0, 0, 1);
+  return camera_matrix;
+}
+
+template<>
+cv::Mat distortion_coefficients_from_json<cv::Mat>(json intrinsics) {
+cv::Mat distortion_coefficients = (cv::Mat_<double>(1, 5) << 
+    intrinsics["k1"], intrinsics["k2"], intrinsics["p1"], intrinsics["p2"], intrinsics["k3"]);
+  return distortion_coefficients;
+}
+
+PoseEstimator::PoseEstimator(json intrinsics, std::vector<cv::Point3f> apriltag_dimensions)
+    : apriltag_layout_(frc::AprilTagFieldLayout::LoadField(frc::AprilTagField::k2025ReefscapeAndyMark)), camera_matrix_(camera_matrix_from_json<cv::Mat>(intrinsics)), 
+  distortion_coefficients_(distortion_coefficients_from_json<cv::Mat>(intrinsics)),
       apriltag_dimensions_(apriltag_dimensions) {
 
   apriltag_detector_ = apriltag_detector_create();
@@ -47,7 +64,7 @@ PoseEstimator::PoseEstimator(frc971::apriltag::CameraMatrix camera_matrix,
   apriltag_detector_->debug = false;
 
   gpu_detector_ = new frc971::apriltag::GpuDetector(
-      1456, 1088, apriltag_detector_, camera_matrix, dist_coeffs);
+      1456, 1088, apriltag_detector_, camera_matrix_from_json<frc971::apriltag::CameraMatrix>(intrinsics), distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(intrinsics));
 }
 PoseEstimator::~PoseEstimator() {
   delete gpu_detector_;
@@ -66,8 +83,6 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_img) {
     for (int i = 0; i < zarray_size(detections); ++i) {
       apriltag_detection_t *gpu_detection;
       zarray_get(detections, i, &gpu_detection);
-      std::printf("tag: %f, %f id: %d\n", gpu_detection->c[0],
-                  gpu_detection->c[1], gpu_detection->id);
       cv::Point point(gpu_detection->c[0], gpu_detection->c[1]);
 
       std::vector<cv::Point2f> imagePoints;
@@ -78,12 +93,7 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_img) {
       cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1); // output rotation vector
       cv::Mat tvec =
           cv::Mat::zeros(3, 1, CV_64FC1); // output translation vector
-      cv::Mat cameraMatrix =
-          (cv::Mat_<double>(3, 3) << camera_matrix_.fx, 0, camera_matrix_.cx, 0,
-           camera_matrix_.fy, camera_matrix_.cy, 0, 0, 1);
-      cv::Mat distCoeffs =
-          cv::Mat::zeros(4, 1, CV_64FC1); // vector of distortion coefficients
-      cv::solvePnP(apriltag_dimensions_, imagePoints, cameraMatrix, distCoeffs,
+      cv::solvePnP(apriltag_dimensions_, imagePoints, camera_matrix_, distortion_coefficients_,
                    rvec, tvec);
 
       position_estimate_t estimate;
@@ -98,8 +108,14 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_img) {
       estimate.tag_id = gpu_detection->id;
       estimates.push_back(estimate);
       std::cout << "--- Pose Estimation Results ---" << "\n";
-      std::cout << "Rotation Vector (rvec):\n" << rvec << "\n";
-      std::cout << "Translation Vector (tvec):\n" << tvec << "\n";
+      std::cout << "Translation: " << "\n";
+      std::cout << estimate.translation.x << "\n";
+      std::cout << estimate.translation.y << "\n";
+      std::cout << estimate.translation.z << "\n";
+      std::cout << "Rotation: " << "\n";
+      std::cout << estimate.rotation.x << "\n";
+      std::cout << estimate.rotation.y << "\n";
+      std::cout << estimate.rotation.z << "\n";
       std::cout << "-------------------------------" << "\n";
       break;
     }

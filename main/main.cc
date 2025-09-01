@@ -25,10 +25,7 @@ int main() {
   std::ifstream file("calibration/intrinsics.json");
   file >> intrinsics;
 
-  PoseEstimator::PoseEstimator estimator(
-      PoseEstimator::camera_matrix_from_json(intrinsics),
-      PoseEstimator::distortion_coefficients_from_json(intrinsics),
-      PoseEstimator::kapriltag_dimensions);
+  PoseEstimator::PoseEstimator estimator(intrinsics, PoseEstimator::kapriltag_dimensions);
   PositionSender sender;
 
   cv::Mat frame;
