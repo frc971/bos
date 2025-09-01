@@ -7,3 +7,5 @@ cmake_install.cmake
 *.so
 *.cmake
 Makefile
+*nsys-rep
+*perf.data*

@@ -1,7 +1,6 @@
 #include "camera/camera.h"
 #include "pose_estimator.h"
 #include "position_sender.h"
-#include "kalman_filter.h"
 #include <fstream>
 #include "wpilibc/frc/RuntimeType.h"
 #include "apriltag/apriltag.h"
@@ -10,6 +9,7 @@
 #include <networktables/DoubleTopic.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
+#include <opencv2/highgui.hpp>
 #include <sstream>
 
 using json = nlohmann::json;
@@ -33,6 +33,8 @@ int main() {
     camera.getFrame(frame);
     std::vector<PoseEstimator::position_estimate_t> estimates = estimator.Estimate(frame);
     sender.Send(estimates);
+    cv::imshow("", frame);
+    cv::waitKey(1);
   }
 
   return 0;
