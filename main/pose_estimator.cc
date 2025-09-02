@@ -9,6 +9,10 @@
 namespace PoseEstimator {
 using json = nlohmann::json;
 
+constexpr double square(double x){
+  return x * x;
+}
+
 constexpr double RadianToDegree(double radian){
   return radian * (180 / M_PI);
 }
@@ -102,9 +106,9 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_image) {
       estimate.translation.y = tvec.ptr<double>()[1];
       estimate.translation.z = tvec.ptr<double>()[2];
 
-      estimate.rotation.x = RadianToDegree(rvec.ptr<double>()[0]);
-      estimate.rotation.y = RadianToDegree(rvec.ptr<double>()[1]);
-      estimate.rotation.z = RadianToDegree(rvec.ptr<double>()[2]);
+      estimate.rotation.x = rvec.ptr<double>()[0];
+      estimate.rotation.y = rvec.ptr<double>()[1];
+      estimate.rotation.z = rvec.ptr<double>()[2];
 
       estimate.tag_id = gpu_detection->id;
       estimates.push_back(estimate);
@@ -114,9 +118,17 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_image) {
       std::cout << estimate.translation.y << "\n";
       std::cout << estimate.translation.z << "\n";
       std::cout << "Rotation: " << "\n";
-      std::cout << estimate.rotation.x << "\n";
-      std::cout << estimate.rotation.y << "\n";
-      std::cout << estimate.rotation.z << "\n";
+      std::cout << RadianToDegree(estimate.rotation.x) << "\n";
+      std::cout << RadianToDegree(estimate.rotation.y) << "\n";
+      std::cout << RadianToDegree(estimate.rotation.z) << "\n";
+      std::cout << "Distance: \n";
+      double magnitude = sqrt(square(estimate.translation.x) + square(estimate.translation.z));
+      double angle = estimate.rotation.y; // left is positive
+      double x = cos(angle) * estimate.translation.x - sin(angle)* estimate.translation.z;
+      double y = sin(angle) * estimate.translation.x + cos(angle) * estimate.translation.z;
+      std::cout << "Absolute Positions: \n";
+      std::cout << x << "\n";
+      std::cout << y << "\n";
       std::cout << "-------------------------------" << "\n";
       break;
     }
