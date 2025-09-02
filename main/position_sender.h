@@ -3,22 +3,28 @@
 
 #include "pose_estimator.h"
 #include <networktables/DoubleTopic.h>
+#include <networktables/BooleanTopic.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
 
 class PositionSender {
 public:
-  PositionSender();
+  PositionSender(std::vector<int> tag_ids);
   void Send(std::vector<PoseEstimator::position_estimate_t> position_estimate);
 
 private:
-  nt::DoublePublisher translation_x_publisher_;
-  nt::DoublePublisher translation_y_publisher_;
-  nt::DoublePublisher translation_z_publisher_;
+  std::vector<int> tag_ids_;
+  nt::NetworkTableInstance instance_;
 
-  nt::DoublePublisher rotation_x_publisher_;
-  nt::DoublePublisher rotation_y_publisher_;
-  nt::DoublePublisher rotation_z_publisher_;
+  std::vector<nt::DoublePublisher> translation_x_publisher_;
+  std::vector<nt::DoublePublisher> translation_y_publisher_;
+  std::vector<nt::DoublePublisher> translation_z_publisher_;
+
+  std::vector<nt::DoublePublisher> rotation_x_publisher_;
+  std::vector<nt::DoublePublisher> rotation_y_publisher_;
+  std::vector<nt::DoublePublisher> rotation_z_publisher_;
+
+  std::vector<nt::BooleanPublisher> status_;
 };
 
 #endif // POSITION_SENDER_H

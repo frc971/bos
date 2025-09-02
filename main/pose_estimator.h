@@ -26,7 +26,7 @@ typedef struct PositionEstimate {
   int tag_id;
 } position_estimate_t;
 
-constexpr double ktag_size = 6.5; // TODO
+constexpr double ktag_size = 0.1651; // meters
 const std::vector<cv::Point3f> kapriltag_dimensions = {
     {-ktag_size / 2, ktag_size / 2, 0},
     {ktag_size / 2, ktag_size / 2, 0},
@@ -47,7 +47,7 @@ public:
 
 private:
   // Changes the position estimate to be tag relitive to absolute feild position
-  void TransformPose(position_estimate_t* estimate, int tag_id);
+ position_estimate_t GetFeildRelitivePosition(position_estimate_t tag_relitive_position);
 private:
   apriltag_detector_t *apriltag_detector_;
   frc971::apriltag::GpuDetector *gpu_detector_;
