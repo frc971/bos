@@ -1,35 +1,50 @@
 #include "position_sender.h"
+#include <networktables/NetworkTableInstance.h>
+#include <string>
 
-PositionSender::PositionSender() {
-  nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
-  std::shared_ptr<nt::NetworkTable> table = inst.GetTable("orin/pose_estimate");
+PositionSender::PositionSender(std::vector<int> tag_ids) : tag_ids_(tag_ids), instance_(nt::NetworkTableInstance::GetDefault()) {
+  for (int i = 0; i < tag_ids_.size(); i++){
+    std::shared_ptr<nt::NetworkTable> table = instance_.GetTable("orin/pose_estimate/" + std::to_string(tag_ids_[i]));
 
-  nt::DoubleTopic translation_x_topic = table->GetDoubleTopic("translation_x");
-  nt::DoubleTopic translation_y_topic = table->GetDoubleTopic("translation_y");
-  nt::DoubleTopic translation_z_topic = table->GetDoubleTopic("translation_z");
+    nt::DoubleTopic translation_x_topic = table->GetDoubleTopic("translation_x");
+    nt::DoubleTopic translation_y_topic = table->GetDoubleTopic("translation_y");
+    nt::DoubleTopic translation_z_topic = table->GetDoubleTopic("translation_z");
 
-  nt::DoubleTopic rotation_x_topic = table->GetDoubleTopic("position_x");
-  nt::DoubleTopic rotation_y_topic = table->GetDoubleTopic("position_y");
-  nt::DoubleTopic rotation_z_topic = table->GetDoubleTopic("position_z");
+    nt::DoubleTopic rotation_x_topic = table->GetDoubleTopic("position_x");
+    nt::DoubleTopic rotation_y_topic = table->GetDoubleTopic("position_y");
+    nt::DoubleTopic rotation_z_topic = table->GetDoubleTopic("position_z");
 
-  translation_x_publisher_ = translation_x_topic.Publish();
-  translation_y_publisher_ = translation_y_topic.Publish();
-  translation_z_publisher_ = translation_z_topic.Publish();
+    nt::BooleanTopic status_topic = table->GetBooleanTopic("status");
 
-  rotation_x_publisher_ = rotation_x_topic.Publish();
-  rotation_y_publisher_ = rotation_y_topic.Publish();
-  rotation_z_publisher_ = rotation_z_topic.Publish();
+    translation_x_publisher_.push_back(translation_x_topic.Publish());
+    translation_y_publisher_.push_back(translation_y_topic.Publish());
+    translation_z_publisher_.push_back(translation_z_topic.Publish());
+
+    rotation_x_publisher_.push_back(rotation_x_topic.Publish());
+    rotation_y_publisher_.push_back(rotation_y_topic.Publish());
+    rotation_z_publisher_.push_back(rotation_z_topic.Publish());
+
+    status_.push_back(status_topic.Publish());
+  }
 }
 
 void PositionSender::Send(
-    std::vector<PoseEstimator::position_estimate_t> position_estimate) {
-  // TODO
-  // translation_x_publisher_.Set(position_estimate.translation.x);
-  // translation_y_publisher_.Set(position_estimate.translation.y);
-  // translation_z_publisher_.Set(position_estimate.translation.z);
-  //
-  // rotation_x_publisher_.Set(position_estimate.translation.x);
-  // rotation_y_publisher_.Set(position_estimate.translation.y);
-  // rotation_z_publisher_.Set(position_estimate.translation.z);
-  // flush?
+  std::vector<PoseEstimator::position_estimate_t> position_estimates) {
+  for (int i = 0; i < tag_ids_.size(); i++){
+    for (int j = 0; j < position_estimates.size(); j++){
+      status_[i].Set(false);
+      if (tag_ids_[i] == position_estimates[j].tag_id){
+        translation_x_publisher_[i].Set(position_estimates[j].translation.y);
+        translation_y_publisher_[i].Set(position_estimates[j].translation.z);
+        translation_z_publisher_[i].Set(position_estimates[j].translation.x);
+
+        rotation_x_publisher_[i].Set(position_estimates[j].translation.y);
+        rotation_y_publisher_[i].Set(position_estimates[j].translation.z);
+        rotation_z_publisher_[i].Set(position_estimates[j].translation.x);
+        status_[i].Set(true);
+      }
+    }
+  }
+  instance_.Flush();
+
 }

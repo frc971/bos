@@ -4,7 +4,7 @@
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
 #include <cmath>
-
+#define PRINT_DETECTION_POSE true
 
 namespace PoseEstimator {
 using json = nlohmann::json;
@@ -102,43 +102,58 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_image) {
                    rvec, tvec);
 
       position_estimate_t estimate;
-      estimate.translation.x = tvec.ptr<double>()[0];
-      estimate.translation.y = tvec.ptr<double>()[1];
-      estimate.translation.z = tvec.ptr<double>()[2];
+      estimate.translation.y = tvec.ptr<double>()[0];
+      estimate.translation.z = tvec.ptr<double>()[1];
+      estimate.translation.x = tvec.ptr<double>()[2];
 
-      estimate.rotation.x = rvec.ptr<double>()[0];
-      estimate.rotation.y = rvec.ptr<double>()[1];
-      estimate.rotation.z = rvec.ptr<double>()[2];
+      estimate.rotation.y = rvec.ptr<double>()[0];
+      estimate.rotation.z = rvec.ptr<double>()[1];
+      estimate.rotation.x = rvec.ptr<double>()[2];
 
       estimate.tag_id = gpu_detection->id;
+
+      estimate = GetFeildRelitivePosition(estimate);
+      
       estimates.push_back(estimate);
-      std::cout << "--- Pose Estimation Results ---" << "\n";
-      std::cout << "Translation: " << "\n";
-      std::cout << estimate.translation.x << "\n";
-      std::cout << estimate.translation.y << "\n";
-      std::cout << estimate.translation.z << "\n";
-      std::cout << "Rotation: " << "\n";
-      std::cout << RadianToDegree(estimate.rotation.x) << "\n";
-      std::cout << RadianToDegree(estimate.rotation.y) << "\n";
-      std::cout << RadianToDegree(estimate.rotation.z) << "\n";
-      std::cout << "Distance: \n";
-      double magnitude = sqrt(square(estimate.translation.x) + square(estimate.translation.z));
-      double angle = estimate.rotation.y; // left is positive
-      double x = cos(angle) * estimate.translation.x - sin(angle)* estimate.translation.z;
-      double y = sin(angle) * estimate.translation.x + cos(angle) * estimate.translation.z;
-      std::cout << "Absolute Positions: \n";
-      std::cout << x << "\n";
-      std::cout << y << "\n";
-      std::cout << "-------------------------------" << "\n";
-      break;
+
+      if (PRINT_DETECTION_POSE){
+        std::cout << "--- Pose Estimation Results ---" << "\n";
+        std::cout << "id: " << estimate.tag_id << "\n";
+        std::cout << "Translation: " << "\n";
+        std::cout << estimate.translation.y << "\n";
+        std::cout << estimate.translation.z << "\n";
+        std::cout << estimate.translation.x << "\n";
+        std::cout << "Rotation: " << "\n";
+        std::cout << RadianToDegree(estimate.rotation.y) << "\n";
+        std::cout << RadianToDegree(estimate.rotation.z) << "\n";
+        std::cout << RadianToDegree(estimate.rotation.x) << "\n";
+      }
     }
   }
   return estimates;
 }
 
 
-void PoseEstimator::TransformPose(position_estimate_t* estimate, int tag_id){
-  frc::Pose3d tag_pose = apriltag_layout_.GetTagPose(tag_id).value();
+
+position_estimate_t PoseEstimator::GetFeildRelitivePosition(position_estimate_t tag_relitive_position){
+  position_estimate_t feild_relitive_position;
+  // TODO account for angle
+  double angle = tag_relitive_position.rotation.z; // left is positive
+  feild_relitive_position.rotation.y = tag_relitive_position.rotation.y;
+  feild_relitive_position.rotation.z = tag_relitive_position.rotation.z - apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)->Rotation().Z().value();
+  feild_relitive_position.rotation.x = tag_relitive_position.rotation.x;
+
+  feild_relitive_position.translation.z = tag_relitive_position.translation.z;
+  feild_relitive_position.translation.y = cos(angle) * tag_relitive_position.translation.y - sin(angle) * tag_relitive_position.translation.x;
+  feild_relitive_position.translation.x = sin(angle) * tag_relitive_position.translation.y + cos(angle) * tag_relitive_position.translation.x;
+
+  feild_relitive_position.translation.y *= -1;
+  feild_relitive_position.translation.y += apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)->Translation().Y().value();
+  feild_relitive_position.translation.x += apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)->Translation().X().value();
+
+  feild_relitive_position.tag_id = tag_relitive_position.tag_id;
+
+  return feild_relitive_position;
 }
 
 } // namespace PoseEstimator
