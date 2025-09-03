@@ -40,6 +40,11 @@ cv::Mat GenerateBoard(cv::aruco::CharucoBoard board, int squares_x, int squares_
 int main() {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
+  std::cout << "What is the id of the camera we are logging?\n";
+  int camera_id;
+  std::cin >> camera_id;
+
+
   cv::aruco::DetectorParameters detectorParams =
       cv::aruco::DetectorParameters();
   cv::aruco::Dictionary dictionary =
@@ -66,7 +71,7 @@ int main() {
   cv::Size imageSize;
 
   std::vector<cv::String> image_files;
-  cv::glob("data/*.jpg", image_files, false);
+  cv::glob("data/camera_" + std::to_string(camera_id) + "/*.jpg", image_files, false);
 
   for (const auto &file : image_files) {
     cv::Mat frame = cv::imread(file);
@@ -108,7 +113,7 @@ int main() {
                       cv::noArray(), cv::noArray());
   std::cout << "Done! Error: " << repError << std::endl;
 
-  std::ofstream file("intrinsics.json");
+  std::ofstream file("camera_" + std::to_string(camera_id) + "_intrinsics.json");
   json intrinsics = intrisincs_to_json(cameraMatrix, distCoeffs);
   file << intrinsics.dump(4);
   std::cout << "Intrinsics: " << intrinsics.dump(4);
