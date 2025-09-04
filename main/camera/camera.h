@@ -9,6 +9,8 @@ namespace Camera {
 typedef struct CameraInfo {
   std::string pipeline;
   std::string name;
+  std::string intrinsics_path;
+  int id;
 } camera_info_t;
 
 struct kCameras {
@@ -19,8 +21,10 @@ struct kCameras {
           "nvvidconv ! "
           "video/x-raw, format=BGRx ! "
           "appsink",
-
-      .name = "Gstreamer #1 30fps"};
+      .name = "Gstreamer #1 30fps",
+    .intrinsics_path = "calibration/intrinsics.json",
+    .id = 0
+  };
 
   CameraInfo gstreamer2_30fps = {
       .pipeline =
@@ -29,8 +33,10 @@ struct kCameras {
           "nvvidconv ! "
           "video/x-raw, format=BGRx ! "
           "appsink",
-
-      .name = "Gstreamer #2 30fps"};
+      .name = "Gstreamer #2 30fps",
+    .intrinsics_path = "calibration/intrinsics.json", // TODO
+      .id = 1
+  };
 };
 
 const kCameras CAMERAS;

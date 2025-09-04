@@ -1,4 +1,5 @@
 #include "camera/camera.h"
+#include <thread>
 #include "pose_estimator.h"
 #include "position_sender.h"
 #include <fstream>
@@ -14,15 +15,20 @@
 
 using json = nlohmann::json;
 
-int main() {
+
+void start_networktables(){
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   inst.StartClient4("orin");
   inst.SetServerTeam(971);
+  std::cout << "Started networktables!" << std::endl;
+}
 
-  Camera::Camera camera(Camera::CAMERAS.gstreamer1_30fps);
+void run_camera(Camera::CameraInfo camera_info){
+  std::cout << "Starting cameras" << std::endl;
+  Camera::Camera camera(camera_info);
 
   json intrinsics;
-  std::ifstream file("calibration/intrinsics.json");
+  std::ifstream file(camera_info.intrinsics_path);
   file >> intrinsics;
 
   PoseEstimator::PoseEstimator estimator(intrinsics, PoseEstimator::kapriltag_dimensions);
@@ -33,9 +39,16 @@ int main() {
     camera.getFrame(frame);
     std::vector<PoseEstimator::position_estimate_t> estimates = estimator.Estimate(frame);
     sender.Send(estimates);
-    cv::imshow("", frame);
-    cv::waitKey(1);
   }
+}
+
+
+int main() {
+
+  start_networktables();
+
+  std::thread camera_one_thread(run_camera, Camera::CAMERAS.gstreamer1_30fps);
+  camera_one_thread.join();
 
   return 0;
 }
