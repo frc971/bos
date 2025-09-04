@@ -74,6 +74,8 @@ int main(int argc, char* argv[]) {
     }
     std::cout << key;
 
+    cv::imwrite("data/server_img.jpg", frame);
+
     if (key == 'q') {
       break;
     } else if (key == 'c') {
