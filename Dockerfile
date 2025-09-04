@@ -32,9 +32,30 @@ RUN apt-get install -y ninja-build
 RUN apt-get install -y protobuf-compiler
 RUN apt-get install -y libxrandr-dev
 RUN apt-get install -y libssh-dev
-RUN apt-get install -y libopencv4.5-java
-RUN cmake --preset default -DWITH_GUI=OFF -DWITH_JAVA=OFF -DWITH_SIMULATION_MODULES=OFF -DWITH_TESTS=OFF -DOPENCV_JAR_FILE=/usr/share/java/opencv.jar
+RUN cmake --preset default -DWITH_GUI=OFF -DWITH_JAVA=OFF -DWITH_SIMULATION_MODULES=OFF -DWITH_TESTS=OFF
 WORKDIR /allwpilib/allwpilib/build-cmake 
 RUN cmake --build . --parallel 4 
 RUN cmake --build . --target install
+RUN sed -i '/find_dependency(wpilibj)/d' /usr/local/share/wpilib/wpilib-config.cmake
 
+WORKDIR /perf
+RUN gunzip -c /proc/config.gz | grep PERF
+RUN wget https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.0/sources/public_sources.tbz2 
+RUN tar -xjf public_sources.tbz2
+RUN apt-get install -y libperl-dev
+RUN apt-get install -y flex
+RUN apt-get install -y bison
+RUN apt-get install -y libslang2-dev
+RUN apt-get install -y libbfd-dev
+RUN apt-get install -y tree
+RUN tar -xjf Linux_for_Tegra/source/kernel_src.tbz2
+WORKDIR kernel/kernel-jammy-src/tools/perf
+RUN make -j5
+RUN cp perf /usr/bin
+
+
+WORKDIR /eigen
+RUN git clone https://gitlab.com/libeigen/eigen.git
+WORKDIR eigen
+RUN make
+WORKDIR /
