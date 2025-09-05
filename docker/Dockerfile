@@ -36,7 +36,7 @@ RUN cmake --preset default -DWITH_GUI=OFF -DWITH_JAVA=OFF -DWITH_SIMULATION_MODU
 WORKDIR /allwpilib/allwpilib/build-cmake 
 RUN cmake --build . --parallel 4 
 RUN cmake --build . --target install
-RUN sed -i '/find_dependency(wpilibj)/d' /usr/local/share/wpilib/wpilib-config.cmake
+COPY wpilib-config.cmake /usr/local/share/wpilib/wpilib-config.cmake
 
 WORKDIR /perf
 RUN gunzip -c /proc/config.gz | grep PERF
@@ -50,16 +50,16 @@ RUN apt-get install -y libbfd-dev
 RUN apt-get install -y tree
 RUN tar -xjf Linux_for_Tegra/source/kernel_src.tbz2
 WORKDIR kernel/kernel-jammy-src/tools/perf
-RUN make -j5
+RUN make -j$(nproc)
 RUN cp perf /usr/bin
 
 
-# WORKDIR /eigen
-# RUN git clone https://gitlab.com/libeigen/eigen.git
-# WORKDIR eigen
-# RUN mkdir build
-# WORKDIR build
-# RUN cmake ..
-# RUN make -j$(nproc)
-# RUN make install
-# WORKDIR /
+WORKDIR /eigen
+RUN git clone https://gitlab.com/libeigen/eigen.git
+WORKDIR eigen
+RUN mkdir build
+WORKDIR build
+RUN cmake ..
+RUN make -j$(nproc)
+
+WORKDIR /
