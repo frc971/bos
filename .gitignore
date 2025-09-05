@@ -10,3 +10,5 @@ Makefile
 *nsys-rep
 *perf.data*
 image.tar
+*.swp
+bin/*
