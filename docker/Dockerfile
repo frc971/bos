@@ -10,6 +10,7 @@ RUN apt-get install -y vim stow
 RUN apt-get install -y libblas-dev liblapack-dev
 RUN apt-get install -y rsync
 RUN apt-get install -y gh
+RUN apt-get install -y ripgrep
 
 RUN mkdir opencv
 
