@@ -11,6 +11,7 @@ RUN apt-get install -y libblas-dev liblapack-dev
 RUN apt-get install -y rsync
 RUN apt-get install -y gh
 RUN apt-get install -y ripgrep
+RUN apt-get install -y clangd
 
 RUN mkdir opencv
 
