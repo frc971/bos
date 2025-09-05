@@ -1,6 +1,6 @@
+// https://gist.github.com/SteveRuben/2a15909e384b582c51b5
 #ifndef CAMERA_H
 #define CAMERA_H
-
 #include <opencv2/opencv.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
@@ -20,6 +20,7 @@ struct kCameras {
           "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, format=NV12 ! "
           "nvvidconv ! "
           "video/x-raw, format=BGRx ! "
+          "queue ! "
           "appsink",
       .name = "Gstreamer #1 30fps",
     .intrinsics_path = "calibration/intrinsics.json",
@@ -32,6 +33,7 @@ struct kCameras {
           "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, format=NV12 ! "
           "nvvidconv ! "
           "video/x-raw, format=BGRx ! "
+          "queue ! "
           "appsink",
       .name = "Gstreamer #2 30fps",
     .intrinsics_path = "calibration/intrinsics.json", // TODO
