@@ -1,6 +1,6 @@
 HOST="$1"
 
-executables=("main/main" "main/calibration/frame_logger")
+executables=("main/main" "main/calibration/frame_logger" "main/calibration/calibrate" "main/calibration/frame_logger")
 
 for n in "${executables[@]}"; do
   cp $n bin

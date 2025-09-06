@@ -41,14 +41,18 @@ T distortion_coefficients_from_json(json intrinsics);
 
 class PoseEstimator {
 public:
-  PoseEstimator(json intrinsics, std::vector<cv::Point3f> apriltag_dimensions);
+  PoseEstimator(json intrinsics, json extrinsics, std::vector<cv::Point3f> apriltag_dimensions);
   ~PoseEstimator();
   std::vector<position_estimate_t> Estimate(cv::Mat &input_img);
 
 private:
+  // should be pointer?
   // Changes the position estimate to be tag relitive to absolute feild position
  position_estimate_t GetFeildRelitivePosition(position_estimate_t tag_relitive_position);
+ position_estimate_t ApplyExtrinsics(position_estimate_t position);
+
 private:
+  json extrinsics_;
   apriltag_detector_t *apriltag_detector_;
   frc971::apriltag::GpuDetector *gpu_detector_;
   cv::Mat camera_matrix_;

@@ -23,15 +23,19 @@ void start_networktables(){
   std::cout << "Started networktables!" << std::endl;
 }
 
-void run_camera(Camera::CameraInfo camera_info){
-  std::cout << "Starting cameras" << std::endl;
+void run_camera1(Camera::CameraInfo camera_info){
+  std::cout << "Starting camera 1" << std::endl;
   Camera::Camera camera(camera_info);
 
   json intrinsics;
-  std::ifstream file(camera_info.intrinsics_path);
-  file >> intrinsics;
+  std::ifstream intrinsics_file(camera_info.intrinsics_path);
+  intrinsics_file >> intrinsics;
 
-  PoseEstimator::PoseEstimator estimator(intrinsics, PoseEstimator::kapriltag_dimensions);
+  json extrinsics;
+  std::ifstream extrinsics_file(camera_info.intrinsics_path);
+  extrinsics_file >> extrinsics;
+
+  PoseEstimator::PoseEstimator estimator(intrinsics, extrinsics, PoseEstimator::kapriltag_dimensions);
   PositionSender sender({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25});
 
   cv::Mat frame;
@@ -47,7 +51,7 @@ int main() {
 
   start_networktables();
 
-  std::thread camera_one_thread(run_camera, Camera::CAMERAS.gstreamer1_30fps);
+  std::thread camera_one_thread(run_camera1, Camera::CAMERAS.gstreamer1_30fps);
   camera_one_thread.join();
 
   return 0;

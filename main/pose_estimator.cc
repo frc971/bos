@@ -53,8 +53,8 @@ cv::Mat distortion_coefficients = (cv::Mat_<double>(1, 5) <<
   return distortion_coefficients;
 }
 
-PoseEstimator::PoseEstimator(json intrinsics, std::vector<cv::Point3f> apriltag_dimensions)
-    : apriltag_layout_(frc::AprilTagFieldLayout::LoadField(frc::AprilTagField::k2025ReefscapeAndyMark)), camera_matrix_(camera_matrix_from_json<cv::Mat>(intrinsics)), 
+PoseEstimator::PoseEstimator(json intrinsics, json extrinsics, std::vector<cv::Point3f> apriltag_dimensions)
+    : extrinsics_(extrinsics), apriltag_layout_(frc::AprilTagFieldLayout::LoadField(frc::AprilTagField::k2025ReefscapeAndyMark)), camera_matrix_(camera_matrix_from_json<cv::Mat>(intrinsics)), 
   distortion_coefficients_(distortion_coefficients_from_json<cv::Mat>(intrinsics)),
       apriltag_dimensions_(apriltag_dimensions) {
 
@@ -113,6 +113,7 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_image) {
       estimate.tag_id = gpu_detection->id;
 
       estimate = GetFeildRelitivePosition(estimate);
+      estimate = ApplyExtrinsics(estimate);
       
       estimates.push_back(estimate);
 
@@ -133,11 +134,8 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_image) {
   return estimates;
 }
 
-
-
 position_estimate_t PoseEstimator::GetFeildRelitivePosition(position_estimate_t tag_relitive_position){
   position_estimate_t feild_relitive_position;
-  // TODO account for angle
   double angle = tag_relitive_position.rotation.z; // left is positive
   feild_relitive_position.rotation.y = tag_relitive_position.rotation.y;
   feild_relitive_position.rotation.z = tag_relitive_position.rotation.z - apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)->Rotation().Z().value();
@@ -154,6 +152,18 @@ position_estimate_t PoseEstimator::GetFeildRelitivePosition(position_estimate_t 
   feild_relitive_position.tag_id = tag_relitive_position.tag_id;
 
   return feild_relitive_position;
+}
+
+position_estimate_t PoseEstimator::ApplyExtrinsics(position_estimate_t position){
+  position.translation.x += static_cast<double>(extrinsics_["translation_x"]);
+  position.translation.y += static_cast<double>(extrinsics_["translation_y"]);
+  position.translation.z += static_cast<double>(extrinsics_["translation_z"]);
+
+  position.rotation.x += static_cast<double>(extrinsics_["rotation_x"]);
+  position.rotation.y += static_cast<double>(extrinsics_["rotation_y"]);
+  position.rotation.z += static_cast<double>(extrinsics_["rotation_z"]);
+
+  return position;
 }
 
 } // namespace PoseEstimator
