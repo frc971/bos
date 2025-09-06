@@ -41,7 +41,7 @@ T distortion_coefficients_from_json(json intrinsics);
 
 class PoseEstimator {
 public:
-  PoseEstimator(json intrinsics, json extrinsics, std::vector<cv::Point3f> apriltag_dimensions);
+  PoseEstimator(json intrinsics, json extrinsics, std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions);
   ~PoseEstimator();
   std::vector<position_estimate_t> Estimate(cv::Mat &input_img);
 
