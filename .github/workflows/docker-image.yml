@@ -14,8 +14,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    
     - name: Build Docker image for ARM64
       run: docker buildx build \
           --platform linux/arm64 \
           --file docker/Dockerfile \
-          --tag orin:latest
+          --tag orin:latest \
+          --load
