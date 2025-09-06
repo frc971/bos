@@ -57,7 +57,6 @@ WORKDIR kernel/kernel-jammy-src/tools/perf
 RUN make -j$(nproc)
 RUN cp perf /usr/bin
 
-
 WORKDIR /eigen
 RUN git clone https://gitlab.com/libeigen/eigen.git
 WORKDIR eigen
@@ -65,5 +64,6 @@ RUN mkdir build
 WORKDIR build
 RUN cmake ..
 RUN make -j$(nproc)
+RUN make install
 
 WORKDIR /
