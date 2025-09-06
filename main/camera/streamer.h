@@ -10,20 +10,23 @@ namespace Camera {
 
 class Streamer {
 public:
-  Streamer (uint port, bool verbose=false);
+  Streamer (uint port, bool verbose=false, uint skip_frame=5);
   void writeFrame(cv::Mat &mat);
   // ~Streamer();
   // void getFrame(cv::Mat &mat);
 
 private:
-  void Listen();
+  // void Listen();
 
 private:
   bool status_;
+  bool verbose_;
+  int skip_frame_;
+  int skip_frame_idx_;
   int server_fd_;
   sockaddr_in address_;
   socklen_t address_length_;
-  std::vector<int> client_fd_;
+  int client_fd_;
   std::thread listen_thread_;
 };
 
