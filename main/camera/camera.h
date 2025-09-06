@@ -23,8 +23,8 @@ struct kCameras {
           "queue ! "
           "appsink",
       .name = "Gstreamer #1 30fps",
-    .intrinsics_path = "calibration/intrinsics.json",
-    .id = 0
+      .intrinsics_path = "data/camera1_intrinsics.json",
+      .id = 0
   };
 
   CameraInfo gstreamer2_30fps = {
@@ -36,7 +36,7 @@ struct kCameras {
           "queue ! "
           "appsink",
       .name = "Gstreamer #2 30fps",
-    .intrinsics_path = "calibration/intrinsics.json", // TODO
+      .intrinsics_path = "data/camera2_intrinsics.json",
       .id = 1
   };
 };
