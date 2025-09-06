@@ -1,0 +1,16 @@
+include(CMakeFindDependencyMacro)
+get_filename_component(SELF_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_dependency(Threads)
+
+find_dependency(apriltag)
+find_dependency(cameraserver)
+find_dependency(cscore)
+find_dependency(hal)
+find_dependency(ntcore)
+find_dependency(wpilibc)
+find_dependency(wpilibNewCommands)
+find_dependency(wpimath)
+find_dependency(wpinet)
+
+find_dependency(wpiutil)
