@@ -8,6 +8,7 @@
 #include "main/camera/camera.h"
 #include "main/camera/streamer.h"
 
+const int k_port = 4971;
 
 void read_camera(Camera::Streamer streamer, Camera::Camera camera, std::atomic<bool>& log_image, std::string data_folder){
   cv::Mat frame;
@@ -17,9 +18,11 @@ void read_camera(Camera::Streamer streamer, Camera::Camera camera, std::atomic<b
     camera.getFrame(frame);
     streamer.writeFrame(frame);
     if (log_image.load()){
+      std::cout << "writing frame\n";
       filename << data_folder << std::setfill('0') << std::setw(4) << image_idx << ".jpg";
       cv::imwrite(filename.str(), frame);
       log_image.store(false);
+      image_idx++;
     }
   }
 }
@@ -59,8 +62,9 @@ int main() {
     }
   }
 
+  std::cout << "Port number: " << k_port << std::endl;
+  Camera::Streamer streamer(k_port, true);
   Camera::Camera camera(Camera::CAMERAS.gstreamer1_30fps);
-  Camera::Streamer streamer(4097, true);
   std::atomic<bool> log_image(false);
 
   cv::Mat frame;
