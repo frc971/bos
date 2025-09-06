@@ -1,3 +1,5 @@
+HOST="$1"
+
 executables=("main/main" "main/calibration/frame_logger")
 
 for n in "${executables[@]}"; do
@@ -9,5 +11,4 @@ for n in `find -name "*.so"`; do
   cp $n bin
  done
 
- rsync -avz bin nvidia@10.9.71.101:/bos/bin
- #rsync -avz image.tar nvidia@10.9.71.101:/bos/image.tar
+ rsync -avz bin "$HOST":/bos/bin
