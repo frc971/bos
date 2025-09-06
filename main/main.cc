@@ -32,7 +32,7 @@ void run_camera1(Camera::CameraInfo camera_info){
   intrinsics_file >> intrinsics;
 
   json extrinsics;
-  std::ifstream extrinsics_file(camera_info.intrinsics_path);
+  std::ifstream extrinsics_file(camera_info.extrinsics_path);
   extrinsics_file >> extrinsics;
 
   PoseEstimator::PoseEstimator estimator(intrinsics, extrinsics, PoseEstimator::kapriltag_dimensions);
