@@ -10,6 +10,7 @@ typedef struct CameraInfo {
   std::string pipeline;
   std::string name;
   std::string intrinsics_path;
+  std::string extrinsics_path;
   int id;
 } camera_info_t;
 
@@ -24,6 +25,7 @@ struct kCameras {
           "appsink",
       .name = "Gstreamer #1 30fps",
       .intrinsics_path = "data/camera1_intrinsics.json",
+      .extrinsics_path = "data/camera1_extrinsics.json",
       .id = 0
   };
 
@@ -37,6 +39,7 @@ struct kCameras {
           "appsink",
       .name = "Gstreamer #2 30fps",
       .intrinsics_path = "data/camera2_intrinsics.json",
+      .extrinsics_path = "data/camera2_extrinsics.json",
       .id = 1
   };
 };
