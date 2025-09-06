@@ -1,23 +1,49 @@
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <filesystem>
 #include <opencv2/opencv.hpp>
 #include <sstream>
+#include <atomic>
+#include "main/camera/camera.h"
+#include "main/camera/streamer.h"
 
-int main(int argc, char* argv[]) {
-  std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
-  bool gui_mode = false;
-  if (argc >= 2 && std::string(argv[1]) == "--gui"){
-    gui_mode = true;
-    std::cout << "gui mode on\n";
-  } else{
-    std::cout << "gui mode off (turn on with --gui)\n";
+void read_camera(Camera::Streamer streamer, Camera::Camera camera, std::atomic<bool>& log_image, std::string data_folder){
+  cv::Mat frame;
+  int image_idx = 0;
+  std::ostringstream filename;
+  while (true){
+    camera.getFrame(frame);
+    streamer.writeFrame(frame);
+    if (log_image.load()){
+      filename << data_folder << std::setfill('0') << std::setw(4) << image_idx << ".jpg";
+      cv::imwrite(filename.str(), frame);
+      log_image.store(false);
+    }
   }
+}
+
+int main() {
+  std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
   std::cout << "What is the id of the camera we are logging?\n";
   int camera_id;
   std::cin >> camera_id;
+
+  Camera::CameraInfo camera_info;
+
+  switch (camera_id){
+  case 0:
+    camera_info = Camera::CAMERAS.gstreamer1_30fps;
+    break;
+  case 1:
+    camera_info = Camera::CAMERAS.gstreamer1_30fps;
+    break;
+  default:
+    std::cout << "Invalid ID! Only 0 or 1" << std::endl;
+    return 0;
+  }
 
   std::string data_folder = "data/camera_" + std::to_string(camera_id) + "/";
   if (std::filesystem::create_directory(data_folder)){
@@ -33,23 +59,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
-
-  std::string pipeline =
-      "nvarguscamerasrc sensor-id=" + std::to_string(camera_id) + 
-      " aelock=true exposuretimerange=\"100000 " + 
-      "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! " + 
-      "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, " + 
-      "format=NV12 ! " + 
-      "nvvidconv ! " + 
-      "video/x-raw, format=BGRx ! " + 
-      "appsink";
-
-  cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
-
-  if (!cap.isOpened()) {
-    std::cerr << "Error: Could not open camera" << std::endl;
-    return -1;
-  }
+  Camera::Camera camera(Camera::CAMERAS.gstreamer1_30fps);
+  Camera::Streamer streamer(4097, true);
+  std::atomic<bool> log_image(false);
 
   cv::Mat frame;
   int image_idx = 0;
@@ -57,42 +69,22 @@ int main(int argc, char* argv[]) {
   std::cout << "Camera opened successfully. Press 'c' to capture, 'q' to quit."
             << std::endl;
 
+  std::thread read_camera_thread(read_camera, std::move(streamer), std::move(camera), std::ref(log_image), data_folder);
+
   while (true) {
-    cap >> frame;
-    if (frame.empty()) {
-      std::cerr << "Error: Could not read frame" << std::endl;
-      break;
-    }
-
     char key;
-    if (gui_mode){
-      cv::imshow("Camera Feed", frame);
-      key = cv::waitKey(1) & 0xFF;
-    }
-    else {
-      std::cin >> key;
-    }
-    std::cout << key;
-
-    cv::imwrite("data/server_img.jpg", frame);
-
-    if (key == 'q') {
-      break;
-    } else if (key == 'c') {
-      std::ostringstream filename;
-      filename << data_folder << std::setfill('0') << std::setw(4) << image_idx << ".jpg";
-
-      if (cv::imwrite(filename.str(), frame)) {
-        std::cout << "Saved: " << filename.str() << std::endl;
-        image_idx++;
-      } else {
-        std::cerr << "Error: Could not save image " << filename.str()
-                  << std::endl;
-      }
+    std::cin >> key;
+    switch (key){
+        case 'q':
+          return 0;
+        case 'c':
+          log_image.store(true);
+          continue;
+        default:
+          std::cout << "Received invalid key!\n";
     }
   }
 
-  cap.release();
   cv::destroyAllWindows();
   return 0;
 }
