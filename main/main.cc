@@ -35,7 +35,7 @@ void run_camera1(Camera::CameraInfo camera_info){
   std::ifstream extrinsics_file(camera_info.extrinsics_path);
   extrinsics_file >> extrinsics;
 
-  PoseEstimator::PoseEstimator estimator(intrinsics, extrinsics, PoseEstimator::kapriltag_dimensions);
+  PoseEstimator::PoseEstimator estimator(intrinsics, extrinsics);
   PositionSender sender({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25});
 
   cv::Mat frame;
