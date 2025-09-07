@@ -4,6 +4,7 @@
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
 #include <cmath>
+
 #define PRINT_DETECTION_POSE true
 
 namespace PoseEstimator {
@@ -112,8 +113,8 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_image) {
 
       estimate.tag_id = gpu_detection->id;
 
-      estimate = GetFeildRelitivePosition(estimate);
       estimate = ApplyExtrinsics(estimate);
+      estimate = GetFeildRelitivePosition(estimate);
       
       estimates.push_back(estimate);
 
