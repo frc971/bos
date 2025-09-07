@@ -113,7 +113,7 @@ int main() {
                       cv::noArray(), cv::noArray());
   std::cout << "Done! Error: " << repError << std::endl;
 
-  std::ofstream file("camera_" + std::to_string(camera_id) + "_intrinsics.json");
+  std::ofstream file("constants/camera" + std::to_string(camera_id) + "_intrinsics.json");
   json intrinsics = intrisincs_to_json(cameraMatrix, distCoeffs);
   file << intrinsics.dump(4);
   std::cout << "Intrinsics: " << intrinsics.dump(4);

@@ -23,9 +23,9 @@ struct kCameras {
           "video/x-raw, format=BGRx ! "
           "queue ! "
           "appsink",
-      .name = "Gstreamer #1 30fps",
-      .intrinsics_path = "data/camera1_intrinsics.json",
-      .extrinsics_path = "data/camera1_extrinsics.json",
+      .name = "Gstreamer #0 30fps",
+      .intrinsics_path = "constants/camera0_intrinsics.json",
+      .extrinsics_path = "constants/camera0_extrinsics.json",
       .id = 0
   };
 
@@ -37,9 +37,9 @@ struct kCameras {
           "video/x-raw, format=BGRx ! "
           "queue ! "
           "appsink",
-      .name = "Gstreamer #2 30fps",
-      .intrinsics_path = "data/camera2_intrinsics.json",
-      .extrinsics_path = "data/camera2_extrinsics.json",
+      .name = "Gstreamer #1 30fps",
+      .intrinsics_path = "constants/camera1_intrinsics.json",
+      .extrinsics_path = "constants/camera1_extrinsics.json",
       .id = 1
   };
 };
