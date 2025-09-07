@@ -29,11 +29,21 @@ void run_camera1(Camera::CameraInfo camera_info){
 
   json intrinsics;
   std::ifstream intrinsics_file(camera_info.intrinsics_path);
-  intrinsics_file >> intrinsics;
+  if (!intrinsics_file.is_open()) {
+      std::cerr << "Error: Cannot open intrinsics file: " 
+                << camera_info.intrinsics_path << std::endl;
+  } else {
+      intrinsics_file >> intrinsics;
+  }
 
   json extrinsics;
   std::ifstream extrinsics_file(camera_info.extrinsics_path);
-  extrinsics_file >> extrinsics;
+  if (!extrinsics_file.is_open()) {
+      std::cerr << "Error: Cannot open extrinsics file: " 
+                << camera_info.extrinsics_path << std::endl;
+  } else {
+      extrinsics_file >> extrinsics;
+  }
 
   PoseEstimator::PoseEstimator estimator(intrinsics, extrinsics);
   PositionSender sender({1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25});

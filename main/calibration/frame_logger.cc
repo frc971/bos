@@ -8,18 +8,18 @@
 #include "main/camera/camera.h"
 #include "main/camera/streamer.h"
 
-const int k_port = 4971;
+const int k_port = 5200;
 
 void read_camera(Camera::Streamer streamer, Camera::Camera camera, std::atomic<bool>& log_image, std::string data_folder){
   cv::Mat frame;
   int image_idx = 0;
-  std::ostringstream filename;
   while (true){
     camera.getFrame(frame);
     streamer.writeFrame(frame);
     if (log_image.load()){
-      std::cout << "writing frame\n";
+  std::ostringstream filename;
       filename << data_folder << std::setfill('0') << std::setw(4) << image_idx << ".jpg";
+      std::cout << "writing frame to " << filename.str() << "\n";
       cv::imwrite(filename.str(), frame);
       log_image.store(false);
       image_idx++;
@@ -41,7 +41,7 @@ int main() {
     camera_info = Camera::CAMERAS.gstreamer1_30fps;
     break;
   case 1:
-    camera_info = Camera::CAMERAS.gstreamer1_30fps;
+    camera_info = Camera::CAMERAS.gstreamer2_30fps;
     break;
   default:
     std::cout << "Invalid ID! Only 0 or 1" << std::endl;
