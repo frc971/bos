@@ -5,5 +5,5 @@ if [ -z "$HOST" ]; then
   exit 1
 fi
 
-rsync -avz image.tar "$HOST":/bos/image.tar
-ssh -t "$HOST" 'docker load -i /bos/image.tar'
+rsync -avz --progress image.tar "$HOST":/bos/image.tar
+ssh -t "$HOST" 'sudo docker load -i /bos/image.tar'
