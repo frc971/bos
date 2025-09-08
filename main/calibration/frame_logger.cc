@@ -64,7 +64,7 @@ int main() {
 
   std::cout << "Port number: " << k_port << std::endl;
   Camera::Streamer streamer(k_port, true);
-  Camera::Camera camera(Camera::CAMERAS.gstreamer1_30fps);
+  Camera::Camera camera(camera_info);
   std::atomic<bool> log_image(false);
 
   cv::Mat frame;
