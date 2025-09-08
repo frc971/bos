@@ -113,8 +113,8 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_image) {
 
       estimate.tag_id = gpu_detection->id;
 
-      // estimate = ApplyExtrinsics(estimate);
-      // estimate = GetFeildRelitivePosition(estimate);
+      estimate = GetFeildRelitivePosition(estimate);
+      estimate = ApplyExtrinsics(estimate);
       
       estimates.push_back(estimate);
 
@@ -122,13 +122,13 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_image) {
         std::cout << "--- Pose Estimation Results ---" << "\n";
         std::cout << "id: " << estimate.tag_id << "\n";
         std::cout << "Translation: " << "\n";
+        std::cout << estimate.translation.x << "\n";
         std::cout << estimate.translation.y << "\n";
         std::cout << estimate.translation.z << "\n";
-        std::cout << estimate.translation.x << "\n";
         std::cout << "Rotation: " << "\n";
+        std::cout << RadianToDegree(estimate.rotation.x) << "\n";
         std::cout << RadianToDegree(estimate.rotation.y) << "\n";
         std::cout << RadianToDegree(estimate.rotation.z) << "\n";
-        std::cout << RadianToDegree(estimate.rotation.x) << "\n";
       }
     }
   }
@@ -136,19 +136,29 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_image) {
 }
 
 position_estimate_t PoseEstimator::GetFeildRelitivePosition(position_estimate_t tag_relitive_position){
+  tag_relitive_position.tag_id = 20;
+  std::cout << "April tag rotation: " << apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)->Rotation().Z().value() << "\n";
   position_estimate_t feild_relitive_position;
-  double angle = tag_relitive_position.rotation.z; // left is positive
-  feild_relitive_position.rotation.y = tag_relitive_position.rotation.y;
-  feild_relitive_position.rotation.z = tag_relitive_position.rotation.z - apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)->Rotation().Z().value();
   feild_relitive_position.rotation.x = tag_relitive_position.rotation.x;
+  feild_relitive_position.rotation.y = tag_relitive_position.rotation.y;
+  feild_relitive_position.rotation.z = apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)->Rotation().Z().value() + tag_relitive_position.rotation.z; 
 
-  feild_relitive_position.translation.z = tag_relitive_position.translation.z;
-  feild_relitive_position.translation.y = cos(angle) * tag_relitive_position.translation.y - sin(angle) * tag_relitive_position.translation.x;
-  feild_relitive_position.translation.x = sin(angle) * tag_relitive_position.translation.y + cos(angle) * tag_relitive_position.translation.x;
+  double angle = feild_relitive_position.rotation.z;
+  std::cout << "angle "  << angle << "\n";
 
-  feild_relitive_position.translation.y *= -1;
-  feild_relitive_position.translation.y += apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)->Translation().Y().value();
-  feild_relitive_position.translation.x += apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)->Translation().X().value();
+  feild_relitive_position.translation.x = apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)->Translation().X().value();
+  feild_relitive_position.translation.y = apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)->Translation().Y().value();
+  feild_relitive_position.translation.z = apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)->Translation().Z().value();
+
+  feild_relitive_position.translation.x = 0;
+  feild_relitive_position.translation.y = 0;
+  feild_relitive_position.translation.z = 0;
+
+  feild_relitive_position.translation.x += sin(angle) * tag_relitive_position.translation.y + cos(angle) * tag_relitive_position.translation.x;
+  feild_relitive_position.translation.y -= cos(angle) * tag_relitive_position.translation.y - sin(angle) * tag_relitive_position.translation.x;
+  feild_relitive_position.translation.z += tag_relitive_position.translation.z;
+
+  // feild_relitive_position.translation.y *= -1;
 
   feild_relitive_position.tag_id = tag_relitive_position.tag_id;
 

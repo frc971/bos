@@ -887,12 +887,18 @@ void GpuDetector::DetectGray2(uint8_t *image) {
     size_t temp_storage_bytes =
         temp_storage_compressed_union_marker_pair_device_.size();
     NonZero nz;
-    CHECK_CUDA(cub::DeviceSelect::If(
+    cudaError_t err = cub::DeviceSelect::If(
         temp_storage_compressed_union_marker_pair_device_.get(),
         temp_storage_bytes, union_marker_pair_device_.get(),
         compressed_union_marker_pair_device_.get(),
         num_compressed_union_marker_pair_device_.get(),
-        union_marker_pair_device_.size(), nz, stream_.get()));
+        union_marker_pair_device_.size(), nz, stream_.get());
+
+    if (err != cudaSuccess) {
+        std::cerr << "DeviceSelect::If failed: " << cudaGetErrorString(err) << std::endl;
+        exit(1);
+    }
+
 
     MaybeCheckAndSynchronize("cub::DeviceSelect::If");
   }
@@ -1101,11 +1107,17 @@ void GpuDetector::DetectGray2(uint8_t *image) {
     size_t temp_storage_bytes =
         temp_storage_compressed_union_marker_pair_device_.size();
     ValidPeaks peak_filter;
-    CHECK_CUDA(cub::DeviceSelect::If(
+
+    cudaError_t err = cub::DeviceSelect::If(
         temp_storage_compressed_union_marker_pair_device_.get(),
         temp_storage_bytes, filtered_is_local_peak_device_.get(),
         compressed_peaks_device_.get(), num_compressed_peaks_device_.get(),
-        num_selected_blobs_host, peak_filter, stream_.get()));
+        num_selected_blobs_host, peak_filter, stream_.get());
+
+    if (err != cudaSuccess) {
+        std::cerr << "DeviceSelect::If failed: " << cudaGetErrorString(err) << std::endl;
+        exit(1);
+    }
 
     after_peak_compression_.Record(&stream_);
     MaybeCheckAndSynchronize("cub::DeviceSelect::If");

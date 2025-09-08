@@ -1,5 +1,7 @@
 #!/bin/bash
 
+make -j5
+
 HOST="$1"
 
 if [ -z "$HOST" ]; then
