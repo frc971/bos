@@ -14,3 +14,7 @@ target_link_libraries(frame_logger PRIVATE ${OpenCV_LIBS} camera)
 add_executable(test_intrinsics test_intrinsics.cc)
 target_include_directories(test_intrinsics PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(test_intrinsics PRIVATE ${OpenCV_LIBS} camera nlohmann_json::nlohmann_json)
+
+add_executable(focus_calibrate focus_calibrate.cc)
+target_include_directories(focus_calibrate PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(focus_calibrate PRIVATE ${OpenCV_LIBS} camera nlohmann_json::nlohmann_json)
