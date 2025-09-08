@@ -9,7 +9,7 @@ if [ -z "$HOST" ]; then
   exit 1
 fi
 
-executables=("main/main" "main/calibration/frame_logger" "main/calibration/calibrate" "main/calibration/frame_logger" "main/calibration/test_intrinsics" "main/camera/test" )
+executables=("main/main" "main/calibration/frame_logger" "main/calibration/calibrate" "main/calibration/frame_logger" "main/calibration/test_intrinsics" "main/camera/test" "main/calibration/focus_calibrate")
 
 for n in "${executables[@]}"; do
   cp $n bin

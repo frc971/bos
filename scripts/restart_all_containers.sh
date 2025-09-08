@@ -19,16 +19,7 @@ fi
 docker container prune -f
 '
 
-# ssh -t "$HOST" "unset DISPLAY && sudo -S docker run --name main --restart unless-stopped --net host --privileged --runtime nvidia -d \
-#   -v /bos:/bos \
-#   -v /tmp/.X11-unix/:/tmp/.X11-unix/ \
-#   -v /tmp/argus_socket:/tmp/argus_socket \
-#   -v /usr/lib/aarch64-linux-gnu/nvidia:/usr/lib/aarch64-linux-gnu/nvidia \
-#   -v /var/run:/var/run \
-#   -e LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu/nvidia:/usr/lib/aarch64-linux-gnu/tegra:/bos/bin \
-#   ghcr.io/frc971/bos/orin /bin/bash -c \"cd /bos && bin/main\""
-
-ssh -t "$HOST" "unset DISPLAY && sudo -S docker run --name main --restart unless-stopped --net host --privileged --runtime nvidia -it \
+ssh -t "$HOST" "docker run -d --name main --restart unless-stopped --net host --privileged --runtime nvidia \
   -v /bos:/bos \
   -v /tmp/.X11-unix/:/tmp/.X11-unix/ \
   -v /tmp/argus_socket:/tmp/argus_socket \
