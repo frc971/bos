@@ -113,8 +113,8 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat &input_image) {
 
       estimate.tag_id = gpu_detection->id;
 
-      estimate = ApplyExtrinsics(estimate);
-      estimate = GetFeildRelitivePosition(estimate);
+      // estimate = ApplyExtrinsics(estimate);
+      // estimate = GetFeildRelitivePosition(estimate);
       
       estimates.push_back(estimate);
 

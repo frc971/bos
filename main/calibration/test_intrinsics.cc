@@ -5,6 +5,8 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 #include <sstream>
+#include "main/camera/camera.h"
+#include "main/camera/streamer.h"
 
 using json = nlohmann::json;
 
@@ -27,36 +29,47 @@ void warmupCamera(std::string pipeline) {
   cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
 }
 int main() {
-  std::ifstream file("intrinsics.json");
+  std::cout << "OpenCV version: " << CV_VERSION << std::endl;
+
+  std::cout << "What is the id of the camera we are logging?\n";
+  int camera_id;
+  std::cin >> camera_id;
+
+  Camera::CameraInfo camera_info;
+
+  switch (camera_id){
+  case 0:
+    camera_info = Camera::CAMERAS.gstreamer1_30fps;
+    break;
+  case 1:
+    camera_info = Camera::CAMERAS.gstreamer2_30fps;
+    break;
+  default:
+    std::cout << "Invalid ID! Only 0 or 1" << std::endl;
+    return 0;
+  }
+
+  std::ifstream file(camera_info.intrinsics_path);
   json intrinsics;
   file >> intrinsics;
+
   cv::Mat camera_matrix = camera_matrix_from_json(intrinsics);
   cv::Mat distortion_coefficients = distortion_coefficients_from_json(intrinsics);
 
-  std::string pipeline =
-      "nvarguscamerasrc sensor-id=0 aelock=true exposuretimerange=\"100000 "
-      "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
-      "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, "
-      "format=NV12 ! "
-      "nvvidconv ! "
-      "video/x-raw, format=BGRx ! "
-      "appsink";
 
-  warmupCamera(pipeline);
-  cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
+  Camera::Streamer raw_streamer(4971, true);
+  Camera::Streamer undistorted_streamer(4972, true);
+
+  Camera::Camera camera(camera_info);
   cv::Mat frame;
-  cv::Mat gray;
+
   while (true) {
-    cap >> frame;
+    camera.getFrame(frame);
+    raw_streamer.writeFrame(frame);
+
     cv::Mat undistorted;
-
     cv::undistort(frame, undistorted, camera_matrix, distortion_coefficients);
-    cv::imshow("raw", frame);
-    cv::imshow("undistorted", undistorted);
 
-    char c = (char)cv::waitKey(1);
-    if (c == 'q' || c == 27) {
-      break;
-    }
+    undistorted_streamer.writeFrame(undistorted);
   }
 }
