@@ -57,7 +57,6 @@ int main() {
   float squares_length = 0.04;
   float pixel_per_square = 128;
   float maker_length = 0.02;
-  float margin_size = 0;
   cv::aruco::CharucoBoard board(cv::Size(squares_x, squares_y), squares_length,
                                 maker_length, dictionary);
   cv::aruco::CharucoParameters charucoParams;
