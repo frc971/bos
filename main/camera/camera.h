@@ -18,7 +18,8 @@ struct kCameras {
   CameraInfo gstreamer1_30fps = {
       .pipeline =
           "nvarguscamerasrc sensor-id=0 ! "
-          "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, format=NV12 ! "
+          "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, "
+          "format=NV12 ! "
           "nvvidconv ! "
           "video/x-raw, format=BGRx ! "
           "queue ! "
@@ -26,13 +27,13 @@ struct kCameras {
       .name = "Gstreamer #0 30fps",
       .intrinsics_path = "constants/camera0_intrinsics.json",
       .extrinsics_path = "constants/camera0_extrinsics.json",
-      .id = 0
-  };
+      .id = 0};
 
   CameraInfo gstreamer2_30fps = {
       .pipeline =
           "nvarguscamerasrc sensor-id=1 !"
-          "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, format=NV12 ! "
+          "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, "
+          "format=NV12 ! "
           "nvvidconv ! "
           "video/x-raw, format=BGRx ! "
           "queue ! "
@@ -40,8 +41,7 @@ struct kCameras {
       .name = "Gstreamer #1 30fps",
       .intrinsics_path = "constants/camera1_intrinsics.json",
       .extrinsics_path = "constants/camera1_extrinsics.json",
-      .id = 1
-  };
+      .id = 1};
 };
 
 const kCameras CAMERAS;
@@ -51,16 +51,16 @@ inline void WarmupCamera(std::string pipeline) {
 }
 
 class Camera {
-public:
+ public:
   Camera(camera_info_t info);
   ~Camera();
-  void getFrame(cv::Mat &mat);
+  void getFrame(cv::Mat& mat);
 
-private:
+ private:
   camera_info_t info_;
   cv::VideoCapture cap_;
 };
 
-} // namespace Camera
+}  // namespace Camera
 
-#endif // CAMERA_H
+#endif  // CAMERA_H

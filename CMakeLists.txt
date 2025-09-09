@@ -25,3 +25,15 @@ add_subdirectory(third_party/971apriltag)
 
 add_compile_options(-Wno-psabi)
 add_subdirectory(main)
+
+
+file(GLOB_RECURSE ALL_CXX_SOURCE_FILES
+     "${CMAKE_SOURCE_DIR}/**/*.cc"
+     "${CMAKE_SOURCE_DIR}/**/*.h"
+)
+
+add_custom_target(
+    clang_format
+    COMMAND clang-format -i ${ALL_CXX_SOURCE_FILES}
+    COMMENT "Formatting all C++ source files with clang-format"
+)

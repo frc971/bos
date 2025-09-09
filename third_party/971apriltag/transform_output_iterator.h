@@ -9,9 +9,9 @@ class TransformOutputIterator {
  private:
   // proxy object to be able to convert when assigning value
   struct Reference {
-    OutputType *ptr;
+    OutputType* ptr;
     ConversionOp convert_op;
-    __host__ __device__ Reference(OutputType *ptr, ConversionOp convert_op)
+    __host__ __device__ Reference(OutputType* ptr, ConversionOp convert_op)
         : ptr(ptr), convert_op(convert_op) {}
     __host__ __device__ Reference operator=(InputType val) {
       *ptr = convert_op(val);
@@ -25,10 +25,10 @@ class TransformOutputIterator {
   typedef TransformOutputIterator self_type;
   typedef OffsetT difference_type;
   typedef void value_type;
-  typedef void *pointer;
+  typedef void* pointer;
   typedef Reference reference;
 
-  TransformOutputIterator(OutputType *ptr, const ConversionOp convert_op)
+  TransformOutputIterator(OutputType* ptr, const ConversionOp convert_op)
       : convert_op(convert_op), ptr(ptr) {}
 
   // postfix addition
@@ -69,21 +69,19 @@ class TransformOutputIterator {
 
   // equal to
   __host__ __device__ __forceinline__ bool operator==(
-      const TransformOutputIterator &rhs) const {
+      const TransformOutputIterator& rhs) const {
     return ptr == rhs.ptr;
   }
 
   // not equal to
   __host__ __device__ __forceinline__ bool operator!=(
-      const TransformOutputIterator &rhs) const {
+      const TransformOutputIterator& rhs) const {
     return ptr != rhs.ptr;
   }
 
  private:
   const ConversionOp convert_op;
-  OutputType *ptr;
+  OutputType* ptr;
 };
 
 }  // namespace frc971::apriltag
-
-

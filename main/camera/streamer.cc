@@ -1,20 +1,23 @@
 // https://gist.github.com/SteveRuben/2a15909e384b582c51b5
 #include "streamer.h"
-namespace Camera{
+namespace Camera {
 
-
-static std::string k_header = 
+static std::string k_header =
     "HTTP/1.0 200 OK\r\n"
     "Server: MJPEG-Streamer\r\n"
     "Cache-Control: no-cache\r\n"
     "Pragma: no-cache\r\n"
     "Content-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n";
 
-Streamer::Streamer(uint port, bool verbose, uint skip_frame) : status_(false), verbose_(verbose), skip_frame_(skip_frame), skip_frame_idx_(0){
+Streamer::Streamer(uint port, bool verbose, uint skip_frame)
+    : status_(false),
+      verbose_(verbose),
+      skip_frame_(skip_frame),
+      skip_frame_idx_(0) {
   address_length_ = sizeof(address_);
 
   server_fd_ = socket(AF_INET, SOCK_STREAM, 0);
-  if (server_fd_ == -1) { 
+  if (server_fd_ == -1) {
     std::cout << "failed to open socket!\n";
     return;
   }
@@ -29,17 +32,17 @@ Streamer::Streamer(uint port, bool verbose, uint skip_frame) : status_(false), v
   }
 
   listen(server_fd_, 5);
-  if (verbose){
+  if (verbose) {
     std::cout << "HTTP MJPEG server running on port " << port << std::endl;
   }
   // listen_thread_  = std::thread(&Streamer::Listen, this);
   std::cout << "waiting for client..." << std::endl;
-  client_fd_ = accept(server_fd_, (struct sockaddr*)&address_, &address_length_);
-  if (client_fd_ < 0){
+  client_fd_ =
+      accept(server_fd_, (struct sockaddr*)&address_, &address_length_);
+  if (client_fd_ < 0) {
     std::cout << "failed to receive client\n";
   }
   std::cout << "connected to client!\n";
-
 
   send(client_fd_, k_header.c_str(), k_header.size(), 0);
   status_ = true;
@@ -59,21 +62,21 @@ Streamer::Streamer(uint port, bool verbose, uint skip_frame) : status_(false), v
 //   }
 // }
 
-void Streamer::writeFrame(cv::Mat &mat){
-    cv::Mat compressed;
-    cv::resize(mat, compressed, cv::Size(480, 480), 0, 0, cv::INTER_AREA);
-    cv::cvtColor(compressed, compressed, cv::COLOR_BGR2GRAY);
+void Streamer::writeFrame(cv::Mat& mat) {
+  cv::Mat compressed;
+  cv::resize(mat, compressed, cv::Size(480, 480), 0, 0, cv::INTER_AREA);
+  cv::cvtColor(compressed, compressed, cv::COLOR_BGR2GRAY);
 
-    std::vector<uchar> buf;
-    cv::imencode(".jpg", compressed, buf);
+  std::vector<uchar> buf;
+  cv::imencode(".jpg", compressed, buf);
 
-    std::string part = 
+  std::string part =
       "--frame\r\n"
       "Content-Type: image/jpeg\r\n"
-      "Content-Length: " + std::to_string(buf.size()) + "\r\n\r\n";
-    send(client_fd_, part.c_str(), part.size(), 0);
-    send(client_fd_, reinterpret_cast<char*>(buf.data()), buf.size(), 0);
-    send(client_fd_, "\r\n", 2, 0);
+      "Content-Length: " +
+      std::to_string(buf.size()) + "\r\n\r\n";
+  send(client_fd_, part.c_str(), part.size(), 0);
+  send(client_fd_, reinterpret_cast<char*>(buf.data()), buf.size(), 0);
+  send(client_fd_, "\r\n", 2, 0);
 }
-}
-
+}  // namespace Camera

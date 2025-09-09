@@ -158,7 +158,7 @@ struct QuadBoundaryPoint {
   uint64_t key;
 };
 
-std::ostream &operator<<(std::ostream &os, const QuadBoundaryPoint &point);
+std::ostream& operator<<(std::ostream& os, const QuadBoundaryPoint& point);
 
 // Holds a compacted blob index, the angle to the X axis from the center of the
 // blob, and the coordinate of the point.
@@ -166,7 +166,7 @@ std::ostream &operator<<(std::ostream &os, const QuadBoundaryPoint &point);
 // The blob index is 12 bits, the angle is 28 bits, and the point is 24 bits.
 struct IndexPoint {
   // Max number of blob IDs we can hold.
-  static constexpr size_t kMaxBlobs = 4096; //2048; RJS
+  static constexpr size_t kMaxBlobs = 4096;  //2048; RJS
 
   static constexpr size_t kRepEndBit = 24;
   static constexpr size_t kBitsInKey = 64;
@@ -276,24 +276,22 @@ struct IndexPoint {
   uint64_t key;
 };
 
-std::ostream &operator<<(std::ostream &os, const IndexPoint &point);
+std::ostream& operator<<(std::ostream& os, const IndexPoint& point);
 
 // Decomposer for sorting which just returns the key.
 struct QuadBoundaryPointDecomposer {
-  __host__ __device__ ::cuda::std::tuple<uint64_t &> operator()(
-      QuadBoundaryPoint &key) const {
+  __host__ __device__ ::cuda::std::tuple<uint64_t&> operator()(
+      QuadBoundaryPoint& key) const {
     return {key.key};
   }
 };
 
 // Decomposer for sorting which just returns the key.
 struct QuadIndexPointDecomposer {
-  __host__ __device__ ::cuda::std::tuple<uint64_t &> operator()(
-      IndexPoint &key) const {
+  __host__ __device__ ::cuda::std::tuple<uint64_t&> operator()(
+      IndexPoint& key) const {
     return {key.key};
   }
 };
 
 }  // namespace frc971::apriltag
-
-

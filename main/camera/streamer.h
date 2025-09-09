@@ -1,24 +1,24 @@
 // #ifndef STREAMER_H
 // #define STREAMER_H
 
+#include <arpa/inet.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
 #include <thread>
-#include <arpa/inet.h>
 namespace Camera {
 
 class Streamer {
-public:
-  Streamer (uint port, bool verbose=false, uint skip_frame=5);
-  void writeFrame(cv::Mat &mat);
+ public:
+  Streamer(uint port, bool verbose = false, uint skip_frame = 5);
+  void writeFrame(cv::Mat& mat);
   // ~Streamer();
   // void getFrame(cv::Mat &mat);
 
-private:
+ private:
   // void Listen();
 
-private:
+ private:
   bool status_;
   bool verbose_;
   int skip_frame_;
@@ -30,6 +30,6 @@ private:
   std::thread listen_thread_;
 };
 
-} // namespace Camera
+}  // namespace Camera
 
 // #endif // STREAMER_H
