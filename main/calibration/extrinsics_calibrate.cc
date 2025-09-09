@@ -8,6 +8,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include "main/camera/camera.h"
+#include "main/localization/pose_estimator.h"
 
 using json = nlohmann::json;
 
@@ -49,9 +50,23 @@ int main() {
   Camera::Camera camera(camera_info);
   cv::Mat frame;
 
-  while (true) {
+  PoseEstimator::PoseEstimator estimator(intrinsics, nullptr);
+
+  PoseEstimator::position_estimate_t average_position;
+  for (int i = 0; i < 240; i++) {
     camera.getFrame(frame);
-    // std::vector<PoseEstimator::position_estimate_t> estimates = estimator.Estimate(frame);
-    // sender.Send(estimates);
+    std::vector<PoseEstimator::position_estimate_t> estimates =
+        estimator.GetRawPositionEstimates(frame);
+    for (PoseEstimator::position_estimate_t& estimate : estimates) {
+      if (estimate.tag_id == tag_id) {
+        average_position.rotation.x += estimate.rotation.x;
+        average_position.rotation.y += estimate.rotation.y;
+        average_position.rotation.z += estimate.rotation.z;
+
+        average_position.translation.x += estimate.translation.x;
+        average_position.translation.y += estimate.translation.y;
+        average_position.translation.z += estimate.translation.z;
+      }
+    }
   }
 }

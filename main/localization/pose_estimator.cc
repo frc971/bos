@@ -2,10 +2,11 @@
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
+#include <ntcore_cpp_types.h>
 #include <cmath>
 #include <fstream>
 
-#define PRINT_DETECTION_POSE true
+#define PRINT_DETECTION_POSE false
 
 namespace PoseEstimator {
 using json = nlohmann::json;
@@ -91,9 +92,41 @@ PoseEstimator::~PoseEstimator() {
   return;
 }
 
-std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat& input_image) {
+std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat& frame) {
+  std::vector<position_estimate_t> estimates = GetRawPositionEstimates(frame);
+  PrintPositionEstimates(estimates);
+  for (position_estimate_t& estimate : estimates) {
+    estimate = GetFeildRelitivePosition(estimate);
+    estimate = ApplyExtrinsics(estimate);
+  }
+  if (PRINT_DETECTION_POSE) {
+    PrintPositionEstimates(estimates);
+  }
+  return estimates;
+}
+
+void PoseEstimator::PrintPositionEstimates(
+    std::vector<position_estimate_t> estimates) {
+  for (position_estimate_t& estimate : estimates) {
+    std::cout << "--- Pose Estimation Results ---"
+              << "\n";
+    std::cout << "id: " << estimate.tag_id << "\n";
+    std::cout << "Translation: "
+              << "\n";
+    std::cout << estimate.translation.x << "\n";
+    std::cout << estimate.translation.y << "\n";
+    std::cout << estimate.translation.z << "\n";
+    std::cout << "Rotation: "
+              << "\n";
+    std::cout << RadianToDegree(estimate.rotation.x) << "\n";
+    std::cout << RadianToDegree(estimate.rotation.y) << "\n";
+    std::cout << RadianToDegree(estimate.rotation.z) << "\n";
+  }
+}
+std::vector<position_estimate_t> PoseEstimator::GetRawPositionEstimates(
+    cv::Mat& frame) {
   cv::Mat gray;
-  cv::cvtColor(input_image, gray, cv::COLOR_BGR2GRAY);
+  cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
   const zarray_t* detections = gpu_detector_->Detections();
   std::vector<position_estimate_t> estimates;
@@ -116,36 +149,20 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat& input_image) {
                    distortion_coefficients_, rvec, tvec);
 
       position_estimate_t estimate;
-      estimate.translation.y = tvec.ptr<double>()[0];
-      estimate.translation.z = tvec.ptr<double>()[1];
+      // Currently we do not use transation z, rotation x and rotation y
       estimate.translation.x = tvec.ptr<double>()[2];
+      estimate.translation.y =
+          -tvec.ptr<double>()[0];  // We want right to be positive
+      estimate.translation.z = tvec.ptr<double>()[1];
 
-      estimate.rotation.y = rvec.ptr<double>()[0];
-      estimate.rotation.z = rvec.ptr<double>()[1];
       estimate.rotation.x = rvec.ptr<double>()[2];
+      estimate.rotation.y = rvec.ptr<double>()[0];
+      estimate.rotation.z =
+          -rvec.ptr<double>()[1];  // We want right to be positive
 
       estimate.tag_id = gpu_detection->id;
 
-      estimate = GetFeildRelitivePosition(estimate);
-      estimate = ApplyExtrinsics(estimate);
-
       estimates.push_back(estimate);
-
-      if (PRINT_DETECTION_POSE) {
-        std::cout << "--- Pose Estimation Results ---"
-                  << "\n";
-        std::cout << "id: " << estimate.tag_id << "\n";
-        std::cout << "Translation: "
-                  << "\n";
-        std::cout << estimate.translation.x << "\n";
-        std::cout << estimate.translation.y << "\n";
-        std::cout << estimate.translation.z << "\n";
-        std::cout << "Rotation: "
-                  << "\n";
-        std::cout << RadianToDegree(estimate.rotation.x) << "\n";
-        std::cout << RadianToDegree(estimate.rotation.y) << "\n";
-        std::cout << RadianToDegree(estimate.rotation.z) << "\n";
-      }
     }
   }
   return estimates;
@@ -153,7 +170,6 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat& input_image) {
 
 position_estimate_t PoseEstimator::GetFeildRelitivePosition(
     position_estimate_t tag_relitive_position) {
-  tag_relitive_position.tag_id = 20;
   std::cout << "April tag rotation: "
             << apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
                    ->Rotation()
@@ -167,11 +183,10 @@ position_estimate_t PoseEstimator::GetFeildRelitivePosition(
       apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
           ->Rotation()
           .Z()
-          .value() +
+          .value() -
       tag_relitive_position.rotation.z;
 
   double angle = feild_relitive_position.rotation.z;
-  std::cout << "angle " << angle << "\n";
 
   feild_relitive_position.translation.x =
       apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
@@ -196,12 +211,10 @@ position_estimate_t PoseEstimator::GetFeildRelitivePosition(
   feild_relitive_position.translation.x +=
       sin(angle) * tag_relitive_position.translation.y +
       cos(angle) * tag_relitive_position.translation.x;
-  feild_relitive_position.translation.y -=
+  feild_relitive_position.translation.y +=
       cos(angle) * tag_relitive_position.translation.y -
       sin(angle) * tag_relitive_position.translation.x;
   feild_relitive_position.translation.z += tag_relitive_position.translation.z;
-
-  // feild_relitive_position.translation.y *= -1;
 
   feild_relitive_position.tag_id = tag_relitive_position.tag_id;
 
@@ -210,6 +223,9 @@ position_estimate_t PoseEstimator::GetFeildRelitivePosition(
 
 position_estimate_t PoseEstimator::ApplyExtrinsics(
     position_estimate_t position) {
+  if (extrinsics_ == nullptr) {
+    return position;
+  }
   position.translation.x += static_cast<double>(extrinsics_["translation_x"]);
   position.translation.y += static_cast<double>(extrinsics_["translation_y"]);
   position.translation.z += static_cast<double>(extrinsics_["translation_z"]);
