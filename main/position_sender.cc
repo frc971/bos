@@ -10,9 +10,9 @@ PositionSender::PositionSender(std::vector<int> tag_ids) : tag_ids_(tag_ids), in
     nt::DoubleTopic translation_y_topic = table->GetDoubleTopic("translation_y");
     nt::DoubleTopic translation_z_topic = table->GetDoubleTopic("translation_z");
 
-    nt::DoubleTopic rotation_x_topic = table->GetDoubleTopic("position_x");
-    nt::DoubleTopic rotation_y_topic = table->GetDoubleTopic("position_y");
-    nt::DoubleTopic rotation_z_topic = table->GetDoubleTopic("position_z");
+    nt::DoubleTopic rotation_x_topic = table->GetDoubleTopic("rotation_x");
+        nt::DoubleTopic rotation_y_topic = table->GetDoubleTopic("rotation_y");
+        nt::DoubleTopic rotation_z_topic = table->GetDoubleTopic("rotation_z");
 
     nt::BooleanTopic status_topic = table->GetBooleanTopic("status");
 
@@ -38,9 +38,9 @@ void PositionSender::Send(
         translation_y_publisher_[i].Set(position_estimates[j].translation.z);
         translation_z_publisher_[i].Set(position_estimates[j].translation.x);
 
-        rotation_x_publisher_[i].Set(position_estimates[j].translation.y);
-        rotation_y_publisher_[i].Set(position_estimates[j].translation.z);
-        rotation_z_publisher_[i].Set(position_estimates[j].translation.x);
+        rotation_x_publisher_[i].Set(position_estimates[j].rotation.x);
+        rotation_y_publisher_[i].Set(position_estimates[j].rotation.y);
+        rotation_z_publisher_[i].Set(position_estimates[j].rotation.z);
         status_[i].Set(true);
       }
     }
