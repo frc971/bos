@@ -1,7 +1,7 @@
 #include "camera/camera.h"
 #include <thread>
-#include "pose_estimator.h"
-#include "position_sender.h"
+#include "localization/pose_estimator.h"
+#include "localization/position_sender.h"
 #include <fstream>
 #include "wpilibc/frc/RuntimeType.h"
 #include "apriltag/apriltag.h"
