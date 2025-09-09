@@ -56,12 +56,12 @@ class PoseEstimator {
 
  private:
   json extrinsics_;
+  frc::AprilTagFieldLayout apriltag_layout_;
   apriltag_detector_t* apriltag_detector_;
   frc971::apriltag::GpuDetector* gpu_detector_;
   cv::Mat camera_matrix_;
   cv::Mat distortion_coefficients_;
   std::vector<cv::Point3f> apriltag_dimensions_;
-  frc::AprilTagFieldLayout apriltag_layout_;
 };
 }  // namespace PoseEstimator
 
