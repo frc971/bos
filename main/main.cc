@@ -15,6 +15,8 @@
 
 using json = nlohmann::json;
 
+#define STREAM_VIDEO false
+
 void start_networktables() {
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   inst.StartClient4("orin");

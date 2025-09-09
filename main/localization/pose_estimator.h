@@ -45,7 +45,9 @@ class PoseEstimator {
       json intrinsics, json extrinsics,
       std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions);
   ~PoseEstimator();
-  std::vector<position_estimate_t> Estimate(cv::Mat& input_img);
+  std::vector<position_estimate_t> Estimate(cv::Mat& frame);
+  std::vector<position_estimate_t> GetRawPositionEstimates(cv::Mat& frame);
+  void PrintPositionEstimates(std::vector<position_estimate_t> estimates);
 
  private:
   // should be pointer?
