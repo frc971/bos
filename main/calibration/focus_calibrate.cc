@@ -1,10 +1,9 @@
-#include "opencv2/imgproc/imgproc.hpp"
 #include <iostream>
 #include "main/camera/camera.h"
 #include "main/camera/streamer.h"
+#include "opencv2/imgproc/imgproc.hpp"
 
-
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
   std::cout << "What is the id of the camera we are using?\n";
@@ -13,22 +12,22 @@ int main(int argc, char *argv[]) {
 
   Camera::CameraInfo camera_info;
 
-  switch (camera_id){
-  case 0:
-    camera_info = Camera::CAMERAS.gstreamer1_30fps;
-    break;
-  case 1:
-    camera_info = Camera::CAMERAS.gstreamer2_30fps;
-    break;
-  default:
-    std::cout << "Invalid ID! Only 0 or 1" << std::endl;
-    return 0;
+  switch (camera_id) {
+    case 0:
+      camera_info = Camera::CAMERAS.gstreamer1_30fps;
+      break;
+    case 1:
+      camera_info = Camera::CAMERAS.gstreamer2_30fps;
+      break;
+    default:
+      std::cout << "Invalid ID! Only 0 or 1" << std::endl;
+      return 0;
   }
 
   Camera::Camera camera(camera_info);
 
   cv::Mat frame, gray, laplace;
-  while (true){
+  while (true) {
     camera.getFrame(frame);
 
     cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);

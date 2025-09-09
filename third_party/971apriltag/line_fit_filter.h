@@ -2,9 +2,9 @@
 
 #include <cub/util_type.cuh>
 
-#include <cuda/std/tuple>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
+#include <cuda/std/tuple>
 #include "cuda.h"
 
 namespace frc971::apriltag {
@@ -92,8 +92,8 @@ struct LineFitMoments {
   int N;  // how many points are included in the set?
 };
 
-std::ostream &operator<<(std::ostream &os,
-                         const frc971::apriltag::LineFitMoments &moments);
+std::ostream& operator<<(std::ostream& os,
+                         const frc971::apriltag::LineFitMoments& moments);
 
 struct Peak {
   static constexpr uint16_t kNoPeak() { return 0xffff; }
@@ -112,8 +112,8 @@ struct PeakExtents {
 
 struct PeakDecomposer {
   static constexpr size_t kBitsInKey = 16 + 32;
-  __host__ __device__ ::cuda::std::tuple<uint16_t &, float &> operator()(
-      Peak &key) const {
+  __host__ __device__ ::cuda::std::tuple<uint16_t&, float&> operator()(
+      Peak& key) const {
     return {key.blob_index, key.error};
   }
 };
@@ -133,21 +133,21 @@ struct FitQuad {
   LineFitMoments moments[4];
 };
 
-__host__ __device__ void FitLine(LineFitMoments moments, double *lineparam01,
-                                 double *lineparam23, double *err, double *mse);
+__host__ __device__ void FitLine(LineFitMoments moments, double* lineparam01,
+                                 double* lineparam23, double* err, double* mse);
 
 void FitLines(
-    const LineFitPoint *line_fit_points_device, size_t points,
-    const cub::KeyValuePair<long, MinMaxExtents> *selected_extents_device,
-    size_t num_extents, double *errs_device, double *filtered_errs_device,
-    Peak *peaks_device, CudaStream *stream);
+    const LineFitPoint* line_fit_points_device, size_t points,
+    const cub::KeyValuePair<long, MinMaxExtents>* selected_extents_device,
+    size_t num_extents, double* errs_device, double* filtered_errs_device,
+    Peak* peaks_device, CudaStream* stream);
 
 void FitQuads(
-    const Peak *peaks_device, size_t peaks, const PeakExtents *peak_extents,
-    size_t num_extents, const LineFitPoint *line_fit_points_device, int nmaxima,
-    const cub::KeyValuePair<long, MinMaxExtents> *selected_extents_device,
-    float max_line_fit_mse, double cos_critical_rad, FitQuad *fit_quads_device,
-    CudaStream *stream);
+    const Peak* peaks_device, size_t peaks, const PeakExtents* peak_extents,
+    size_t num_extents, const LineFitPoint* line_fit_points_device, int nmaxima,
+    const cub::KeyValuePair<long, MinMaxExtents>* selected_extents_device,
+    float max_line_fit_mse, double cos_critical_rad, FitQuad* fit_quads_device,
+    CudaStream* stream);
 
 // Returns the m0, m1, m2, m3 indices for the provided index.  The index is the
 // inner loop number when you process the 4 for loops in order and count.  See
@@ -156,8 +156,8 @@ void FitQuads(
 // This lets us distribute work amoung the cuda threads and get back the index.
 __host__ __device__ std::tuple<uint, uint, uint, uint> Unrank(uint i);
 // The max number of work elements for a max maxes of 10.
-constexpr size_t MaxRankedIndex() { return 210; }
+constexpr size_t MaxRankedIndex() {
+  return 210;
+}
 
 }  // namespace frc971::apriltag
-
-

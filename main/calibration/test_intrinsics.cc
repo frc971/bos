@@ -11,17 +11,17 @@
 using json = nlohmann::json;
 
 cv::Mat camera_matrix_from_json(json intrinsics) {
-  cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << 
-    intrinsics["fx"], 0, intrinsics["cx"],
-    0, intrinsics["fy"], intrinsics["cy"],
-    0, 0, 1);
+  cv::Mat camera_matrix =
+      (cv::Mat_<double>(3, 3) << intrinsics["fx"], 0, intrinsics["cx"], 0,
+       intrinsics["fy"], intrinsics["cy"], 0, 0, 1);
 
   return camera_matrix;
 }
 
 cv::Mat distortion_coefficients_from_json(json intrinsics) {
-  cv::Mat distortion_coefficients = (cv::Mat_<double>(1, 5) << 
-    intrinsics["k1"], intrinsics["k2"], intrinsics["p1"], intrinsics["p2"], intrinsics["k3"]);
+  cv::Mat distortion_coefficients =
+      (cv::Mat_<double>(1, 5) << intrinsics["k1"], intrinsics["k2"],
+       intrinsics["p1"], intrinsics["p2"], intrinsics["k3"]);
   return distortion_coefficients;
 }
 
@@ -37,16 +37,16 @@ int main() {
 
   Camera::CameraInfo camera_info;
 
-  switch (camera_id){
-  case 0:
-    camera_info = Camera::CAMERAS.gstreamer1_30fps;
-    break;
-  case 1:
-    camera_info = Camera::CAMERAS.gstreamer2_30fps;
-    break;
-  default:
-    std::cout << "Invalid ID! Only 0 or 1" << std::endl;
-    return 0;
+  switch (camera_id) {
+    case 0:
+      camera_info = Camera::CAMERAS.gstreamer1_30fps;
+      break;
+    case 1:
+      camera_info = Camera::CAMERAS.gstreamer2_30fps;
+      break;
+    default:
+      std::cout << "Invalid ID! Only 0 or 1" << std::endl;
+      return 0;
   }
 
   std::ifstream file(camera_info.intrinsics_path);
@@ -54,8 +54,8 @@ int main() {
   file >> intrinsics;
 
   cv::Mat camera_matrix = camera_matrix_from_json(intrinsics);
-  cv::Mat distortion_coefficients = distortion_coefficients_from_json(intrinsics);
-
+  cv::Mat distortion_coefficients =
+      distortion_coefficients_from_json(intrinsics);
 
   Camera::Streamer raw_streamer(4971, true);
   Camera::Streamer undistorted_streamer(4972, true);

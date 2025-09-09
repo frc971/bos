@@ -1,18 +1,18 @@
 #ifndef POSITION_SENDER_H
 #define POSITION_SENDER_H
 
-#include "pose_estimator.h"
-#include <networktables/DoubleTopic.h>
 #include <networktables/BooleanTopic.h>
+#include <networktables/DoubleTopic.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
+#include "pose_estimator.h"
 
 class PositionSender {
-public:
+ public:
   PositionSender(std::vector<int> tag_ids);
   void Send(std::vector<PoseEstimator::position_estimate_t> position_estimate);
 
-private:
+ private:
   std::vector<int> tag_ids_;
   nt::NetworkTableInstance instance_;
 
@@ -27,4 +27,4 @@ private:
   std::vector<nt::BooleanPublisher> status_;
 };
 
-#endif // POSITION_SENDER_H
+#endif  // POSITION_SENDER_H

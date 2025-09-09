@@ -21,25 +21,25 @@ int main() {
 
   Camera::CameraInfo camera_info;
 
-  switch (camera_id){
-  case 0:
-    camera_info = Camera::CAMERAS.gstreamer1_30fps;
-    break;
-  case 1:
-    camera_info = Camera::CAMERAS.gstreamer2_30fps;
-    break;
-  default:
-    std::cout << "Invalid ID! Only 0 or 1" << std::endl;
-    return 0;
+  switch (camera_id) {
+    case 0:
+      camera_info = Camera::CAMERAS.gstreamer1_30fps;
+      break;
+    case 1:
+      camera_info = Camera::CAMERAS.gstreamer2_30fps;
+      break;
+    default:
+      std::cout << "Invalid ID! Only 0 or 1" << std::endl;
+      return 0;
   }
 
   json intrinsics;
   std::ifstream intrinsics_file(camera_info.intrinsics_path);
   if (!intrinsics_file.is_open()) {
-      std::cerr << "Error: Cannot open intrinsics file: " 
-                << camera_info.intrinsics_path << std::endl;
+    std::cerr << "Error: Cannot open intrinsics file: "
+              << camera_info.intrinsics_path << std::endl;
   } else {
-      intrinsics_file >> intrinsics;
+    intrinsics_file >> intrinsics;
   }
 
   std::cout << "What tag are we calibrating against?\n";
@@ -49,11 +49,9 @@ int main() {
   Camera::Camera camera(camera_info);
   cv::Mat frame;
 
-  while (true){
+  while (true) {
     camera.getFrame(frame);
     // std::vector<PoseEstimator::position_estimate_t> estimates = estimator.Estimate(frame);
     // sender.Send(estimates);
   }
-
-
 }

@@ -14,7 +14,7 @@ namespace frc971::apriltag {
 // Class to find the blob index of a point in a point vector.
 class BlobExtentsIndexFinder {
  public:
-  BlobExtentsIndexFinder(const MinMaxExtents *extents_device,
+  BlobExtentsIndexFinder(const MinMaxExtents* extents_device,
                          size_t num_extents)
       : extents_device_(extents_device), num_extents_(num_extents) {}
 
@@ -44,7 +44,7 @@ class BlobExtentsIndexFinder {
   }
 
  private:
-  const MinMaxExtents *extents_device_;
+  const MinMaxExtents* extents_device_;
   size_t num_extents_;
 
   // TODO(austin): Cache the last one?
@@ -79,42 +79,42 @@ class GpuDetector {
 
   // Constructs a detector, reserving space for detecting tags of the provided
   // with and height, using the provided detector options.
-  GpuDetector(size_t width, size_t height, apriltag_detector_t *tag_detector,
+  GpuDetector(size_t width, size_t height, apriltag_detector_t* tag_detector,
               CameraMatrix camera_matrix, DistCoeffs distortion_coefficients);
-  GpuDetector(size_t width, size_t height, apriltag_detector_t *tag_detector,
+  GpuDetector(size_t width, size_t height, apriltag_detector_t* tag_detector,
               CameraMatrix camera_matrix, DistCoeffs distortion_coefficients,
-	      size_t decimate);
+              size_t decimate);
   virtual ~GpuDetector();
 
   // Detects april tags in the provided image.
-  void DetectColor(const uint8_t *image);
-  void DetectGray(uint8_t *image);
-  void DetectGrayHost(uint8_t *image);
-  void DetectGray2(uint8_t *image);
+  void DetectColor(const uint8_t* image);
+  void DetectGray(uint8_t* image);
+  void DetectGrayHost(uint8_t* image);
+  void DetectGray2(uint8_t* image);
 
-  const std::vector<QuadCorners> &FitQuads() const;
+  const std::vector<QuadCorners>& FitQuads() const;
 
-  const zarray_t *Detections() const { return detections_; }
+  const zarray_t* Detections() const { return detections_; }
 
   // Debug methods to expose internal state for testing.
-  void CopyGrayTo(uint8_t *output) const {
+  void CopyGrayTo(uint8_t* output) const {
     gray_image_device_.MemcpyTo(output);
   }
-  void CopyDecimatedTo(uint8_t *output) const {
+  void CopyDecimatedTo(uint8_t* output) const {
     decimated_image_device_.MemcpyTo(output);
   }
-  void CopyThresholdedTo(uint8_t *output) const {
+  void CopyThresholdedTo(uint8_t* output) const {
     thresholded_image_device_.MemcpyTo(output);
   }
-  void CopyUnionMarkersTo(uint32_t *output) const {
+  void CopyUnionMarkersTo(uint32_t* output) const {
     union_markers_device_.MemcpyTo(output);
   }
 
-  void CopyUnionMarkerPairTo(QuadBoundaryPoint *output) const {
+  void CopyUnionMarkerPairTo(QuadBoundaryPoint* output) const {
     union_marker_pair_device_.MemcpyTo(output);
   }
 
-  void CopyCompressedUnionMarkerPairTo(QuadBoundaryPoint *output) const {
+  void CopyCompressedUnionMarkerPairTo(QuadBoundaryPoint* output) const {
     compressed_union_marker_pair_device_.MemcpyTo(output);
   }
 
@@ -130,7 +130,7 @@ class GpuDetector {
     return num_compressed_union_marker_pair_device_.Copy()[0];
   }
 
-  void CopyUnionMarkersSizeTo(uint32_t *output) const {
+  void CopyUnionMarkersSizeTo(uint32_t* output) const {
     union_markers_size_device_.MemcpyTo(output);
   }
 
@@ -198,8 +198,8 @@ class GpuDetector {
 
   // Undistort pixels based on our camera model, using iterative algorithm
   // Returns false if we fail to converge
-  static bool UnDistort(double *u, double *v, const CameraMatrix *camera_matrix,
-                        const DistCoeffs *distortion_coefficients);
+  static bool UnDistort(double* u, double* v, const CameraMatrix* camera_matrix,
+                        const DistCoeffs* distortion_coefficients);
   size_t width() const { return width_; }
   size_t height() const { return height_; }
 
@@ -208,13 +208,13 @@ class GpuDetector {
 
   void AdjustPixelCenters();
 
-  void DecodeTags(uint8_t *image);
+  void DecodeTags(uint8_t* image);
 
-  static void QuadDecodeTask(void *_u);
+  static void QuadDecodeTask(void* _u);
 
   // Creates a GPU image wrapped around the provided memory.
   template <typename T>
-  GpuImage<T> ToGpuImage(GpuMemory<T> &memory) {
+  GpuImage<T> ToGpuImage(GpuMemory<T>& memory) {
     if (memory.size() == width_ * height_) {
       return GpuImage<T>{
           .data = memory.get(),
@@ -242,7 +242,7 @@ class GpuDetector {
   const size_t decimate_;
 
   // Detector parameters.
-  apriltag_detector_t *tag_detector_;
+  apriltag_detector_t* tag_detector_;
 
   // Stream to operate on.
   CudaStream stream_;
@@ -361,13 +361,11 @@ class GpuDetector {
   bool reversed_border_ = false;
   int min_tag_width_ = 1000000;
 
-  zarray_t *poly0_;
-  zarray_t *poly1_;
+  zarray_t* poly0_;
+  zarray_t* poly1_;
 
-  zarray_t *detections_ = nullptr;
+  zarray_t* detections_ = nullptr;
   std::chrono::steady_clock::time_point start_time;
 };
 
 }  // namespace frc971::apriltag
-
-
