@@ -196,7 +196,11 @@ position_estimate_t PoseEstimator::GetFeildRelitivePosition(
 
   double angle =
       -(M_PI / 2 - std::atan2(feild_relitive_position.translation.x,
-                              feild_relitive_position.translation.y));
+                              feild_relitive_position.translation.y)) +
+      apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
+          ->Rotation()
+          .Z()
+          .value();
 
   double magnitude = sqrt(feild_relitive_position.translation.x *
                               feild_relitive_position.translation.x +
