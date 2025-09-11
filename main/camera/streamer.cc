@@ -35,7 +35,6 @@ Streamer::Streamer(uint port, bool verbose, uint skip_frame)
   if (verbose) {
     std::cout << "HTTP MJPEG server running on port " << port << std::endl;
   }
-  // listen_thread_  = std::thread(&Streamer::Listen, this);
   std::cout << "waiting for client..." << std::endl;
   client_fd_ =
       accept(server_fd_, (struct sockaddr*)&address_, &address_length_);
@@ -48,27 +47,9 @@ Streamer::Streamer(uint port, bool verbose, uint skip_frame)
   status_ = true;
 }
 
-// void Streamer::Listen(){
-//   // TODO make thread safe
-//   while (true){
-//     int client_fd = accept(server_fd_, (struct sockaddr*)&address_, &address_length_);
-//     send(client_fd, k_header.c_str(), k_header.size(), 0);
-//     if (client_fd >= 0){
-//       if (verbose_){
-//         std::cout << "got new client\n";
-//       }
-//       client_fd_.push_back(client_fd);
-//     }
-//   }
-// }
-
-void Streamer::writeFrame(cv::Mat& mat) {
-  cv::Mat compressed;
-  cv::resize(mat, compressed, cv::Size(480, 480), 0, 0, cv::INTER_AREA);
-  cv::cvtColor(compressed, compressed, cv::COLOR_BGR2GRAY);
-
+void Streamer::WriteFrame(cv::Mat& frame) {
   std::vector<uchar> buf;
-  cv::imencode(".jpg", compressed, buf);
+  cv::imencode(".jpg", frame, buf);
 
   std::string part =
       "--frame\r\n"
