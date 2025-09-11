@@ -175,6 +175,7 @@ position_estimate_t PoseEstimator::GetFeildRelitivePosition(
                    .value()
             << "\n";
   position_estimate_t feild_relitive_position;
+  feild_relitive_position.tag_id = tag_relitive_position.tag_id;
 
   feild_relitive_position.rotation.x = tag_relitive_position.rotation.x;
   feild_relitive_position.rotation.y = tag_relitive_position.rotation.y;
@@ -192,8 +193,6 @@ position_estimate_t PoseEstimator::GetFeildRelitivePosition(
           tag_relitive_position.translation.x;
   feild_relitive_position.translation.z = tag_relitive_position.translation.z;
 
-  feild_relitive_position.tag_id = tag_relitive_position.tag_id;
-
   double angle =
       -(M_PI / 2 - std::atan2(feild_relitive_position.translation.x,
                               feild_relitive_position.translation.y)) +
@@ -210,7 +209,12 @@ position_estimate_t PoseEstimator::GetFeildRelitivePosition(
   feild_relitive_position.translation.x = std::cos(angle) * magnitude;
   feild_relitive_position.translation.y = std::sin(angle) * magnitude;
 
-  std::cout << "Angle " << RadianToDegree(angle) << std::endl;
+  feild_relitive_position.translation.x +=
+      apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->X().value();
+  feild_relitive_position.translation.y +=
+      apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->Y().value();
+  feild_relitive_position.translation.z +=
+      apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->Z().value();
 
   return feild_relitive_position;
 }
