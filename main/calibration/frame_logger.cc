@@ -16,7 +16,7 @@ void read_camera(Camera::Streamer streamer, Camera::Camera camera,
   int image_idx = 0;
   while (true) {
     camera.getFrame(frame);
-    streamer.writeFrame(frame);
+    streamer.WriteFrame(frame);
     if (log_image.load()) {
       std::ostringstream filename;
       filename << data_folder << std::setfill('0') << std::setw(4) << image_idx
@@ -70,7 +70,6 @@ int main() {
   std::atomic<bool> log_image(false);
 
   cv::Mat frame;
-  int image_idx = 0;
 
   std::cout << "Camera opened successfully. Press 'c' to capture, 'q' to quit."
             << std::endl;

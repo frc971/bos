@@ -7,37 +7,32 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/objdetect/aruco_dictionary.hpp>
+#include <opencv2/objdetect/charuco_detector.hpp>
+#include "main/calibration/intrinsics_calibrate_lib.h"
+#include "main/camera/camera.h"
+#include "main/camera/streamer.h"
 
 using json = nlohmann::json;
 
-json intrisincs_to_json(cv::Mat cameraMatrix,
-                        cv::Mat distCoeffs) {  // TODO get index
-
-  json output;
-  output["fx"] = cameraMatrix.ptr<double>()[0];
-  output["cx"] = cameraMatrix.ptr<double>()[2];
-  output["fy"] = cameraMatrix.ptr<double>()[4];
-  output["cy"] = cameraMatrix.ptr<double>()[5];
-
-  output["k1"] = distCoeffs.ptr<double>()[0];
-  output["k2"] = distCoeffs.ptr<double>()[1];
-  output["p1"] = distCoeffs.ptr<double>()[2];
-  output["p2"] = distCoeffs.ptr<double>()[3];
-  output["k3"] = distCoeffs.ptr<double>()[4];
-
-  return output;
-}
-
-cv::Mat GenerateBoard(cv::aruco::CharucoBoard board, int squares_x,
-                      int squares_y, float pixel_per_square,
-                      int margin_squares = 0) {
-  cv::Mat board_image;
-  cv::Size image_size;
-  image_size.width = (squares_x + margin_squares) * pixel_per_square;
-  image_size.height = (squares_y + margin_squares) * pixel_per_square;
-  board.generateImage(image_size, board_image,
-                      margin_squares * pixel_per_square, 1);
-  return board_image;
+void CaptureFrames(
+    cv::aruco::CharucoDetector detector, Camera::Camera camera,
+    Camera::Streamer& streamer,
+    std::vector<Calibration::detection_result_t>& detection_results,
+    std::atomic<bool>& capture_frames_thread) {
+  cv::Mat frame;
+  while (true) {
+    camera.getFrame(frame);
+    cv::cvtColor(frame, frame, cv::COLOR_BGRA2RGB);
+    Calibration::detection_result_t detection_result =
+        Calibration::DetectCharucoBoard(frame, detector);
+    detection_results.push_back(detection_result);
+    cv::Mat annotated_frame = DrawDetectionResult(frame, detection_result);
+    streamer.WriteFrame(annotated_frame);
+    if (!capture_frames_thread.load()) {
+      return;
+    }
+  }
 }
 
 int main() {
@@ -47,80 +42,51 @@ int main() {
   int camera_id;
   std::cin >> camera_id;
 
-  cv::aruco::DetectorParameters detectorParams =
-      cv::aruco::DetectorParameters();
-  cv::aruco::Dictionary dictionary =
-      cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
-
-  int squares_x = 5;
-  int squares_y = 7;
-  float squares_length = 0.04;
-  float pixel_per_square = 128;
-  float maker_length = 0.02;
-  cv::aruco::CharucoBoard board(cv::Size(squares_x, squares_y), squares_length,
-                                maker_length, dictionary);
-  cv::aruco::CharucoParameters charucoParams;
-  cv::aruco::CharucoDetector detector(board, charucoParams, detectorParams);
-
-  cv::Mat board_image =
-      GenerateBoard(board, squares_x, squares_y, pixel_per_square);
-  cv::imwrite("calibration_board.png", board_image);
-
-  std::vector<cv::Mat> allCharucoCorners, allCharucoIds;
-  std::vector<std::vector<cv::Point2f>> allImagePoints;
-  std::vector<std::vector<cv::Point3f>> allObjectPoints;
-  std::vector<cv::Mat> allImages;
-  cv::Size imageSize;
-
-  std::vector<cv::String> image_files;
-  cv::glob("data/camera_" + std::to_string(camera_id) + "/*.jpg", image_files,
-           false);
-
-  for (const auto& file : image_files) {
-    cv::Mat frame = cv::imread(file);
-
-    cv::Mat currentCharucoCorners, currentCharucoIds;
-    std::vector<cv::Point3f> currentObjectPoints;
-    std::vector<cv::Point2f> currentImagePoints;
-
-    detector.detectBoard(frame, currentCharucoCorners, currentCharucoIds);
-    if (currentCharucoCorners.total() > 3) {
-      board.matchImagePoints(currentCharucoCorners, currentCharucoIds,
-                             currentObjectPoints, currentImagePoints);
-
-      if (currentImagePoints.empty() || currentObjectPoints.empty()) {
-        std::cout << "Point matching failed in " << file << std::endl;
-        continue;
-      }
-
-      std::cout << "Found board in " << file << std::endl;
-
-      allCharucoCorners.push_back(currentCharucoCorners);
-      allCharucoIds.push_back(currentCharucoIds);
-      allImagePoints.push_back(currentImagePoints);
-      allObjectPoints.push_back(currentObjectPoints);
-      allImages.push_back(frame);
-
-      imageSize = frame.size();
-    } else {
-      std::cout << "No board found in " << file << std::endl;
-    }
+  Camera::CameraInfo camera_info;
+  switch (camera_id) {
+    case 0:
+      camera_info = Camera::CAMERAS.gstreamer1_30fps;
+      break;
+    case 1:
+      camera_info = Camera::CAMERAS.gstreamer2_30fps;
+      break;
+    default:
+      std::cout << "Invalid ID! Only 0 or 1" << std::endl;
+      return 0;
   }
 
-  cv::Mat cameraMatrix, distCoeffs;
+  Camera::Streamer streamer(4971, true);
+  Camera::Camera camera(camera_info);
 
-  std::cout << "Calculating intrinsics..." << std::endl;
-  double repError =
-      calibrateCamera(allObjectPoints, allImagePoints, imageSize, cameraMatrix,
-                      distCoeffs, cv::noArray(), cv::noArray(), cv::noArray(),
-                      cv::noArray(), cv::noArray());
-  std::cout << "Done! Error: " << repError << std::endl;
+  cv::Mat frame;
+  camera.getFrame(frame);
+  cv::Size frame_size = frame.size();
+
+  cv::aruco::CharucoDetector detector = Calibration::CreateDetector(
+      cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250));
+  cv::Mat board_image = Calibration::GenerateBoard(detector.getBoard());
+  cv::imwrite("calibration_board.png", board_image);
+
+  std::atomic<bool> capture_frames(true);
+  std::vector<Calibration::detection_result_t> detection_results;
+  std::thread capture_frames_thread(
+      CaptureFrames, detector, camera, std::ref(streamer),
+      std::ref(detection_results), std::ref(capture_frames));
+  std::cout << "Double enter to finish capturing frames" << std::endl;
+  std::cin.get();
+  std::cin.get();
+  capture_frames.store(false);
+  capture_frames_thread.join();
+  std::cout << "Calibrating cameras" << std::endl;
+
+  cv::Mat cameraMatrix, distCoeffs;
+  Calibration::CalibrateCamera(detection_results, frame_size, cameraMatrix,
+                               distCoeffs);
 
   std::ofstream file("constants/camera" + std::to_string(camera_id) +
                      "_intrinsics.json");
-  json intrinsics = intrisincs_to_json(cameraMatrix, distCoeffs);
+  json intrinsics = Calibration::intrisincs_to_json(cameraMatrix, distCoeffs);
   file << intrinsics.dump(4);
   std::cout << "Intrinsics: " << intrinsics.dump(4);
   file.close();
-  return 0;
 }

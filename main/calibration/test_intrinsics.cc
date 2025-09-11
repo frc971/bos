@@ -65,11 +65,11 @@ int main() {
 
   while (true) {
     camera.getFrame(frame);
-    raw_streamer.writeFrame(frame);
+    raw_streamer.WriteFrame(frame);
 
     cv::Mat undistorted;
     cv::undistort(frame, undistorted, camera_matrix, distortion_coefficients);
 
-    undistorted_streamer.writeFrame(undistorted);
+    undistorted_streamer.WriteFrame(undistorted);
   }
 }

@@ -11,12 +11,7 @@ namespace Camera {
 class Streamer {
  public:
   Streamer(uint port, bool verbose = false, uint skip_frame = 5);
-  void writeFrame(cv::Mat& mat);
-  // ~Streamer();
-  // void getFrame(cv::Mat &mat);
-
- private:
-  // void Listen();
+  void WriteFrame(cv::Mat& mat);
 
  private:
   bool status_;
