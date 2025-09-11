@@ -63,7 +63,7 @@ int main() {
   cv::Size frame_size = frame.size();
 
   cv::aruco::CharucoDetector detector = Calibration::CreateDetector(
-      cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250));
+      cv::aruco::getPredefinedDictionary(cv::aruco::DICT_5X5_250));
   cv::Mat board_image = Calibration::GenerateBoard(detector.getBoard());
   cv::imwrite("calibration_board.png", board_image);
 
