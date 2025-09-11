@@ -94,10 +94,10 @@ PoseEstimator::~PoseEstimator() {
 
 std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat& frame) {
   std::vector<position_estimate_t> estimates = GetRawPositionEstimates(frame);
-  PrintPositionEstimates(estimates);
   for (position_estimate_t& estimate : estimates) {
     estimate = GetFeildRelitivePosition(estimate);
-    estimate = ApplyExtrinsics(estimate);
+    PrintPositionEstimates(estimates);
+    // estimate = ApplyExtrinsics(estimate);
   }
   if (PRINT_DETECTION_POSE) {
     PrintPositionEstimates(estimates);
@@ -151,14 +151,12 @@ std::vector<position_estimate_t> PoseEstimator::GetRawPositionEstimates(
       position_estimate_t estimate;
       // Currently we do not use transation z, rotation x and rotation y
       estimate.translation.x = tvec.ptr<double>()[2];
-      estimate.translation.y =
-          -tvec.ptr<double>()[0];  // We want right to be positive
+      estimate.translation.y = tvec.ptr<double>()[0];
       estimate.translation.z = tvec.ptr<double>()[1];
 
       estimate.rotation.x = rvec.ptr<double>()[2];
       estimate.rotation.y = rvec.ptr<double>()[0];
-      estimate.rotation.z =
-          -rvec.ptr<double>()[1];  // We want right to be positive
+      estimate.rotation.z = rvec.ptr<double>()[1];
 
       estimate.tag_id = gpu_detection->id;
 
@@ -177,46 +175,38 @@ position_estimate_t PoseEstimator::GetFeildRelitivePosition(
                    .value()
             << "\n";
   position_estimate_t feild_relitive_position;
+
   feild_relitive_position.rotation.x = tag_relitive_position.rotation.x;
   feild_relitive_position.rotation.y = tag_relitive_position.rotation.y;
-  feild_relitive_position.rotation.z =
-      apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
-          ->Rotation()
-          .Z()
-          .value() -
-      tag_relitive_position.rotation.z;
-
-  double angle = feild_relitive_position.rotation.z;
+  feild_relitive_position.rotation.z = tag_relitive_position.rotation.z;
 
   feild_relitive_position.translation.x =
-      apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
-          ->Translation()
-          .X()
-          .value();
+      sin(feild_relitive_position.rotation.z) *
+          tag_relitive_position.translation.y +
+      cos(feild_relitive_position.rotation.z) *
+          tag_relitive_position.translation.x;
   feild_relitive_position.translation.y =
-      apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
-          ->Translation()
-          .Y()
-          .value();
-  feild_relitive_position.translation.z =
-      apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
-          ->Translation()
-          .Z()
-          .value();
-
-  feild_relitive_position.translation.x = 0;
-  feild_relitive_position.translation.y = 0;
-  feild_relitive_position.translation.z = 0;
-
-  feild_relitive_position.translation.x +=
-      sin(angle) * tag_relitive_position.translation.y +
-      cos(angle) * tag_relitive_position.translation.x;
-  feild_relitive_position.translation.y +=
-      cos(angle) * tag_relitive_position.translation.y -
-      sin(angle) * tag_relitive_position.translation.x;
-  feild_relitive_position.translation.z += tag_relitive_position.translation.z;
+      cos(feild_relitive_position.rotation.z) *
+          tag_relitive_position.translation.y -
+      sin(feild_relitive_position.rotation.z) *
+          tag_relitive_position.translation.x;
+  feild_relitive_position.translation.z = tag_relitive_position.translation.z;
 
   feild_relitive_position.tag_id = tag_relitive_position.tag_id;
+
+  double angle =
+      -(M_PI / 2 - std::atan2(feild_relitive_position.translation.x,
+                              feild_relitive_position.translation.y));
+
+  double magnitude = sqrt(feild_relitive_position.translation.x *
+                              feild_relitive_position.translation.x +
+                          feild_relitive_position.translation.y *
+                              feild_relitive_position.translation.y);
+
+  feild_relitive_position.translation.x = std::cos(angle) * magnitude;
+  feild_relitive_position.translation.y = std::sin(angle) * magnitude;
+
+  std::cout << "Angle " << RadianToDegree(angle) << std::endl;
 
   return feild_relitive_position;
 }
