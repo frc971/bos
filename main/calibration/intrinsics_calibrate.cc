@@ -21,14 +21,25 @@ void CaptureFrames(
     std::vector<Calibration::detection_result_t>& detection_results,
     std::atomic<bool>& capture_frames_thread) {
   cv::Mat frame;
+  int frame_count = 0;
   while (true) {
     camera.getFrame(frame);
-    cv::cvtColor(frame, frame, cv::COLOR_BGRA2RGB);
-    Calibration::detection_result_t detection_result =
-        Calibration::DetectCharucoBoard(frame, detector);
-    detection_results.push_back(detection_result);
-    cv::Mat annotated_frame = DrawDetectionResult(frame, detection_result);
-    streamer.WriteFrame(annotated_frame);
+    frame_count++;
+    if (frame_count % 10 == 0) {
+      cv::cvtColor(frame, frame, cv::COLOR_BGRA2RGB);
+      Calibration::detection_result_t detection_result =
+          Calibration::DetectCharucoBoard(frame, detector);
+
+      cv::Mat annotated_frame = DrawDetectionResult(frame, detection_result);
+      for (Calibration::detection_result_t detection_result :
+           detection_results) {
+        annotated_frame =
+            Calibration::DrawDetectionResult(annotated_frame, detection_result);
+      }
+      streamer.WriteFrame(annotated_frame);
+
+      detection_results.push_back(detection_result);
+    }
     if (!capture_frames_thread.load()) {
       return;
     }

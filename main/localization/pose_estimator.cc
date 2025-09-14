@@ -216,6 +216,12 @@ position_estimate_t PoseEstimator::GetFeildRelitivePosition(
   feild_relitive_position.translation.z +=
       apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->Z().value();
 
+  feild_relitive_position.rotation.z =
+      (M_PI / 2 + apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)
+                      ->Rotation()
+                      .Z()
+                      .value());
+
   return feild_relitive_position;
 }
 
