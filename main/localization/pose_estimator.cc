@@ -168,6 +168,7 @@ std::vector<position_estimate_t> PoseEstimator::GetRawPositionEstimates(
 
 position_estimate_t PoseEstimator::GetFeildRelitivePosition(
     position_estimate_t tag_relitive_position) {
+  tag_relitive_position.tag_id = 19;
   std::cout << "April tag rotation: "
             << apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
                    ->Rotation()
@@ -217,10 +218,12 @@ position_estimate_t PoseEstimator::GetFeildRelitivePosition(
       apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->Z().value();
 
   feild_relitive_position.rotation.z =
-      (M_PI / 2 + apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)
-                      ->Rotation()
-                      .Z()
-                      .value());
+      M_PI +
+      apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)
+          ->Rotation()
+          .Z()
+          .value() +
+      tag_relitive_position.rotation.z;
 
   return feild_relitive_position;
 }
