@@ -13,10 +13,7 @@
 using json = nlohmann::json;
 
 int main() {
-
-  std::cout << "OpenCV version: " << CV_VERSION << std::endl;
-
-  std::cout << "What is the id of the camera we are logging?\n";
+  std::cout << "What is the id of the camera?\n";
   int camera_id;
   std::cin >> camera_id;
 
@@ -53,10 +50,14 @@ int main() {
   PoseEstimator::PoseEstimator estimator(intrinsics, nullptr);
 
   PoseEstimator::position_estimate_t average_position;
-  for (int i = 0; i < 240; i++) {
+  average_position.tag_id = tag_id;
+
+  int estimate_count = 0;
+  for (int i = 0; i < 24; i++) {
     camera.getFrame(frame);
     std::vector<PoseEstimator::position_estimate_t> estimates =
         estimator.GetRawPositionEstimates(frame);
+    estimate_count += estimates.size();
     for (PoseEstimator::position_estimate_t& estimate : estimates) {
       if (estimate.tag_id == tag_id) {
         average_position.rotation.x += estimate.rotation.x;
@@ -69,4 +70,51 @@ int main() {
       }
     }
   }
+  std::cout << "Estimate count: " << estimate_count << std::endl;
+  average_position.rotation.x /= estimate_count;
+  average_position.rotation.y /= estimate_count;
+  average_position.rotation.z /= estimate_count;
+
+  average_position.translation.x /= estimate_count;
+  average_position.translation.y /= estimate_count;
+  average_position.translation.z /= estimate_count;
+
+  std::cout << "Estimated position: " << std::endl;
+  PoseEstimator::PrintPositionEstimate(average_position);
+
+  PoseEstimator::position_estimate_t true_position;
+  std::cout << "True position x (meters)";
+  std::cin >> true_position.translation.x;
+
+  std::cout << "True position y (meters)";
+  std::cin >> true_position.translation.y;
+
+  std::cout << "True position z (meters)";
+  std::cin >> true_position.translation.z;
+
+  std::cout << "True rotation x (meters)";
+  std::cin >> true_position.rotation.x;
+
+  std::cout << "True rotation y (meters)";
+  std::cin >> true_position.rotation.y;
+
+  std::cout << "True rotation z (meters)";
+  std::cin >> true_position.rotation.z;
+
+  PoseEstimator::position_estimate_t extrinsics;
+  extrinsics.translation.x =
+      average_position.translation.x - true_position.translation.x;
+  extrinsics.translation.y =
+      average_position.translation.y - true_position.translation.y;
+  extrinsics.translation.z =
+      average_position.translation.z - true_position.translation.z;
+
+  extrinsics.rotation.x =
+      average_position.rotation.x - true_position.rotation.x;
+  extrinsics.rotation.y =
+      average_position.rotation.y - true_position.rotation.y;
+  extrinsics.rotation.z =
+      average_position.rotation.z - true_position.rotation.z;
+
+  PoseEstimator::ExtrinsicsToJson(extrinsics);
 }

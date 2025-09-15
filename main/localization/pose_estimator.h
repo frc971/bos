@@ -39,6 +39,11 @@ T camera_matrix_from_json(json intrinsics);
 template <typename T>
 T distortion_coefficients_from_json(json intrinsics);
 
+void PrintPositionEstimate(position_estimate_t position_estimate);
+void PrintPositionEstimates(std::vector<position_estimate_t> estimates);
+
+json ExtrinsicsToJson(position_estimate_t extrinsics);
+
 class PoseEstimator {
  public:
   PoseEstimator(
@@ -47,7 +52,6 @@ class PoseEstimator {
   ~PoseEstimator();
   std::vector<position_estimate_t> Estimate(cv::Mat& frame);
   std::vector<position_estimate_t> GetRawPositionEstimates(cv::Mat& frame);
-  void PrintPositionEstimates(std::vector<position_estimate_t> estimates);
 
  private:
   // should be pointer?

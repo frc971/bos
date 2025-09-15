@@ -59,6 +59,40 @@ cv::Mat distortion_coefficients_from_json<cv::Mat>(json intrinsics) {
   return distortion_coefficients;
 }
 
+void PrintPositionEstimate(position_estimate_t estimate) {
+  std::cout << "id: " << estimate.tag_id << "\n";
+  std::cout << "Translation: "
+            << "\n";
+  std::cout << estimate.translation.x << "\n";
+  std::cout << estimate.translation.y << "\n";
+  std::cout << estimate.translation.z << "\n";
+  std::cout << "Rotation: "
+            << "\n";
+  std::cout << RadianToDegree(estimate.rotation.x) << "\n";
+  std::cout << RadianToDegree(estimate.rotation.y) << "\n";
+  std::cout << RadianToDegree(estimate.rotation.z) << "\n";
+}
+
+void PrintPositionEstimates(std::vector<position_estimate_t> estimates) {
+  for (position_estimate_t& estimate : estimates) {
+    std::cout << "--- Pose Estimation Results ---"
+              << "\n";
+    PrintPositionEstimate(estimate);
+  }
+}
+
+json ExtrinsicsToJson(position_estimate_t extrinsics) {
+  json output;
+  output["translation_x"] = extrinsics.translation.x;
+  output["translation_y"] = extrinsics.translation.y;
+  output["translation_z"] = extrinsics.translation.z;
+
+  output["rotation_x"] = extrinsics.rotation.x;
+  output["rotation_y"] = extrinsics.rotation.y;
+  output["rotation_z"] = extrinsics.rotation.z;
+  return output;
+}
+
 PoseEstimator::PoseEstimator(json intrinsics, json extrinsics,
                              std::vector<cv::Point3f> apriltag_dimensions)
     : extrinsics_(extrinsics),
@@ -105,24 +139,6 @@ std::vector<position_estimate_t> PoseEstimator::Estimate(cv::Mat& frame) {
   return estimates;
 }
 
-void PoseEstimator::PrintPositionEstimates(
-    std::vector<position_estimate_t> estimates) {
-  for (position_estimate_t& estimate : estimates) {
-    std::cout << "--- Pose Estimation Results ---"
-              << "\n";
-    std::cout << "id: " << estimate.tag_id << "\n";
-    std::cout << "Translation: "
-              << "\n";
-    std::cout << estimate.translation.x << "\n";
-    std::cout << estimate.translation.y << "\n";
-    std::cout << estimate.translation.z << "\n";
-    std::cout << "Rotation: "
-              << "\n";
-    std::cout << RadianToDegree(estimate.rotation.x) << "\n";
-    std::cout << RadianToDegree(estimate.rotation.y) << "\n";
-    std::cout << RadianToDegree(estimate.rotation.z) << "\n";
-  }
-}
 std::vector<position_estimate_t> PoseEstimator::GetRawPositionEstimates(
     cv::Mat& frame) {
   cv::Mat gray;
@@ -168,7 +184,6 @@ std::vector<position_estimate_t> PoseEstimator::GetRawPositionEstimates(
 
 position_estimate_t PoseEstimator::GetFeildRelitivePosition(
     position_estimate_t tag_relitive_position) {
-  tag_relitive_position.tag_id = 19;
   std::cout << "April tag rotation: "
             << apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
                    ->Rotation()
