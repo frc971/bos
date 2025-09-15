@@ -47,18 +47,18 @@ int main() {
   Camera::Camera camera(camera_info);
   cv::Mat frame;
 
-  PoseEstimator::PoseEstimator estimator(intrinsics, nullptr);
+  Localization::PoseEstimator estimator(intrinsics, nullptr);
 
-  PoseEstimator::position_estimate_t average_position;
+  Localization::position_estimate_t average_position;
   average_position.tag_id = tag_id;
 
   int estimate_count = 0;
   for (int i = 0; i < 24; i++) {
     camera.getFrame(frame);
-    std::vector<PoseEstimator::position_estimate_t> estimates =
+    std::vector<Localization::position_estimate_t> estimates =
         estimator.GetRawPositionEstimates(frame);
     estimate_count += estimates.size();
-    for (PoseEstimator::position_estimate_t& estimate : estimates) {
+    for (Localization::position_estimate_t& estimate : estimates) {
       if (estimate.tag_id == tag_id) {
         average_position.rotation.x += estimate.rotation.x;
         average_position.rotation.y += estimate.rotation.y;
@@ -80,9 +80,9 @@ int main() {
   average_position.translation.z /= estimate_count;
 
   std::cout << "Estimated position: " << std::endl;
-  PoseEstimator::PrintPositionEstimate(average_position);
+  Localization::PrintPositionEstimate(average_position);
 
-  PoseEstimator::position_estimate_t true_position;
+  Localization::position_estimate_t true_position;
   std::cout << "True position x (meters)";
   std::cin >> true_position.translation.x;
 
@@ -101,7 +101,7 @@ int main() {
   std::cout << "True rotation z (meters)";
   std::cin >> true_position.rotation.z;
 
-  PoseEstimator::position_estimate_t extrinsics;
+  Localization::position_estimate_t extrinsics;
   extrinsics.translation.x =
       average_position.translation.x - true_position.translation.x;
   extrinsics.translation.y =
@@ -116,5 +116,5 @@ int main() {
   extrinsics.rotation.z =
       average_position.rotation.z - true_position.rotation.z;
 
-  PoseEstimator::ExtrinsicsToJson(extrinsics);
+  Localization::ExtrinsicsToJson(extrinsics);
 }
