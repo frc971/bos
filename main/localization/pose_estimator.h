@@ -11,7 +11,7 @@
 #include "apriltag/tag36h11.h"
 #include "third_party/971apriltag/971apriltag.h"
 
-namespace PoseEstimator {
+namespace Localization {
 using json = nlohmann::json;
 
 typedef struct Point3d {

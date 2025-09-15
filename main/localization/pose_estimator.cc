@@ -8,7 +8,7 @@
 
 #define PRINT_DETECTION_POSE false
 
-namespace PoseEstimator {
+namespace Localization{
 using json = nlohmann::json;
 
 constexpr double square(double x) {
