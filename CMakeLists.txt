@@ -26,6 +26,8 @@ add_subdirectory(third_party/971apriltag)
 add_compile_options(-Wno-psabi)
 add_subdirectory(main)
 
+find_program(IWYU_PATH NAMES include-what-you-use iwyu)
+set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_PATH})
 
 file(GLOB_RECURSE ALL_CXX_SOURCE_FILES
      "${CMAKE_SOURCE_DIR}/**/*.cc"

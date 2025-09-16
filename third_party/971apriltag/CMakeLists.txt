@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include_directories(. /usr/local/cuda/include ${OpenCV_INCLUDE_DIRS})
 
 find_package(wpilib REQUIRED)
