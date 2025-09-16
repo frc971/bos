@@ -2,10 +2,9 @@
 #define POSE_ESTIMATOR_H
 
 #include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
-#include <iomanip>
-#include <iostream>
 #include <nlohmann/json.hpp>
-#include <opencv2/opencv.hpp>
+#include <opencv2/core/mat.hpp>
+#include <opencv2/core/types.hpp>
 #include <sstream>
 #include "apriltag/apriltag.h"
 #include "apriltag/tag36h11.h"
@@ -69,6 +68,6 @@ class PoseEstimator {
   cv::Mat distortion_coefficients_;
   std::vector<cv::Point3f> apriltag_dimensions_;
 };
-}  // namespace PoseEstimator
+}  // namespace Localization
 
 #endif  // POSE_ESTIMATOR_H

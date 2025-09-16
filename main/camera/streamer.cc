@@ -1,5 +1,7 @@
 // https://gist.github.com/SteveRuben/2a15909e384b582c51b5
 #include "streamer.h"
+#include <iostream>
+#include <opencv2/imgcodecs.hpp>
 namespace Camera {
 
 static std::string k_header =

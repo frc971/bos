@@ -1,7 +1,7 @@
-// https://gist.github.com/SteveRuben/2a15909e384b582c51b5
+// https://gist.github.com/SteveRuben/1a15909e384b582c51b5
 #ifndef CAMERA_H
 #define CAMERA_H
-#include <opencv2/opencv.hpp>
+#include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
 namespace Camera {

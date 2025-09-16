@@ -5,10 +5,11 @@
 #include <ntcore_cpp_types.h>
 #include <cmath>
 #include <fstream>
+#include <opencv2/opencv.hpp>
 
 #define PRINT_DETECTION_POSE false
 
-namespace Localization{
+namespace Localization {
 using json = nlohmann::json;
 
 constexpr double square(double x) {
@@ -259,4 +260,4 @@ position_estimate_t PoseEstimator::ApplyExtrinsics(
   return position;
 }
 
-}  // namespace PoseEstimator
+}  // namespace Localization
