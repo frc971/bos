@@ -12,6 +12,7 @@ RUN apt-get install -y rsync
 RUN apt-get install -y gh
 RUN apt-get install -y ripgrep
 RUN apt-get install -y clangd
+RUN apt-get install -y ninja-build
 
 RUN mkdir opencv
 
