@@ -11,13 +11,13 @@
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 #include <opencv2/objdetect/charuco_detector.hpp>
 #include "main/calibration/intrinsics_calibrate_lib.h"
-#include "main/camera/camera.h"
+#include "main/camera/imx296_camera.h"
 #include "main/camera/streamer.h"
 
 using json = nlohmann::json;
 
 void CaptureFrames(
-    cv::aruco::CharucoDetector detector, Camera::Camera camera,
+    cv::aruco::CharucoDetector detector, Camera::IMX296Camera camera,
     Camera::Streamer& streamer,
     std::vector<Calibration::detection_result_t>& detection_results,
     std::atomic<bool>& capture_frames_thread) {
@@ -68,7 +68,7 @@ int main() {
   }
 
   Camera::Streamer streamer(4971, true);
-  Camera::Camera camera(camera_info);
+  Camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame;
   camera.getFrame(frame);

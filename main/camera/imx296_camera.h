@@ -1,6 +1,6 @@
 // https://gist.github.com/SteveRuben/1a15909e384b582c51b5
-#ifndef CAMERA_H
-#define CAMERA_H
+#ifndef IMX296_CAMERA_H
+#define IMX296_CAMERA_H
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
@@ -51,10 +51,10 @@ inline void WarmupCamera(std::string pipeline) {
   cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
 }
 
-class Camera {
+class IMX296Camera {
  public:
-  Camera(camera_info_t info);
-  ~Camera();
+  IMX296Camera(camera_info_t info);
+  ~IMX296Camera();
   void getFrame(cv::Mat& mat);
 
  private:
@@ -64,4 +64,4 @@ class Camera {
 
 }  // namespace Camera
 
-#endif  // CAMERA_H
+#endif  // IMX296_CAMERA_H

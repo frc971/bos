@@ -1,5 +1,5 @@
 #include <iostream>
-#include "main/camera/camera.h"
+#include "main/camera/imx296_camera.h"
 #include "main/camera/streamer.h"
 #include "opencv2/imgproc/imgproc.hpp"
 
@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
       return 0;
   }
 
-  Camera::Camera camera(camera_info);
+  Camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame, gray, laplace;
   while (true) {
