@@ -14,7 +14,7 @@ using json = nlohmann::json;
 
 void start_networktables() {
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
-  inst.StartClient4("orin");
+  inst.StartClient4("orin_localization");
   inst.SetServerTeam(971);
   std::cout << "Started networktables!" << std::endl;
 }
@@ -43,7 +43,7 @@ void run_camera1(Camera::CameraInfo camera_info) {
 
   Localization::PoseEstimator estimator(intrinsics, extrinsics);
   PositionSender sender({1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
-                         14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25});
+                         14, 15, 16, 17, 18, 19, 20, 21, 22});
 
   cv::Mat frame;
   while (true) {

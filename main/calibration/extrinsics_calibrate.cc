@@ -116,5 +116,10 @@ int main() {
   extrinsics.rotation.z =
       average_position.rotation.z - true_position.rotation.z;
 
-  Localization::ExtrinsicsToJson(extrinsics);
+
+  std::ofstream file(camera_info.extrinsics_path);
+  json extrinsics_json = Localization::ExtrinsicsToJson(extrinsics);
+  file << extrinsics_json.dump(4);
+  std::cout << "Extrinsics: \n" << intrinsics.dump(4);
+  file.close();
 }
