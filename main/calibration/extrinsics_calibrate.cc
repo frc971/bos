@@ -7,7 +7,7 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include "main/camera/camera.h"
+#include "main/camera/imx296_camera.h"
 #include "main/localization/pose_estimator.h"
 
 using json = nlohmann::json;
@@ -44,7 +44,7 @@ int main() {
   int tag_id;
   std::cin >> tag_id;
 
-  Camera::Camera camera(camera_info);
+  Camera::IMX296Camera camera(camera_info);
   cv::Mat frame;
 
   Localization::PoseEstimator estimator(intrinsics, nullptr);

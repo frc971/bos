@@ -4,7 +4,7 @@
 #include <sstream>
 #include <thread>
 #include "apriltag/apriltag.h"
-#include "camera/camera.h"
+#include "camera/imx296_camera.h"
 #include "localization/pose_estimator.h"
 #include "localization/position_sender.h"
 
@@ -21,7 +21,7 @@ void start_networktables() {
 
 void run_camera1(Camera::CameraInfo camera_info) {
   std::cout << "Starting camera 1" << std::endl;
-  Camera::Camera camera(camera_info);
+  Camera::IMX296Camera camera(camera_info);
 
   json intrinsics;
   std::ifstream intrinsics_file(camera_info.intrinsics_path);

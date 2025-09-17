@@ -5,7 +5,7 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 #include <sstream>
-#include "main/camera/camera.h"
+#include "main/camera/imx296_camera.h"
 #include "main/camera/streamer.h"
 
 using json = nlohmann::json;
@@ -60,7 +60,7 @@ int main() {
   Camera::Streamer raw_streamer(4971, true);
   Camera::Streamer undistorted_streamer(4972, true);
 
-  Camera::Camera camera(camera_info);
+  Camera::IMX296Camera camera(camera_info);
   cv::Mat frame;
 
   while (true) {
