@@ -131,9 +131,9 @@ PoseEstimator::~PoseEstimator() {
 std::vector<position_t> PoseEstimator::Estimate(cv::Mat& frame) {
   std::vector<position_t> estimates = GetRawPositionEstimates(frame);
   for (position_t& estimate : estimates) {
+    estimate = ApplyExtrinsics(estimate);
     estimate = GetFeildRelitivePosition(estimate);
     PrintPositionEstimates(estimates);
-    // estimate = ApplyExtrinsics(estimate);
   }
   if (PRINT_DETECTION_POSE) {
     PrintPositionEstimates(estimates);
