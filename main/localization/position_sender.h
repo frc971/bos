@@ -10,7 +10,7 @@
 class PositionSender {
  public:
   PositionSender(std::vector<int> tag_ids);
-  void Send(std::vector<Localization::position_estimate_t> position_estimate);
+  void Send(std::vector<Localization::position_t> position_estimate);
 
  private:
   std::vector<int> tag_ids_;

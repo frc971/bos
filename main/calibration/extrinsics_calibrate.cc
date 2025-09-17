@@ -49,16 +49,16 @@ int main() {
 
   Localization::PoseEstimator estimator(intrinsics, nullptr);
 
-  Localization::position_estimate_t average_position;
+  Localization::position_t average_position;
   average_position.tag_id = tag_id;
 
   int estimate_count = 0;
   for (int i = 0; i < 24; i++) {
     camera.getFrame(frame);
-    std::vector<Localization::position_estimate_t> estimates =
+    std::vector<Localization::position_t> estimates =
         estimator.GetRawPositionEstimates(frame);
     estimate_count += estimates.size();
-    for (Localization::position_estimate_t& estimate : estimates) {
+    for (Localization::position_t& estimate : estimates) {
       if (estimate.tag_id == tag_id) {
         average_position.rotation.x += estimate.rotation.x;
         average_position.rotation.y += estimate.rotation.y;
@@ -82,7 +82,7 @@ int main() {
   std::cout << "Estimated position: " << std::endl;
   Localization::PrintPositionEstimate(average_position);
 
-  Localization::position_estimate_t true_position;
+  Localization::position_t true_position;
   std::cout << "True position x (meters)";
   std::cin >> true_position.translation.x;
 
@@ -101,7 +101,7 @@ int main() {
   std::cout << "True rotation z (meters)";
   std::cin >> true_position.rotation.z;
 
-  Localization::position_estimate_t extrinsics;
+  Localization::position_t extrinsics;
   extrinsics.translation.x =
       average_position.translation.x - true_position.translation.x;
   extrinsics.translation.y =

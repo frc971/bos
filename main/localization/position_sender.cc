@@ -34,7 +34,7 @@ PositionSender::PositionSender(std::vector<int> tag_ids)
 }
 
 void PositionSender::Send(
-    std::vector<Localization::position_estimate_t> position_estimates) {
+    std::vector<Localization::position_t> position_estimates) {
   for (size_t i = 0; i < tag_ids_.size(); i++) {
     for (size_t j = 0; j < position_estimates.size(); j++) {
       status_[i].Set(false);
