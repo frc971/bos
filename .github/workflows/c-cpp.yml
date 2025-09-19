@@ -10,7 +10,10 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-
+    
+    container:
+      image: ghcr.io/frc971/bos/orin:latest
+      
     steps:
     - uses: actions/checkout@v4
     - name: configure
