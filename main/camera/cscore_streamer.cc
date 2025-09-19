@@ -1,0 +1,22 @@
+#include "cscore_streamer.h"
+#include <cscore_cpp.h>
+#include <cscore_cv.h>
+namespace Camera {
+
+CscoreStreamer::CscoreStreamer(std::string name, uint port, uint fps,
+                               uint width, uint height) {
+  cs::VideoMode mode(cs::VideoMode::kBGR, width, height, fps);
+  source_ = cs::CvSource(name, mode);
+  server_ = cs::MjpegServer(name, port);
+  server_.SetSource(source_);
+}
+
+// is this tuff? (prob not)
+CscoreStreamer::CscoreStreamer(IMX296Streamer streamer)
+    : CscoreStreamer(streamer.name, streamer.port, streamer.fps,
+                     streamer.height, streamer.width) {}
+
+void CscoreStreamer::WriteFrame(cv::Mat& mat) {
+  source_.PutFrame(mat);
+}
+}  // namespace Camera

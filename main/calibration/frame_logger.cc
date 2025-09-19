@@ -5,6 +5,7 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <sstream>
+#include <thread>
 #include "main/camera/imx296_camera.h"
 #include "main/camera/streamer.h"
 
