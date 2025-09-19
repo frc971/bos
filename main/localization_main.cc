@@ -42,14 +42,14 @@ void run_camera1(Camera::CameraInfo camera_info) {
   }
 
   Localization::PoseEstimator estimator(intrinsics, extrinsics);
-  PositionSender sender({1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
-                         14, 15, 16, 17, 18, 19, 20, 21, 22});
+  PositionSender sender(camera_info.name,
+                        {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
+                         12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22});
 
   cv::Mat frame;
   while (true) {
     camera.getFrame(frame);
-    std::vector<Localization::position_t> estimates =
-        estimator.Estimate(frame);
+    std::vector<Localization::position_t> estimates = estimator.Estimate(frame);
     sender.Send(estimates);
   }
 }

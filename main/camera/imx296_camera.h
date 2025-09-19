@@ -8,7 +8,7 @@ namespace Camera {
 
 typedef struct CameraInfo {
   std::string pipeline;
-  std::string name;
+  std::string name;  // name in the networktables
   std::string intrinsics_path;
   std::string extrinsics_path;
   int id;
@@ -25,7 +25,7 @@ struct kCameras {
           "video/x-raw, format=BGRx ! "
           "queue ! "
           "appsink",
-      .name = "Gstreamer #0 30fps",
+      .name = "camera_1",
       .intrinsics_path = "constants/camera0_intrinsics.json",
       .extrinsics_path = "constants/camera0_extrinsics.json",
       .id = 0};
@@ -39,7 +39,7 @@ struct kCameras {
           "video/x-raw, format=BGRx ! "
           "queue ! "
           "appsink",
-      .name = "Gstreamer #1 30fps",
+      .name = "camera_2",
       .intrinsics_path = "constants/camera1_intrinsics.json",
       .extrinsics_path = "constants/camera1_extrinsics.json",
       .id = 1};
