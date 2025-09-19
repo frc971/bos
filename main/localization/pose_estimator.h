@@ -22,7 +22,6 @@ typedef struct Point3d {
 typedef struct Position {
   point3d_t translation;
   point3d_t rotation;
-  double distance;
   int tag_id;
 } position_t;
 
@@ -56,8 +55,7 @@ class PoseEstimator {
  private:
   // should be pointer?
   // Changes the position estimate to be tag relitive to absolute feild position
-  position_t GetFeildRelitivePosition(
-      position_t tag_relitive_position);
+  position_t GetFeildRelitivePosition(position_t tag_relitive_position);
   position_t ApplyExtrinsics(position_t position);
 
  private:
