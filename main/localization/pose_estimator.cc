@@ -1,6 +1,5 @@
 #include "pose_estimator.h"
 #include <frc/apriltag/AprilTagFieldLayout.h>
-#include <cmath>
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
 #include <ntcore_cpp_types.h>
@@ -141,8 +140,7 @@ std::vector<position_t> PoseEstimator::Estimate(cv::Mat& frame) {
   return estimates;
 }
 
-std::vector<position_t> PoseEstimator::GetRawPositionEstimates(
-    cv::Mat& frame) {
+std::vector<position_t> PoseEstimator::GetRawPositionEstimates(cv::Mat& frame) {
   cv::Mat gray;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
@@ -176,9 +174,7 @@ std::vector<position_t> PoseEstimator::GetRawPositionEstimates(
       estimate.rotation.y = rvec.ptr<double>()[0];
       estimate.rotation.z = rvec.ptr<double>()[1];
 
-      estimate.distance = sqrt(square(estimate.translation.x) + square(estimate.translation.y));
       estimate.tag_id = gpu_detection->id;
-
 
       estimates.push_back(estimate);
     }
@@ -195,7 +191,6 @@ position_t PoseEstimator::GetFeildRelitivePosition(
                    .value()
             << "\n";
   position_t feild_relitive_position;
-  feild_relitive_position.distance = tag_relitive_position.distance;
   feild_relitive_position.tag_id = tag_relitive_position.tag_id;
 
   feild_relitive_position.rotation.x = tag_relitive_position.rotation.x;
@@ -248,8 +243,7 @@ position_t PoseEstimator::GetFeildRelitivePosition(
   return feild_relitive_position;
 }
 
-position_t PoseEstimator::ApplyExtrinsics(
-    position_t position) {
+position_t PoseEstimator::ApplyExtrinsics(position_t position) {
   if (extrinsics_ == nullptr) {
     return position;
   }
