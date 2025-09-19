@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.10)
 
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(/usr/local/cuda/include)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 add_subdirectory(camera)
 add_subdirectory(localization)
