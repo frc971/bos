@@ -2,11 +2,11 @@
 #include <networktables/NetworkTableInstance.h>
 #include <string>
 
-PositionSender::PositionSender(std::vector<int> tag_ids)
+PositionSender::PositionSender(std::string name, std::vector<int> tag_ids)
     : tag_ids_(tag_ids), instance_(nt::NetworkTableInstance::GetDefault()) {
   for (size_t i = 0; i < tag_ids_.size(); i++) {
-    std::shared_ptr<nt::NetworkTable> table =
-        instance_.GetTable("orin/pose_estimate/" + std::to_string(tag_ids_[i]));
+    std::shared_ptr<nt::NetworkTable> table = instance_.GetTable(
+        "orin/pose_estimate/" + name + "/" + std::to_string(tag_ids_[i]));
 
     nt::DoubleTopic translation_x_topic =
         table->GetDoubleTopic("translation_x");
