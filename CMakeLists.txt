@@ -21,7 +21,7 @@ find_package(Eigen3 REQUIRED)
 
 add_subdirectory(third_party/nlohmann_json)
 add_subdirectory(third_party/971apriltag)
-add_subdirectory(third_party/simple-kalman)
+add_subdirectory(third_party/kalman-cpp)
 
 add_compile_options(-Wno-psabi)
 add_subdirectory(main)
