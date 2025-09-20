@@ -9,8 +9,8 @@
 
 class PositionSender {
  public:
-  PositionSender(std::vector<int> tag_ids);
-  void Send(std::vector<PoseEstimator::position_estimate_t> position_estimate);
+  PositionSender(std::string name, std::vector<int> tag_ids);
+  void Send(std::vector<Localization::position_t> position_estimate);
 
  private:
   std::vector<int> tag_ids_;
@@ -26,7 +26,7 @@ class PositionSender {
   
   std::vector<nt::DoublePublisher> dist_camera_tag_publisher_;
 
-  std::vector<nt::BooleanPublisher> status_;
+  std::vector<nt::BooleanPublisher> status_;  // Was a tag detected?
 };
 
 #endif  // POSITION_SENDER_H

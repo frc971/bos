@@ -2,16 +2,17 @@ FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS builder
 
 WORKDIR /
 RUN apt-get update
-RUN apt-get install -y build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
 RUN apt-get install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev python3.10-dev python3-numpy
+RUN apt-get install -y build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
 RUN apt-get install -y libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libv4l-dev v4l-utils qv4l2
-RUN apt-get install -y curl unzip
+RUN apt-get install -y curl unzip zip
 RUN apt-get install -y vim stow
-RUN apt-get install -y libblas-dev liblapack-dev
 RUN apt-get install -y rsync
+RUN apt-get install -y libblas-dev liblapack-dev
 RUN apt-get install -y gh
 RUN apt-get install -y ripgrep
 RUN apt-get install -y clangd
+RUN apt-get install -y ninja-build
 
 RUN mkdir opencv
 
@@ -43,8 +44,8 @@ RUN cmake --build . --target install
 COPY wpilib-config.cmake /usr/local/share/wpilib/wpilib-config.cmake
 
 WORKDIR /perf
-RUN gunzip -c /proc/config.gz | grep PERF
 RUN wget https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.0/sources/public_sources.tbz2 
+RUN gunzip -c /proc/config.gz | grep PERF
 RUN tar -xjf public_sources.tbz2
 RUN apt-get install -y libperl-dev
 RUN apt-get install -y flex
@@ -65,5 +66,19 @@ WORKDIR build
 RUN cmake ..
 RUN make -j$(nproc)
 RUN make install
+
+WORKDIR /releasesense
+RUN apt-get install -y lsb-release
+RUN apt-get install -y software-properties-common
+RUN apt-get install -y libfastrtps-dev
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE || apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key F6E65AC044F831AC80A06380C8B3A55A6F3EFCDE
+RUN add-apt-repository "deb https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" -u
+RUN apt-get install -y librealsense2-utils librealsense2-dev
+COPY realsense2Targets.cmake /usr/lib/aarch64-linux-gnu/cmake/realsense2/realsense2Targets.cmake
+
+WORKDIR /usr/local/bin
+RUN wget https://github.com/neovim/neovim/releases/download/v0.11.4/nvim-linux-arm64.tar.gz
+RUN tar -xzvf nvim-linux-arm64.tar.gz
+RUN ln -s nvim-linux-arm64/bin/nvim nvim
 
 WORKDIR /

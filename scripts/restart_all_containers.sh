@@ -26,4 +26,4 @@ ssh -t "$HOST" "docker run -d --name main --restart unless-stopped --net host --
   -v /usr/lib/aarch64-linux-gnu/nvidia:/usr/lib/aarch64-linux-gnu/nvidia \
   -v /var/run:/var/run \
   -e LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu/nvidia:/usr/lib/aarch64-linux-gnu/tegra:/bos/bin \
-  ghcr.io/frc971/bos/orin /bin/bash -c \"cd /bos && bin/main\""
+  ghcr.io/frc971/bos/orin /bin/bash -c \"cd /bos && build/main/localization_main \""

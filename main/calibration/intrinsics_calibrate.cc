@@ -7,28 +7,40 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 #include <opencv2/objdetect/charuco_detector.hpp>
 #include "main/calibration/intrinsics_calibrate_lib.h"
-#include "main/camera/camera.h"
+#include "main/camera/imx296_camera.h"
 #include "main/camera/streamer.h"
 
 using json = nlohmann::json;
 
 void CaptureFrames(
-    cv::aruco::CharucoDetector detector, Camera::Camera camera,
+    cv::aruco::CharucoDetector detector, Camera::IMX296Camera camera,
     Camera::Streamer& streamer,
     std::vector<Calibration::detection_result_t>& detection_results,
     std::atomic<bool>& capture_frames_thread) {
   cv::Mat frame;
+  int frame_count = 0;
   while (true) {
     camera.getFrame(frame);
-    cv::cvtColor(frame, frame, cv::COLOR_BGRA2RGB);
-    Calibration::detection_result_t detection_result =
-        Calibration::DetectCharucoBoard(frame, detector);
-    detection_results.push_back(detection_result);
-    cv::Mat annotated_frame = DrawDetectionResult(frame, detection_result);
-    streamer.WriteFrame(annotated_frame);
+    frame_count++;
+    if (frame_count % 10 == 0) {
+      cv::cvtColor(frame, frame, cv::COLOR_BGRA2RGB);
+      Calibration::detection_result_t detection_result =
+          Calibration::DetectCharucoBoard(frame, detector);
+
+      cv::Mat annotated_frame = DrawDetectionResult(frame, detection_result);
+      for (Calibration::detection_result_t detection_result :
+           detection_results) {
+        annotated_frame =
+            Calibration::DrawDetectionResult(annotated_frame, detection_result);
+      }
+      streamer.WriteFrame(annotated_frame);
+
+      detection_results.push_back(detection_result);
+    }
     if (!capture_frames_thread.load()) {
       return;
     }
@@ -56,14 +68,14 @@ int main() {
   }
 
   Camera::Streamer streamer(4971, true);
-  Camera::Camera camera(camera_info);
+  Camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame;
   camera.getFrame(frame);
   cv::Size frame_size = frame.size();
 
   cv::aruco::CharucoDetector detector = Calibration::CreateDetector(
-      cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250));
+      cv::aruco::getPredefinedDictionary(cv::aruco::DICT_5X5_250));
   cv::Mat board_image = Calibration::GenerateBoard(detector.getBoard());
   cv::imwrite("calibration_board.png", board_image);
 
@@ -83,8 +95,7 @@ int main() {
   Calibration::CalibrateCamera(detection_results, frame_size, cameraMatrix,
                                distCoeffs);
 
-  std::ofstream file("constants/camera" + std::to_string(camera_id) +
-                     "_intrinsics.json");
+  std::ofstream file(camera_info.intrinsics_path);
   json intrinsics = Calibration::intrisincs_to_json(cameraMatrix, distCoeffs);
   file << intrinsics.dump(4);
   std::cout << "Intrinsics: " << intrinsics.dump(4);

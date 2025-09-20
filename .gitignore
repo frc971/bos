@@ -12,3 +12,4 @@ Makefile
 image.tar
 *.swp
 bin/*
+build

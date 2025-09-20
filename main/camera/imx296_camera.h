@@ -1,14 +1,14 @@
-// https://gist.github.com/SteveRuben/2a15909e384b582c51b5
-#ifndef CAMERA_H
-#define CAMERA_H
-#include <opencv2/opencv.hpp>
+// https://gist.github.com/SteveRuben/1a15909e384b582c51b5
+#ifndef IMX296_CAMERA_H
+#define IMX296_CAMERA_H
+#include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
 namespace Camera {
 
 typedef struct CameraInfo {
   std::string pipeline;
-  std::string name;
+  std::string name;  // name in the networktables
   std::string intrinsics_path;
   std::string extrinsics_path;
   int id;
@@ -25,7 +25,7 @@ struct kCameras {
           "video/x-raw, format=BGRx ! "
           "queue ! "
           "appsink",
-      .name = "Gstreamer #0 30fps",
+      .name = "camera_1",
       .intrinsics_path = "constants/camera0_intrinsics.json",
       .extrinsics_path = "constants/camera0_extrinsics.json",
       .id = 0};
@@ -39,7 +39,7 @@ struct kCameras {
           "video/x-raw, format=BGRx ! "
           "queue ! "
           "appsink",
-      .name = "Gstreamer #1 30fps",
+      .name = "camera_2",
       .intrinsics_path = "constants/camera1_intrinsics.json",
       .extrinsics_path = "constants/camera1_extrinsics.json",
       .id = 1};
@@ -51,10 +51,10 @@ inline void WarmupCamera(std::string pipeline) {
   cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
 }
 
-class Camera {
+class IMX296Camera {
  public:
-  Camera(camera_info_t info);
-  ~Camera();
+  IMX296Camera(camera_info_t info);
+  ~IMX296Camera();
   void getFrame(cv::Mat& mat);
 
  private:
@@ -64,4 +64,4 @@ class Camera {
 
 }  // namespace Camera
 
-#endif  // CAMERA_H
+#endif  // IMX296_CAMERA_H

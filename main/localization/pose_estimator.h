@@ -2,16 +2,15 @@
 #define POSE_ESTIMATOR_H
 
 #include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
-#include <iomanip>
-#include <iostream>
 #include <nlohmann/json.hpp>
-#include <opencv2/opencv.hpp>
+#include <opencv2/core/mat.hpp>
+#include <opencv2/core/types.hpp>
 #include <sstream>
 #include "apriltag/apriltag.h"
 #include "apriltag/tag36h11.h"
 #include "third_party/971apriltag/971apriltag.h"
 
-namespace PoseEstimator {
+namespace Localization {
 using json = nlohmann::json;
 
 typedef struct Point3d {
@@ -20,11 +19,11 @@ typedef struct Point3d {
   double z;
 } point3d_t;
 
-typedef struct PositionEstimate {
+typedef struct Position {
   point3d_t translation;
   point3d_t rotation;
   int tag_id;
-} position_estimate_t;
+} position_t;
 
 constexpr double ktag_size = 0.1651;  // meters
 const std::vector<cv::Point3f> kapriltag_dimensions = {
@@ -39,22 +38,25 @@ T camera_matrix_from_json(json intrinsics);
 template <typename T>
 T distortion_coefficients_from_json(json intrinsics);
 
+void PrintPositionEstimate(position_t position_estimate);
+void PrintPositionEstimates(std::vector<position_t> estimates);
+
+json ExtrinsicsToJson(position_t extrinsics);
+
 class PoseEstimator {
  public:
   PoseEstimator(
       json intrinsics, json extrinsics,
       std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions);
   ~PoseEstimator();
-  std::vector<position_estimate_t> Estimate(cv::Mat& frame);
-  std::vector<position_estimate_t> GetRawPositionEstimates(cv::Mat& frame);
-  void PrintPositionEstimates(std::vector<position_estimate_t> estimates);
+  std::vector<position_t> Estimate(cv::Mat& frame);
+  std::vector<position_t> GetRawPositionEstimates(cv::Mat& frame);
 
  private:
   // should be pointer?
   // Changes the position estimate to be tag relitive to absolute feild position
-  position_estimate_t GetFeildRelitivePosition(
-      position_estimate_t tag_relitive_position);
-  position_estimate_t ApplyExtrinsics(position_estimate_t position);
+  position_t GetFeildRelitivePosition(position_t tag_relitive_position);
+  position_t ApplyExtrinsics(position_t position);
 
  private:
   json extrinsics_;
@@ -65,6 +67,6 @@ class PoseEstimator {
   cv::Mat distortion_coefficients_;
   std::vector<cv::Point3f> apriltag_dimensions_;
 };
-}  // namespace PoseEstimator
+}  // namespace Localization
 
 #endif  // POSE_ESTIMATOR_H

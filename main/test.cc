@@ -10,7 +10,7 @@
 #include <sstream>
 #include <thread>
 #include "apriltag/apriltag.h"
-#include "camera/camera.h"
+#include "camera/imx296_camera.h"
 #include "localization/position_sender.h"
 #include "wpilibc/frc/RuntimeType.h"
 
