@@ -1,6 +1,7 @@
 // https://gist.github.com/SteveRuben/2a15909e384b582c51b5
-#ifndef CAMERA_H
-#define CAMERA_H
+#ifndef BOS_MAIN_CAMERA_CAMERA_H_
+#define BOS_MAIN_CAMERA_CAMERA_H_
+
 #include <opencv2/opencv.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>

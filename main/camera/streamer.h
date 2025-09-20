@@ -1,5 +1,5 @@
-// #ifndef STREAMER_H
-// #define STREAMER_H
+#ifndef BOS_MAIN_CAMERA_STREAMER_H_
+#define BOS_MAIN_CAMERA_STREAMER_H_
 
 #include <arpa/inet.h>
 #include <opencv2/opencv.hpp>
@@ -27,4 +27,4 @@ class Streamer {
 
 }  // namespace Camera
 
-// #endif // STREAMER_H
+#endif // STREAMER_H

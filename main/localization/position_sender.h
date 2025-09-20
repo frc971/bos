@@ -1,5 +1,5 @@
-#ifndef POSITION_SENDER_H
-#define POSITION_SENDER_H
+#ifndef BOS_MAIN_LOCALIZATION_POSITION_SENDER_H_
+#define BOS_MAIN_LOCALIZATION_POSITION_SENDER_H_
 
 #include <networktables/BooleanTopic.h>
 #include <networktables/DoubleTopic.h>
@@ -10,7 +10,8 @@
 class PositionSender {
  public:
   PositionSender(std::vector<int> tag_ids);
-  void Send(std::vector<PoseEstimator::position_estimate_t> position_estimate);
+  void Send(std::vector<PoseEstimator::position_estimate_t> position_estimate,
+            std::vector<);
 
  private:
   std::vector<int> tag_ids_;
