@@ -5,7 +5,7 @@
 #include <networktables/DoubleTopic.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
-#include "pose_estimator.h"
+#include "tag_detector.h"
 
 class PositionSender {
  public:

@@ -1,4 +1,4 @@
-#include "pose_estimator.h"
+#include "tag_estimator.h"
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
@@ -94,8 +94,8 @@ json ExtrinsicsToJson(position_t extrinsics) {
   return output;
 }
 
-PoseEstimator::PoseEstimator(json intrinsics, json extrinsics,
-                             std::vector<cv::Point3f> apriltag_dimensions)
+TagEstimator::TagEstimator(json intrinsics, json extrinsics,
+                           std::vector<cv::Point3f> apriltag_dimensions)
     : extrinsics_(extrinsics),
       apriltag_layout_(frc::AprilTagFieldLayout::LoadField(
           frc::AprilTagField::k2025ReefscapeAndyMark)),
@@ -121,13 +121,13 @@ PoseEstimator::PoseEstimator(json intrinsics, json extrinsics,
           intrinsics),
       1);
 }
-PoseEstimator::~PoseEstimator() {
+TagEstimator::~TagEstimator() {
   delete gpu_detector_;
   delete apriltag_detector_;
   return;
 }
 
-std::vector<position_t> PoseEstimator::Estimate(cv::Mat& frame) {
+std::vector<position_t> TagEstimator::Estimate(cv::Mat& frame) {
   std::vector<position_t> estimates = GetRawPositionEstimates(frame);
   for (position_t& estimate : estimates) {
     estimate = ApplyExtrinsics(estimate);
@@ -140,7 +140,7 @@ std::vector<position_t> PoseEstimator::Estimate(cv::Mat& frame) {
   return estimates;
 }
 
-std::vector<position_t> PoseEstimator::GetRawPositionEstimates(cv::Mat& frame) {
+std::vector<position_t> TagEstimator::GetRawPositionEstimates(cv::Mat& frame) {
   cv::Mat gray;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
@@ -182,7 +182,7 @@ std::vector<position_t> PoseEstimator::GetRawPositionEstimates(cv::Mat& frame) {
   return estimates;
 }
 
-position_t PoseEstimator::GetFeildRelitivePosition(
+position_t TagEstimator::GetFeildRelitivePosition(
     position_t tag_relitive_position) {
   std::cout << "April tag rotation: "
             << apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
@@ -243,7 +243,7 @@ position_t PoseEstimator::GetFeildRelitivePosition(
   return feild_relitive_position;
 }
 
-position_t PoseEstimator::ApplyExtrinsics(position_t position) {
+position_t TagEstimator::ApplyExtrinsics(position_t position) {
   if (extrinsics_ == nullptr) {
     return position;
   }

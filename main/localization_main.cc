@@ -5,8 +5,8 @@
 #include <thread>
 #include "apriltag/apriltag.h"
 #include "camera/imx296_camera.h"
-#include "localization/pose_estimator.h"
 #include "localization/position_sender.h"
+#include "localization/tag_estimator.h"
 
 using json = nlohmann::json;
 
@@ -41,7 +41,7 @@ void run_camera1(Camera::CameraInfo camera_info) {
     extrinsics_file >> extrinsics;
   }
 
-  Localization::PoseEstimator estimator(intrinsics, extrinsics);
+  Localization::TagEstimator estimator(intrinsics, extrinsics);
   PositionSender sender(camera_info.name,
                         {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
                          12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22});

@@ -1,5 +1,5 @@
-#ifndef POSE_ESTIMATOR_H
-#define POSE_ESTIMATOR_H
+#ifndef TAG_ESTIMATOR_H
+#define TAG_ESTIMATOR_H
 
 #include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
 #include <nlohmann/json.hpp>
@@ -8,22 +8,11 @@
 #include <sstream>
 #include "apriltag/apriltag.h"
 #include "apriltag/tag36h11.h"
+#include "position.h"
 #include "third_party/971apriltag/971apriltag.h"
 
 namespace Localization {
 using json = nlohmann::json;
-
-typedef struct Point3d {
-  double x;
-  double y;
-  double z;
-} point3d_t;
-
-typedef struct Position {
-  point3d_t translation;
-  point3d_t rotation;
-  int tag_id;
-} position_t;
 
 constexpr double ktag_size = 0.1651;  // meters
 const std::vector<cv::Point3f> kapriltag_dimensions = {
@@ -43,12 +32,14 @@ void PrintPositionEstimates(std::vector<position_t> estimates);
 
 json ExtrinsicsToJson(position_t extrinsics);
 
-class PoseEstimator {
+// Estimates position based on each tag detection
+// The position returned in feild reltive, wpilib coordinates
+class TagEstimator {
  public:
-  PoseEstimator(
+  TagEstimator(
       json intrinsics, json extrinsics,
       std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions);
-  ~PoseEstimator();
+  ~TagEstimator();
   std::vector<position_t> Estimate(cv::Mat& frame);
   std::vector<position_t> GetRawPositionEstimates(cv::Mat& frame);
 
@@ -69,4 +60,4 @@ class PoseEstimator {
 };
 }  // namespace Localization
 
-#endif  // POSE_ESTIMATOR_H
+#endif  // TAG_ESTIMATOR_H

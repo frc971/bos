@@ -8,7 +8,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include "main/camera/imx296_camera.h"
-#include "main/localization/pose_estimator.h"
+#include "main/localization/tag_estimator.h"
 
 using json = nlohmann::json;
 
@@ -47,7 +47,7 @@ int main() {
   Camera::IMX296Camera camera(camera_info);
   cv::Mat frame;
 
-  Localization::PoseEstimator estimator(intrinsics, nullptr);
+  Localization::TagEstimator estimator(intrinsics, nullptr);
 
   Localization::position_t average_position;
   average_position.tag_id = tag_id;
@@ -115,7 +115,6 @@ int main() {
       average_position.rotation.y - true_position.rotation.y;
   extrinsics.rotation.z =
       average_position.rotation.z - true_position.rotation.z;
-
 
   std::ofstream file(camera_info.extrinsics_path);
   json extrinsics_json = Localization::ExtrinsicsToJson(extrinsics);
