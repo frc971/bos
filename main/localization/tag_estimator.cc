@@ -60,7 +60,7 @@ cv::Mat distortion_coefficients_from_json<cv::Mat>(json intrinsics) {
   return distortion_coefficients;
 }
 
-void PrintPositionEstimate(position_t estimate) {
+void PrintPositionEstimate(tag_detection_t estimate) {
   std::cout << "id: " << estimate.tag_id << "\n";
   std::cout << "Translation: "
             << "\n";
@@ -74,15 +74,15 @@ void PrintPositionEstimate(position_t estimate) {
   std::cout << RadianToDegree(estimate.rotation.z) << "\n";
 }
 
-void PrintPositionEstimates(std::vector<position_t> estimates) {
-  for (position_t& estimate : estimates) {
+void PrintPositionEstimates(std::vector<tag_detection_t> estimates) {
+  for (tag_detection_t& estimate : estimates) {
     std::cout << "--- Pose Estimation Results ---"
               << "\n";
     PrintPositionEstimate(estimate);
   }
 }
 
-json ExtrinsicsToJson(position_t extrinsics) {
+json ExtrinsicsToJson(tag_detection_t extrinsics) {
   json output;
   output["translation_x"] = extrinsics.translation.x;
   output["translation_y"] = extrinsics.translation.y;
@@ -127,9 +127,9 @@ TagEstimator::~TagEstimator() {
   return;
 }
 
-std::vector<position_t> TagEstimator::Estimate(cv::Mat& frame) {
-  std::vector<position_t> estimates = GetRawPositionEstimates(frame);
-  for (position_t& estimate : estimates) {
+std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) {
+  std::vector<tag_detection_t> estimates = GetRawPositionEstimates(frame);
+  for (tag_detection_t& estimate : estimates) {
     estimate = ApplyExtrinsics(estimate);
     estimate = GetFeildRelitivePosition(estimate);
     PrintPositionEstimates(estimates);
@@ -140,12 +140,13 @@ std::vector<position_t> TagEstimator::Estimate(cv::Mat& frame) {
   return estimates;
 }
 
-std::vector<position_t> TagEstimator::GetRawPositionEstimates(cv::Mat& frame) {
+std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
+    cv::Mat& frame) {
   cv::Mat gray;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
   const zarray_t* detections = gpu_detector_->Detections();
-  std::vector<position_t> estimates;
+  std::vector<tag_detection_t> estimates;
 
   if (zarray_size(detections)) {
     for (int i = 0; i < zarray_size(detections); ++i) {
@@ -164,7 +165,7 @@ std::vector<position_t> TagEstimator::GetRawPositionEstimates(cv::Mat& frame) {
       cv::solvePnP(apriltag_dimensions_, imagePoints, camera_matrix_,
                    distortion_coefficients_, rvec, tvec);
 
-      position_t estimate;
+      tag_detection_t estimate;
       // Currently we do not use transation z, rotation x and rotation y
       estimate.translation.x = tvec.ptr<double>()[2];
       estimate.translation.y = tvec.ptr<double>()[0];
@@ -182,15 +183,15 @@ std::vector<position_t> TagEstimator::GetRawPositionEstimates(cv::Mat& frame) {
   return estimates;
 }
 
-position_t TagEstimator::GetFeildRelitivePosition(
-    position_t tag_relitive_position) {
+tag_detection_t TagEstimator::GetFeildRelitivePosition(
+    tag_detection_t tag_relitive_position) {
   std::cout << "April tag rotation: "
             << apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
                    ->Rotation()
                    .Z()
                    .value()
             << "\n";
-  position_t feild_relitive_position;
+  tag_detection_t feild_relitive_position;
   feild_relitive_position.tag_id = tag_relitive_position.tag_id;
 
   feild_relitive_position.rotation.x = tag_relitive_position.rotation.x;
@@ -243,7 +244,7 @@ position_t TagEstimator::GetFeildRelitivePosition(
   return feild_relitive_position;
 }
 
-position_t TagEstimator::ApplyExtrinsics(position_t position) {
+tag_detection_t TagEstimator::ApplyExtrinsics(tag_detection_t position) {
   if (extrinsics_ == nullptr) {
     return position;
   }

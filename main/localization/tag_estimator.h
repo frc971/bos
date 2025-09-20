@@ -27,10 +27,10 @@ T camera_matrix_from_json(json intrinsics);
 template <typename T>
 T distortion_coefficients_from_json(json intrinsics);
 
-void PrintPositionEstimate(position_t position_estimate);
-void PrintPositionEstimates(std::vector<position_t> estimates);
+void PrintPositionEstimate(tag_detection_t position_estimate);
+void PrintPositionEstimates(std::vector<tag_detection_t> estimates);
 
-json ExtrinsicsToJson(position_t extrinsics);
+json ExtrinsicsToJson(tag_detection_t extrinsics);
 
 // Estimates position based on each tag detection
 // The position returned in feild reltive, wpilib coordinates
@@ -40,14 +40,15 @@ class TagEstimator {
       json intrinsics, json extrinsics,
       std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions);
   ~TagEstimator();
-  std::vector<position_t> Estimate(cv::Mat& frame);
-  std::vector<position_t> GetRawPositionEstimates(cv::Mat& frame);
+  std::vector<tag_detection_t> Estimate(cv::Mat& frame);
+  std::vector<tag_detection_t> GetRawPositionEstimates(cv::Mat& frame);
 
  private:
   // should be pointer?
   // Changes the position estimate to be tag relitive to absolute feild position
-  position_t GetFeildRelitivePosition(position_t tag_relitive_position);
-  position_t ApplyExtrinsics(position_t position);
+  tag_detection_t GetFeildRelitivePosition(
+      tag_detection_t tag_relitive_position);
+  tag_detection_t ApplyExtrinsics(tag_detection_t position);
 
  private:
   json extrinsics_;
