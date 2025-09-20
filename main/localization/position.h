@@ -1,3 +1,4 @@
+#pragma once
 namespace Localization {
 typedef struct Point3d {
   double x;
