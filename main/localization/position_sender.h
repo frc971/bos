@@ -23,6 +23,8 @@ class PositionSender {
   std::vector<nt::DoublePublisher> rotation_x_publisher_;
   std::vector<nt::DoublePublisher> rotation_y_publisher_;
   std::vector<nt::DoublePublisher> rotation_z_publisher_;
+  
+  std::vector<nt::DoublePublisher> dist_camera_tag_publisher_;
 
   std::vector<nt::BooleanPublisher> status_;
 };
