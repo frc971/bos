@@ -23,10 +23,10 @@ void PoseEstimator::Update(std::vector<tag_detection_t> position) {
   }
 }
 
-tag_dection_t PoseEstimator::GetPose() {
-  tag_dection_t position2d{.x = x_filter_.position(),
-                           .y = y_filter_.position(),
-                           .rotation = rotation_filter_.position()};
+pose2d_t PoseEstimator::GetPose() {
+  pose2d_t position2d{.x = x_filter_.position(),
+                      .y = y_filter_.position(),
+                      .rotation = rotation_filter_.position()};
   return position2d;
 }
 

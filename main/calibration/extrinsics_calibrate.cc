@@ -49,8 +49,7 @@ int main() {
 
   Localization::TagEstimator estimator(intrinsics, nullptr);
 
-  Localization::tag_detection_t average_position;
-  average_position.tag_id = tag_id;
+  Localization::pose3d_t average_position{{0, 0, 0}, {0, 0, 0}};
 
   int estimate_count = 0;
   for (int i = 0; i < 24; i++) {
@@ -80,7 +79,6 @@ int main() {
   average_position.translation.z /= estimate_count;
 
   std::cout << "Estimated position: " << std::endl;
-  Localization::PrintPositionEstimate(average_position);
 
   Localization::tag_detection_t true_position;
   std::cout << "True position x (meters)";

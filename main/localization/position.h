@@ -16,6 +16,10 @@ typedef struct Pose2d {
   double x;
   double y;
   double rotation;
-} tag_dection_t;
+} pose2d_t;
 
+typedef struct Pose3d {
+  point3d_t translation;
+  point3d_t rotation;
+} pose3d_t;
 }  // namespace Localization
