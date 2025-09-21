@@ -18,7 +18,7 @@ class PoseEstimator {
   PoseEstimator(SimpleKalmanConfig x_filter_config,
                 SimpleKalmanConfig y_filter_config,
                 SimpleKalmanConfig rotation_filter_config);
-  void Update(double x, double y, double rotation);
+  void Update(double x, double y, double rotation, double time);
   void Update(std::vector<tag_detection_t> position);
   pose2d_t GetPose();
 

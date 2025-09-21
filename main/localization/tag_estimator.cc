@@ -3,6 +3,7 @@
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
 #include <ntcore_cpp_types.h>
+#include <wpilibc/frc/Timer.h>
 #include <cmath>
 #include <fstream>
 #include <opencv2/opencv.hpp>
@@ -174,6 +175,8 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
       estimate.rotation.x = rvec.ptr<double>()[2];
       estimate.rotation.y = rvec.ptr<double>()[0];
       estimate.rotation.z = rvec.ptr<double>()[1];
+
+      estimate.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
 
       estimate.tag_id = gpu_detection->id;
 

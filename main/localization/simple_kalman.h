@@ -14,7 +14,7 @@ class SimpleKalman {
   SimpleKalman(double position, double velocity, double time,
                int measurment_noise, int process_noise);
   SimpleKalman(SimpleKalmanConfig config);
-  void Update(double position_update);
+  void Update(double position_update, double time);
 
   double position() { return kalman_filter_.state()[0]; }
   double velocity() { return kalman_filter_.state()[1]; }
@@ -22,5 +22,6 @@ class SimpleKalman {
 
  private:
   KalmanFilter kalman_filter_;
+  double time_;  // Current time of the kalman filter (seconds)
 };
 }  // namespace Localization

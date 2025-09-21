@@ -7,6 +7,7 @@
 #include "camera/imx296_camera.h"
 #include "localization/position_sender.h"
 #include "localization/tag_estimator.h"
+#include "main/localization/pose_estimator.h"
 
 using json = nlohmann::json;
 
@@ -42,16 +43,35 @@ void run_camera1(Camera::CameraInfo camera_info) {
   }
 
   Localization::TagEstimator estimator(intrinsics, extrinsics);
-  PositionSender sender(camera_info.name,
-                        {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
-                         12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22});
+
+  Localization::SimpleKalmanConfig x_filter_config{.position = 0,
+                                                   .velocity = 0,
+                                                   .time = 0,
+                                                   .measurment_noise = 0.5,
+                                                   .process_noise = 0.5};
+
+  Localization::SimpleKalmanConfig y_filter_config{.position = 0,
+                                                   .velocity = 0,
+                                                   .time = 0,
+                                                   .measurment_noise = 0.5,
+                                                   .process_noise = 0.5};
+
+  Localization::SimpleKalmanConfig rotation_filter_config{
+      .position = 0,
+      .velocity = 0,
+      .time = 0,
+      .measurment_noise = 0.5,
+      .process_noise = 0.5};
+  Localization::PoseEstimator pose_estimator(x_filter_config, y_filter_config,
+                                             rotation_filter_config);
+  PositionSender sender;
 
   cv::Mat frame;
   while (true) {
     camera.getFrame(frame);
     std::vector<Localization::tag_detection_t> estimates =
         estimator.Estimate(frame);
-    sender.Send(estimates);
+    // sender.Send(estimates);
   }
 }
 

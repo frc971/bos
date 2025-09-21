@@ -10,16 +10,16 @@ PoseEstimator::PoseEstimator(SimpleKalmanConfig x_filter_config,
       y_filter_(y_filter_config),
       rotation_filter_(rotation_filter_config) {}
 
-void PoseEstimator::Update(double x, double y, double rotation) {
-  x_filter_.Update(x);
-  y_filter_.Update(y);
-  rotation_filter_.Update(rotation);
+void PoseEstimator::Update(double x, double y, double rotation, double time) {
+  x_filter_.Update(x, time);
+  y_filter_.Update(y, time);
+  rotation_filter_.Update(rotation, time);
 }
 
 void PoseEstimator::Update(std::vector<tag_detection_t> position) {
   for (size_t i = 0; i < position.size(); i++) {
     Update(position[i].translation.x, position[i].translation.y,
-           position[i].rotation.z);
+           position[i].rotation.z, position[i].timestamp);
   }
 }
 

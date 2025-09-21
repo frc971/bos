@@ -1,4 +1,5 @@
 #include "simple_kalman.h"
+#include <wpilibc/frc/Timer.h>
 
 namespace Localization {
 
@@ -21,6 +22,7 @@ SimpleKalman::SimpleKalman(double position, double velocity, double time,
   Eigen::VectorXd initial_pose(2);
   initial_pose << position, velocity;
   kalman_filter_.init(time, initial_pose);
+  time_ = frc::Timer::GetFPGATimestamp().to<double>();
 }
 
 SimpleKalman::SimpleKalman(SimpleKalmanConfig config) {
@@ -28,10 +30,16 @@ SimpleKalman::SimpleKalman(SimpleKalmanConfig config) {
                config.measurment_noise, config.process_noise);
 }
 
-void SimpleKalman::Update(double position_update) {
+void SimpleKalman::Update(double position_update, double time) {
+  double dt = time - time_;
+  time_ = time;
+
+  Eigen::MatrixXd A(2, 2);
+  A << 1, dt, 0, 1;
+
   Eigen::VectorXd position_update_(1);
   position_update_ << position_update;
-  kalman_filter_.update(position_update_);
+  kalman_filter_.update(position_update_, dt, A);
 }
 
 }  // namespace Localization
