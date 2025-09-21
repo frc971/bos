@@ -17,8 +17,8 @@
 using json = nlohmann::json;
 
 void CaptureFrames(
-    cv::aruco::CharucoDetector detector, Camera::IMX296Camera camera,
-    Camera::Streamer& streamer,
+    cv::aruco::CharucoDetector detector, camera::IMX296Camera camera,
+    camera::Streamer& streamer,
     std::vector<Calibration::detection_result_t>& detection_results,
     std::atomic<bool>& capture_frames_thread) {
   cv::Mat frame;
@@ -54,21 +54,21 @@ int main() {
   int camera_id;
   std::cin >> camera_id;
 
-  Camera::CameraInfo camera_info;
+  camera::CameraInfo camera_info;
   switch (camera_id) {
     case 0:
-      camera_info = Camera::CAMERAS.gstreamer1_30fps;
+      camera_info = camera::CAMERAS.gstreamer1_30fps;
       break;
     case 1:
-      camera_info = Camera::CAMERAS.gstreamer2_30fps;
+      camera_info = camera::CAMERAS.gstreamer2_30fps;
       break;
     default:
       std::cout << "Invalid ID! Only 0 or 1" << std::endl;
       return 0;
   }
 
-  Camera::Streamer streamer(4971, true);
-  Camera::IMX296Camera camera(camera_info);
+  camera::Streamer streamer(4971, true);
+  camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame;
   camera.getFrame(frame);

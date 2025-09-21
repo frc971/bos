@@ -20,13 +20,13 @@ void start_networktables() {
   std::cout << "Started networktables!" << std::endl;
 }
 
-void run_estimator(Camera::CameraInfo camera_info,
+void run_estimator(camera::CameraInfo camera_info,
                    localization::PoseEstimator& pose_estimator,
                    localization::PositionSender& position_sender) {
 
   localization::TagEstimator tag_estimator(camera_info.intrinsics_path,
                                            camera_info.extrinsics_path);
-  Camera::IMX296Camera camera(camera_info);
+  camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame;
   while (true) {
@@ -65,11 +65,11 @@ int main() {
                                              rotation_filter_config);
   localization::PositionSender position_sender;
 
-  std::thread camera_one_thread(run_estimator, Camera::CAMERAS.gstreamer1_30fps,
+  std::thread camera_one_thread(run_estimator, camera::CAMERAS.gstreamer1_30fps,
                                 std::ref(pose_estimator),
                                 std::ref(position_sender));
 
-  std::thread camera_two_thread(run_estimator, Camera::CAMERAS.gstreamer2_30fps,
+  std::thread camera_two_thread(run_estimator, camera::CAMERAS.gstreamer2_30fps,
                                 std::ref(pose_estimator),
                                 std::ref(position_sender));
 
