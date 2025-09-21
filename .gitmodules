@@ -1,6 +1,3 @@
 [submodule "third_party/nlohmann_json"]
 	path = third_party/nlohmann_json
 	url = https://github.com/nlohmann/json
-[submodule "third_party/kalman-cpp"]
-	path = third_party/kalman-cpp
-	url = https://github.com/hmartiro/kalman-cpp
