@@ -50,7 +50,7 @@ void setup_camera(Camera::CameraInfo camera_info) {
  estimators.push_back(Localization::TagEstimator(intrinsics, extrinsics));
 }
 
-void run_estimator(Camera::IMX296Camera camera, Localization::TagEstimator camera_estimator, Localization::PoseEstimator pose_estimator) {
+void run_estimator(Camera::IMX296Camera& camera, Localization::TagEstimator& camera_estimator, Localization::PoseEstimator& pose_estimator) {
   cv::Mat frame;
   while (true) {
     camera.getFrame(frame);
@@ -93,7 +93,10 @@ int main() {
   // camera_one_thread.join();
   std::vector<std::thread> workers(cameras.size());
   for (int i = 0; i < cameras.size(); i++) {
-    workers.at(i) = std::thread(cameras.at(i), estimators.at(i));
+    workers.at(i) = std::thread(run_estimator,
+                            std::ref(cameras.at(i)),
+                            std::ref(estimators.at(i)),
+                            std::ref(pose_estimator));
   }
   for (int i = 0; i < cameras.size(); i++) {
     workers.at(i).join();
