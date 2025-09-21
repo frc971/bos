@@ -1,6 +1,6 @@
 #include <frc/EigenCore.h>
 #include <frc/geometry/Pose2d.h>
-#include "third_party/kalman-cpp/kalman.hpp"
+#include "third_party/kalman-cpp/kalman.h"
 namespace Localization {
 struct SimpleKalmanConfig {
   double position;
