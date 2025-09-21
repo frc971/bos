@@ -12,7 +12,7 @@ struct SimpleKalmanConfig {
 class SimpleKalman {
  public:
   SimpleKalman(double position, double velocity, double time,
-               int measurment_noise, int process_noise);
+               double measurment_noise, double process_noise);
   SimpleKalman(SimpleKalmanConfig config);
   void Update(double position_update, double time);
 

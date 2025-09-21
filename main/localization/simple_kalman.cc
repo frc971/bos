@@ -4,7 +4,7 @@
 namespace Localization {
 
 SimpleKalman::SimpleKalman(double position, double velocity, double time,
-                           int measurment_noise, int process_noise) {
+                           double measurment_noise, double process_noise) {
   constexpr double placeholder_dt = 1;
   Eigen::MatrixXd A(2, 2);
   Eigen::MatrixXd C(1, 2);
@@ -12,10 +12,9 @@ SimpleKalman::SimpleKalman(double position, double velocity, double time,
   Eigen::MatrixXd R(1, 1);
   Eigen::MatrixXd P(2, 2);
 
-  A << 1, placeholder_dt, 0,
-      1;  // This is temp, we set A each time we update position
+  A << 1, placeholder_dt, 0, 1;
   C << 1, 0;
-  Q << process_noise;
+  Q << process_noise, 0, 0, process_noise;
   R << measurment_noise;
   P << 1, 0, 0, 1;
   kalman_filter_ = KalmanFilter(placeholder_dt, A, C, Q, R, P);
@@ -25,10 +24,9 @@ SimpleKalman::SimpleKalman(double position, double velocity, double time,
   time_ = frc::Timer::GetFPGATimestamp().to<double>();
 }
 
-SimpleKalman::SimpleKalman(SimpleKalmanConfig config) {
-  SimpleKalman(config.position, config.velocity, config.time,
-               config.measurment_noise, config.process_noise);
-}
+SimpleKalman::SimpleKalman(SimpleKalmanConfig config)
+    : SimpleKalman(config.position, config.velocity, config.time,
+                   config.measurment_noise, config.process_noise) {}
 
 void SimpleKalman::Update(double position_update, double time) {
   double dt = time - time_;
