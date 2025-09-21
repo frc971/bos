@@ -39,16 +39,19 @@ class TagEstimator {
   TagEstimator(
       json intrinsics, json extrinsics,
       std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions);
+  TagEstimator(
+      std::string intrinsics_path, std::string extrinsics_path,
+      std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions);
   ~TagEstimator();
-  std::vector<tag_detection_t> Estimate(cv::Mat& frame);
-  std::vector<tag_detection_t> GetRawPositionEstimates(cv::Mat& frame);
+  std::vector<tag_detection_t> Estimate(cv::Mat& frame) const;
+  std::vector<tag_detection_t> GetRawPositionEstimates(cv::Mat& frame) const;
 
  private:
   // should be pointer?
   // Changes the position estimate to be tag relitive to absolute feild position
   tag_detection_t GetFeildRelitivePosition(
-      tag_detection_t tag_relitive_position);
-  tag_detection_t ApplyExtrinsics(tag_detection_t position);
+      tag_detection_t tag_relitive_position) const;
+  tag_detection_t ApplyExtrinsics(tag_detection_t position) const;
 
  private:
   json extrinsics_;

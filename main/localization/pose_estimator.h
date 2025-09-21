@@ -5,6 +5,7 @@
 #include <frc/system/LinearSystem.h>
 #include <units/angular_velocity.h>
 #include <units/length.h>
+#include <mutex>
 #include "frc/estimator/DifferentialDrivePoseEstimator.h"
 #include "frc/estimator/KalmanFilter.h"
 #include "position.h"
@@ -18,14 +19,19 @@ class PoseEstimator {
   PoseEstimator(SimpleKalmanConfig x_filter_config,
                 SimpleKalmanConfig y_filter_config,
                 SimpleKalmanConfig rotation_filter_config);
-  void Update(double x, double y, double rotation, double time);
   void Update(std::vector<tag_detection_t> position);
+  void Update(double x, double y, double rotation, double time);
   pose2d_t GetPose();
+  pose2d_t GetPoseVarience();
+
+ private:
+  void UpdateKalmanFilter(double x, double y, double rotation, double time);
 
  private:
   SimpleKalman x_filter_;
   SimpleKalman y_filter_;
   SimpleKalman rotation_filter_;
+  std::mutex update_mutex_;
   double timestamp;
 };
 }  // namespace Localization

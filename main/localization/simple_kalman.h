@@ -20,6 +20,11 @@ class SimpleKalman {
   double velocity() { return kalman_filter_.state()[1]; }
   double time() { return kalman_filter_.time(); }
 
+  double position_varience() { return kalman_filter_.P(0, 0); }
+  double velocity_varience() { return kalman_filter_.P(1, 1); }
+
+  // double position_varience() {}
+
  private:
   KalmanFilter kalman_filter_;
   double time_;  // Current time of the kalman filter (seconds)

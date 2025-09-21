@@ -122,13 +122,37 @@ TagEstimator::TagEstimator(json intrinsics, json extrinsics,
           intrinsics),
       1);
 }
+
+TagEstimator::TagEstimator(std::string intrinsics_path,
+                           std::string extrinsics_path,
+                           std::vector<cv::Point3f> apriltag_dimensions) {
+
+  json intrinsics;
+  std::ifstream intrinsics_file(intrinsics_path);
+  if (!intrinsics_file.is_open()) {
+    std::cerr << "Error: Cannot open intrinsics file: " << intrinsics_path
+              << std::endl;
+  } else {
+    intrinsics_file >> intrinsics;
+  }
+
+  json extrinsics;
+  std::ifstream extrinsics_file(extrinsics_path);
+  if (!extrinsics_file.is_open()) {
+    std::cerr << "Error: Cannot open extrinsics file: " << extrinsics_path
+              << std::endl;
+  } else {
+    extrinsics_file >> extrinsics;
+  }
+  TagEstimator(intrinsics, extrinsics, apriltag_dimensions);
+}
 TagEstimator::~TagEstimator() {
   delete gpu_detector_;
   delete apriltag_detector_;
   return;
 }
 
-std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) {
+std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
   std::vector<tag_detection_t> estimates = GetRawPositionEstimates(frame);
   for (tag_detection_t& estimate : estimates) {
     estimate = ApplyExtrinsics(estimate);
@@ -142,7 +166,7 @@ std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) {
 }
 
 std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
-    cv::Mat& frame) {
+    cv::Mat& frame) const {
   cv::Mat gray;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
@@ -187,7 +211,7 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
 }
 
 tag_detection_t TagEstimator::GetFeildRelitivePosition(
-    tag_detection_t tag_relitive_position) {
+    tag_detection_t tag_relitive_position) const {
   std::cout << "April tag rotation: "
             << apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
                    ->Rotation()
@@ -247,7 +271,7 @@ tag_detection_t TagEstimator::GetFeildRelitivePosition(
   return feild_relitive_position;
 }
 
-tag_detection_t TagEstimator::ApplyExtrinsics(tag_detection_t position) {
+tag_detection_t TagEstimator::ApplyExtrinsics(tag_detection_t position) const {
   if (extrinsics_ == nullptr) {
     return position;
   }

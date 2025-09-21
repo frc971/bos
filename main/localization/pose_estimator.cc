@@ -10,24 +10,40 @@ PoseEstimator::PoseEstimator(SimpleKalmanConfig x_filter_config,
       y_filter_(y_filter_config),
       rotation_filter_(rotation_filter_config) {}
 
+void PoseEstimator::Update(std::vector<tag_detection_t> position) {
+  update_mutex_.lock();
+  for (size_t i = 0; i < position.size(); i++) {
+    UpdateKalmanFilter(position[i].translation.x, position[i].translation.y,
+                       position[i].rotation.z, position[i].timestamp);
+  }
+  update_mutex_.unlock();
+}
+
 void PoseEstimator::Update(double x, double y, double rotation, double time) {
+  update_mutex_.lock();
+  UpdateKalmanFilter(x, y, rotation, time);
+  update_mutex_.unlock();
+}
+
+void PoseEstimator::UpdateKalmanFilter(double x, double y, double rotation,
+                                       double time) {
   x_filter_.Update(x, time);
   y_filter_.Update(y, time);
   rotation_filter_.Update(rotation, time);
 }
-
-void PoseEstimator::Update(std::vector<tag_detection_t> position) {
-  for (size_t i = 0; i < position.size(); i++) {
-    Update(position[i].translation.x, position[i].translation.y,
-           position[i].rotation.z, position[i].timestamp);
-  }
-}
-
 pose2d_t PoseEstimator::GetPose() {
   pose2d_t position2d{.x = x_filter_.position(),
                       .y = y_filter_.position(),
                       .rotation = rotation_filter_.position()};
   return position2d;
+}
+
+pose2d_t PoseEstimator::GetPoseVarience() {
+
+  pose2d_t varience{.x = x_filter_.position_varience(),
+                    .y = y_filter_.position_varience(),
+                    .rotation = rotation_filter_.position_varience()};
+  return varience;
 }
 
 }  // namespace Localization

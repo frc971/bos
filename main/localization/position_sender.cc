@@ -3,6 +3,7 @@
 #include <string>
 #include "main/localization/position.h"
 
+namespace Localization {
 PositionSender::PositionSender()
     : instance_(nt::NetworkTableInstance::GetDefault()) {
   std::shared_ptr<nt::NetworkTable> table =
@@ -34,11 +35,15 @@ PositionSender::PositionSender()
 
 void PositionSender::Send(Localization::pose2d_t position_estimates,
                           Localization::pose2d_t varience) {
-  translation_x_publisher_.Set(position_estimates.x);
-  translation_y_publisher_.Set(position_estimates.y);
-  rotation_publisher_.Set(position_estimates.rotation);
+  if (mutex_.try_lock()) {
+    translation_x_publisher_.Set(position_estimates.x);
+    translation_y_publisher_.Set(position_estimates.y);
+    rotation_publisher_.Set(position_estimates.rotation);
 
-  translation_x_varience_publisher_.Set(varience.x);
-  translation_y_varience_publisher_.Set(varience.y);
-  rotation_varience_publisher_.Set(varience.rotation);
+    translation_x_varience_publisher_.Set(varience.x);
+    translation_y_varience_publisher_.Set(varience.y);
+    rotation_varience_publisher_.Set(varience.rotation);
+    mutex_.unlock();
+  }
 }
+}  // namespace Localization

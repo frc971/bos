@@ -6,8 +6,9 @@
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
 #include "main/localization/position.h"
-#include "tag_detector.h"
+#include "tag_estimator.h"
 
+namespace Localization {
 class PositionSender {
  public:
   PositionSender();
@@ -27,7 +28,7 @@ class PositionSender {
 
   nt::DoublePublisher rotation_varience_publisher_;
 
-  std::vector<nt::BooleanPublisher> status_;  // Was a tag detected?
+  std::mutex mutex_;
 };
-
+}  // namespace Localization
 #endif  // POSITION_SENDER_H
