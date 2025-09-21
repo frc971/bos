@@ -8,12 +8,11 @@
 #include "main/localization/position.h"
 #include "tag_estimator.h"
 
-namespace Localization {
+namespace localization {
 class PositionSender {
  public:
   PositionSender();
-  void Send(Localization::pose2d_t position_estimate,
-            Localization::pose2d_t varience);
+  void Send(pose2d_t position_estimate, pose2d_t varience);
 
  private:
   nt::NetworkTableInstance instance_;
@@ -30,5 +29,5 @@ class PositionSender {
 
   std::mutex mutex_;
 };
-}  // namespace Localization
+}  // namespace localization
 #endif  // POSITION_SENDER_H

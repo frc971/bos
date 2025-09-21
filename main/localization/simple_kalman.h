@@ -1,7 +1,7 @@
 #include <frc/EigenCore.h>
 #include <frc/geometry/Pose2d.h>
 #include "third_party/kalman-cpp/kalman.h"
-namespace Localization {
+namespace localization {
 struct SimpleKalmanConfig {
   double position;
   double velocity;
@@ -29,4 +29,4 @@ class SimpleKalman {
   KalmanFilter kalman_filter_;
   double time_;  // Current time of the kalman filter (seconds)
 };
-}  // namespace Localization
+}  // namespace localization

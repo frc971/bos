@@ -10,7 +10,7 @@
 
 #define PRINT_DETECTION_POSE false
 
-namespace Localization {
+namespace localization {
 using json = nlohmann::json;
 
 constexpr double square(double x) {
@@ -286,4 +286,4 @@ tag_detection_t TagEstimator::ApplyExtrinsics(tag_detection_t position) const {
   return position;
 }
 
-}  // namespace Localization
+}  // namespace localization

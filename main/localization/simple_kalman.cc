@@ -1,7 +1,7 @@
 #include "simple_kalman.h"
 #include <wpilibc/frc/Timer.h>
 
-namespace Localization {
+namespace localization {
 
 SimpleKalman::SimpleKalman(double position, double velocity, double time,
                            double measurment_noise, double process_noise) {
@@ -40,4 +40,4 @@ void SimpleKalman::Update(double position_update, double time) {
   kalman_filter_.update(position_update_, dt, A);
 }
 
-}  // namespace Localization
+}  // namespace localization

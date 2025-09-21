@@ -21,17 +21,17 @@ void start_networktables() {
 }
 
 void run_estimator(Camera::CameraInfo camera_info,
-                   Localization::PoseEstimator& pose_estimator,
-                   Localization::PositionSender& position_sender) {
+                   localization::PoseEstimator& pose_estimator,
+                   localization::PositionSender& position_sender) {
 
-  Localization::TagEstimator tag_estimator(camera_info.intrinsics_path,
+  localization::TagEstimator tag_estimator(camera_info.intrinsics_path,
                                            camera_info.extrinsics_path);
   Camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame;
   while (true) {
     camera.getFrame(frame);
-    std::vector<Localization::tag_detection_t> estimates =
+    std::vector<localization::tag_detection_t> estimates =
         tag_estimator.Estimate(frame);
     pose_estimator.Update(estimates);
     position_sender.Send(pose_estimator.GetPose(),
@@ -43,27 +43,27 @@ int main() {
 
   start_networktables();
 
-  Localization::SimpleKalmanConfig x_filter_config{.position = 0,
+  localization::SimpleKalmanConfig x_filter_config{.position = 0,
                                                    .velocity = 0,
                                                    .time = 0,
                                                    .measurment_noise = 0.5,
                                                    .process_noise = 0.5};
 
-  Localization::SimpleKalmanConfig y_filter_config{.position = 0,
+  localization::SimpleKalmanConfig y_filter_config{.position = 0,
                                                    .velocity = 0,
                                                    .time = 0,
                                                    .measurment_noise = 0.5,
                                                    .process_noise = 0.5};
-  Localization::SimpleKalmanConfig rotation_filter_config{
+  localization::SimpleKalmanConfig rotation_filter_config{
       .position = 0,
       .velocity = 0,
       .time = 0,
       .measurment_noise = 0.5,
       .process_noise = 0.5};
 
-  Localization::PoseEstimator pose_estimator(x_filter_config, y_filter_config,
+  localization::PoseEstimator pose_estimator(x_filter_config, y_filter_config,
                                              rotation_filter_config);
-  Localization::PositionSender position_sender;
+  localization::PositionSender position_sender;
 
   std::thread camera_one_thread(run_estimator, Camera::CAMERAS.gstreamer1_30fps,
                                 std::ref(pose_estimator),

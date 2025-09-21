@@ -1,7 +1,7 @@
 #include "pose_estimator.h"
 #include <frc/geometry/Pose2d.h>
 
-namespace Localization {
+namespace localization {
 
 PoseEstimator::PoseEstimator(SimpleKalmanConfig x_filter_config,
                              SimpleKalmanConfig y_filter_config,
@@ -46,4 +46,4 @@ pose2d_t PoseEstimator::GetPoseVarience() {
   return varience;
 }
 
-}  // namespace Localization
+}  // namespace localization

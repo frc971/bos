@@ -11,7 +11,7 @@
 #include "position.h"
 #include "third_party/971apriltag/971apriltag.h"
 
-namespace Localization {
+namespace localization {
 using json = nlohmann::json;
 
 constexpr double ktag_size = 0.1651;  // meters
@@ -62,6 +62,6 @@ class TagEstimator {
   cv::Mat distortion_coefficients_;
   std::vector<cv::Point3f> apriltag_dimensions_;
 };
-}  // namespace Localization
+}  // namespace localization
 
 #endif  // TAG_ESTIMATOR_H

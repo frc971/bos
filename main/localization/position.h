@@ -1,5 +1,5 @@
 #pragma once
-namespace Localization {
+namespace localization {
 typedef struct Point3d {
   double x;
   double y;
@@ -23,4 +23,4 @@ typedef struct Pose3d {
   point3d_t translation;
   point3d_t rotation;
 } pose3d_t;
-}  // namespace Localization
+}  // namespace localization

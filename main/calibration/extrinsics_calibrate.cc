@@ -47,17 +47,17 @@ int main() {
   Camera::IMX296Camera camera(camera_info);
   cv::Mat frame;
 
-  Localization::TagEstimator estimator(intrinsics, nullptr);
+  localization::TagEstimator estimator(intrinsics, nullptr);
 
-  Localization::pose3d_t average_position{{0, 0, 0}, {0, 0, 0}};
+  localization::pose3d_t average_position{{0, 0, 0}, {0, 0, 0}};
 
   int estimate_count = 0;
   for (int i = 0; i < 24; i++) {
     camera.getFrame(frame);
-    std::vector<Localization::tag_detection_t> estimates =
+    std::vector<localization::tag_detection_t> estimates =
         estimator.GetRawPositionEstimates(frame);
     estimate_count += estimates.size();
-    for (Localization::tag_detection_t& estimate : estimates) {
+    for (localization::tag_detection_t& estimate : estimates) {
       if (estimate.tag_id == tag_id) {
         average_position.rotation.x += estimate.rotation.x;
         average_position.rotation.y += estimate.rotation.y;
@@ -80,7 +80,7 @@ int main() {
 
   std::cout << "Estimated position: " << std::endl;
 
-  Localization::tag_detection_t true_position;
+  localization::tag_detection_t true_position;
   std::cout << "True position x (meters)";
   std::cin >> true_position.translation.x;
 
@@ -99,7 +99,7 @@ int main() {
   std::cout << "True rotation z (meters)";
   std::cin >> true_position.rotation.z;
 
-  Localization::tag_detection_t extrinsics;
+  localization::tag_detection_t extrinsics;
   extrinsics.translation.x =
       average_position.translation.x - true_position.translation.x;
   extrinsics.translation.y =
@@ -115,7 +115,7 @@ int main() {
       average_position.rotation.z - true_position.rotation.z;
 
   std::ofstream file(camera_info.extrinsics_path);
-  json extrinsics_json = Localization::ExtrinsicsToJson(extrinsics);
+  json extrinsics_json = localization::ExtrinsicsToJson(extrinsics);
   file << extrinsics_json.dump(4);
   std::cout << "Extrinsics: \n" << intrinsics.dump(4);
   file.close();

@@ -12,7 +12,7 @@
 #include "simple_kalman.h"
 #include "units/angle.h"
 // Uses wpilib's DifferentialDrivePoseEstimator with a mutex to agregate mutliple camera's multiple detections
-namespace Localization {
+namespace localization {
 
 class PoseEstimator {
  public:
@@ -34,4 +34,4 @@ class PoseEstimator {
   std::mutex update_mutex_;
   double timestamp;
 };
-}  // namespace Localization
+}  // namespace localization
