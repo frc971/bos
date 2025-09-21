@@ -19,7 +19,7 @@ find_package(wpilib REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 
-add_subdirectory(third_party/nlohmann_json)
+add_subdirectory(third_party/json)
 add_subdirectory(third_party/971apriltag)
 add_subdirectory(third_party/kalman-cpp)
 
