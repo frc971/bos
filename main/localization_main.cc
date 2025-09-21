@@ -8,6 +8,7 @@
 #include "localization/position_sender.h"
 #include "localization/tag_estimator.h"
 #include "main/localization/pose_estimator.h"
+#include "mutex"
 
 using json = nlohmann::json;
 
@@ -20,9 +21,13 @@ void start_networktables() {
   std::cout << "Started networktables!" << std::endl;
 }
 
-void run_camera1(Camera::CameraInfo camera_info) {
-  std::cout << "Starting camera 1" << std::endl;
-  Camera::IMX296Camera camera(camera_info);
+std::vector<Camera::IMX296Camera> cameras;
+std::vector<Localization::TagEstimator> estimators;
+std::mutex mtx;
+
+void setup_camera(Camera::CameraInfo camera_info) {
+  std::cout << "Starting camera " << camera_info.id << std::endl;
+  cameras.push_back(Camera::IMX296Camera(camera_info));
 
   json intrinsics;
   std::ifstream intrinsics_file(camera_info.intrinsics_path);
@@ -42,7 +47,25 @@ void run_camera1(Camera::CameraInfo camera_info) {
     extrinsics_file >> extrinsics;
   }
 
-  Localization::TagEstimator estimator(intrinsics, extrinsics);
+ estimators.push_back(Localization::TagEstimator(intrinsics, extrinsics));
+}
+
+void run_estimator(Camera::IMX296Camera camera, Localization::TagEstimator camera_estimator, Localization::PoseEstimator pose_estimator) {
+  cv::Mat frame;
+  while (true) {
+    camera.getFrame(frame);
+    std::vector<Localization::tag_detection_t> estimates =
+        camera_estimator.Estimate(frame);
+    mtx.lock();
+    pose_estimator.Update(estimates);
+    mtx.unlock();
+    // sender.Send(estimates);
+  }
+}
+
+int main() {
+
+  start_networktables();
 
   Localization::SimpleKalmanConfig x_filter_config{.position = 0,
                                                    .velocity = 0,
@@ -66,21 +89,15 @@ void run_camera1(Camera::CameraInfo camera_info) {
                                              rotation_filter_config);
   PositionSender sender;
 
-  cv::Mat frame;
-  while (true) {
-    camera.getFrame(frame);
-    std::vector<Localization::tag_detection_t> estimates =
-        estimator.Estimate(frame);
-    // sender.Send(estimates);
+  // std::thread camera_one_thread(run_camera1, Camera::CAMERAS.gstreamer1_30fps);
+  // camera_one_thread.join();
+  std::vector<std::thread> workers(cameras.size());
+  for (int i = 0; i < cameras.size(); i++) {
+    workers.at(i) = std::thread(cameras.at(i), estimators.at(i));
   }
-}
-
-int main() {
-
-  start_networktables();
-
-  std::thread camera_one_thread(run_camera1, Camera::CAMERAS.gstreamer1_30fps);
-  camera_one_thread.join();
+  for (int i = 0; i < cameras.size(); i++) {
+    workers.at(i).join();
+  }
 
   return 0;
 }
