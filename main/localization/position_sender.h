@@ -5,26 +5,30 @@
 #include <networktables/DoubleTopic.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
-#include "pose_estimator.h"
+#include "main/localization/position.h"
+#include "tag_estimator.h"
 
+namespace localization {
 class PositionSender {
  public:
-  PositionSender(std::string name, std::vector<int> tag_ids);
-  void Send(std::vector<Localization::position_t> position_estimate);
+  PositionSender(bool verbose=false);
+  void Send(pose2d_t position_estimate, pose2d_t varience);
 
  private:
-  std::vector<int> tag_ids_;
   nt::NetworkTableInstance instance_;
 
-  std::vector<nt::DoublePublisher> translation_x_publisher_;
-  std::vector<nt::DoublePublisher> translation_y_publisher_;
-  std::vector<nt::DoublePublisher> translation_z_publisher_;
+  nt::DoublePublisher translation_x_publisher_;
+  nt::DoublePublisher translation_y_publisher_;
 
-  std::vector<nt::DoublePublisher> rotation_x_publisher_;
-  std::vector<nt::DoublePublisher> rotation_y_publisher_;
-  std::vector<nt::DoublePublisher> rotation_z_publisher_;
+  nt::DoublePublisher rotation_publisher_;
 
-  std::vector<nt::BooleanPublisher> status_;  // Was a tag detected?
+  nt::DoublePublisher translation_x_varience_publisher_;
+  nt::DoublePublisher translation_y_varience_publisher_;
+
+  nt::DoublePublisher rotation_varience_publisher_;
+
+  std::mutex mutex_;
+  bool verbose_;
 };
-
+}  // namespace localization
 #endif  // POSITION_SENDER_H

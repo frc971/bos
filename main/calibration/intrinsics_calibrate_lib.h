@@ -7,7 +7,7 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
 
-namespace Calibration {
+namespace calibration {
 
 using json = nlohmann::json;
 typedef struct DetectionResult {
@@ -39,4 +39,4 @@ double CalibrateCamera(std::vector<detection_result_t> detection_results,
                        cv::Size image_size, cv::Mat& camera_matrix,
                        cv::Mat& distortion_coefficiants);
 
-}  // namespace Calibration
+}  // namespace calibration

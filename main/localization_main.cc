@@ -5,8 +5,9 @@
 #include <thread>
 #include "apriltag/apriltag.h"
 #include "camera/imx296_camera.h"
-#include "localization/pose_estimator.h"
 #include "localization/position_sender.h"
+#include "localization/tag_estimator.h"
+#include "main/localization/pose_estimator.h"
 
 using json = nlohmann::json;
 
@@ -19,15 +20,16 @@ void start_networktables() {
   std::cout << "Started networktables!" << std::endl;
 }
 
-void run_camera1(Camera::CameraInfo camera_info) {
-  std::cout << "Starting camera 1" << std::endl;
-  Camera::IMX296Camera camera(camera_info);
+void run_estimator(camera::CameraInfo camera_info,
+                   localization::PoseEstimator& pose_estimator,
+                   localization::PositionSender& position_sender) {
 
   json intrinsics;
+
   std::ifstream intrinsics_file(camera_info.intrinsics_path);
   if (!intrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open intrinsics file: "
-              << camera_info.intrinsics_path << std::endl;
+    std::cerr << "Error: Cannot open intrinsics file: " << camera_info.intrinsics_path
+              << std::endl;
   } else {
     intrinsics_file >> intrinsics;
   }
@@ -35,22 +37,24 @@ void run_camera1(Camera::CameraInfo camera_info) {
   json extrinsics;
   std::ifstream extrinsics_file(camera_info.extrinsics_path);
   if (!extrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open extrinsics file: "
-              << camera_info.extrinsics_path << std::endl;
+    std::cerr << "Error: Cannot open extrinsics file: " << camera_info.extrinsics_path
+              << std::endl;
   } else {
     extrinsics_file >> extrinsics;
   }
 
-  Localization::PoseEstimator estimator(intrinsics, extrinsics);
-  PositionSender sender(camera_info.name,
-                        {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
-                         12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22});
+  localization::TagEstimator tag_estimator(intrinsics,
+                                           extrinsics);
+  camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame;
   while (true) {
     camera.getFrame(frame);
-    std::vector<Localization::position_t> estimates = estimator.Estimate(frame);
-    sender.Send(estimates);
+    std::vector<localization::tag_detection_t> estimates =
+        tag_estimator.Estimate(frame);
+    pose_estimator.Update(estimates);
+    position_sender.Send(pose_estimator.GetPose(),
+                         pose_estimator.GetPoseVarience());
   }
 }
 
@@ -58,8 +62,37 @@ int main() {
 
   start_networktables();
 
-  std::thread camera_one_thread(run_camera1, Camera::CAMERAS.gstreamer1_30fps);
+  localization::SimpleKalmanConfig x_filter_config{.position = 0,
+                                                   .velocity = 0,
+                                                   .time = 0,
+                                                   .measurment_noise = 0.5,
+                                                   .process_noise = 0.5};
+
+  localization::SimpleKalmanConfig y_filter_config{.position = 0,
+                                                   .velocity = 0,
+                                                   .time = 0,
+                                                   .measurment_noise = 0.5,
+                                                   .process_noise = 0.5};
+  localization::SimpleKalmanConfig rotation_filter_config{
+      .position = 0,
+      .velocity = 0,
+      .time = 0,
+      .measurment_noise = 0.5,
+      .process_noise = 0.5};
+
+  localization::PoseEstimator pose_estimator(x_filter_config, y_filter_config,
+                                             rotation_filter_config);
+  localization::PositionSender position_sender(true);
+
+  std::thread camera_one_thread(run_estimator, camera::CAMERAS.gstreamer1_30fps,
+                                std::ref(pose_estimator),
+                                std::ref(position_sender));
+
+  // std::thread camera_two_thread(run_estimator, camera::CAMERAS.gstreamer2_30fps,
+  //                               std::ref(pose_estimator),
+  //                               std::ref(position_sender));
   camera_one_thread.join();
+  // camera_two_thread.join();
 
   return 0;
 }

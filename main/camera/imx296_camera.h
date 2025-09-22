@@ -4,7 +4,7 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
-namespace Camera {
+namespace camera {
 
 typedef struct CameraInfo {
   std::string pipeline;
@@ -62,6 +62,6 @@ class IMX296Camera {
   cv::VideoCapture cap_;
 };
 
-}  // namespace Camera
+}  // namespace camera
 
 #endif  // IMX296_CAMERA_H

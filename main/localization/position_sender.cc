@@ -1,54 +1,66 @@
 #include "position_sender.h"
 #include <networktables/NetworkTableInstance.h>
 #include <string>
+#include "main/localization/position.h"
 
-PositionSender::PositionSender(std::string name, std::vector<int> tag_ids)
-    : tag_ids_(tag_ids), instance_(nt::NetworkTableInstance::GetDefault()) {
-  for (size_t i = 0; i < tag_ids_.size(); i++) {
-    std::shared_ptr<nt::NetworkTable> table = instance_.GetTable(
-        "orin/pose_estimate/" + name + "/" + std::to_string(tag_ids_[i]));
+namespace localization {
 
-    nt::DoubleTopic translation_x_topic =
-        table->GetDoubleTopic("translation_x");
-    nt::DoubleTopic translation_y_topic =
-        table->GetDoubleTopic("translation_y");
-    nt::DoubleTopic translation_z_topic =
-        table->GetDoubleTopic("translation_z");
-
-    nt::DoubleTopic rotation_x_topic = table->GetDoubleTopic("rotation_x");
-    nt::DoubleTopic rotation_y_topic = table->GetDoubleTopic("rotation_y");
-    nt::DoubleTopic rotation_z_topic = table->GetDoubleTopic("rotation_z");
-
-    nt::BooleanTopic status_topic = table->GetBooleanTopic("status");
-
-    translation_x_publisher_.push_back(translation_x_topic.Publish());
-    translation_y_publisher_.push_back(translation_y_topic.Publish());
-    translation_z_publisher_.push_back(translation_z_topic.Publish());
-
-    rotation_x_publisher_.push_back(rotation_x_topic.Publish());
-    rotation_y_publisher_.push_back(rotation_y_topic.Publish());
-    rotation_z_publisher_.push_back(rotation_z_topic.Publish());
-
-    status_.push_back(status_topic.Publish());
-  }
+constexpr double RadianToDegree(double radian) {
+  return radian * (180 / M_PI);
 }
 
-void PositionSender::Send(
-    std::vector<Localization::position_t> position_estimates) {
-  for (size_t i = 0; i < tag_ids_.size(); i++) {
-    for (size_t j = 0; j < position_estimates.size(); j++) {
-      status_[i].Set(false);
-      if (tag_ids_[i] == position_estimates[j].tag_id) {
-        translation_x_publisher_[i].Set(position_estimates[j].translation.y);
-        translation_y_publisher_[i].Set(position_estimates[j].translation.z);
-        translation_z_publisher_[i].Set(position_estimates[j].translation.x);
+PositionSender::PositionSender(bool verbose)
+    : instance_(nt::NetworkTableInstance::GetDefault()), verbose_(verbose) {
+  std::shared_ptr<nt::NetworkTable> table =
+      instance_.GetTable("orin/pose_estimate");
 
-        rotation_x_publisher_[i].Set(position_estimates[j].rotation.x);
-        rotation_y_publisher_[i].Set(position_estimates[j].rotation.y);
-        rotation_z_publisher_[i].Set(position_estimates[j].rotation.z);
-        status_[i].Set(true);
-      }
-    }
-  }
-  instance_.Flush();
+  nt::DoubleTopic translation_x_topic = table->GetDoubleTopic("translation_x");
+  nt::DoubleTopic translation_y_topic = table->GetDoubleTopic("translation_y");
+
+  nt::DoubleTopic rotation_topic = table->GetDoubleTopic("rotation");
+
+  nt::DoubleTopic translation_x_varience_topic =
+      table->GetDoubleTopic("translation_x_varience");
+  nt::DoubleTopic translation_y_varience_topic =
+      table->GetDoubleTopic("translation_y_varience");
+
+  nt::DoubleTopic rotation_varience_topic =
+      table->GetDoubleTopic("rotation_varience");
+
+  translation_x_publisher_ = translation_x_topic.Publish();
+  translation_y_publisher_ = translation_y_topic.Publish();
+
+  rotation_publisher_ = rotation_topic.Publish();
+
+  translation_x_varience_publisher_ = translation_x_varience_topic.Publish();
+  translation_y_varience_publisher_ = translation_y_varience_topic.Publish();
+
+  rotation_varience_publisher_ = rotation_varience_topic.Publish();
 }
+
+void PositionSender::Send(pose2d_t position_estimates, pose2d_t varience) {
+  if (mutex_.try_lock()) {
+    translation_x_publisher_.Set(position_estimates.x);
+    translation_y_publisher_.Set(position_estimates.y);
+    rotation_publisher_.Set(position_estimates.rotation);
+
+    translation_x_varience_publisher_.Set(varience.x);
+    translation_y_varience_publisher_.Set(varience.y);
+    rotation_varience_publisher_.Set(varience.rotation);
+    mutex_.unlock();
+  }
+  if (verbose_){
+    std::cout << "Translation: "
+              << "\n";
+    std::cout << position_estimates.x << "\n";
+    std::cout << position_estimates.y << "\n";
+    std::cout << RadianToDegree(position_estimates.rotation) << "\n";
+
+    std::cout << "Varience: "
+              << "\n";
+    std::cout << varience.x << "\n";
+    std::cout << varience.y << "\n";
+    std::cout << varience.rotation << "\n";
+  }
+}
+}  // namespace localization

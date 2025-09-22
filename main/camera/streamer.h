@@ -5,7 +5,7 @@
 #include <opencv2/core/mat.hpp>
 #include <string>
 #include <thread>
-namespace Camera {
+namespace camera {
 
 class Streamer {
  public:
@@ -24,6 +24,6 @@ class Streamer {
   std::thread listen_thread_;
 };
 
-}  // namespace Camera
+}  // namespace camera
 
 // #endif // STREAMER_H
