@@ -57,8 +57,8 @@ class KalmanFilter {
   /**
   * Return the current state and time.
   */
-  Eigen::VectorXd state() { return x_hat; };
-  double time() { return t; };
+  Eigen::VectorXd state() const { return x_hat; };
+  double time() const { return t; };
 
   // Matrices for computation
   Eigen::MatrixXd A, C, Q, R, P, K, P0;

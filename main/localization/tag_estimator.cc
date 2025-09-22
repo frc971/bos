@@ -178,8 +178,9 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
 
       estimate.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
 
+      estimate.distance =
+          sqrt(square(estimate.translation.x) + square(estimate.translation.y));
       estimate.tag_id = gpu_detection->id;
-      estimate.tag_id = 10;
 
       estimates.push_back(estimate);
     }
@@ -196,11 +197,7 @@ tag_detection_t TagEstimator::GetFeildRelitivePosition(
                    .value()
             << "\n";
   tag_detection_t feild_relitive_position;
-  feild_relitive_position.tag_id = tag_relitive_position.tag_id;
-
-  feild_relitive_position.rotation.x = tag_relitive_position.rotation.x;
-  feild_relitive_position.rotation.y = tag_relitive_position.rotation.y;
-  feild_relitive_position.rotation.z = tag_relitive_position.rotation.z;
+  feild_relitive_position = tag_relitive_position;
 
   feild_relitive_position.translation.x =
       sin(feild_relitive_position.rotation.z) *

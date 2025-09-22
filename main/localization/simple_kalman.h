@@ -14,16 +14,18 @@ class SimpleKalman {
   SimpleKalman(double position, double velocity, double time,
                double measurment_noise, double process_noise);
   SimpleKalman(SimpleKalmanConfig config);
-  void Update(double position_update, double time);
+  void Update(double position_update, double time, double varience);
 
-  double position() { return kalman_filter_.state()[0]; }
-  double velocity() { return kalman_filter_.state()[1]; }
-  double time() { return kalman_filter_.time(); }
+  double position() const { return kalman_filter_.state()[0]; }
+  double velocity() const { return kalman_filter_.state()[1]; }
+  double time() const { return kalman_filter_.time(); }
 
-  double position_varience() { return kalman_filter_.P(0, 0); }
-  double velocity_varience() { return kalman_filter_.P(1, 1); }
+  double position_varience() const { return kalman_filter_.P(0, 0); }
+  double velocity_varience() const { return kalman_filter_.P(1, 1); }
 
-  // double position_varience() {}
+  void set_measurment_varience(double varience) {
+    kalman_filter_.R << varience;
+  }
 
  private:
   KalmanFilter kalman_filter_;
