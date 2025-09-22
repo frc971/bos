@@ -1,72 +1,37 @@
-#ifndef POSE_ESTIMATOR_H
-#define POSE_ESTIMATOR_H
-
-#include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
-#include <nlohmann/json.hpp>
-#include <opencv2/core/mat.hpp>
-#include <opencv2/core/types.hpp>
-#include <sstream>
-#include "apriltag/apriltag.h"
-#include "apriltag/tag36h11.h"
-#include "third_party/971apriltag/971apriltag.h"
-
-namespace Localization {
-using json = nlohmann::json;
-
-typedef struct Point3d {
-  double x;
-  double y;
-  double z;
-} point3d_t;
-
-typedef struct Position {
-  point3d_t translation;
-  point3d_t rotation;
-  int tag_id;
-} position_t;
-
-constexpr double ktag_size = 0.1651;  // meters
-const std::vector<cv::Point3f> kapriltag_dimensions = {
-    {-ktag_size / 2, ktag_size / 2, 0},
-    {ktag_size / 2, ktag_size / 2, 0},
-    {ktag_size / 2, -ktag_size / 2, 0},
-    {-ktag_size / 2, -ktag_size / 2, 0}};
-
-template <typename T>
-T camera_matrix_from_json(json intrinsics);
-
-template <typename T>
-T distortion_coefficients_from_json(json intrinsics);
-
-void PrintPositionEstimate(position_t position_estimate);
-void PrintPositionEstimates(std::vector<position_t> estimates);
-
-json ExtrinsicsToJson(position_t extrinsics);
+#pragma once  // Headers garuds are cooked right now, we need to do this intead https://google.github.io/styleguide/cppguide.html#The__define_Guard
+#include <frc/EigenCore.h>
+#include <frc/geometry/Pose2d.h>
+#include <frc/geometry/Rotation2d.h>
+#include <frc/system/LinearSystem.h>
+#include <units/angular_velocity.h>
+#include <units/length.h>
+#include <mutex>
+#include "frc/estimator/DifferentialDrivePoseEstimator.h"
+#include "frc/estimator/KalmanFilter.h"
+#include "position.h"
+#include "simple_kalman.h"
+#include "units/angle.h"
+// Uses wpilib's DifferentialDrivePoseEstimator with a mutex to agregate mutliple camera's multiple detections
+namespace localization {
 
 class PoseEstimator {
  public:
-  PoseEstimator(
-      json intrinsics, json extrinsics,
-      std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions);
-  ~PoseEstimator();
-  std::vector<position_t> Estimate(cv::Mat& frame);
-  std::vector<position_t> GetRawPositionEstimates(cv::Mat& frame);
+  PoseEstimator(SimpleKalmanConfig x_filter_config,
+                SimpleKalmanConfig y_filter_config,
+                SimpleKalmanConfig rotation_filter_config);
+  void Update(std::vector<tag_detection_t> position);
+  void Update(double x, double y, double rotation, double time);
+  pose2d_t GetPose();
+  pose2d_t GetPoseVarience();
 
  private:
-  // should be pointer?
-  // Changes the position estimate to be tag relitive to absolute feild position
-  position_t GetFeildRelitivePosition(position_t tag_relitive_position);
-  position_t ApplyExtrinsics(position_t position);
+  void UpdateKalmanFilter(double x, double y, double rotation, double time);
 
  private:
-  json extrinsics_;
-  frc::AprilTagFieldLayout apriltag_layout_;
-  apriltag_detector_t* apriltag_detector_;
-  frc971::apriltag::GpuDetector* gpu_detector_;
-  cv::Mat camera_matrix_;
-  cv::Mat distortion_coefficients_;
-  std::vector<cv::Point3f> apriltag_dimensions_;
+  SimpleKalman x_filter_;
+  SimpleKalman y_filter_;
+  SimpleKalman rotation_filter_;
+  std::mutex update_mutex_;
+  double timestamp;
 };
-}  // namespace Localization
-
-#endif  // POSE_ESTIMATOR_H
+}  // namespace localization

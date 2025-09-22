@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(BOS CXX C CUDA)
 
-# Set C++ standard
+set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -21,6 +21,7 @@ find_package(Eigen3 REQUIRED)
 
 add_subdirectory(third_party/json)
 add_subdirectory(third_party/971apriltag)
+add_subdirectory(third_party/kalman-cpp)
 
 add_compile_options(-Wno-psabi)
 add_subdirectory(main)
