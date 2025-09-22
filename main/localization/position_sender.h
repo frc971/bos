@@ -11,7 +11,7 @@
 namespace localization {
 class PositionSender {
  public:
-  PositionSender();
+  PositionSender(bool verbose=false);
   void Send(pose2d_t position_estimate, pose2d_t varience);
 
  private:
@@ -28,6 +28,7 @@ class PositionSender {
   nt::DoublePublisher rotation_varience_publisher_;
 
   std::mutex mutex_;
+  bool verbose_;
 };
 }  // namespace localization
 #endif  // POSITION_SENDER_H

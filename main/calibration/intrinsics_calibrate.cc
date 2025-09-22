@@ -98,6 +98,7 @@ int main() {
   std::ofstream file(camera_info.intrinsics_path);
   json intrinsics = calibration::intrisincs_to_json(cameraMatrix, distCoeffs);
   file << intrinsics.dump(4);
+  std::cout << "Saved to " << camera_info.intrinsics_path << std::endl;
   std::cout << "Intrinsics: " << intrinsics.dump(4);
   file.close();
 }

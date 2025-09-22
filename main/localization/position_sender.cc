@@ -4,8 +4,13 @@
 #include "main/localization/position.h"
 
 namespace localization {
-PositionSender::PositionSender()
-    : instance_(nt::NetworkTableInstance::GetDefault()) {
+
+constexpr double RadianToDegree(double radian) {
+  return radian * (180 / M_PI);
+}
+
+PositionSender::PositionSender(bool verbose)
+    : instance_(nt::NetworkTableInstance::GetDefault()), verbose_(verbose) {
   std::shared_ptr<nt::NetworkTable> table =
       instance_.GetTable("orin/pose_estimate");
 
@@ -43,6 +48,19 @@ void PositionSender::Send(pose2d_t position_estimates, pose2d_t varience) {
     translation_y_varience_publisher_.Set(varience.y);
     rotation_varience_publisher_.Set(varience.rotation);
     mutex_.unlock();
+  }
+  if (verbose_){
+    std::cout << "Translation: "
+              << "\n";
+    std::cout << position_estimates.x << "\n";
+    std::cout << position_estimates.y << "\n";
+    std::cout << RadianToDegree(position_estimates.rotation) << "\n";
+
+    std::cout << "Varience: "
+              << "\n";
+    std::cout << varience.x << "\n";
+    std::cout << varience.y << "\n";
+    std::cout << varience.rotation << "\n";
   }
 }
 }  // namespace localization

@@ -123,29 +123,6 @@ TagEstimator::TagEstimator(json intrinsics, json extrinsics,
       1);
 }
 
-TagEstimator::TagEstimator(std::string intrinsics_path,
-                           std::string extrinsics_path,
-                           std::vector<cv::Point3f> apriltag_dimensions) {
-
-  json intrinsics;
-  std::ifstream intrinsics_file(intrinsics_path);
-  if (!intrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open intrinsics file: " << intrinsics_path
-              << std::endl;
-  } else {
-    intrinsics_file >> intrinsics;
-  }
-
-  json extrinsics;
-  std::ifstream extrinsics_file(extrinsics_path);
-  if (!extrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open extrinsics file: " << extrinsics_path
-              << std::endl;
-  } else {
-    extrinsics_file >> extrinsics;
-  }
-  TagEstimator(intrinsics, extrinsics, apriltag_dimensions);
-}
 TagEstimator::~TagEstimator() {
   delete gpu_detector_;
   delete apriltag_detector_;
@@ -154,14 +131,13 @@ TagEstimator::~TagEstimator() {
 
 std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
   std::vector<tag_detection_t> estimates = GetRawPositionEstimates(frame);
-  for (tag_detection_t& estimate : estimates) {
-    estimate = ApplyExtrinsics(estimate);
-    estimate = GetFeildRelitivePosition(estimate);
-    PrintPositionEstimates(estimates);
-  }
-  if (PRINT_DETECTION_POSE) {
-    PrintPositionEstimates(estimates);
-  }
+  // for (tag_detection_t& estimate : estimates) {
+  //   estimate = ApplyExtrinsics(estimate);
+  //   estimate = GetFeildRelitivePosition(estimate);
+  // }
+  // if (PRINT_DETECTION_POSE) {
+  //   PrintPositionEstimates(estimates);
+  // }
   return estimates;
 }
 
