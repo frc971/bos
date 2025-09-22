@@ -28,8 +28,8 @@ void run_estimator(camera::CameraInfo camera_info,
 
   std::ifstream intrinsics_file(camera_info.intrinsics_path);
   if (!intrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open intrinsics file: " << camera_info.intrinsics_path
-              << std::endl;
+    std::cerr << "Error: Cannot open intrinsics file: "
+              << camera_info.intrinsics_path << std::endl;
   } else {
     intrinsics_file >> intrinsics;
   }
@@ -37,14 +37,13 @@ void run_estimator(camera::CameraInfo camera_info,
   json extrinsics;
   std::ifstream extrinsics_file(camera_info.extrinsics_path);
   if (!extrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open extrinsics file: " << camera_info.extrinsics_path
-              << std::endl;
+    std::cerr << "Error: Cannot open extrinsics file: "
+              << camera_info.extrinsics_path << std::endl;
   } else {
     extrinsics_file >> extrinsics;
   }
 
-  localization::TagEstimator tag_estimator(intrinsics,
-                                           extrinsics);
+  localization::TagEstimator tag_estimator(intrinsics, extrinsics);
   camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame;
@@ -84,11 +83,11 @@ int main() {
                                              rotation_filter_config);
   localization::PositionSender position_sender(true);
 
-  std::thread camera_one_thread(run_estimator, camera::CAMERAS.gstreamer1_30fps,
+  std::thread camera_one_thread(run_estimator, camera::gstreamer1_30fps,
                                 std::ref(pose_estimator),
                                 std::ref(position_sender));
 
-  // std::thread camera_two_thread(run_estimator, camera::CAMERAS.gstreamer2_30fps,
+  // std::thread camera_two_thread(run_estimator, camera::gstreamer2_30fps,
   //                               std::ref(pose_estimator),
   //                               std::ref(position_sender));
   camera_one_thread.join();
