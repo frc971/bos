@@ -3,6 +3,10 @@
 
 namespace localization {
 
+constexpr double DistanceToVarience(double distance) {
+  return distance;
+}
+
 PoseEstimator::PoseEstimator(SimpleKalmanConfig x_filter_config,
                              SimpleKalmanConfig y_filter_config,
                              SimpleKalmanConfig rotation_filter_config)
@@ -14,22 +18,25 @@ void PoseEstimator::Update(std::vector<tag_detection_t> position) {
   update_mutex_.lock();
   for (size_t i = 0; i < position.size(); i++) {
     UpdateKalmanFilter(position[i].translation.x, position[i].translation.y,
-                       position[i].rotation.z, position[i].timestamp);
+                       position[i].rotation.z,
+                       DistanceToVarience(position[i].distance),
+                       position[i].timestamp);
   }
   update_mutex_.unlock();
 }
 
-void PoseEstimator::Update(double x, double y, double rotation, double time) {
+void PoseEstimator::Update(double x, double y, double rotation, double varience,
+                           double time) {
   update_mutex_.lock();
-  UpdateKalmanFilter(x, y, rotation, time);
+  UpdateKalmanFilter(x, y, rotation, varience, time);
   update_mutex_.unlock();
 }
 
 void PoseEstimator::UpdateKalmanFilter(double x, double y, double rotation,
-                                       double time) {
-  x_filter_.Update(x, time);
-  y_filter_.Update(y, time);
-  rotation_filter_.Update(rotation, time);
+                                       double varience, double time) {
+  x_filter_.Update(x, time, varience);
+  y_filter_.Update(y, time, varience);
+  rotation_filter_.Update(rotation, time, varience);
 }
 pose2d_t PoseEstimator::GetPose() {
   pose2d_t position2d{.x = x_filter_.position(),

@@ -10,6 +10,7 @@ typedef struct TagDetection {
   point3d_t translation;  // Meters
   point3d_t rotation;     // Radians
   double timestamp;
+  double distance;
   int tag_id;
 } tag_detection_t;
 
