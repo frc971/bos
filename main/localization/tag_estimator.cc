@@ -8,7 +8,7 @@
 #include <fstream>
 #include <opencv2/opencv.hpp>
 
-#define PRINT_DETECTION_POSE false
+#define PRINT_DETECTION_POSE true
 
 namespace localization {
 using json = nlohmann::json;
@@ -131,13 +131,13 @@ TagEstimator::~TagEstimator() {
 
 std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
   std::vector<tag_detection_t> estimates = GetRawPositionEstimates(frame);
-  // for (tag_detection_t& estimate : estimates) {
-  //   estimate = ApplyExtrinsics(estimate);
-  //   estimate = GetFeildRelitivePosition(estimate);
-  // }
-  // if (PRINT_DETECTION_POSE) {
-  //   PrintPositionEstimates(estimates);
-  // }
+  for (tag_detection_t& estimate : estimates) {
+    estimate = ApplyExtrinsics(estimate);
+    estimate = GetFeildRelitivePosition(estimate);
+  }
+  if (PRINT_DETECTION_POSE) {
+    PrintPositionEstimates(estimates);
+  }
   return estimates;
 }
 
@@ -179,6 +179,7 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
       estimate.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
 
       estimate.tag_id = gpu_detection->id;
+      estimate.tag_id = 10;
 
       estimates.push_back(estimate);
     }
