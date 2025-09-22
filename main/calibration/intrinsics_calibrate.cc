@@ -57,10 +57,10 @@ int main() {
   camera::CameraInfo camera_info;
   switch (camera_id) {
     case 0:
-      camera_info = camera::CAMERAS.gstreamer1_30fps;
+      camera_info = camera::gstreamer1_30fps;
       break;
     case 1:
-      camera_info = camera::CAMERAS.gstreamer2_30fps;
+      camera_info = camera::gstreamer2_30fps;
       break;
     default:
       std::cout << "Invalid ID! Only 0 or 1" << std::endl;
