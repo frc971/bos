@@ -16,11 +16,12 @@
 
 using json = nlohmann::json;
 
+// TODO refactor to be lambda?
 void CaptureFrames(
     cv::aruco::CharucoDetector detector, camera::IMX296Camera camera,
     camera::Streamer& streamer,
     std::vector<calibration::detection_result_t>& detection_results,
-    std::atomic<bool>& capture_frames_thread) {
+    std::atomic<bool>& capture_frames_thread, std::atomic<bool>& log_image) {
   cv::Mat frame;
   int frame_count = 0;
   while (true) {
@@ -39,7 +40,10 @@ void CaptureFrames(
       }
       streamer.WriteFrame(annotated_frame);
 
-      detection_results.push_back(detection_result);
+      if (log_image.load()) {
+        detection_results.push_back(detection_result);
+        log_image.store(false);
+      }
     }
     if (!capture_frames_thread.load()) {
       return;
@@ -80,13 +84,27 @@ int main() {
   cv::imwrite("calibration_board.png", board_image);
 
   std::atomic<bool> capture_frames(true);
+  std::atomic<bool> log_image(false);
+
   std::vector<calibration::detection_result_t> detection_results;
   std::thread capture_frames_thread(
       CaptureFrames, detector, camera, std::ref(streamer),
       std::ref(detection_results), std::ref(capture_frames));
-  std::cout << "Double enter to finish capturing frames" << std::endl;
-  std::cin.get();
-  std::cin.get();
+
+  while (true) {
+    char key;
+    std::cin >> key;
+    switch (key) {
+      case 'q':
+        break;
+      case 'c':
+        log_image.store(true);
+        continue;
+      default:
+        std::cout << "Received invalid key!\n";
+    }
+  }
+
   capture_frames.store(false);
   capture_frames_thread.join();
   std::cout << "Calibrating cameras" << std::endl;
