@@ -27,9 +27,6 @@ T camera_matrix_from_json(json intrinsics);
 template <typename T>
 T distortion_coefficients_from_json(json intrinsics);
 
-void PrintPositionEstimate(tag_detection_t position_estimate);
-void PrintPositionEstimates(std::vector<tag_detection_t> estimates);
-
 json ExtrinsicsToJson(tag_detection_t extrinsics);
 
 // Estimates position based on each tag detection
