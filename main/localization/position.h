@@ -24,8 +24,8 @@ typedef struct TagDetection {
     os << "Rotation: "
        << "\n";
     os << t.rotation.x * 180 / M_PI << "\n";
-    os << t.rotation.x * 180 / M_PI << "\n";
-    os << t.rotation.x * 180 / M_PI << "\n";
+    os << t.rotation.y * 180 / M_PI << "\n";
+    os << t.rotation.z * 180 / M_PI << "\n";
     return os;
   }
 } tag_detection_t;
