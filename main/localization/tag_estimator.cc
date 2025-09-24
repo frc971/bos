@@ -136,7 +136,10 @@ std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
     estimate = GetFeildRelitivePosition(estimate);
   }
   if (PRINT_DETECTION_POSE) {
-    PrintPositionEstimates(estimates);
+    for (const tag_detection_t& estimate : estimates) {
+      std::cout << estimate << std::endl;
+    }
+    std::cout << std::endl;
   }
   return estimates;
 }
