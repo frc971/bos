@@ -5,7 +5,7 @@
 #include <opencv2/core/mat.hpp>
 #include <string>
 #include <thread>
-namespace Camera {
+namespace camera {
 
 static const int MAX_CLIENTS = 5;
 class Streamer {
@@ -26,6 +26,6 @@ class Streamer {
   std::thread* listen_thread_; // Can we make this static and not ptr?
 };
 
-}  // namespace Camera
+}  // namespace camera
 
 // #endif // STREAMER_H

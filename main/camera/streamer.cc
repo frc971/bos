@@ -2,7 +2,7 @@
 #include "streamer.h"
 #include <iostream>
 #include <opencv2/imgcodecs.hpp>
-namespace Camera {
+namespace camera {
 
 static std::string k_header =
     "HTTP/1.0 200 OK\r\n"
@@ -83,4 +83,4 @@ void Streamer::WriteFrame(cv::Mat& frame) {
 Streamer::~Streamer(){
   close(server_fd_);
 }
-}  // namespace Camera
+}  // namespace camera

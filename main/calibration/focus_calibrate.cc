@@ -10,21 +10,21 @@ int main(int argc, char* argv[]) {
   int camera_id;
   std::cin >> camera_id;
 
-  Camera::CameraInfo camera_info;
+  camera::CameraInfo camera_info;
 
   switch (camera_id) {
     case 0:
-      camera_info = Camera::CAMERAS.gstreamer1_30fps;
+      camera_info = camera::gstreamer1_30fps;
       break;
     case 1:
-      camera_info = Camera::CAMERAS.gstreamer2_30fps;
+      camera_info = camera::gstreamer2_30fps;
       break;
     default:
       std::cout << "Invalid ID! Only 0 or 1" << std::endl;
       return 0;
   }
 
-  Camera::IMX296Camera camera(camera_info);
+  camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame, gray, laplace;
   while (true) {

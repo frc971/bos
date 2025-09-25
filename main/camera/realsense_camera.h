@@ -3,7 +3,7 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
-namespace Camera {
+namespace camera {
 
 class RealSenseCamera {
  public:
@@ -14,6 +14,6 @@ class RealSenseCamera {
  private:
 };
 
-}  // namespace Camera
+}  // namespace camera
 
 #endif  // REALSENSE_CAMERA_H

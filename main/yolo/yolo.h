@@ -6,7 +6,7 @@
 #include <opencv2/core/mat.hpp>
 #include <string>
 #include <vector>
-namespace Yolo {
+namespace yolo {
 
 class Yolo {
  public:
@@ -24,6 +24,6 @@ class Yolo {
   bool verbose_;
 };
 
-}  // namespace Yolo
+}  // namespace yolo
 
 #endif  // YOLO_H

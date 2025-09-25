@@ -6,7 +6,7 @@
 #include <opencv2/cudaarithm.hpp>
 #include <vector>
 
-namespace Yolo {
+namespace yolo {
 std::vector<char> loadEngineFile(const std::string& filename) {
   std::ifstream file(filename, std::ios::binary);
   if (!file)
@@ -130,4 +130,4 @@ Yolo::~Yolo() {
   }
 }
 
-}  // namespace Yolo
+}  // namespace yolo

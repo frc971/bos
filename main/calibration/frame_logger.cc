@@ -11,7 +11,7 @@
 
 const int k_port = 5200;
 
-void read_camera(Camera::Streamer streamer, Camera::IMX296Camera camera,
+void read_camera(camera::Streamer streamer, camera::IMX296Camera camera,
                  std::atomic<bool>& log_image, std::string data_folder) {
   cv::Mat frame;
   int image_idx = 0;
@@ -37,14 +37,14 @@ int main() {
   int camera_id;
   std::cin >> camera_id;
 
-  Camera::CameraInfo camera_info;
+  camera::CameraInfo camera_info;
 
   switch (camera_id) {
     case 0:
-      camera_info = Camera::CAMERAS.gstreamer1_30fps;
+      camera_info = camera::gstreamer1_30fps;
       break;
     case 1:
-      camera_info = Camera::CAMERAS.gstreamer2_30fps;
+      camera_info = camera::gstreamer2_30fps;
       break;
     default:
       std::cout << "Invalid ID! Only 0 or 1" << std::endl;
@@ -66,8 +66,8 @@ int main() {
 
   std::cout << "Port number: " << k_port << std::endl;
 
-  Camera::Streamer streamer(k_port, true);
-  Camera::IMX296Camera camera(camera_info);
+  camera::Streamer streamer(k_port, true);
+  camera::IMX296Camera camera(camera_info);
   std::atomic<bool> log_image(false);
 
   cv::Mat frame;

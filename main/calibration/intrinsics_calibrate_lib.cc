@@ -3,7 +3,7 @@
 #include "main/camera/imx296_camera.h"
 #include "main/camera/streamer.h"
 
-namespace Calibration {
+namespace calibration {
 
 json intrisincs_to_json(cv::Mat cameraMatrix,
                         cv::Mat distCoeffs) {  // TODO get index
@@ -109,4 +109,4 @@ double CalibrateCamera(std::vector<detection_result_t> detection_results,
                              cv::noArray(), cv::noArray());
 }
 
-}  // namespace Calibration
+}  // namespace calibration
