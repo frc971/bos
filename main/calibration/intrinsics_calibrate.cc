@@ -16,10 +16,9 @@
 
 using json = nlohmann::json;
 
-// TODO refactor to be lambda?
 void CaptureFrames(
     cv::aruco::CharucoDetector detector, camera::IMX296Camera camera,
-    camera::CscoreStreamer& streamer,
+    camera::CscoreStreamer streamer,
     std::vector<calibration::detection_result_t>& detection_results,
     std::atomic<bool>& capture_frames_thread, std::atomic<bool>& log_image) {
   cv::Mat frame;
@@ -71,8 +70,9 @@ int main() {
       return 0;
   }
 
-  camera::CscoreStreamer streamer(
-      camera::IMX296Streamer("intrinsics_calibrate", 4971, 30));
+  camera::CscoreStreamer streamer("intrinsics_calibrate", 4971, 30, 1080, 1080,
+                                  true);
+
   camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame;
@@ -89,18 +89,19 @@ int main() {
 
   std::vector<calibration::detection_result_t> detection_results;
   std::thread capture_frames_thread(
-      CaptureFrames, detector, camera, std::ref(streamer),
-      std::ref(detection_results), std::ref(capture_frames));
+      CaptureFrames, detector, camera, streamer, std::ref(detection_results),
+      std::ref(capture_frames), std::ref(log_image));
 
-  while (true) {
+  bool run = true;
+  while (run) {
     char key;
     std::cin >> key;
     switch (key) {
       case 'q':
-        break;
+        run = false;
       case 'c':
         log_image.store(true);
-        continue;
+        break;
       default:
         std::cout << "Received invalid key!\n";
     }

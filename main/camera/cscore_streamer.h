@@ -21,8 +21,8 @@ struct IMX296Streamer {
 // Simple wrapper for cscore streaming to mjpeg
 class CscoreStreamer {
  public:
-  CscoreStreamer(std::string name, uint port, uint fps, uint width,
-                 uint height);
+  CscoreStreamer(std::string name, uint port, uint fps, uint width, uint height,
+                 bool verbose = false);
   CscoreStreamer(IMX296Streamer streamer);
   void WriteFrame(cv::Mat& mat);
 
