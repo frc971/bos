@@ -16,8 +16,8 @@ class SimpleKalman {
   SimpleKalman(SimpleKalmanConfig config);
   void Update(double position_update, double time, double varience);
 
-  double& position() { return kalman_filter_.state()[0]; }
-  double& velocity() { return kalman_filter_.state()[1]; }
+  double& position() const { return kalman_filter_.state()[0]; }
+  double& velocity() const { return kalman_filter_.state()[1]; }
   double time() const { return kalman_filter_.time(); }
 
   double position_varience() const { return kalman_filter_.P(0, 0); }
