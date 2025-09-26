@@ -13,6 +13,7 @@ RUN apt-get install -y gh
 RUN apt-get install -y ripgrep
 RUN apt-get install -y clangd
 RUN apt-get install -y ninja-build
+RUN apt-get install -y clang-format
 
 RUN mkdir opencv
 

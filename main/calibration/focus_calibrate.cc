@@ -1,4 +1,5 @@
 #include <iostream>
+#include "main/camera/cscore_streamer.h"
 #include "main/camera/imx296_camera.h"
 #include "main/camera/streamer.h"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -25,10 +26,13 @@ int main(int argc, char* argv[]) {
   }
 
   camera::IMX296Camera camera(camera_info);
+  camera::CscoreStreamer streamer(
+      camera::IMX296Streamer("focus_calibrate", 4971, 30));
 
   cv::Mat frame, gray, laplace;
   while (true) {
     camera.getFrame(frame);
+    streamer.WriteFrame(frame);
 
     cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
     cv::Laplacian(gray, laplace, CV_64F);

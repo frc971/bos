@@ -5,8 +5,8 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 #include <sstream>
+#include "main/camera/cscore_streamer.h"
 #include "main/camera/imx296_camera.h"
-#include "main/camera/streamer.h"
 
 using json = nlohmann::json;
 
@@ -57,8 +57,10 @@ int main() {
   cv::Mat distortion_coefficients =
       distortion_coefficients_from_json(intrinsics);
 
-  camera::Streamer raw_streamer(4971, true);
-  camera::Streamer undistorted_streamer(4972, true);
+  camera::CscoreStreamer raw_streamer(
+      camera::IMX296Streamer("raw_stream", 4971, 30));
+  camera::CscoreStreamer undistorted_streamer(
+      camera::IMX296Streamer("undistorted_stream", 4972, 30));
 
   camera::IMX296Camera camera(camera_info);
   cv::Mat frame;
