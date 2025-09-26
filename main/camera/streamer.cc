@@ -38,19 +38,29 @@ Streamer::Streamer(uint port, bool verbose, uint skip_frame)
     std::cout << "HTTP MJPEG server running on port " << port << std::endl;
   }
   std::cout << "waiting for client..." << std::endl;
-  client_fd_ =
-      accept(server_fd_, (struct sockaddr*)&address_, &address_length_);
-  if (client_fd_ < 0) {
-    std::cout << "failed to receive client\n";
+  for (int i = 0; i < MAX_CLIENTS; i++){
+    client_fds_[i] = -1;
   }
-  std::cout << "connected to client!\n";
-
-  send(client_fd_, k_header.c_str(), k_header.size(), 0);
+  listen_thread_ = new std::thread([this](){
+    while (true){
+      int client_fd = accept(server_fd_, (struct sockaddr*)&address_, &address_length_);
+      if (client_fd < 0) continue;
+      for (int i = 0; i < MAX_CLIENTS; i++){
+        if (client_fds_[i] == -1){
+          client_fds_[i] = client_fd;
+          send(client_fd, k_header.c_str(), k_header.size(), 0);
+          if (verbose_){
+            std::cout << "Got new connection with client_fd: " << client_fd << "\n";
+          }
+        }
+      }
+    }
+  });
   status_ = true;
 }
 
 void Streamer::WriteFrame(cv::Mat& frame) {
-  std::vector<uchar> buf;
+  std::vector<uchar> buf; // TODO make this part of the private variables so we do not need to malloc every time?
   cv::imencode(".jpg", frame, buf);
 
   std::string part =
@@ -58,8 +68,19 @@ void Streamer::WriteFrame(cv::Mat& frame) {
       "Content-Type: image/jpeg\r\n"
       "Content-Length: " +
       std::to_string(buf.size()) + "\r\n\r\n";
-  send(client_fd_, part.c_str(), part.size(), 0);
-  send(client_fd_, reinterpret_cast<char*>(buf.data()), buf.size(), 0);
-  send(client_fd_, "\r\n", 2, 0);
+  for (int i = 0; i < MAX_CLIENTS; i++){
+    if (client_fds_[i] != -1){
+      send(client_fds_[i], part.c_str(), part.size(), 0);
+      send(client_fds_[i], reinterpret_cast<char*>(buf.data()), buf.size(), 0);
+      if (send(client_fds_[i], "\r\n", 2, 0) == -1){
+        close(client_fds_[i]);
+        client_fds_[i] = -1;
+      }
+    }
+  }
+}
+
+Streamer::~Streamer(){
+  close(server_fd_);
 }
 }  // namespace camera
