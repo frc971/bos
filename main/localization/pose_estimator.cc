@@ -7,6 +7,22 @@ constexpr double DistanceToVarience(double distance) {
   return distance;
 }
 
+constexpr double ClampAngle(double angle) {
+  angle = std::fmod(angle + M_PI, 2.0 * M_PI);
+  if (angle < 0) {
+    angle += 2.0 * M_PI;
+  }
+  angle -= M_PI;
+
+  if (angle > M_PI_2) {
+    angle -= M_PI;
+  }
+  if (angle < -M_PI_2) {
+    angle += M_PI;
+  }
+  return angle;
+}
+
 PoseEstimator::PoseEstimator(SimpleKalmanConfig x_filter_config,
                              SimpleKalmanConfig y_filter_config,
                              SimpleKalmanConfig rotation_filter_config)
@@ -36,7 +52,8 @@ void PoseEstimator::UpdateKalmanFilter(double x, double y, double rotation,
                                        double varience, double time) {
   x_filter_.Update(x, time, varience);
   y_filter_.Update(y, time, varience);
-  rotation_filter_.Update(rotation, time, varience);
+  rotation_filter_.Update(ClampAngle(rotation), time, varience);
+  rotation_filter_.position() = ClampAngle(rotation_filter_.position());
 }
 pose2d_t PoseEstimator::GetPose() {
   pose2d_t position2d{.x = x_filter_.position(),
