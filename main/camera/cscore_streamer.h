@@ -6,7 +6,7 @@
 #include <opencv2/core/mat.hpp>
 #include <string>
 #include <thread>
-namespace Camera {
+namespace camera {
 
 struct IMX296Streamer {
   inline IMX296Streamer(std::string name, uint port, uint fps = 30)
@@ -24,7 +24,6 @@ class CscoreStreamer {
   CscoreStreamer(std::string name, uint port, uint fps, uint width,
                  uint height);
   CscoreStreamer(IMX296Streamer streamer);
-  ~CscoreStreamer();
   void WriteFrame(cv::Mat& mat);
 
  private:
@@ -32,6 +31,6 @@ class CscoreStreamer {
   cs::MjpegServer server_;
 };
 
-}  // namespace Camera
+}  // namespace camera
 
 // #endif // STREAMER_H

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-make -j5
+cmake --build build
 
 HOST="$1"
 

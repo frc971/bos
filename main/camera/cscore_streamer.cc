@@ -1,7 +1,7 @@
 #include "cscore_streamer.h"
 #include <cscore_cpp.h>
 #include <cscore_cv.h>
-namespace Camera {
+namespace camera {
 
 CscoreStreamer::CscoreStreamer(std::string name, uint port, uint fps,
                                uint width, uint height) {
@@ -19,4 +19,4 @@ CscoreStreamer::CscoreStreamer(IMX296Streamer streamer)
 void CscoreStreamer::WriteFrame(cv::Mat& mat) {
   source_.PutFrame(mat);
 }
-}  // namespace Camera
+}  // namespace camera
