@@ -15,6 +15,11 @@ set(CMAKE_CUDA_FLAGS "--expt-relaxed-constexpr")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
+include_directories(/usr/local/cuda/include)
+link_directories(/usr/local/cuda/lib64)
+include_directories(/usr/include/x86_64-linux-gnu/)
+link_directories(/usr/lib/x86_64-linux-gnu/)
+
 find_package(wpilib REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
