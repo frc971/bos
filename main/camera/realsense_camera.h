@@ -1,5 +1,6 @@
 #ifndef REALSENSE_CAMERA_H
 #define REALSENSE_CAMERA_H
+#include <librealsense2/rs.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
@@ -12,6 +13,7 @@ class RealSenseCamera {
   void getFrame(cv::Mat& mat);
 
  private:
+  cv::VideoCapture cap_;
 };
 
 }  // namespace camera
