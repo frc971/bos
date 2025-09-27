@@ -5,19 +5,21 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <sstream>
+#include <thread>
+#include "main/camera/cscore_streamer.h"
 #include "main/camera/imx296_camera.h"
-#include "main/camera/streamer.h"
 
 const int k_port = 5200;
 
-void read_camera(camera::Streamer streamer, camera::IMX296Camera camera,
-                 std::atomic<bool>& log_image, std::string data_folder) {
+void read_camera(camera::CscoreStreamer streamer, camera::IMX296Camera camera,
+                 std::atomic<bool>& log_image, std::string data_folder,
+                 bool log_every_frame) {
   cv::Mat frame;
   int image_idx = 0;
   while (true) {
     camera.getFrame(frame);
     streamer.WriteFrame(frame);
-    if (log_image.load()) {
+    if (log_every_frame || log_image.load()) {
       std::ostringstream filename;
       filename << data_folder << std::setfill('0') << std::setw(4) << image_idx
                << ".jpg";
@@ -63,9 +65,15 @@ int main() {
     }
   }
 
+  std::cout << "Do you want to log every single frame? (yes/no)\n";
+  std::string log_every_frame_response;
+  std::cin >> log_every_frame_response;
+  bool log_every_frame = "yes" == log_every_frame_response;
+
   std::cout << "Port number: " << k_port << std::endl;
 
-  camera::Streamer streamer(k_port, true);
+  camera::CscoreStreamer streamer(
+      camera::IMX296Streamer("frame_logger", 4971, 30));
   camera::IMX296Camera camera(camera_info);
   std::atomic<bool> log_image(false);
 
@@ -76,7 +84,7 @@ int main() {
 
   std::thread read_camera_thread(read_camera, std::move(streamer),
                                  std::move(camera), std::ref(log_image),
-                                 data_folder);
+                                 data_folder, log_every_frame);
 
   while (true) {
     char key;

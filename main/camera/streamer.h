@@ -7,9 +7,11 @@
 #include <thread>
 namespace camera {
 
+static const int MAX_CLIENTS = 5;
 class Streamer {
  public:
   Streamer(uint port, bool verbose = false, uint skip_frame = 5);
+  ~Streamer();
   void WriteFrame(cv::Mat& mat);
 
  private:
@@ -20,8 +22,8 @@ class Streamer {
   int server_fd_;
   sockaddr_in address_;
   socklen_t address_length_;
-  int client_fd_;
-  std::thread listen_thread_;
+  int client_fds_[MAX_CLIENTS];
+  std::thread* listen_thread_; // Can we make this static and not ptr?
 };
 
 }  // namespace camera
