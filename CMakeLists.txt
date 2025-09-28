@@ -17,8 +17,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 include_directories(/usr/local/cuda/include)
 link_directories(/usr/local/cuda/lib64)
-include_directories(/usr/include/x86_64-linux-gnu/)
-link_directories(/usr/lib/x86_64-linux-gnu/)
+
+include_directories(/usr/local/cuda-12.6/include)
+link_directories(/usr/local/cuda-12.6/compat)
+
+link_directories(/usr/lib/aarch64-linux-gnu/nvidia)
 
 find_package(wpilib REQUIRED)
 find_package(OpenCV REQUIRED)
