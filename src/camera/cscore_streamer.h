@@ -1,5 +1,4 @@
-// #ifndef CSCORE_STREAMER_H
-// #define CSCORE_STREAMER_H
+#pragma once
 
 #include <arpa/inet.h>
 #include <cscore_cv.h>
@@ -32,5 +31,3 @@ class CscoreStreamer {
 };
 
 }  // namespace camera
-
-// #endif // STREAMER_H

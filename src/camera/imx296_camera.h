@@ -1,6 +1,4 @@
-// https://gist.github.com/SteveRuben/1a15909e384b582c51b5
-#ifndef IMX296_CAMERA_H
-#define IMX296_CAMERA_H
+#pragma once
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
@@ -88,5 +86,3 @@ class IMX296Camera {
 };
 
 }  // namespace camera
-
-#endif  // IMX296_CAMERA_H
