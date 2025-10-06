@@ -1,5 +1,6 @@
 #include "pose_estimator.h"
 #include <frc/geometry/Pose2d.h>
+#include <iostream>
 
 namespace localization {
 
@@ -33,6 +34,11 @@ PoseEstimator::PoseEstimator(SimpleKalmanConfig x_filter_config,
 void PoseEstimator::Update(std::vector<tag_detection_t> position) {
   update_mutex_.lock();
   for (size_t i = 0; i < position.size(); i++) {
+    // std::cout << "trainslation x and y"
+    //           << "\n";
+    // std::cout << position[i].translation.x << "\n";
+    // std::cout << position[i].translation.y << "\n";
+    // std::cout << "\n";
     UpdateKalmanFilter(position[i].translation.x, position[i].translation.y,
                        position[i].rotation.z,
                        DistanceToVarience(position[i].distance),
@@ -50,10 +56,15 @@ void PoseEstimator::Update(double x, double y, double rotation, double varience,
 
 void PoseEstimator::UpdateKalmanFilter(double x, double y, double rotation,
                                        double varience, double time) {
+  // time = 0.1;
+  // std::cout << "x: " << x << "\n";
+  // std::cout << "time: " << time << "\n";
+  // std::cout << "varience: " << varience << "\n";
   x_filter_.Update(x, time, varience);
+  // std::cout << "x filter position: " << x_filter_.position() << "\n";
   y_filter_.Update(y, time, varience);
   rotation_filter_.Update(ClampAngle(rotation), time, varience);
-  rotation_filter_.position() = ClampAngle(rotation_filter_.position());
+  // rotation_filter_.position() = ClampAngle(rotation_filter_.position());
 }
 pose2d_t PoseEstimator::GetPose() {
   pose2d_t position2d{.x = x_filter_.position(),

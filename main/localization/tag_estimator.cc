@@ -8,7 +8,7 @@
 #include <fstream>
 #include <opencv2/opencv.hpp>
 
-#define PRINT_DETECTION_POSE true
+#define PRINT_DETECTION_POSE false
 
 namespace localization {
 using json = nlohmann::json;
@@ -193,12 +193,6 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
 
 tag_detection_t TagEstimator::GetFeildRelitivePosition(
     tag_detection_t tag_relitive_position) const {
-  std::cout << "April tag rotation: "
-            << apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
-                   ->Rotation()
-                   .Z()
-                   .value()
-            << "\n";
   tag_detection_t feild_relitive_position;
   feild_relitive_position = tag_relitive_position;
 

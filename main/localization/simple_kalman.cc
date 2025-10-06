@@ -1,5 +1,6 @@
 #include "simple_kalman.h"
 #include <wpilibc/frc/Timer.h>
+#include <iostream>
 
 namespace localization {
 
@@ -32,6 +33,10 @@ void SimpleKalman::Update(double position_update, double time,
                           double varience) {
   double dt = time - time_;
   time_ = time;
+  dt = 0.1;
+  // std::cout << "dt: " << dt << "\n";
+  // std::cout << "position_update: " << position_update << "\n";
+  // std::cout << "varience: " << varience << "\n";
 
   Eigen::MatrixXd A(2, 2);
   A << 1, dt, 0, 1;
@@ -40,6 +45,8 @@ void SimpleKalman::Update(double position_update, double time,
   position_update_ << position_update;
   set_measurment_varience(varience);
   kalman_filter_.update(position_update_, dt, A);
+  // std::cout << "resulting position: " << kalman_filter_.state()[0] << " "
+  //           << kalman_filter_.state()[1] << "\n";
 }
 
 }  // namespace localization
