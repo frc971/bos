@@ -6,13 +6,13 @@
 namespace camera {
 
 class DiskCamera {
-    private:
-        std::string path_to_img_dir;
-    
+ public:
+  DiskCamera(std::string image_folder_path);
+  void getFrame(cv::Mat& frame);
 
-    public:
-        DiskCamera(std::string path_to_img_dir);
-        cv::Mat GetLatestFrame();
+ private:
+  std::string image_folder_path_;
+  int current_frame_;
 };
 
-} // namespace camera
+}  // namespace camera

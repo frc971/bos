@@ -1,31 +1,17 @@
 #include "disk_camera.h"
 #include <opencv2/opencv.hpp>
-namespace fs = std::filesystem;
 
 namespace camera {
 
-DiskCamera::DiskCamera(std::string path_to_img_dir) 
-    : path_to_img_dir(path_to_img_dir) {}
+DiskCamera::DiskCamera(std::string image_folder_path)
+    : image_folder_path_(image_folder_path), current_frame_(0) {}
 
-cv::Mat DiskCamera::GetLatestFrame() {
-    int max_num = -1;
-    std::string latest_path;
+void DiskCamera::getFrame(cv::Mat& frame) {
 
-    for (const auto& entry : fs::directory_iterator(path_to_img_dir)) {
-        if (entry.path().extension() == ".png") {
-            std::string stem = entry.path().stem().string();
-
-            // ensure file nname is purely digits
-            if (!stem.empty() && std::all_of(stem.begin(), stem.end(), ::isdigit)) {
-                int num = std::stoi(stem);
-                if (num > max_num) {
-                    max_num = num;
-                    latest_path = entry.path().string();
-                }
-            }
-        }
-    }
-    return cv::imread(latest_path, cv::IMREAD_COLOR);
+  std::ostringstream filename;
+  filename << image_folder_path_ << "/" << std::setfill('0') << std::setw(4)
+           << current_frame_ << ".jpg";
+  frame = cv::imread(filename.str());
 }
 
-} // namespace camera
+}  // namespace camera
