@@ -8,8 +8,6 @@
 #include <fstream>
 #include <opencv2/opencv.hpp>
 
-#define PRINT_DETECTION_POSE true
-
 namespace localization {
 using json = nlohmann::json;
 
@@ -96,14 +94,16 @@ json ExtrinsicsToJson(tag_detection_t extrinsics) {
 }
 
 TagEstimator::TagEstimator(json intrinsics, json extrinsics,
-                           std::vector<cv::Point3f> apriltag_dimensions)
+                           std::vector<cv::Point3f> apriltag_dimensions,
+                           bool verbose)
     : extrinsics_(extrinsics),
       apriltag_layout_(frc::AprilTagFieldLayout::LoadField(
           frc::AprilTagField::k2025ReefscapeAndyMark)),
       camera_matrix_(camera_matrix_from_json<cv::Mat>(intrinsics)),
       distortion_coefficients_(
           distortion_coefficients_from_json<cv::Mat>(intrinsics)),
-      apriltag_dimensions_(apriltag_dimensions) {
+      apriltag_dimensions_(apriltag_dimensions),
+      verbose_(verbose) {
 
   apriltag_detector_ = apriltag_detector_create();
 
@@ -135,7 +135,7 @@ std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
     estimate = ApplyExtrinsics(estimate);
     estimate = GetFeildRelitivePosition(estimate);
   }
-  if (PRINT_DETECTION_POSE) {
+  if (verbose_) {
     for (const tag_detection_t& estimate : estimates) {
       std::cout << estimate << std::endl;
     }
@@ -193,12 +193,6 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
 
 tag_detection_t TagEstimator::GetFeildRelitivePosition(
     tag_detection_t tag_relitive_position) const {
-  std::cout << "April tag rotation: "
-            << apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
-                   ->Rotation()
-                   .Z()
-                   .value()
-            << "\n";
   tag_detection_t feild_relitive_position;
   feild_relitive_position = tag_relitive_position;
 

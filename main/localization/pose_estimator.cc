@@ -1,5 +1,6 @@
 #include "pose_estimator.h"
 #include <frc/geometry/Pose2d.h>
+#include <iostream>
 
 namespace localization {
 
@@ -53,7 +54,7 @@ void PoseEstimator::UpdateKalmanFilter(double x, double y, double rotation,
   x_filter_.Update(x, time, varience);
   y_filter_.Update(y, time, varience);
   rotation_filter_.Update(ClampAngle(rotation), time, varience);
-  rotation_filter_.position() = ClampAngle(rotation_filter_.position());
+  rotation_filter_.set_position(ClampAngle(rotation_filter_.position()));
 }
 pose2d_t PoseEstimator::GetPose() {
   pose2d_t position2d{.x = x_filter_.position(),
