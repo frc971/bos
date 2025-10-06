@@ -1,7 +1,7 @@
 #include "intrinsics_calibrate_lib.h"
 #include <opencv2/objdetect/charuco_detector.hpp>
-#include "main/camera/imx296_camera.h"
-#include "main/camera/streamer.h"
+#include "src/camera/imx296_camera.h"
+#include "src/camera/streamer.h"
 
 namespace calibration {
 

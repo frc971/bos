@@ -5,8 +5,8 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 #include <sstream>
-#include "main/camera/cscore_streamer.h"
-#include "main/camera/imx296_camera.h"
+#include "src/camera/cscore_streamer.h"
+#include "src/camera/imx296_camera.h"
 
 using json = nlohmann::json;
 

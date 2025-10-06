@@ -10,9 +10,9 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 #include <opencv2/objdetect/charuco_detector.hpp>
-#include "main/calibration/intrinsics_calibrate_lib.h"
-#include "main/camera/cscore_streamer.h"
-#include "main/camera/imx296_camera.h"
+#include "src/calibration/intrinsics_calibrate_lib.h"
+#include "src/camera/cscore_streamer.h"
+#include "src/camera/imx296_camera.h"
 
 using json = nlohmann::json;
 

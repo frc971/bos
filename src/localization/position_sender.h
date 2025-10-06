@@ -5,13 +5,13 @@
 #include <networktables/DoubleTopic.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
-#include "main/localization/position.h"
+#include "src/localization/position.h"
 #include "tag_estimator.h"
 
 namespace localization {
 class PositionSender {
  public:
-  PositionSender(bool verbose=false);
+  PositionSender(bool verbose = false);
   void Send(pose2d_t position_estimate, pose2d_t varience);
 
  private:
