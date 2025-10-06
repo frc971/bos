@@ -7,8 +7,8 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include "main/camera/imx296_camera.h"
-#include "main/localization/tag_estimator.h"
+#include "src/camera/imx296_camera.h"
+#include "src/localization/tag_estimator.h"
 
 using json = nlohmann::json;
 

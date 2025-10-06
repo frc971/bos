@@ -1,8 +1,8 @@
 #include <iostream>
-#include "main/camera/cscore_streamer.h"
-#include "main/camera/imx296_camera.h"
-#include "main/camera/streamer.h"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "src/camera/cscore_streamer.h"
+#include "src/camera/imx296_camera.h"
+#include "src/camera/streamer.h"
 
 int main(int argc, char* argv[]) {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;

@@ -32,4 +32,4 @@ add_subdirectory(third_party/971apriltag)
 add_subdirectory(third_party/kalman-cpp)
 
 add_compile_options(-Wno-psabi)
-add_subdirectory(main)
+add_subdirectory(src)

@@ -7,7 +7,7 @@
 #include "camera/imx296_camera.h"
 #include "localization/position_sender.h"
 #include "localization/tag_estimator.h"
-#include "main/localization/pose_estimator.h"
+#include "src/localization/pose_estimator.h"
 
 using json = nlohmann::json;
 

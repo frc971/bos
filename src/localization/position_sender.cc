@@ -1,7 +1,7 @@
 #include "position_sender.h"
 #include <networktables/NetworkTableInstance.h>
 #include <string>
-#include "main/localization/position.h"
+#include "src/localization/position.h"
 
 namespace localization {
 
