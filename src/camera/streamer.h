@@ -1,5 +1,4 @@
-// #ifndef STREAMER_H
-// #define STREAMER_H
+#pragma once
 
 #include <arpa/inet.h>
 #include <opencv2/core/mat.hpp>
@@ -23,9 +22,7 @@ class Streamer {
   sockaddr_in address_;
   socklen_t address_length_;
   int client_fds_[MAX_CLIENTS];
-  std::thread* listen_thread_; // Can we make this static and not ptr?
+  std::thread* listen_thread_;  // Can we make this static and not ptr?
 };
 
 }  // namespace camera
-
-// #endif // STREAMER_H

@@ -1,5 +1,4 @@
-#ifndef POSITION_SENDER_H
-#define POSITION_SENDER_H
+#pragma once
 
 #include <networktables/BooleanTopic.h>
 #include <networktables/DoubleTopic.h>
@@ -31,4 +30,3 @@ class PositionSender {
   bool verbose_;
 };
 }  // namespace localization
-#endif  // POSITION_SENDER_H

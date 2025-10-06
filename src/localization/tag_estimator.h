@@ -1,5 +1,4 @@
-#ifndef TAG_ESTIMATOR_H
-#define TAG_ESTIMATOR_H
+#pragma once
 
 #include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
 #include <nlohmann/json.hpp>
@@ -59,5 +58,3 @@ class TagEstimator {
   bool verbose_;
 };
 }  // namespace localization
-
-#endif  // TAG_ESTIMATOR_H

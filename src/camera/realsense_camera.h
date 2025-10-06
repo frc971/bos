@@ -1,5 +1,4 @@
-#ifndef REALSENSE_CAMERA_H
-#define REALSENSE_CAMERA_H
+#pragma once
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
@@ -15,5 +14,3 @@ class RealSenseCamera {
 };
 
 }  // namespace camera
-
-#endif  // REALSENSE_CAMERA_H
