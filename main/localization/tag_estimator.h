@@ -35,7 +35,8 @@ class TagEstimator {
  public:
   TagEstimator(
       json intrinsics, json extrinsics,
-      std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions);
+      std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions,
+      bool verbose = false);
   ~TagEstimator();
   std::vector<tag_detection_t> Estimate(cv::Mat& frame) const;
   std::vector<tag_detection_t> GetRawPositionEstimates(cv::Mat& frame) const;
@@ -55,6 +56,7 @@ class TagEstimator {
   cv::Mat camera_matrix_;
   cv::Mat distortion_coefficients_;
   std::vector<cv::Point3f> apriltag_dimensions_;
+  bool verbose_;
 };
 }  // namespace localization
 
