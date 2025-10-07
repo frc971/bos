@@ -7,4 +7,4 @@ if [ -z "$HOST" ]; then
   exit 1
 fi
 
-rsync -avz "$HOST":/bos/logs logs
+rsync -avz "$HOST":/bos/logs .
