@@ -94,9 +94,11 @@ json ExtrinsicsToJson(tag_detection_t extrinsics) {
 }
 
 TagEstimator::TagEstimator(json intrinsics, json extrinsics,
+                           speed_contraint_t speed_contraint,
                            std::vector<cv::Point3f> apriltag_dimensions,
                            bool verbose)
     : extrinsics_(extrinsics),
+      speed_contraint_(speed_contraint),
       apriltag_layout_(frc::AprilTagFieldLayout::LoadField(
           frc::AprilTagField::k2025ReefscapeAndyMark)),
       camera_matrix_(camera_matrix_from_json<cv::Mat>(intrinsics)),
