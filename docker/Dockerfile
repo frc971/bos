@@ -5,15 +5,7 @@ RUN apt-get update
 RUN apt-get install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev python3.10-dev python3-numpy
 RUN apt-get install -y build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
 RUN apt-get install -y libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libv4l-dev v4l-utils qv4l2
-RUN apt-get install -y curl unzip zip
-RUN apt-get install -y vim stow
-RUN apt-get install -y rsync
-RUN apt-get install -y libblas-dev liblapack-dev
-RUN apt-get install -y gh
-RUN apt-get install -y ripgrep
-RUN apt-get install -y clangd
-RUN apt-get install -y ninja-build
-RUN apt-get install -y clang-format
+RUN apt-get install -y clangd ninja-build clang-format ripgrep gh libblas-dev liblapack-dev rsync vim stow curl unzip zip
 
 RUN mkdir opencv
 
@@ -81,5 +73,8 @@ WORKDIR /usr/local/bin
 RUN wget https://github.com/neovim/neovim/releases/download/v0.11.4/nvim-linux-arm64.tar.gz
 RUN tar -xzvf nvim-linux-arm64.tar.gz
 RUN ln -s nvim-linux-arm64/bin/nvim nvim
+
+WORKDIR /
+COPY lib/* /usr/lib/
 
 WORKDIR /
