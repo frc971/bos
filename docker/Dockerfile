@@ -78,3 +78,8 @@ WORKDIR /
 COPY lib/* /usr/lib/
 
 WORKDIR /
+RUN curl -s --compressed -o /usr/share/keyrings/ctr-pubkey.gpg "https://deb.ctr-electronics.com/ctr-pubkey.gpg"
+RUN curl -s --compressed -o /etc/apt/sources.list.d/ctr2025.list "https://deb.ctr-electronics.com/ctr2025.list"
+RUN apt-get update && apt-get install -y phoenix6
+
+WORKDIR /
