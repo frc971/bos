@@ -68,3 +68,21 @@ void KalmanFilter::update(const Eigen::VectorXd y, double dt,
   this->dt = dt;
   update(y);
 }
+
+void KalmanFilter::predict() {
+  if (!initialized) {
+    throw std::runtime_error("Filter is not initialized!");
+  }
+
+  // Time update and to project the state ahead
+  x_hat_new = A * x_hat;
+
+  // Increase uncertainty
+  P = A * P * A.transpose() + Q;
+  
+  // Update internal state
+  x_hat = x_hat_new;
+
+  // Update time based off the change
+  t += dt;
+} 
