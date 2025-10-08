@@ -2,11 +2,14 @@
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
+#include <frc/kinematics/ChassisSpeeds.h>
+#include <ntcore_cpp.h>
 #include <ntcore_cpp_types.h>
 #include <wpilibc/frc/Timer.h>
 #include <cmath>
 #include <fstream>
 #include <opencv2/opencv.hpp>
+#include <vector>
 
 namespace localization {
 using json = nlohmann::json;
@@ -107,6 +110,11 @@ TagEstimator::TagEstimator(json intrinsics, json extrinsics,
       apriltag_dimensions_(apriltag_dimensions),
       verbose_(verbose) {
 
+  nt::NetworkTableInstance instance = nt::NetworkTableInstance::GetDefault();
+  nt::StructTopic<frc::ChassisSpeeds> speed_topic =
+      instance.GetStructTopic<frc::ChassisSpeeds>("DriveState/Speeds");
+  speed_subscriber_ = speed_topic.Subscribe(frc::ChassisSpeeds{});
+
   apriltag_detector_ = apriltag_detector_create();
 
   apriltag_detector_add_family_bits(apriltag_detector_, tag36h11_create(), 1);
@@ -132,6 +140,9 @@ TagEstimator::~TagEstimator() {
 }
 
 std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
+  if (AboveSpeedThreshold()) {
+    return std::vector<tag_detection_t>();
+  }
   std::vector<tag_detection_t> estimates = GetRawPositionEstimates(frame);
   for (tag_detection_t& estimate : estimates) {
     estimate = ApplyExtrinsics(estimate);
@@ -257,6 +268,16 @@ tag_detection_t TagEstimator::ApplyExtrinsics(tag_detection_t position) const {
   position.rotation.z += static_cast<double>(extrinsics_["rotation_z"]);
 
   return position;
+}
+
+bool TagEstimator::AboveSpeedThreshold() const {
+  frc::ChassisSpeeds chassis_speed = speed_subscriber_.Get();
+  const double chassis_translation_speed =
+      square(chassis_speed.vx.value()) + square(chassis_speed.vy.value());
+  return chassis_translation_speed >
+             square(speed_contraint_.translation_speed) ||
+         square(chassis_speed.omega.value()) >
+             square(speed_contraint_.rotation_speed);
 }
 
 }  // namespace localization

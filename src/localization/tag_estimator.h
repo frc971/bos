@@ -1,6 +1,7 @@
 #pragma once
 
 #include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
+#include <frc/kinematics/ChassisSpeeds.h>
 #include <networktables/DoubleTopic.h>
 #include <networktables/StructTopic.h>
 #include <nlohmann/json.hpp>
@@ -23,8 +24,8 @@ const std::vector<cv::Point3f> kapriltag_dimensions = {
     {-ktag_size / 2, -ktag_size / 2, 0}};
 
 typedef struct SpeedContraint {
-  double translation_speed;
-  double rotation_speed;
+  double translation_speed = 100;
+  double rotation_speed = 100;
 } speed_contraint_t;
 
 template <typename T>
@@ -53,6 +54,7 @@ class TagEstimator {
   tag_detection_t GetFeildRelitivePosition(
       tag_detection_t tag_relitive_position) const;
   tag_detection_t ApplyExtrinsics(tag_detection_t position) const;
+  bool AboveSpeedThreshold() const;
 
  private:
   json extrinsics_;
@@ -63,6 +65,7 @@ class TagEstimator {
   cv::Mat camera_matrix_;
   cv::Mat distortion_coefficients_;
   std::vector<cv::Point3f> apriltag_dimensions_;
+  nt::StructSubscriber<frc::ChassisSpeeds> speed_subscriber_;
   bool verbose_;
 };
 }  // namespace localization
