@@ -32,6 +32,8 @@ class SimpleKalman {
     kalman_filter_.R << varience;
   }
 
+  double prediction(double dt);
+
  private:
   KalmanFilter kalman_filter_;
   double time_;  // Current time of the kalman filter (seconds)

@@ -43,4 +43,16 @@ void SimpleKalman::Update(double position_update, double time,
   kalman_filter_.update(position_update_, dt, A);
 }
 
+std::pair<double, double> SimpleKalman::prediction(double dt) {
+  Eigen::MatrixXd A = Eigen::MatrixXd::Identity(2, 2);
+  A(0, 1) = dt;
+  Eigen::VectorXd x_pred = A * kalman_filter_.state();
+  Eigen::MatrixXd P_pred =
+      A * kalman_filter_.P * A.transpose() + kalman_filter_.Q;
+  double predicted_position = x_pred(0);
+  double predicted_velocity = x_pred(1);
+  double predicted_position_variance = P_pred(0, 0);
+  return {predicted_position, predicted_position_variance};
+}
+
 }  // namespace localization
