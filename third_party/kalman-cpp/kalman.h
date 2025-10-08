@@ -8,7 +8,7 @@
 * @date: 2014.11.15
 */
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 #pragma once
 
@@ -47,6 +47,12 @@ class KalmanFilter {
   * time step is assumed to remain constant.
   */
   void update(const Eigen::VectorXd y);
+
+  /**
+   * Predict the next state (time update).
+   * use when no measurements are available
+   */
+  void predict();
 
   /**
   * Update the estimated state based on measured values,
