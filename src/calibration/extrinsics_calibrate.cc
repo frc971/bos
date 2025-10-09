@@ -53,7 +53,7 @@ int main() {
 
   int estimate_count = 0;
   for (int i = 0; i < 24; i++) {
-    camera.getFrame(frame);
+    camera.GetFrame(frame);
     std::vector<localization::tag_detection_t> estimates =
         estimator.GetRawPositionEstimates(frame);
     estimate_count += estimates.size();

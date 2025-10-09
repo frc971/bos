@@ -24,7 +24,7 @@ void CaptureFrames(
   cv::Mat frame;
   int frame_count = 0;
   while (true) {
-    camera.getFrame(frame);
+    camera.GetFrame(frame);
     frame_count++;
     if (frame_count % 10 == 0) {
       cv::cvtColor(frame, frame, cv::COLOR_BGRA2RGB);
@@ -76,7 +76,7 @@ int main() {
   camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame;
-  camera.getFrame(frame);
+  camera.GetFrame(frame);
   cv::Size frame_size = frame.size();
 
   cv::aruco::CharucoDetector detector = calibration::CreateDetector(
