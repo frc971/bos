@@ -1,3 +1,4 @@
+#include <frc/DataLogManager.h>
 #include <networktables/NetworkTableInstance.h>
 #include <fstream>
 #include <iostream>
@@ -17,6 +18,7 @@ void start_networktables() {
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   inst.StartClient4("orin_localization");
   inst.SetServerTeam(971);
+  frc::DataLogManager::Start("/bos/logs/");
   std::cout << "Started networktables!" << std::endl;
 }
 

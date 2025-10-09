@@ -12,13 +12,13 @@ fi
 mkdir -p bin
 
 binaries=(
-  "build/main/localization_main"
-  "build/main/test"
-  "build/main/calibration/extrinsics_calibrate"
-  "build/main/calibration/focus_calibrate"
-  "build/main/calibration/frame_logger"
-  "build/main/calibration/intrinsics_calibrate"
-  "build/main/calibration/test_intrinsics"
+  "build/src/localization_main"
+  "build/src/test"
+  "build/src/calibration/extrinsics_calibrate"
+  "build/src/calibration/focus_calibrate"
+  "build/src/calibration/frame_logger"
+  "build/src/calibration/intrinsics_calibrate"
+  "build/src/calibration/test_intrinsics"
 )
 for binary in "${binaries[@]}"; do
   if [[ -f "$binary" ]]; then
