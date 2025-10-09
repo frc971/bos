@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.10)
 
 find_package(OpenCV REQUIRED)
 
-
 add_library(intrinsics_calibrate_lib intrinsics_calibrate_lib.cc)
 target_link_libraries(intrinsics_calibrate_lib PRIVATE ${OpenCV_LIBS} nlohmann_json::nlohmann_json)
 

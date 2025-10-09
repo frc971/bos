@@ -2,11 +2,14 @@
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
+#include <frc/kinematics/ChassisSpeeds.h>
+#include <ntcore_cpp.h>
 #include <ntcore_cpp_types.h>
 #include <wpilibc/frc/Timer.h>
 #include <cmath>
 #include <fstream>
 #include <opencv2/opencv.hpp>
+#include <vector>
 
 namespace localization {
 using json = nlohmann::json;
@@ -94,9 +97,11 @@ json ExtrinsicsToJson(tag_detection_t extrinsics) {
 }
 
 TagEstimator::TagEstimator(json intrinsics, json extrinsics,
+                           speed_contraint_t speed_contraint,
                            std::vector<cv::Point3f> apriltag_dimensions,
                            bool verbose)
     : extrinsics_(extrinsics),
+      speed_contraint_(speed_contraint),
       apriltag_layout_(frc::AprilTagFieldLayout::LoadField(
           frc::AprilTagField::k2025ReefscapeAndyMark)),
       camera_matrix_(camera_matrix_from_json<cv::Mat>(intrinsics)),
@@ -104,6 +109,11 @@ TagEstimator::TagEstimator(json intrinsics, json extrinsics,
           distortion_coefficients_from_json<cv::Mat>(intrinsics)),
       apriltag_dimensions_(apriltag_dimensions),
       verbose_(verbose) {
+
+  nt::NetworkTableInstance instance = nt::NetworkTableInstance::GetDefault();
+  nt::StructTopic<frc::ChassisSpeeds> speed_topic =
+      instance.GetStructTopic<frc::ChassisSpeeds>("DriveState/Speeds");
+  speed_subscriber_ = speed_topic.Subscribe(frc::ChassisSpeeds{});
 
   apriltag_detector_ = apriltag_detector_create();
 
@@ -130,6 +140,9 @@ TagEstimator::~TagEstimator() {
 }
 
 std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
+  if (AboveSpeedThreshold()) {
+    return std::vector<tag_detection_t>();
+  }
   std::vector<tag_detection_t> estimates = GetRawPositionEstimates(frame);
   for (tag_detection_t& estimate : estimates) {
     estimate = ApplyExtrinsics(estimate);
@@ -255,6 +268,16 @@ tag_detection_t TagEstimator::ApplyExtrinsics(tag_detection_t position) const {
   position.rotation.z += static_cast<double>(extrinsics_["rotation_z"]);
 
   return position;
+}
+
+bool TagEstimator::AboveSpeedThreshold() const {
+  frc::ChassisSpeeds chassis_speed = speed_subscriber_.Get();
+  const double chassis_translation_speed =
+      square(chassis_speed.vx.value()) + square(chassis_speed.vy.value());
+  return chassis_translation_speed >
+             square(speed_contraint_.translation_speed) ||
+         square(chassis_speed.omega.value()) >
+             square(speed_contraint_.rotation_speed);
 }
 
 }  // namespace localization

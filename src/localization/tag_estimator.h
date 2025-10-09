@@ -1,6 +1,9 @@
 #pragma once
 
 #include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
+#include <frc/kinematics/ChassisSpeeds.h>
+#include <networktables/DoubleTopic.h>
+#include <networktables/StructTopic.h>
 #include <nlohmann/json.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
@@ -20,6 +23,11 @@ const std::vector<cv::Point3f> kapriltag_dimensions = {
     {ktag_size / 2, -ktag_size / 2, 0},
     {-ktag_size / 2, -ktag_size / 2, 0}};
 
+typedef struct SpeedContraint {
+  double translation_speed = 100;
+  double rotation_speed = 100;
+} speed_contraint_t;
+
 template <typename T>
 T camera_matrix_from_json(json intrinsics);
 
@@ -33,7 +41,7 @@ json ExtrinsicsToJson(tag_detection_t extrinsics);
 class TagEstimator {
  public:
   TagEstimator(
-      json intrinsics, json extrinsics,
+      json intrinsics, json extrinsics, speed_contraint_t speed_contraint,
       std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions,
       bool verbose = false);
   ~TagEstimator();
@@ -46,15 +54,18 @@ class TagEstimator {
   tag_detection_t GetFeildRelitivePosition(
       tag_detection_t tag_relitive_position) const;
   tag_detection_t ApplyExtrinsics(tag_detection_t position) const;
+  bool AboveSpeedThreshold() const;
 
  private:
   json extrinsics_;
+  speed_contraint_t speed_contraint_;
   frc::AprilTagFieldLayout apriltag_layout_;
   apriltag_detector_t* apriltag_detector_;
   frc971::apriltag::GpuDetector* gpu_detector_;
   cv::Mat camera_matrix_;
   cv::Mat distortion_coefficients_;
   std::vector<cv::Point3f> apriltag_dimensions_;
+  nt::StructSubscriber<frc::ChassisSpeeds> speed_subscriber_;
   bool verbose_;
 };
 }  // namespace localization
