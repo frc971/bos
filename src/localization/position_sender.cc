@@ -1,6 +1,11 @@
 #include "position_sender.h"
+#include <frc/geometry/Pose2d.h>
+#include <frc/geometry/Translation2d.h>
+#include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
+#include <units/angle.h>
 #include <string>
+#include "frc/DataLogManager.h"
 #include "src/localization/position.h"
 
 namespace localization {
@@ -27,6 +32,9 @@ PositionSender::PositionSender(bool verbose)
   nt::DoubleTopic rotation_varience_topic =
       table->GetDoubleTopic("rotation_varience");
 
+  nt::StructTopic<frc::Pose2d> pose_topic =
+      table->GetStructTopic<frc::Pose2d>("pose");
+
   translation_x_publisher_ = translation_x_topic.Publish();
   translation_y_publisher_ = translation_y_topic.Publish();
 
@@ -36,6 +44,8 @@ PositionSender::PositionSender(bool verbose)
   translation_y_varience_publisher_ = translation_y_varience_topic.Publish();
 
   rotation_varience_publisher_ = rotation_varience_topic.Publish();
+
+  pose_publisher_ = pose_topic.Publish();
 }
 
 void PositionSender::Send(pose2d_t position_estimates, pose2d_t varience) {
@@ -47,6 +57,11 @@ void PositionSender::Send(pose2d_t position_estimates, pose2d_t varience) {
     translation_x_varience_publisher_.Set(varience.x);
     translation_y_varience_publisher_.Set(varience.y);
     rotation_varience_publisher_.Set(varience.rotation);
+    pose_publisher_.Set(
+        frc::Pose2d(units::meter_t{position_estimates.x},
+                    units::meter_t{position_estimates.y},
+                    units::radian_t{position_estimates.rotation}));
+
     mutex_.unlock();
   }
   if (verbose_) {
