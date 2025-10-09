@@ -4,6 +4,7 @@
 #include <networktables/DoubleTopic.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
+#include <networktables/StructTopic.h>
 #include "src/localization/position.h"
 #include "tag_estimator.h"
 
@@ -25,6 +26,8 @@ class PositionSender {
   nt::DoublePublisher translation_y_varience_publisher_;
 
   nt::DoublePublisher rotation_varience_publisher_;
+
+  nt::StructPublisher<frc::Pose2d> pose_publisher_;
 
   std::mutex mutex_;
   bool verbose_;
