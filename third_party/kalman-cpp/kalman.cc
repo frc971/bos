@@ -69,20 +69,30 @@ void KalmanFilter::update(const Eigen::VectorXd y, double dt,
   update(y);
 }
 
-void KalmanFilter::predict() {
+Eigen::MatrixXd KalmanFilter::predict_position(double dt) const { 
   if (!initialized) {
     throw std::runtime_error("Filter is not initialized!");
   }
 
+  Eigen::MatrixXd new_A(2, 2); 
+  new_A << 1, dt, 0, 1;
+
   // Time update and to project the state ahead
-  x_hat_new = A * x_hat;
+  Eigen::MatrixXd x_hat_new(2, 1); 
+  x_hat_new = new_A * x_hat;
 
-  // Increase uncertainty
-  P = A * P * A.transpose() + Q;
-  
-  // Update internal state
-  x_hat = x_hat_new;
+  return x_hat_new;
 
-  // Update time based off the change
-  t += dt;
 } 
+
+Eigen::MatrixXd KalmanFilter::predict_variance(double dt) const {
+  
+  Eigen::MatrixXd new_A(2, 2);
+  new_A << 1, dt, 0, 1;
+    
+  // Update covariance
+  Eigen::MatrixXd new_P(2, 1);
+  new_P = new_A * P * new_A.transpose() + Q;
+
+  return new_P;
+}

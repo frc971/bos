@@ -49,10 +49,17 @@ class KalmanFilter {
   void update(const Eigen::VectorXd y);
 
   /**
-   * Predict the next state (time update).
+   * Predict the next position (time update).
    * use when no measurements are available
    */
-  void predict();
+  Eigen::MatrixXd predict_position(double dt) const;
+
+  /**
+   * Predict the next covariance (time update).
+   * use when no measurements are available
+   */
+
+  Eigen::MatrixXd predict_variance(double dt) const;
 
   /**
   * Update the estimated state based on measured values,
