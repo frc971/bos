@@ -66,7 +66,7 @@ int main() {
   cv::Mat frame;
 
   while (true) {
-    camera.getFrame(frame);
+    camera.GetFrame(frame);
     raw_streamer.WriteFrame(frame);
 
     cv::Mat undistorted;
