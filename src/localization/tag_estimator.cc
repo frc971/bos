@@ -232,14 +232,14 @@ tag_detection_t TagEstimator::GetFeildRelitivePosition(
           tag_relitive_position.translation.x;
   feild_relitive_position.translation.z = tag_relitive_position.translation.z;
 
-  std::cout << "rotation: "
-            << RadianToDegree(feild_relitive_position.rotation.z) << "\n";
-  std::cout << "rotation_raw: " << feild_relitive_position.rotation.z << "\n";
-  std::cout << "translation x: " << feild_relitive_position.translation.x
-            << "\n";
-  std::cout << "translation y: " << feild_relitive_position.translation.y
-            << "\n";
-  std::cout << "\n\n";
+  // std::cout << "rotation: "
+  //           << RadianToDegree(feild_relitive_position.rotation.z) << "\n";
+  // std::cout << "rotation_raw: " << feild_relitive_position.rotation.z << "\n";
+  // std::cout << "translation x: " << feild_relitive_position.translation.x
+  //           << "\n";
+  // std::cout << "translation y: " << feild_relitive_position.translation.y
+  //           << "\n";
+  // std::cout << "\n\n";
 
   double angle =
       -(M_PI / 2 - std::atan2(feild_relitive_position.translation.x,
