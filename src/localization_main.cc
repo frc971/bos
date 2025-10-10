@@ -53,6 +53,7 @@ void run_estimator(camera::CameraInfo camera_info,
     camera.getFrame(frame);
     std::vector<localization::tag_detection_t> estimates =
         tag_estimator.Estimate(frame);
+    std::cout << estimates.size();
     pose_estimator.Update(estimates);
     position_sender.Send(pose_estimator.GetPose(),
                          pose_estimator.GetPoseVarience());
@@ -85,15 +86,15 @@ int main() {
                                              rotation_filter_config);
   localization::PositionSender position_sender(false);
 
-  std::thread camera_one_thread(run_estimator, camera::gstreamer1_30fps,
-                                std::ref(pose_estimator),
-                                std::ref(position_sender));
-
-  // std::thread camera_two_thread(run_estimator, camera::gstreamer2_30fps,
+  // std::thread camera_one_thread(run_estimator, camera::gstreamer1_30fps,
   //                               std::ref(pose_estimator),
   //                               std::ref(position_sender));
-  camera_one_thread.join();
-  // camera_two_thread.join();
+
+  std::thread camera_two_thread(run_estimator, camera::gstreamer2_30fps,
+                                std::ref(pose_estimator),
+                                std::ref(position_sender));
+  // camera_one_thread.join();
+  camera_two_thread.join();
 
   return 0;
 }
