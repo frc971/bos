@@ -265,12 +265,12 @@ tag_detection_t TagEstimator::GetFeildRelitivePosition(
       apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->Z().value();
 
   feild_relitive_position.rotation.z =
-      M_PI +
       apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)
           ->Rotation()
           .Z()
           .value() +
       tag_relitive_position.rotation.z;
+  feild_relitive_position.rotation.z += M_PI;
 
   return feild_relitive_position;
 }
