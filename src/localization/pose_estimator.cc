@@ -1,7 +1,7 @@
 #include "pose_estimator.h"
 #include <frc/geometry/Pose2d.h>
-#include <iostream>
 #include <wpilibc/frc/Timer.h>
+#include <iostream>
 
 namespace localization {
 
@@ -10,19 +10,7 @@ constexpr double DistanceToVarience(double distance) {
 }
 
 constexpr double ClampAngle(double angle) {
-  angle = std::fmod(angle + M_PI, 2.0 * M_PI);
-  if (angle < 0) {
-    angle += 2.0 * M_PI;
-  }
-  angle -= M_PI;
-
-  if (angle > M_PI_2) {
-    angle -= M_PI;
-  }
-  if (angle < -M_PI_2) {
-    angle += M_PI;
-  }
-  return angle;
+  return std::remainder(angle, 2.0 * std::numbers::pi_v<double>);
 }
 
 PoseEstimator::PoseEstimator(SimpleKalmanConfig x_filter_config,
@@ -59,22 +47,27 @@ void PoseEstimator::UpdateKalmanFilter(double x, double y, double rotation,
 }
 pose2d_t PoseEstimator::GetPose() {
   double current_time = frc::Timer::GetFPGATimestamp().to<double>();
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> x_predicted_state_and_variance = x_filter_.Predict(current_time);
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> y_predicted_state_and_variance = y_filter_.Predict(current_time);
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> rot_predicted_state_and_variance = rotation_filter_.Predict(current_time);
+  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> x_predicted_state_and_variance =
+      x_filter_.Predict(current_time);
+  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> y_predicted_state_and_variance =
+      y_filter_.Predict(current_time);
+  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> rot_predicted_state_and_variance =
+      rotation_filter_.Predict(current_time);
   pose2d_t position2d{.x = x_predicted_state_and_variance.first(0),
                       .y = y_predicted_state_and_variance.first(0),
                       .rotation = rot_predicted_state_and_variance.first(0)};
 
-  
   return position2d;
 }
 
 pose2d_t PoseEstimator::GetPoseVarience() {
   double current_time = frc::Timer::GetFPGATimestamp().to<double>();
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> x_predicted_state_and_variance = x_filter_.Predict(current_time);
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> y_predicted_state_and_variance = y_filter_.Predict(current_time);
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> rot_predicted_state_and_variance = rotation_filter_.Predict(current_time);
+  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> x_predicted_state_and_variance =
+      x_filter_.Predict(current_time);
+  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> y_predicted_state_and_variance =
+      y_filter_.Predict(current_time);
+  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> rot_predicted_state_and_variance =
+      rotation_filter_.Predict(current_time);
   pose2d_t position2d{.x = x_predicted_state_and_variance.second(0),
                       .y = y_predicted_state_and_variance.second(0),
                       .rotation = rot_predicted_state_and_variance.second(0)};
