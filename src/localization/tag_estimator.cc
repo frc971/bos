@@ -160,14 +160,19 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
 
       std::vector<cv::Point2f> imagePoints;
       for (int i = 0; i < 4; ++i) {
+        // std::cout << i << ": " << gpu_detection->p[i][0] << "  "
+        //           << gpu_detection->p[i][1] << "\n";
+
         imagePoints.emplace_back(gpu_detection->p[i][0],
                                  gpu_detection->p[i][1]);
       }
+      // std::cout << "\n\n";
       cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
       cv::Mat tvec =
           cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
       cv::solvePnP(apriltag_dimensions_, imagePoints, camera_matrix_,
-                   distortion_coefficients_, rvec, tvec);
+                   distortion_coefficients_, rvec, tvec, false,
+                   cv::SOLVEPNP_IPPE_SQUARE);
 
       tag_detection_t estimate;
       // Currently we do not use transation z, rotation x and rotation y
@@ -186,15 +191,34 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
       estimate.tag_id = gpu_detection->id;
 
       estimates.push_back(estimate);
+      // std::cout << "rotation: " << RadianToDegree(estimate.rotation.z) << "\n";
+      // std::cout << "rotation x: " << RadianToDegree(estimate.rotation.x)
+      //           << "\n";
+      // std::cout << "rotation y: " << RadianToDegree(estimate.rotation.y)
+      //           << "\n";
+      // std::cout << "rotation z: " << RadianToDegree(estimate.rotation.z)
+      //           << "\n";
+      // std::cout << "translation x: " << estimate.translation.x << "\n";
+      // std::cout << "translation y: " << estimate.translation.y << "\n";
+      // std::cout << "\n\n";
     }
   }
   return estimates;
 }
 
 tag_detection_t TagEstimator::GetFeildRelitivePosition(
-    tag_detection_t tag_relitive_position) const {
+    const tag_detection_t tag_relitive_position) const {
   tag_detection_t feild_relitive_position;
   feild_relitive_position = tag_relitive_position;
+
+  std::cout << "rotation: "
+            << RadianToDegree(feild_relitive_position.rotation.z) << "\n";
+  std::cout << "rotation_raw: " << feild_relitive_position.rotation.z << "\n";
+  std::cout << "translation x: " << feild_relitive_position.translation.x
+            << "\n";
+  std::cout << "translation y: " << feild_relitive_position.translation.y
+            << "\n";
+  std::cout << "\n\n";
 
   feild_relitive_position.translation.x =
       sin(feild_relitive_position.rotation.z) *
@@ -207,6 +231,15 @@ tag_detection_t TagEstimator::GetFeildRelitivePosition(
       sin(feild_relitive_position.rotation.z) *
           tag_relitive_position.translation.x;
   feild_relitive_position.translation.z = tag_relitive_position.translation.z;
+
+  std::cout << "rotation: "
+            << RadianToDegree(feild_relitive_position.rotation.z) << "\n";
+  std::cout << "rotation_raw: " << feild_relitive_position.rotation.z << "\n";
+  std::cout << "translation x: " << feild_relitive_position.translation.x
+            << "\n";
+  std::cout << "translation y: " << feild_relitive_position.translation.y
+            << "\n";
+  std::cout << "\n\n";
 
   double angle =
       -(M_PI / 2 - std::atan2(feild_relitive_position.translation.x,

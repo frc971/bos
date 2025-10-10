@@ -1,4 +1,8 @@
-// #include "src/yolo/yolo.h"
+#include <frc/apriltag/AprilTagFieldLayout.h>
+#include <iostream>
 int main() {
-  // yolo::Yolo("a");
+  frc::AprilTagFieldLayout layout(frc::AprilTagFieldLayout::LoadField(
+      frc::AprilTagField::k2025ReefscapeAndyMark));
+
+  std::cout << layout.GetTagPose(7)->Rotation().Z().value() << "a\n";
 }
