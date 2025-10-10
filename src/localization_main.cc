@@ -83,7 +83,7 @@ int main() {
 
   localization::PoseEstimator pose_estimator(x_filter_config, y_filter_config,
                                              rotation_filter_config);
-  localization::PositionSender position_sender(true);
+  localization::PositionSender position_sender(false);
 
   std::thread camera_one_thread(run_estimator, camera::gstreamer1_30fps,
                                 std::ref(pose_estimator),
