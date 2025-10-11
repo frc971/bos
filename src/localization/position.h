@@ -1,4 +1,6 @@
 #pragma once
+#include <wpi/struct/Struct.h>
+#include <wpilibc/frc/Timer.h>
 #include <cmath>
 #include <ostream>
 namespace localization {
@@ -17,7 +19,7 @@ typedef struct TagDetection {
   friend std::ostream& operator<<(std::ostream& os, const TagDetection& t) {
     os << "id: " << t.tag_id << "\n";
     os << "Translation: "
-                << "\n";
+       << "\n";
     os << t.translation.x << "\n";
     os << t.translation.y << "\n";
     os << t.translation.z << "\n";

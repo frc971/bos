@@ -145,6 +145,7 @@ std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
 
 std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
     cv::Mat& frame) const {
+  const double timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   cv::Mat gray;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
@@ -183,7 +184,7 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
       estimate.rotation.y = rvec.ptr<double>()[0];
       estimate.rotation.z = rvec.ptr<double>()[1];
 
-      estimate.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
+      estimate.timestamp = timestamp;
 
       estimate.distance =
           sqrt(square(estimate.translation.x) + square(estimate.translation.y));
