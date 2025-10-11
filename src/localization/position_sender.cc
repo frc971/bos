@@ -1,9 +1,11 @@
 #include "position_sender.h"
+#include <frc/Timer.h>
 #include <frc/geometry/Pose2d.h>
 #include <frc/geometry/Translation2d.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
 #include <units/angle.h>
+#include <wpilibc/frc/Timer.h>
 #include <string>
 #include "frc/DataLogManager.h"
 #include "src/localization/position.h"
@@ -45,6 +47,9 @@ PositionSender::PositionSender(bool verbose)
 
   rotation_varience_publisher_ = rotation_varience_topic.Publish();
 
+  nt::DoubleTopic timestamp_topic = table->GetDoubleTopic("timestamp");
+  timestamp_publisher_ = timestamp_topic.Publish();
+
   pose_publisher_ = pose_topic.Publish();
 }
 
@@ -61,6 +66,7 @@ void PositionSender::Send(pose2d_t position_estimates, pose2d_t varience) {
         frc::Pose2d(units::meter_t{position_estimates.x},
                     units::meter_t{position_estimates.y},
                     units::radian_t{position_estimates.rotation}));
+    timestamp_publisher_.Set(frc::Timer::GetFPGATimestamp().value());
 
     mutex_.unlock();
   }
