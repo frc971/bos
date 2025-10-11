@@ -62,11 +62,11 @@ pose2d_t PoseEstimator::GetPose() {
 
   Eigen::MatrixXd x_state = x_filter_.PredictPosition(current_time);
   Eigen::MatrixXd y_state = y_filter_.PredictPosition(current_time);
-  Eigen::MatrixXd rotaion_state = rotation_filter_.PredictPosition(current_time);
+  Eigen::MatrixXd rotation_variance = rotation_filter_.PredictPosition(current_time);
 
   pose2d_t position2d{.x = x_state(0, 0),
                       .y = y_state(0, 0),
-                      .rotation = rotaion_state(0, 0)};
+                      .rotation = rotation_variance(0, 0)};
   
   return position2d;
 }
