@@ -51,6 +51,10 @@ PositionSender::PositionSender(bool verbose)
   timestamp_publisher_ = timestamp_topic.Publish();
 
   pose_publisher_ = pose_topic.Publish();
+
+  nt::DoubleArrayTopic tag_estimation_topic =
+      table->GetDoubleArrayTopic("tag_estimation");
+  tag_estimation_publisher_ = tag_estimation_topic.Publish();
 }
 
 void PositionSender::Send(pose2d_t position_estimates, pose2d_t varience) {
@@ -84,6 +88,35 @@ void PositionSender::Send(pose2d_t position_estimates, pose2d_t varience) {
     std::cout << varience.x << "\n";
     std::cout << varience.y << "\n";
     std::cout << varience.rotation << "\n";
+  }
+}
+
+void PositionSender::Send(
+    std::vector<localization::tag_detection_t> detections) {
+  for (int i = 0; i < detections.size(); i++) {
+    translation_x_publisher_.Set(detections[i].translation.x);
+    translation_y_publisher_.Set(detections[i].translation.y);
+    rotation_publisher_.Set(detections[i].rotation.z);
+
+    double varience = 10 * detections[i].distance * detections[i].distance;
+
+    translation_x_varience_publisher_.Set(varience);
+    translation_y_varience_publisher_.Set(varience);
+    rotation_varience_publisher_.Set(varience);
+    pose_publisher_.Set(frc::Pose2d(units::meter_t{detections[i].translation.x},
+                                    units::meter_t{detections[i].translation.y},
+                                    units::radian_t{detections[i].rotation.z}));
+    timestamp_publisher_.Set(detections[i].timestamp);
+
+    double tag_estimation[5] = {
+        detections[i].translation.x, detections[i].translation.y,
+        detections[i].rotation.z, varience, detections[i].timestamp};
+
+    tag_estimation_publisher_.Set(tag_estimation);
+
+    std::cout << "latency: "
+              << frc::Timer::GetFPGATimestamp().value() -
+                     detections[i].timestamp;
   }
 }
 }  // namespace localization

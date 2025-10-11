@@ -58,13 +58,11 @@ void run_estimator(camera::CameraInfo camera_info,
       for (int i = 0; i < estimates.size(); i++) {
         estimates[i].rotation.z += M_PI;
       }
-      pose_estimator.Update(estimates);
     }
-    if (camera_info.id == 1) {
-      pose_estimator.Update(estimates);
-    }
-    position_sender.Send(pose_estimator.GetPose(),
-                         pose_estimator.GetPoseVarience());
+    position_sender.Send(estimates);
+    // pose_estimator.Update(estimates);
+    // position_sender.Send(pose_estimator.GetPose(),
+    //                      pose_estimator.GetPoseVarience());
   }
 }
 
