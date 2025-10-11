@@ -1,7 +1,7 @@
 #include "pose_estimator.h"
 #include <frc/geometry/Pose2d.h>
-#include <iostream>
 #include <wpilibc/frc/Timer.h>
+#include <iostream>
 
 namespace localization {
 
@@ -10,19 +10,7 @@ constexpr double DistanceToVarience(double distance) {
 }
 
 constexpr double ClampAngle(double angle) {
-  angle = std::fmod(angle + M_PI, 2.0 * M_PI);
-  if (angle < 0) {
-    angle += 2.0 * M_PI;
-  }
-  angle -= M_PI;
-
-  if (angle > M_PI_2) {
-    angle -= M_PI;
-  }
-  if (angle < -M_PI_2) {
-    angle += M_PI;
-  }
-  return angle;
+  return std::remainder(angle, 2.0 * std::numbers::pi_v<double>);
 }
 
 PoseEstimator::PoseEstimator(SimpleKalmanConfig x_filter_config,

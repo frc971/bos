@@ -113,14 +113,13 @@ TagEstimator::TagEstimator(json intrinsics, json extrinsics,
   apriltag_detector_->wp = workerpool_create(apriltag_detector_->nthreads);
   apriltag_detector_->qtp.min_white_black_diff = 4;
   apriltag_detector_->debug = false;
-  apriltag_detector_->quad_decimate = 1;
+  // apriltag_detector_->quad_decimate = 1;
 
   gpu_detector_ = new frc971::apriltag::GpuDetector(
       1456, 1088, apriltag_detector_,
       camera_matrix_from_json<frc971::apriltag::CameraMatrix>(intrinsics),
       distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
-          intrinsics),
-      1);
+          intrinsics));
 }
 
 TagEstimator::~TagEstimator() {
@@ -146,6 +145,7 @@ std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
 
 std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
     cv::Mat& frame) const {
+  const double timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   cv::Mat gray;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
@@ -184,7 +184,7 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
       estimate.rotation.y = rvec.ptr<double>()[0];
       estimate.rotation.z = rvec.ptr<double>()[1];
 
-      estimate.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
+      estimate.timestamp = timestamp;
 
       estimate.distance =
           sqrt(square(estimate.translation.x) + square(estimate.translation.y));
@@ -265,12 +265,12 @@ tag_detection_t TagEstimator::GetFeildRelitivePosition(
       apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->Z().value();
 
   feild_relitive_position.rotation.z =
-      M_PI +
       apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)
           ->Rotation()
           .Z()
           .value() +
       tag_relitive_position.rotation.z;
+  feild_relitive_position.rotation.z += M_PI;
 
   return feild_relitive_position;
 }

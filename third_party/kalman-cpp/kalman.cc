@@ -80,9 +80,9 @@ Eigen::MatrixXd KalmanFilter::predict_position(double dt) const {
   // Time update and to project the state ahead
   Eigen::MatrixXd x_hat_new(2, 1);
   x_hat_new = new_A * x_hat;
-  return x_hat;
+  // return x_hat;
 
-  // return x_hat_new;
+  return x_hat_new;
 }
 
 Eigen::MatrixXd KalmanFilter::predict_variance(double dt) const {
