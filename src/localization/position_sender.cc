@@ -37,24 +37,30 @@ PositionSender::PositionSender(bool verbose)
   nt::StructTopic<frc::Pose2d> pose_topic =
       table->GetStructTopic<frc::Pose2d>("pose");
 
-  translation_x_publisher_ = translation_x_topic.Publish();
-  translation_y_publisher_ = translation_y_topic.Publish();
+  translation_x_publisher_ =
+      translation_x_topic.Publish({.keepDuplicates = true});
+  translation_y_publisher_ =
+      translation_y_topic.Publish({.keepDuplicates = true});
 
-  rotation_publisher_ = rotation_topic.Publish();
+  rotation_publisher_ = rotation_topic.Publish({.keepDuplicates = true});
 
-  translation_x_varience_publisher_ = translation_x_varience_topic.Publish();
-  translation_y_varience_publisher_ = translation_y_varience_topic.Publish();
+  translation_x_varience_publisher_ =
+      translation_x_varience_topic.Publish({.keepDuplicates = true});
+  translation_y_varience_publisher_ =
+      translation_y_varience_topic.Publish({.keepDuplicates = true});
 
-  rotation_varience_publisher_ = rotation_varience_topic.Publish();
+  rotation_varience_publisher_ =
+      rotation_varience_topic.Publish({.keepDuplicates = true});
 
   nt::DoubleTopic timestamp_topic = table->GetDoubleTopic("timestamp");
-  timestamp_publisher_ = timestamp_topic.Publish();
+  timestamp_publisher_ = timestamp_topic.Publish({.keepDuplicates = true});
 
-  pose_publisher_ = pose_topic.Publish();
+  pose_publisher_ = pose_topic.Publish({.keepDuplicates = true});
 
   nt::DoubleArrayTopic tag_estimation_topic =
       table->GetDoubleArrayTopic("tag_estimation");
-  tag_estimation_publisher_ = tag_estimation_topic.Publish();
+  tag_estimation_publisher_ =
+      tag_estimation_topic.Publish({.keepDuplicates = true});
 }
 
 void PositionSender::Send(pose2d_t position_estimates, pose2d_t varience) {
