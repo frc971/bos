@@ -27,13 +27,13 @@ PositionSender::PositionSender(bool verbose)
 
   nt::DoubleArrayTopic tag_estimation_topic =
       table->GetDoubleArrayTopic("TagEstimation");
-  tag_estimation_publisher_ =
-      tag_estimation_topic.Publish({.sendAll = true, .keepDuplicates = true});
+  tag_estimation_publisher_ = tag_estimation_topic.Publish(
+      {.periodic = 0.05, .sendAll = true, .keepDuplicates = true});
 }
 
 void PositionSender::Send(
     std::vector<localization::tag_detection_t> detections) {
-  for (int i = 0; i < detections.size(); i++) {
+  for (size_t i = 0; i < detections.size(); i++) {
     double varience = 10 * detections[i].distance * detections[i].distance;
     double tag_estimation[5] = {
         detections[i].translation.x, detections[i].translation.y,
