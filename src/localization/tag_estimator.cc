@@ -160,8 +160,6 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
 
       std::vector<cv::Point2f> imagePoints;
       for (int i = 0; i < 4; ++i) {
-        // std::cout << i << ": " << gpu_detection->p[i][0] << "  "
-        //           << gpu_detection->p[i][1] << "\n";
 
         imagePoints.emplace_back(gpu_detection->p[i][0],
                                  gpu_detection->p[i][1]);
