@@ -98,11 +98,11 @@ int main() {
                                 std::ref(pose_estimator),
                                 std::ref(position_sender));
 
-  std::thread camera_two_thread(run_estimator, camera::gstreamer2_30fps,
-                                std::ref(pose_estimator),
-                                std::ref(position_sender));
+  // std::thread camera_two_thread(run_estimator, camera::gstreamer2_30fps,
+  //                               std::ref(pose_estimator),
+  //                               std::ref(position_sender));
   camera_one_thread.join();
-  camera_two_thread.join();
+  // camera_two_thread.join();
 
   return 0;
 }

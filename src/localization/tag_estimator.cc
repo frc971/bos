@@ -113,14 +113,13 @@ TagEstimator::TagEstimator(json intrinsics, json extrinsics,
   apriltag_detector_->wp = workerpool_create(apriltag_detector_->nthreads);
   apriltag_detector_->qtp.min_white_black_diff = 4;
   apriltag_detector_->debug = false;
-  apriltag_detector_->quad_decimate = 1;
+  // apriltag_detector_->quad_decimate = 1;
 
   gpu_detector_ = new frc971::apriltag::GpuDetector(
       1456, 1088, apriltag_detector_,
       camera_matrix_from_json<frc971::apriltag::CameraMatrix>(intrinsics),
       distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
-          intrinsics),
-      1);
+          intrinsics));
 }
 
 TagEstimator::~TagEstimator() {
