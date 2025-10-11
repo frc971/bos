@@ -28,7 +28,7 @@ PositionSender::PositionSender(bool verbose)
   nt::DoubleArrayTopic tag_estimation_topic =
       table->GetDoubleArrayTopic("TagEstimation");
   tag_estimation_publisher_ = tag_estimation_topic.Publish(
-      {.periodic = 0.05, .sendAll = true, .keepDuplicates = true});
+      {.periodic = 0.01, .sendAll = true, .keepDuplicates = true});
 }
 
 void PositionSender::Send(
