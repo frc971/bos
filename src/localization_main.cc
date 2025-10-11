@@ -16,7 +16,10 @@ using json = nlohmann::json;
 
 void start_networktables() {
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
+  inst.StopClient();
+  inst.StopLocal();
   inst.StartClient4("orin_localization");
+
   inst.SetServerTeam(971);
   frc::DataLogManager::Start("/bos/logs/");
   std::cout << "Started networktables!" << std::endl;
@@ -95,6 +98,13 @@ int main() {
   std::thread camera_one_thread(run_estimator, camera::gstreamer1_30fps,
                                 std::ref(pose_estimator),
                                 std::ref(position_sender));
+
+  nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
+  while (true) {
+    if (!inst.IsConnected()) {
+      start_networktables();
+    }
+  }
 
   // std::thread camera_two_thread(run_estimator, camera::gstreamer2_30fps,
   //                               std::ref(pose_estimator),
