@@ -27,6 +27,8 @@ class PositionSender {
 
   nt::DoublePublisher rotation_varience_publisher_;
 
+  nt::DoublePublisher timestamp_publisher_;
+
   nt::StructPublisher<frc::Pose2d> pose_publisher_;
 
   std::mutex mutex_;
