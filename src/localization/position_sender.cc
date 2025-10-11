@@ -110,7 +110,8 @@ void PositionSender::Send(
 
     double tag_estimation[5] = {
         detections[i].translation.x, detections[i].translation.y,
-        detections[i].rotation.z, varience, detections[i].timestamp};
+        detections[i].rotation.z, varience,
+        detections[i].timestamp + instance_.GetServerTimeOffset().value()};
 
     tag_estimation_publisher_.Set(tag_estimation);
 
