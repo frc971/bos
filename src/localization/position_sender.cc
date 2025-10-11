@@ -38,29 +38,32 @@ PositionSender::PositionSender(bool verbose)
       table->GetStructTopic<frc::Pose2d>("pose");
 
   translation_x_publisher_ =
-      translation_x_topic.Publish({.keepDuplicates = true});
+      translation_x_topic.Publish({.sendAll = true, .keepDuplicates = true});
   translation_y_publisher_ =
-      translation_y_topic.Publish({.keepDuplicates = true});
+      translation_y_topic.Publish({.sendAll = true, .keepDuplicates = true});
 
-  rotation_publisher_ = rotation_topic.Publish({.keepDuplicates = true});
+  rotation_publisher_ =
+      rotation_topic.Publish({.sendAll = true, .keepDuplicates = true});
 
-  translation_x_varience_publisher_ =
-      translation_x_varience_topic.Publish({.keepDuplicates = true});
-  translation_y_varience_publisher_ =
-      translation_y_varience_topic.Publish({.keepDuplicates = true});
+  translation_x_varience_publisher_ = translation_x_varience_topic.Publish(
+      {.sendAll = true, .keepDuplicates = true});
+  translation_y_varience_publisher_ = translation_y_varience_topic.Publish(
+      {.sendAll = true, .keepDuplicates = true});
 
-  rotation_varience_publisher_ =
-      rotation_varience_topic.Publish({.keepDuplicates = true});
+  rotation_varience_publisher_ = rotation_varience_topic.Publish(
+      {.sendAll = true, .keepDuplicates = true});
 
   nt::DoubleTopic timestamp_topic = table->GetDoubleTopic("timestamp");
-  timestamp_publisher_ = timestamp_topic.Publish({.keepDuplicates = true});
+  timestamp_publisher_ =
+      timestamp_topic.Publish({.sendAll = true, .keepDuplicates = true});
 
-  pose_publisher_ = pose_topic.Publish({.keepDuplicates = true});
+  pose_publisher_ =
+      pose_topic.Publish({.sendAll = true, .keepDuplicates = true});
 
   nt::DoubleArrayTopic tag_estimation_topic =
       table->GetDoubleArrayTopic("tag_estimation");
   tag_estimation_publisher_ =
-      tag_estimation_topic.Publish({.keepDuplicates = true});
+      tag_estimation_topic.Publish({.sendAll = true, .keepDuplicates = true});
 }
 
 void PositionSender::Send(pose2d_t position_estimates, pose2d_t varience) {
@@ -76,7 +79,8 @@ void PositionSender::Send(pose2d_t position_estimates, pose2d_t varience) {
         frc::Pose2d(units::meter_t{position_estimates.x},
                     units::meter_t{position_estimates.y},
                     units::radian_t{position_estimates.rotation}));
-    timestamp_publisher_.Set(frc::Timer::GetFPGATimestamp().value());
+    timestamp_publisher_.Set(frc::Timer::GetFPGATimestamp().value() +
+                             instance_.GetServerTimeOffset().value() * 1000000);
 
     mutex_.unlock();
   }
@@ -117,7 +121,8 @@ void PositionSender::Send(
     double tag_estimation[5] = {
         detections[i].translation.x, detections[i].translation.y,
         detections[i].rotation.z, varience,
-        detections[i].timestamp + instance_.GetServerTimeOffset().value()};
+        detections[i].timestamp +
+            instance_.GetServerTimeOffset().value() * 1000000};
 
     tag_estimation_publisher_.Set(tag_estimation);
 
