@@ -220,10 +220,10 @@ tag_detection_t TagEstimator::GetFeildRelitivePosition(
 
   frc::Transform3d tag_to_camera = camera_to_tag.Inverse();
 
-  frc::Pose3d field_to_tag =
+  frc::Pose3d tag_pose =
       apriltag_layout_.GetTagPose(tag_relitive_position.tag_id).value();
 
-  frc::Pose3d field_to_camera = field_to_tag.TransformBy(tag_to_camera);
+  frc::Pose3d camera_pose = tag_pose.TransformBy(tag_to_camera);
 
   frc::Transform3d robot_to_camera(
       units::meter_t{static_cast<double>(extrinsics_["translation_x"])},
@@ -234,30 +234,27 @@ tag_detection_t TagEstimator::GetFeildRelitivePosition(
                       units::radian_t{extrinsics_["rotation_z"]}));
   frc::Transform3d camera_to_robot = robot_to_camera.Inverse();
 
-  frc::Pose3d field_to_robot = field_to_camera.TransformBy(camera_to_robot);
+  frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot);
 
-  tag_detection_t field_relitive_position;
+  tag_detection_t field_relitive_pose;
 
-  field_relitive_position.tag_id = tag_relitive_position.tag_id;
+  field_relitive_pose.tag_id = tag_relitive_position.tag_id;
 
-  field_relitive_position.rotation.x = field_to_robot.Rotation().X().value();
-  field_relitive_position.rotation.y = field_to_robot.Rotation().Y().value();
-  field_relitive_position.rotation.z = field_to_robot.Rotation().Z().value();
+  field_relitive_pose.rotation.x = robot_pose.Rotation().X().value();
+  field_relitive_pose.rotation.y = robot_pose.Rotation().Y().value();
+  field_relitive_pose.rotation.z = robot_pose.Rotation().Z().value();
 
-  field_relitive_position.translation.x =
-      field_to_robot.Translation().X().value();
-  field_relitive_position.translation.y =
-      field_to_robot.Translation().Y().value();
-  field_relitive_position.translation.z =
-      field_to_robot.Translation().Z().value();
+  field_relitive_pose.translation.x = robot_pose.Translation().X().value();
+  field_relitive_pose.translation.y = robot_pose.Translation().Y().value();
+  field_relitive_pose.translation.z = robot_pose.Translation().Z().value();
 
-  field_relitive_position.distance = tag_relitive_position.distance;
+  field_relitive_pose.distance = tag_relitive_position.distance;
 
-  field_relitive_position.timestamp = tag_relitive_position.timestamp;
+  field_relitive_pose.timestamp = tag_relitive_position.timestamp;
 
-  std::cout << field_relitive_position;
+  std::cout << field_relitive_pose;
 
-  return field_relitive_position;
+  return field_relitive_pose;
 }
 
 tag_detection_t TagEstimator::ApplyExtrinsics(tag_detection_t position) const {

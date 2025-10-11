@@ -19,20 +19,7 @@ class PositionSender {
  private:
   nt::NetworkTableInstance instance_;
 
-  // nt::DoublePublisher translation_x_publisher_;
-  // nt::DoublePublisher translation_y_publisher_;
-  //
-  // nt::DoublePublisher rotation_publisher_;
-  //
-  // nt::DoublePublisher translation_x_varience_publisher_;
-  // nt::DoublePublisher translation_y_varience_publisher_;
-  //
-  // nt::DoublePublisher rotation_varience_publisher_;
-  //
-  // nt::DoublePublisher timestamp_publisher_;
-
   nt::StructPublisher<frc::Pose2d> pose_publisher_;
-
   nt::DoubleArrayPublisher tag_estimation_publisher_;
 
   std::mutex mutex_;
