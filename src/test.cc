@@ -6,6 +6,8 @@
 #include <Eigen/Dense>  // easiest: pulls in everything you need
 #include <iomanip>
 #include <iostream>
+#include "src/localization/position.h"
+#include "src/localization/tag_estimator.h"
 
 void PrintPose3d(const frc::Pose3d& pose) {
   // Extract translation (in meters)
@@ -47,7 +49,7 @@ int main() {
       frc::AprilTagField::k2025ReefscapeAndyMark));
 
   std::cout << "camera to tag: \n";
-  frc::Transform3d camera_to_tag{1.0_m, 0.5_m, 0_m,
+  frc::Transform3d camera_to_tag{1.0_m, 0_m, 0_m,
                                  frc::Rotation3d{0_deg, 0_deg, 180_deg}};
   PrintTransform3d(camera_to_tag);
 
@@ -57,7 +59,7 @@ int main() {
   PrintTransform3d(tag_to_camera);
 
   std::cout << "feild to tag: ";
-  frc::Pose3d feild_to_tag = layout.GetTagPose(7).value();
+  frc::Pose3d feild_to_tag = layout.GetTagPose(10).value();
   PrintPose3d(feild_to_tag);
 
   std::cout << "feild to camera: \n";
@@ -65,7 +67,7 @@ int main() {
   PrintPose3d(feild_to_cacmera);
 
   std::cout << "feild to robot: \n";
-  frc::Transform3d robot_to_camera{1_m, 0_m, 0_m,
+  frc::Transform3d robot_to_camera{0_m, 0_m, 0_m,
                                    frc::Rotation3d{0_deg, 0_deg, 0_deg}};
   frc::Transform3d camera_to_robot(robot_to_camera.Inverse());
   frc::Pose3d feild_to_robot = feild_to_cacmera.TransformBy(camera_to_robot);
