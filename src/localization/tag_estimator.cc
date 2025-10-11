@@ -2,11 +2,15 @@
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
+#include <frc/geometry/Rotation3d.h>
 #include <ntcore_cpp_types.h>
+#include <units/angle.h>
+#include <units/length.h>
 #include <wpilibc/frc/Timer.h>
 #include <cmath>
 #include <fstream>
 #include <opencv2/opencv.hpp>
+#include "src/localization/position.h"
 
 namespace localization {
 using json = nlohmann::json;
@@ -131,7 +135,6 @@ TagEstimator::~TagEstimator() {
 std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
   std::vector<tag_detection_t> estimates = GetRawPositionEstimates(frame);
   for (tag_detection_t& estimate : estimates) {
-    estimate = ApplyExtrinsics(estimate);
     estimate = GetFeildRelitivePosition(estimate);
   }
   if (verbose_) {
@@ -206,69 +209,53 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
 
 tag_detection_t TagEstimator::GetFeildRelitivePosition(
     const tag_detection_t tag_relitive_position) const {
-  tag_detection_t feild_relitive_position;
-  feild_relitive_position = tag_relitive_position;
 
-  std::cout << "rotation: "
-            << RadianToDegree(feild_relitive_position.rotation.z) << "\n";
-  std::cout << "rotation_raw: " << feild_relitive_position.rotation.z << "\n";
-  std::cout << "translation x: " << feild_relitive_position.translation.x
-            << "\n";
-  std::cout << "translation y: " << feild_relitive_position.translation.y
-            << "\n";
-  std::cout << "\n\n";
+  frc::Transform3d camera_to_tag(
+      units::meter_t{tag_relitive_position.translation.x},
+      units::meter_t{tag_relitive_position.translation.y},
+      units::meter_t{tag_relitive_position.translation.z},
+      frc::Rotation3d(units::radian_t{tag_relitive_position.rotation.x},
+                      units::radian_t{tag_relitive_position.rotation.y},
+                      units::radian_t{tag_relitive_position.rotation.z}));
+
+  frc::Transform3d tag_to_camera = camera_to_tag.Inverse();
+
+  frc::Pose3d feild_to_tag =
+      apriltag_layout_.GetTagPose(tag_relitive_position.tag_id).value();
+
+  frc::Pose3d feild_to_camera = feild_to_tag.TransformBy(tag_to_camera);
+
+  frc::Transform3d robot_to_camera(
+      units::meter_t{static_cast<double>(extrinsics_["translation_x"])},
+      units::meter_t{static_cast<double>(extrinsics_["translation_y"])},
+      units::meter_t{static_cast<double>(extrinsics_["translation_z"])},
+      frc::Rotation3d(units::radian_t{extrinsics_["rotation_x"]},
+                      units::radian_t{extrinsics_["rotation_y"]},
+                      units::radian_t{extrinsics_["rotation_z"]}));
+  frc::Transform3d camera_to_robot = robot_to_camera.Inverse();
+
+  frc::Pose3d feild_to_robot = feild_to_camera.TransformBy(camera_to_robot);
+
+  tag_detection_t feild_relitive_position;
+
+  feild_relitive_position.tag_id = tag_relitive_position.tag_id;
+
+  feild_relitive_position.rotation.x = feild_to_robot.Rotation().X().value();
+  feild_relitive_position.rotation.y = feild_to_robot.Rotation().Y().value();
+  feild_relitive_position.rotation.z = feild_to_robot.Rotation().Z().value();
 
   feild_relitive_position.translation.x =
-      sin(feild_relitive_position.rotation.z) *
-          tag_relitive_position.translation.y +
-      cos(feild_relitive_position.rotation.z) *
-          tag_relitive_position.translation.x;
+      feild_to_robot.Translation().X().value();
   feild_relitive_position.translation.y =
-      cos(feild_relitive_position.rotation.z) *
-          tag_relitive_position.translation.y -
-      sin(feild_relitive_position.rotation.z) *
-          tag_relitive_position.translation.x;
-  feild_relitive_position.translation.z = tag_relitive_position.translation.z;
+      feild_to_robot.Translation().Y().value();
+  feild_relitive_position.translation.z =
+      feild_to_robot.Translation().Z().value();
 
-  // std::cout << "rotation: "
-  //           << RadianToDegree(feild_relitive_position.rotation.z) << "\n";
-  // std::cout << "rotation_raw: " << feild_relitive_position.rotation.z << "\n";
-  // std::cout << "translation x: " << feild_relitive_position.translation.x
-  //           << "\n";
-  // std::cout << "translation y: " << feild_relitive_position.translation.y
-  //           << "\n";
-  // std::cout << "\n\n";
+  feild_relitive_position.distance = tag_relitive_position.distance;
 
-  double angle =
-      -(M_PI / 2 - std::atan2(feild_relitive_position.translation.x,
-                              feild_relitive_position.translation.y)) +
-      apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
-          ->Rotation()
-          .Z()
-          .value();
+  feild_relitive_position.timestamp = tag_relitive_position.timestamp;
 
-  double magnitude = sqrt(feild_relitive_position.translation.x *
-                              feild_relitive_position.translation.x +
-                          feild_relitive_position.translation.y *
-                              feild_relitive_position.translation.y);
-
-  feild_relitive_position.translation.x = std::cos(angle) * magnitude;
-  feild_relitive_position.translation.y = std::sin(angle) * magnitude;
-
-  feild_relitive_position.translation.x +=
-      apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->X().value();
-  feild_relitive_position.translation.y +=
-      apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->Y().value();
-  feild_relitive_position.translation.z +=
-      apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->Z().value();
-
-  feild_relitive_position.rotation.z =
-      apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)
-          ->Rotation()
-          .Z()
-          .value() +
-      tag_relitive_position.rotation.z;
-  feild_relitive_position.rotation.z += M_PI;
+  std::cout << feild_relitive_position;
 
   return feild_relitive_position;
 }
