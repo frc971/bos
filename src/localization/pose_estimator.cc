@@ -59,25 +59,29 @@ void PoseEstimator::UpdateKalmanFilter(double x, double y, double rotation,
 }
 pose2d_t PoseEstimator::GetPose() {
   double current_time = frc::Timer::GetFPGATimestamp().to<double>();
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> x_predicted_state_and_variance = x_filter_.Predict(current_time);
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> y_predicted_state_and_variance = y_filter_.Predict(current_time);
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> rot_predicted_state_and_variance = rotation_filter_.Predict(current_time);
-  pose2d_t position2d{.x = x_predicted_state_and_variance.first(0),
-                      .y = y_predicted_state_and_variance.first(0),
-                      .rotation = rot_predicted_state_and_variance.first(0)};
 
+  Eigen::MatrixXd x_state = x_filter_.PredictPosition(current_time);
+  Eigen::MatrixXd y_state = y_filter_.PredictPosition(current_time);
+  Eigen::MatrixXd rotaion_state = rotation_filter_.PredictPosition(current_time);
+
+  pose2d_t position2d{.x = x_state(0, 0),
+                      .y = y_state(0, 0),
+                      .rotation = rotaion_state(0, 0)};
   
   return position2d;
 }
 
 pose2d_t PoseEstimator::GetPoseVarience() {
   double current_time = frc::Timer::GetFPGATimestamp().to<double>();
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> x_predicted_state_and_variance = x_filter_.Predict(current_time);
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> y_predicted_state_and_variance = y_filter_.Predict(current_time);
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> rot_predicted_state_and_variance = rotation_filter_.Predict(current_time);
-  pose2d_t position2d{.x = x_predicted_state_and_variance.second(0),
-                      .y = y_predicted_state_and_variance.second(0),
-                      .rotation = rot_predicted_state_and_variance.second(0)};
+
+  Eigen::MatrixXd x_variance = x_filter_.PredictVariance(current_time);
+  Eigen::MatrixXd y_variance = y_filter_.PredictVariance(current_time);
+  Eigen::MatrixXd rotation_variance = rotation_filter_.PredictVariance(current_time);
+
+  pose2d_t position2d{.x = x_variance(0, 0),
+                      .y = y_variance(0, 0),
+                      .rotation = rotation_variance(0, 0)};
+  
   return position2d;
 }
 

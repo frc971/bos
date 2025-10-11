@@ -17,7 +17,8 @@ class SimpleKalman {
                double measurment_noise, double process_noise);
   SimpleKalman(SimpleKalmanConfig config);
   void Update(double position_update, double time, double varience);
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Predict(double time);
+  Eigen::MatrixXd PredictPosition(double time);
+  Eigen::MatrixXd PredictVariance(double time);
 
   double position() const { return kalman_filter_.state()[0]; }
   double velocity() const { return kalman_filter_.state()[1]; }
