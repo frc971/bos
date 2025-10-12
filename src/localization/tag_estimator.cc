@@ -260,6 +260,7 @@ tag_detection_t TagEstimator::GetFeildRelitivePosition(
   PrintTransform3d(tag_to_camera);
   std::cout << "\n\n";
 
+  std::cout << "tag id: " << tag_relitive_position.tag_id << std::endl;
   frc::Pose3d tag_pose =
       apriltag_layout_.GetTagPose(tag_relitive_position.tag_id).value();
   std::cout << "tagpose: \n";
@@ -286,7 +287,6 @@ tag_detection_t TagEstimator::GetFeildRelitivePosition(
 
   field_relitive_pose.tag_id = tag_relitive_position.tag_id;
 
-  std::cout << "Getting values set #1 \n" << std::endl;
   field_relitive_pose.rotation.x = robot_pose.Rotation().X().value();
   field_relitive_pose.rotation.y = robot_pose.Rotation().Y().value();
   field_relitive_pose.rotation.z = robot_pose.Rotation().Z().value();
@@ -294,7 +294,6 @@ tag_detection_t TagEstimator::GetFeildRelitivePosition(
   field_relitive_pose.translation.x = robot_pose.Translation().X().value();
   field_relitive_pose.translation.y = robot_pose.Translation().Y().value();
   field_relitive_pose.translation.z = robot_pose.Translation().Z().value();
-  std::cout << "Done getting values set #2 \n" << std::endl;
 
   field_relitive_pose.distance = tag_relitive_position.distance;
 
