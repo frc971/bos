@@ -68,12 +68,13 @@ int main() {
   std::thread camera_one_thread(run_estimator, camera::gstreamer1_30fps,
                                 std::ref(position_sender));
 
-  nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
-  while (true) {
-    if (!inst.IsConnected()) {
-      start_networktables();
-    }
-  }
+  // nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
+  // while (true) {
+  //   if (!inst.IsConnected()) {
+  //     start_networktables();
+  //   }
+  // }
+  // std::cout << "this should never happen \n";
 
   // std::thread camera_two_thread(run_estimator, camera::gstreamer2_30fps,
   //                               std::ref(pose_estimator),
