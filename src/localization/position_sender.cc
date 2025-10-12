@@ -34,7 +34,7 @@ PositionSender::PositionSender(bool verbose)
 void PositionSender::Send(
     std::vector<localization::tag_detection_t> detections) {
   for (size_t i = 0; i < detections.size(); i++) {
-    double varience = 10 * detections[i].distance * detections[i].distance;
+    double varience = detections[i].distance * detections[i].distance;
     double tag_estimation[5] = {
         detections[i].translation.x, detections[i].translation.y,
         detections[i].rotation.z, varience,
@@ -49,7 +49,8 @@ void PositionSender::Send(
 
     std::cout << "latency: "
               << frc::Timer::GetFPGATimestamp().value() -
-                     detections[i].timestamp;
+                     detections[i].timestamp
+              << "\n";
   }
 }
 }  // namespace localization
