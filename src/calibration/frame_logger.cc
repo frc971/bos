@@ -17,7 +17,7 @@ void read_camera(camera::CscoreStreamer streamer, camera::IMX296Camera camera,
   cv::Mat frame;
   int image_idx = 0;
   while (true) {
-    camera.getFrame(frame);
+    camera.GetFrame(frame);
     streamer.WriteFrame(frame);
     if (log_every_frame || log_image.load()) {
       std::ostringstream filename;

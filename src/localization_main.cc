@@ -52,7 +52,7 @@ void run_estimator(camera::CameraInfo camera_info,
 
   cv::Mat frame;
   while (true) {
-    camera.getFrame(frame);
+    camera.GetFrame(frame);
     std::vector<localization::tag_detection_t> estimates =
         tag_estimator.Estimate(frame);
     position_sender.Send(estimates);

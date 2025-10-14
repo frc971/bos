@@ -1,19 +1,18 @@
 #pragma once
-#include <filesystem>
 #include <opencv2/core/mat.hpp>
 #include <string>
 #include "src/camera/camera.h"
 
 namespace camera {
 
-class DiskCamera : Camera {
+class UsbCamera : Camera {
  public:
-  DiskCamera(std::string image_folder_path);
+  UsbCamera(std::string pipeline);
   void GetFrame(cv::Mat& frame);
 
  private:
-  std::string image_folder_path_;
-  int current_frame_;
+  std::string pipeline_;
+  cv::VideoCapture cap_;
 };
 
 }  // namespace camera

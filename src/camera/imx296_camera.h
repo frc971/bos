@@ -2,6 +2,7 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
+#include "src/camera/camera.h"
 namespace camera {
 
 typedef struct CameraInfo {
@@ -74,11 +75,11 @@ inline void WarmupCamera(std::string pipeline) {
   cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
 }
 
-class IMX296Camera {
+class IMX296Camera : Camera {
  public:
   IMX296Camera(camera_info_t info);
   ~IMX296Camera();
-  void getFrame(cv::Mat& mat);
+  void GetFrame(cv::Mat& mat);
 
  private:
   camera_info_t info_;
