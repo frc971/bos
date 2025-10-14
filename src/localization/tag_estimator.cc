@@ -2,13 +2,53 @@
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
+#include <frc/geometry/Rotation3d.h>
 #include <ntcore_cpp_types.h>
+#include <units/angle.h>
+#include <units/length.h>
 #include <wpilibc/frc/Timer.h>
 #include <cmath>
 #include <fstream>
 #include <opencv2/opencv.hpp>
+#include "src/localization/position.h"
 
 namespace localization {
+
+void PrintPose3d(const frc::Pose3d& pose) {
+  // Extract translation (in meters)
+  double x = pose.X().value();
+  double y = pose.Y().value();
+  double z = pose.Z().value();
+
+  // Extract rotation (in degrees)
+  double roll = pose.Rotation().X().value();  // radians → will convert below
+  double pitch = pose.Rotation().Y().value();
+  double yaw = pose.Rotation().Z().value();
+
+  // Convert radians to degrees
+  roll = roll * 180.0 / M_PI;
+  pitch = pitch * 180.0 / M_PI;
+  yaw = yaw * 180.0 / M_PI;
+
+  std::cout << std::fixed << std::setprecision(3);
+  std::cout << "Pose3d -> X: " << x << " m, Y: " << y << " m, Z: " << z << " m"
+            << ", Roll: " << roll << "°, Pitch: " << pitch << "°, Yaw: " << yaw
+            << "°" << std::endl;
+}
+
+inline void PrintTransform3d(const frc::Transform3d& T) {
+  const auto& tr = T.Translation();
+  const auto& r = T.Rotation();
+
+  fmt::print(
+      "Transform3d: "
+      "translation (x={:.3f} m, y={:.3f} m, z={:.3f} m), "
+      "rotation (roll={:.2f} deg, pitch={:.2f} deg, yaw={:.2f} deg)\n",
+      tr.X().value(), tr.Y().value(), tr.Z().value(),
+      units::degree_t{r.X()}.value(), units::degree_t{r.Y()}.value(),
+      units::degree_t{r.Z()}.value());
+}
+
 using json = nlohmann::json;
 
 constexpr double square(double x) {
@@ -113,14 +153,13 @@ TagEstimator::TagEstimator(json intrinsics, json extrinsics,
   apriltag_detector_->wp = workerpool_create(apriltag_detector_->nthreads);
   apriltag_detector_->qtp.min_white_black_diff = 4;
   apriltag_detector_->debug = false;
-  apriltag_detector_->quad_decimate = 1;
+  // apriltag_detector_->quad_decimate = 1;
 
   gpu_detector_ = new frc971::apriltag::GpuDetector(
       1456, 1088, apriltag_detector_,
       camera_matrix_from_json<frc971::apriltag::CameraMatrix>(intrinsics),
       distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
-          intrinsics),
-      1);
+          intrinsics));
 }
 
 TagEstimator::~TagEstimator() {
@@ -132,20 +171,20 @@ TagEstimator::~TagEstimator() {
 std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
   std::vector<tag_detection_t> estimates = GetRawPositionEstimates(frame);
   for (tag_detection_t& estimate : estimates) {
-    estimate = ApplyExtrinsics(estimate);
     estimate = GetFeildRelitivePosition(estimate);
   }
-  if (verbose_) {
-    for (const tag_detection_t& estimate : estimates) {
-      std::cout << estimate << std::endl;
-    }
-    std::cout << std::endl;
-  }
+  // for (const tag_detection_t& estimate : estimates) {
+  //   if (verbose_) {
+  //     std::cout << estimate << std::endl;
+  //   }
+  //   std::cout << std::endl;
+  // }
   return estimates;
 }
 
 std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
     cv::Mat& frame) const {
+  const double timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   cv::Mat gray;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
@@ -160,14 +199,17 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
 
       std::vector<cv::Point2f> imagePoints;
       for (int i = 0; i < 4; ++i) {
+
         imagePoints.emplace_back(gpu_detection->p[i][0],
                                  gpu_detection->p[i][1]);
       }
+      // std::cout << "\n\n";
       cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
       cv::Mat tvec =
           cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
       cv::solvePnP(apriltag_dimensions_, imagePoints, camera_matrix_,
-                   distortion_coefficients_, rvec, tvec);
+                   distortion_coefficients_, rvec, tvec, false,
+                   cv::SOLVEPNP_IPPE_SQUARE);
 
       tag_detection_t estimate;
       // Currently we do not use transation z, rotation x and rotation y
@@ -179,67 +221,85 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
       estimate.rotation.y = rvec.ptr<double>()[0];
       estimate.rotation.z = rvec.ptr<double>()[1];
 
-      estimate.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
+      estimate.timestamp = timestamp;
 
       estimate.distance =
           sqrt(square(estimate.translation.x) + square(estimate.translation.y));
       estimate.tag_id = gpu_detection->id;
 
       estimates.push_back(estimate);
+      // std::cout << "rotation x: " << RadianToDegree(estimate.rotation.x)
+      //           << "\n";
+      // std::cout << "rotation y: " << RadianToDegree(estimate.rotation.y)
+      //           << "\n";
+      // std::cout << "rotation z: " << RadianToDegree(estimate.rotation.z)
+      //           << "\n";
+      // std::cout << "translation x: " << estimate.translation.x << "\n";
+      // std::cout << "translation y: " << estimate.translation.y << "\n";
+      // std::cout << "\n\n";
     }
   }
   return estimates;
 }
 
 tag_detection_t TagEstimator::GetFeildRelitivePosition(
-    tag_detection_t tag_relitive_position) const {
-  tag_detection_t feild_relitive_position;
-  feild_relitive_position = tag_relitive_position;
+    const tag_detection_t tag_relitive_position) const {
 
-  feild_relitive_position.translation.x =
-      sin(feild_relitive_position.rotation.z) *
-          tag_relitive_position.translation.y +
-      cos(feild_relitive_position.rotation.z) *
-          tag_relitive_position.translation.x;
-  feild_relitive_position.translation.y =
-      cos(feild_relitive_position.rotation.z) *
-          tag_relitive_position.translation.y -
-      sin(feild_relitive_position.rotation.z) *
-          tag_relitive_position.translation.x;
-  feild_relitive_position.translation.z = tag_relitive_position.translation.z;
+  frc::Transform3d camera_to_tag(
+      units::meter_t{tag_relitive_position.translation.x},
+      units::meter_t{-tag_relitive_position.translation.y},
+      units::meter_t{-tag_relitive_position.translation.z},
+      frc::Rotation3d(
+          units::radian_t{tag_relitive_position.rotation.x},
+          units::radian_t{-tag_relitive_position.rotation.y},
+          units::radian_t{-tag_relitive_position.rotation.z} + 180_deg));
 
-  double angle =
-      -(M_PI / 2 - std::atan2(feild_relitive_position.translation.x,
-                              feild_relitive_position.translation.y)) +
-      apriltag_layout_.GetTagPose(tag_relitive_position.tag_id)
-          ->Rotation()
-          .Z()
-          .value();
+  frc::Transform3d tag_to_camera = camera_to_tag.Inverse();
 
-  double magnitude = sqrt(feild_relitive_position.translation.x *
-                              feild_relitive_position.translation.x +
-                          feild_relitive_position.translation.y *
-                              feild_relitive_position.translation.y);
+  std::cout << "tag to camera: \n";
+  PrintTransform3d(tag_to_camera);
+  std::cout << "\n\n";
 
-  feild_relitive_position.translation.x = std::cos(angle) * magnitude;
-  feild_relitive_position.translation.y = std::sin(angle) * magnitude;
+  std::cout << "tag id: " << tag_relitive_position.tag_id << std::endl;
+  frc::Pose3d tag_pose =
+      apriltag_layout_.GetTagPose(tag_relitive_position.tag_id).value();
+  std::cout << "tagpose: \n";
+  PrintPose3d(tag_pose);
+  std::cout << "\n\n";
 
-  feild_relitive_position.translation.x +=
-      apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->X().value();
-  feild_relitive_position.translation.y +=
-      apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->Y().value();
-  feild_relitive_position.translation.z +=
-      apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)->Z().value();
+  frc::Pose3d camera_pose = tag_pose.TransformBy(tag_to_camera);
+  std::cout << "camerapose: \n";
+  PrintPose3d(camera_pose);
+  std::cout << "\n\n";
 
-  feild_relitive_position.rotation.z =
-      M_PI +
-      apriltag_layout_.GetTagPose(feild_relitive_position.tag_id)
-          ->Rotation()
-          .Z()
-          .value() +
-      tag_relitive_position.rotation.z;
+  frc::Transform3d robot_to_camera(
+      units::meter_t{static_cast<double>(extrinsics_["translation_x"])},
+      units::meter_t{static_cast<double>(extrinsics_["translation_y"])},
+      units::meter_t{static_cast<double>(extrinsics_["translation_z"])},
+      frc::Rotation3d(units::radian_t{extrinsics_["rotation_x"]},
+                      units::radian_t{extrinsics_["rotation_y"]},
+                      units::radian_t{extrinsics_["rotation_z"]}));
+  frc::Transform3d camera_to_robot = robot_to_camera.Inverse();
 
-  return feild_relitive_position;
+  frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot);
+
+  tag_detection_t field_relitive_pose;
+
+  field_relitive_pose.tag_id = tag_relitive_position.tag_id;
+
+  field_relitive_pose.rotation.x = robot_pose.Rotation().X().value();
+  field_relitive_pose.rotation.y = robot_pose.Rotation().Y().value();
+  field_relitive_pose.rotation.z = robot_pose.Rotation().Z().value();
+
+  field_relitive_pose.translation.x = robot_pose.Translation().X().value();
+  field_relitive_pose.translation.y = robot_pose.Translation().Y().value();
+  field_relitive_pose.translation.z = robot_pose.Translation().Z().value();
+
+  field_relitive_pose.distance = tag_relitive_position.distance;
+
+  field_relitive_pose.timestamp = tag_relitive_position.timestamp;
+
+  return field_relitive_pose;
 }
 
 tag_detection_t TagEstimator::ApplyExtrinsics(tag_detection_t position) const {

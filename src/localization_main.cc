@@ -16,14 +16,16 @@ using json = nlohmann::json;
 
 void start_networktables() {
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
+  inst.StopClient();
+  inst.StopLocal();
   inst.StartClient4("orin_localization");
+
   inst.SetServerTeam(971);
   frc::DataLogManager::Start("/bos/logs/");
   std::cout << "Started networktables!" << std::endl;
 }
 
 void run_estimator(camera::CameraInfo camera_info,
-                   localization::PoseEstimator& pose_estimator,
                    localization::PositionSender& position_sender) {
 
   json intrinsics;
@@ -53,9 +55,7 @@ void run_estimator(camera::CameraInfo camera_info,
     camera.GetFrame(frame);
     std::vector<localization::tag_detection_t> estimates =
         tag_estimator.Estimate(frame);
-    pose_estimator.Update(estimates);
-    position_sender.Send(pose_estimator.GetPose(),
-                         pose_estimator.GetPoseVarience());
+    position_sender.Send(estimates);
   }
 }
 
@@ -63,31 +63,18 @@ int main() {
 
   start_networktables();
 
-  localization::SimpleKalmanConfig x_filter_config{.position = 0,
-                                                   .velocity = 0,
-                                                   .time = 0,
-                                                   .measurment_noise = 0.5,
-                                                   .process_noise = 0.5};
-
-  localization::SimpleKalmanConfig y_filter_config{.position = 0,
-                                                   .velocity = 0,
-                                                   .time = 0,
-                                                   .measurment_noise = 0.5,
-                                                   .process_noise = 0.5};
-  localization::SimpleKalmanConfig rotation_filter_config{
-      .position = 0,
-      .velocity = 0,
-      .time = 0,
-      .measurment_noise = 0.5,
-      .process_noise = 0.5};
-
-  localization::PoseEstimator pose_estimator(x_filter_config, y_filter_config,
-                                             rotation_filter_config);
-  localization::PositionSender position_sender(true);
+  localization::PositionSender position_sender(false);
 
   std::thread camera_one_thread(run_estimator, camera::gstreamer1_30fps,
-                                std::ref(pose_estimator),
                                 std::ref(position_sender));
+
+  // nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
+  // while (true) {
+  //   if (!inst.IsConnected()) {
+  //     start_networktables();
+  //   }
+  // }
+  // std::cout << "this should never happen \n";
 
   // std::thread camera_two_thread(run_estimator, camera::gstreamer2_30fps,
   //                               std::ref(pose_estimator),
