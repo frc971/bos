@@ -8,7 +8,7 @@ IMX296Camera::~IMX296Camera() {
   cap_.release();
 }
 
-void IMX296Camera::getFrame(cv::Mat& mat) {
+void IMX296Camera::GetFrame(cv::Mat& mat) {
   cap_ >> mat;
   cv::flip(mat, mat, -1);
 }
