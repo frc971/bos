@@ -65,22 +65,10 @@ int main() {
 
   localization::PositionSender position_sender(false);
 
-  std::thread camera_one_thread(run_estimator, camera::gstreamer1_30fps,
+  std::thread camera_one_thread(run_estimator, camera::IMX296Template(0, 30),
                                 std::ref(position_sender));
 
-  // nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
-  // while (true) {
-  //   if (!inst.IsConnected()) {
-  //     start_networktables();
-  //   }
-  // }
-  // std::cout << "this should never happen \n";
-
-  // std::thread camera_two_thread(run_estimator, camera::gstreamer2_30fps,
-  //                               std::ref(pose_estimator),
-  //                               std::ref(position_sender));
   camera_one_thread.join();
-  // camera_two_thread.join();
 
   return 0;
 }

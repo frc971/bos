@@ -57,18 +57,7 @@ int main() {
   int camera_id;
   std::cin >> camera_id;
 
-  camera::CameraInfo camera_info;
-  switch (camera_id) {
-    case 0:
-      camera_info = camera::gstreamer1_30fps;
-      break;
-    case 1:
-      camera_info = camera::gstreamer2_30fps;
-      break;
-    default:
-      std::cout << "Invalid ID! Only 0 or 1" << std::endl;
-      return 0;
-  }
+  camera::CameraInfo camera_info = camera::IMX296Template(camera_id, 30);
 
   camera::CscoreStreamer streamer("intrinsics_calibrate", 4971, 30, 1080, 1080,
                                   true);
