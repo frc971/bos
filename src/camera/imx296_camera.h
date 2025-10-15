@@ -3,7 +3,6 @@
 #include <opencv2/videoio.hpp>
 #include <string>
 #include "src/camera/camera.h"
-#include <fmt/format.h>
 namespace camera {
 
 typedef struct CameraInfo {
