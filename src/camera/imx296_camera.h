@@ -3,6 +3,7 @@
 #include <opencv2/videoio.hpp>
 #include <string>
 #include "src/camera/camera.h"
+#include <fmt/format.h>
 namespace camera {
 
 typedef struct CameraInfo {
@@ -13,59 +14,42 @@ typedef struct CameraInfo {
   int id;
 } camera_info_t;
 
+static std::string Imx296PipelineTemplate(int sensor_id, int framerate) {
+  std::string pipeline = 
+    "nvarguscamerasrc sensor-id=" + std::to_string(sensor_id) + " aelock=true exposuretimerange=\"100000 "
+    "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
+    "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=" + std::to_string(framerate) + "/1, "
+    "format=NV12 ! "
+    "nvvidconv ! "
+    "video/x-raw, format=BGRx ! "
+    "queue ! "
+    "appsink";
+  return pipeline;
+}
+
 const CameraInfo gstreamer1_30fps = {
-    .pipeline =
-        "nvarguscamerasrc sensor-id=0 aelock=true exposuretimerange=\"100000 "
-        "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
-        "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, "
-        "format=NV12 ! "
-        "nvvidconv ! "
-        "video/x-raw, format=BGRx ! "
-        "queue ! "
-        "appsink",
+    .pipeline = Imx296PipelineTemplate(0, 30),
     .name = "camera_1",
     .intrinsics_path = "constants/camera0_intrinsics.json",
     .extrinsics_path = "constants/camera0_extrinsics.json",
     .id = 0};
 
 const CameraInfo gstreamer2_30fps = {
-    .pipeline =
-        "nvarguscamerasrc sensor-id=1 !"
-        "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, "
-        "format=NV12 ! "
-        "nvvidconv ! "
-        "video/x-raw, format=BGRx ! "
-        "queue ! "
-        "appsink",
+    .pipeline = Imx296PipelineTemplate(1, 30),
     .name = "camera_2",
     .intrinsics_path = "constants/camera1_intrinsics.json",
     .extrinsics_path = "constants/camera1_extrinsics.json",
     .id = 1};
 
 const CameraInfo gstreamer1_60fps = {
-    .pipeline =
-        "nvarguscamerasrc sensor-id=0 aelock=true exposuretimerange=\"100000 "
-        "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
-        "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=60/1, "
-        "format=NV12 ! "
-        "nvvidconv ! "
-        "video/x-raw, format=BGRx ! "
-        "queue ! "
-        "appsink",
+    .pipeline = Imx296PipelineTemplate(0, 60),
     .name = "camera_1",
     .intrinsics_path = "constants/camera0_intrinsics.json",
     .extrinsics_path = "constants/camera0_extrinsics.json",
     .id = 0};
 
 const CameraInfo gstreamer2_60fps = {
-    .pipeline =
-        "nvarguscamerasrc sensor-id=1 !"
-        "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=60/1, "
-        "format=NV12 ! "
-        "nvvidconv ! "
-        "video/x-raw, format=BGRx ! "
-        "queue ! "
-        "appsink",
+    .pipeline = Imx296PipelineTemplate(1, 60),
     .name = "camera_2",
     .intrinsics_path = "constants/camera1_intrinsics.json",
     .extrinsics_path = "constants/camera1_extrinsics.json",
