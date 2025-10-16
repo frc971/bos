@@ -11,9 +11,8 @@ int main(int argc, char* argv[]) {
   int camera_id;
   std::cin >> camera_id;
 
-  camera::CameraInfo camera_info = camera::IMX296Template(camera_id, 30);
+  camera::IMX296Camera camera(camera::IMX296Template(camera_id, 30));
 
-  camera::IMX296Camera camera(camera_info);
   camera::CscoreStreamer streamer(
       camera::IMX296Streamer("focus_calibrate", 4971, 30));
 
