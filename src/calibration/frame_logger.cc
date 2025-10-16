@@ -6,8 +6,8 @@
 #include <opencv2/opencv.hpp>
 #include <sstream>
 #include <thread>
-#include "main/camera/cscore_streamer.h"
-#include "main/camera/imx296_camera.h"
+#include "src/camera/cscore_streamer.h"
+#include "src/camera/imx296_camera.h"
 
 const int k_port = 5200;
 
@@ -17,7 +17,7 @@ void read_camera(camera::CscoreStreamer streamer, camera::IMX296Camera camera,
   cv::Mat frame;
   int image_idx = 0;
   while (true) {
-    camera.getFrame(frame);
+    camera.GetFrame(frame);
     streamer.WriteFrame(frame);
     if (log_every_frame || log_image.load()) {
       std::ostringstream filename;

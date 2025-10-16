@@ -7,8 +7,8 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include "main/camera/imx296_camera.h"
-#include "main/localization/tag_estimator.h"
+#include "src/camera/imx296_camera.h"
+#include "src/localization/tag_estimator.h"
 
 using json = nlohmann::json;
 
@@ -53,7 +53,7 @@ int main() {
 
   int estimate_count = 0;
   for (int i = 0; i < 24; i++) {
-    camera.getFrame(frame);
+    camera.GetFrame(frame);
     std::vector<localization::tag_detection_t> estimates =
         estimator.GetRawPositionEstimates(frame);
     estimate_count += estimates.size();

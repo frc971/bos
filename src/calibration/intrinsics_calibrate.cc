@@ -10,9 +10,9 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 #include <opencv2/objdetect/charuco_detector.hpp>
-#include "main/calibration/intrinsics_calibrate_lib.h"
-#include "main/camera/cscore_streamer.h"
-#include "main/camera/imx296_camera.h"
+#include "src/calibration/intrinsics_calibrate_lib.h"
+#include "src/camera/cscore_streamer.h"
+#include "src/camera/imx296_camera.h"
 
 using json = nlohmann::json;
 
@@ -24,7 +24,7 @@ void CaptureFrames(
   cv::Mat frame;
   int frame_count = 0;
   while (true) {
-    camera.getFrame(frame);
+    camera.GetFrame(frame);
     frame_count++;
     if (frame_count % 10 == 0) {
       cv::cvtColor(frame, frame, cv::COLOR_BGRA2RGB);
@@ -76,7 +76,7 @@ int main() {
   camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame;
-  camera.getFrame(frame);
+  camera.GetFrame(frame);
   cv::Size frame_size = frame.size();
 
   cv::aruco::CharucoDetector detector = calibration::CreateDetector(

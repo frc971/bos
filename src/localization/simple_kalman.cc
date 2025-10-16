@@ -1,5 +1,6 @@
 #include "simple_kalman.h"
 #include <wpilibc/frc/Timer.h>
+#include <iostream>
 
 namespace localization {
 
@@ -27,6 +28,17 @@ SimpleKalman::SimpleKalman(double position, double velocity, double time,
 SimpleKalman::SimpleKalman(SimpleKalmanConfig config)
     : SimpleKalman(config.position, config.velocity, config.time,
                    config.measurment_noise, config.process_noise) {}
+
+
+std::pair<Eigen::MatrixXd, Eigen::MatrixXd> SimpleKalman::Predict(double time) {
+  double dt = time - time_;
+  Eigen::MatrixXd pred_pos = kalman_filter_.predict_position(dt);
+  Eigen:: MatrixXd pred_variance = kalman_filter_.predict_variance(dt);
+
+  return {pred_pos, pred_variance};
+
+} 
+
 
 void SimpleKalman::Update(double position_update, double time,
                           double varience) {

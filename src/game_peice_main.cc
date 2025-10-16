@@ -1,3 +1,3 @@
-#include "main/yolo/yolo.h"
+#include "src/yolo/yolo.h"
 
 int main() {}

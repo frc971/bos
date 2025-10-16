@@ -1,6 +1,5 @@
 // https://gist.github.com/SteveRuben/1a15909e384b582c51b5
-#ifndef YOLO_H
-#define YOLO_H
+#pragma once
 #include <NvInfer.h>
 #include <stdio.h>
 #include <opencv2/core/mat.hpp>
@@ -25,5 +24,3 @@ class Yolo {
 };
 
 }  // namespace yolo
-
-#endif  // YOLO_H
