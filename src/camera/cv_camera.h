@@ -9,11 +9,11 @@ namespace camera {
 
 class CVCamera : Camera {
  public:
-  CVCamera(std::unique_ptr<cv::VideoCapture> cap);
+  CVCamera(cv::VideoCapture cap);
   void GetFrame(cv::Mat& frame) override;
 
  private:
-  std::unique_ptr<cv::VideoCapture> cap_;
+  cv::VideoCapture cap_;
   int current_frame_;
 };
 

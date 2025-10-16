@@ -21,7 +21,6 @@ void start_networktables() {
   inst.StopClient();
   inst.StopLocal();
   inst.StartClient4("orin_localization");
-
   inst.SetServerTeam(971);
   frc::DataLogManager::Start("/bos/logs/");
   std::cout << "Started networktables!" << std::endl;
@@ -71,31 +70,14 @@ int main() {
 
   localization::PositionSender position_sender(false);
 
-  std::thread camera_one_thread(
-      run_estimator,
-      std::make_unique<camera::CVCamera>(
-          std::make_unique<cv::VideoCapture>(camera::gstreamer1_30fps)),
-      read_intrinsics(camera::camera1_intrinsics),
-      read_extrinsics(camera::camera1_extrinsics), position_sender);
+  std::thread camera_one_thread(run_estimator,
+                                std::make_unique<camera::CVCamera>(
+                                    cv::VideoCapture(camera::gstreamer1_30fps)),
+                                read_intrinsics(camera::camera1_intrinsics),
+                                read_extrinsics(camera::camera1_extrinsics),
+                                position_sender);
 
   camera_one_thread.join();
-
-  // std::thread camera_one_thread(run_estimator, camera::gstreamer1_30fps,
-  //                               std::ref(position_sender));
-
-  // nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
-  // while (true) {
-  //   if (!inst.IsConnected()) {
-  //     start_networktables();
-  //   }
-  // }
-  // std::cout << "this should never happen \n";
-
-  // std::thread camera_two_thread(run_estimator, camera::gstreamer2_30fps,
-  //                               std::ref(pose_estimator),
-  //                               std::ref(position_sender));
-  // camera_one_thread.join();
-  // camera_two_thread.join();
 
   return 0;
 }

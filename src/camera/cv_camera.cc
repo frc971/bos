@@ -4,11 +4,10 @@
 
 namespace camera {
 
-CVCamera::CVCamera(std::unique_ptr<cv::VideoCapture> cap)
-    : cap_(std::move(cap)) {}
+CVCamera::CVCamera(cv::VideoCapture cap) : cap_(std::move(cap)) {}
 
 void CVCamera::GetFrame(cv::Mat& frame) {
-  cap_->read(frame);
+  cap_.read(frame);
 }
 
 }  // namespace camera
