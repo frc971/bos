@@ -71,16 +71,14 @@ int main() {
 
   localization::PositionSender position_sender(false);
 
-  auto a =
-      std::make_unique<camera::CVCamera>(std::make_unique<cv::VideoCapture>(
-          cv::VideoCapture(camera::gstreamer1_30fps)));
-
   std::thread camera_one_thread(
       run_estimator,
       std::make_unique<camera::CVCamera>(
           std::make_unique<cv::VideoCapture>(camera::gstreamer1_30fps)),
       read_intrinsics(camera::camera1_intrinsics),
       read_extrinsics(camera::camera1_extrinsics), position_sender);
+
+  camera_one_thread.join();
 
   // std::thread camera_one_thread(run_estimator, camera::gstreamer1_30fps,
   //                               std::ref(position_sender));
