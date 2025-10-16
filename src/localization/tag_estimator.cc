@@ -153,7 +153,6 @@ TagEstimator::TagEstimator(json intrinsics, json extrinsics,
   apriltag_detector_->wp = workerpool_create(apriltag_detector_->nthreads);
   apriltag_detector_->qtp.min_white_black_diff = 4;
   apriltag_detector_->debug = false;
-  // apriltag_detector_->quad_decimate = 1;
 
   gpu_detector_ = new frc971::apriltag::GpuDetector(
       1456, 1088, apriltag_detector_,
@@ -173,12 +172,6 @@ std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
   for (tag_detection_t& estimate : estimates) {
     estimate = GetFeildRelitivePosition(estimate);
   }
-  // for (const tag_detection_t& estimate : estimates) {
-  //   if (verbose_) {
-  //     std::cout << estimate << std::endl;
-  //   }
-  //   std::cout << std::endl;
-  // }
   return estimates;
 }
 
@@ -203,7 +196,6 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
         imagePoints.emplace_back(gpu_detection->p[i][0],
                                  gpu_detection->p[i][1]);
       }
-      // std::cout << "\n\n";
       cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
       cv::Mat tvec =
           cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
@@ -228,15 +220,6 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
       estimate.tag_id = gpu_detection->id;
 
       estimates.push_back(estimate);
-      // std::cout << "rotation x: " << RadianToDegree(estimate.rotation.x)
-      //           << "\n";
-      // std::cout << "rotation y: " << RadianToDegree(estimate.rotation.y)
-      //           << "\n";
-      // std::cout << "rotation z: " << RadianToDegree(estimate.rotation.z)
-      //           << "\n";
-      // std::cout << "translation x: " << estimate.translation.x << "\n";
-      // std::cout << "translation y: " << estimate.translation.y << "\n";
-      // std::cout << "\n\n";
     }
   }
   return estimates;
