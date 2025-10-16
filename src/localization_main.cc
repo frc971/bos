@@ -2,17 +2,19 @@
 #include <networktables/NetworkTableInstance.h>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <thread>
 #include "apriltag/apriltag.h"
 #include "camera/imx296_camera.h"
 #include "localization/position_sender.h"
 #include "localization/tag_estimator.h"
+#include "src/camera/camera_constants.h"
+#include "src/camera/cscore_streamer.h"
+#include "src/camera/cv_camera.h"
 #include "src/localization/pose_estimator.h"
 
 using json = nlohmann::json;
-
-#define STREAM_VIDEO false
 
 void start_networktables() {
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
@@ -25,34 +27,38 @@ void start_networktables() {
   std::cout << "Started networktables!" << std::endl;
 }
 
-void run_estimator(camera::CameraInfo camera_info,
-                   localization::PositionSender& position_sender) {
-
+json read_intrinsics(std::string path) {
   json intrinsics;
 
-  std::ifstream intrinsics_file(camera_info.intrinsics_path);
+  std::ifstream intrinsics_file(path);
   if (!intrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open intrinsics file: "
-              << camera_info.intrinsics_path << std::endl;
+    std::cerr << "Error: Cannot open intrinsics file: " << path << std::endl;
   } else {
     intrinsics_file >> intrinsics;
   }
+  return intrinsics;
+}
 
+json read_extrinsics(std::string path) {
   json extrinsics;
-  std::ifstream extrinsics_file(camera_info.extrinsics_path);
+  std::ifstream extrinsics_file(path);
   if (!extrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open extrinsics file: "
-              << camera_info.extrinsics_path << std::endl;
+    std::cerr << "Error: Cannot open extrinsics file: " << path << std::endl;
   } else {
     extrinsics_file >> extrinsics;
   }
+  return extrinsics;
+}
+
+void run_estimator(std::unique_ptr<camera::Camera> camera, json intrinsics,
+                   json extrinsics,
+                   localization::PositionSender& position_sender) {
 
   localization::TagEstimator tag_estimator(intrinsics, extrinsics);
-  camera::IMX296Camera camera(camera_info);
 
   cv::Mat frame;
   while (true) {
-    camera.GetFrame(frame);
+    camera->GetFrame(frame);
     std::vector<localization::tag_detection_t> estimates =
         tag_estimator.Estimate(frame);
     position_sender.Send(estimates);
@@ -65,8 +71,19 @@ int main() {
 
   localization::PositionSender position_sender(false);
 
-  std::thread camera_one_thread(run_estimator, camera::gstreamer1_30fps,
-                                std::ref(position_sender));
+  auto a =
+      std::make_unique<camera::CVCamera>(std::make_unique<cv::VideoCapture>(
+          cv::VideoCapture(camera::gstreamer1_30fps)));
+
+  std::thread camera_one_thread(
+      run_estimator,
+      std::make_unique<camera::CVCamera>(
+          std::make_unique<cv::VideoCapture>(camera::gstreamer1_30fps)),
+      read_intrinsics(camera::camera1_intrinsics),
+      read_extrinsics(camera::camera1_extrinsics), position_sender);
+
+  // std::thread camera_one_thread(run_estimator, camera::gstreamer1_30fps,
+  //                               std::ref(position_sender));
 
   // nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   // while (true) {
@@ -79,7 +96,7 @@ int main() {
   // std::thread camera_two_thread(run_estimator, camera::gstreamer2_30fps,
   //                               std::ref(pose_estimator),
   //                               std::ref(position_sender));
-  camera_one_thread.join();
+  // camera_one_thread.join();
   // camera_two_thread.join();
 
   return 0;
