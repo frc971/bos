@@ -74,7 +74,7 @@ class KalmanFilter {
   double time() const { return t; };
 
   // Matrices for computation
-  Eigen::MatrixXd A, C, Q, R, P, K, P0;
+  Eigen::MatrixXd A, C, Q, R, P, K, P0, new_A;
 
   // System dimensions
   int m, n;

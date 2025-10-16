@@ -30,14 +30,21 @@ SimpleKalman::SimpleKalman(SimpleKalmanConfig config)
                    config.measurment_noise, config.process_noise) {}
 
 
-std::pair<Eigen::MatrixXd, Eigen::MatrixXd> SimpleKalman::Predict(double time) {
+Eigen::MatrixXd SimpleKalman::PredictPosition(double time) {
   double dt = time - time_;
   Eigen::MatrixXd pred_pos = kalman_filter_.predict_position(dt);
-  Eigen:: MatrixXd pred_variance = kalman_filter_.predict_variance(dt);
 
-  return {pred_pos, pred_variance};
+  return pred_pos;
 
 } 
+
+Eigen::MatrixXd SimpleKalman::PredictVariance(double time) {
+  double dt = time - time_;
+  Eigen:: MatrixXd pred_variance = kalman_filter_.predict_variance(dt);
+
+  return pred_variance;
+
+}
 
 
 void SimpleKalman::Update(double position_update, double time,
