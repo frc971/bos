@@ -38,20 +38,6 @@ int main() {
   int camera_id;
   std::cin >> camera_id;
 
-  camera::CameraInfo camera_info;
-
-  switch (camera_id) {
-    case 0:
-      camera_info = camera::gstreamer1_30fps;
-      break;
-    case 1:
-      camera_info = camera::gstreamer2_30fps;
-      break;
-    default:
-      std::cout << "Invalid ID! Only 0 or 1" << std::endl;
-      return 0;
-  }
-
   std::string data_folder = "data/camera_" + std::to_string(camera_id) + "/";
   if (std::filesystem::create_directory(data_folder)) {
     std::cout << "data folder created successfully!\n";
@@ -74,7 +60,7 @@ int main() {
 
   camera::CscoreStreamer streamer(
       camera::IMX296Streamer("frame_logger", 4971, 30));
-  camera::IMX296Camera camera(camera_info);
+  camera::IMX296Camera camera(camera::IMX296Template(camera_id, 30));
   std::atomic<bool> log_image(false);
 
   cv::Mat frame;

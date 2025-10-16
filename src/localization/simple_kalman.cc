@@ -11,13 +11,12 @@ SimpleKalman::SimpleKalman(double position, double velocity, double time,
   Eigen::MatrixXd C(1, 2);
   Eigen::MatrixXd Q(2, 2);
   Eigen::MatrixXd R(1, 1);
-  Eigen::MatrixXd P(2, 2);
+  Eigen::MatrixXd P = Eigen::MatrixXd::Identity();
 
   A << 1, placeholder_dt, 0, 1;
   C << 1, 0;
-  Q << process_noise, 0, 0, process_noise;
+  Q << Eigen::MatrixXd::Identity() * process_noise;
   R << measurment_noise;
-  P << 1, 0, 0, 1;
   kalman_filter_ = KalmanFilter(placeholder_dt, A, C, Q, R, P);
   Eigen::VectorXd initial_pose(2);
   initial_pose << position, velocity;
@@ -41,7 +40,7 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> SimpleKalman::Predict(double time) {
 
 
 void SimpleKalman::Update(double position_update, double time,
-                          double varience) {
+                          double variance) {
   double dt = time - time_;
   time_ = time;
 
@@ -50,7 +49,7 @@ void SimpleKalman::Update(double position_update, double time,
 
   Eigen::VectorXd position_update_(1);
   position_update_ << position_update;
-  set_measurment_varience(varience);
+  set_measurment_variance(variance);
   kalman_filter_.update(position_update_, dt, A);
 }
 

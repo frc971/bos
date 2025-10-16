@@ -11,21 +11,8 @@ int main(int argc, char* argv[]) {
   int camera_id;
   std::cin >> camera_id;
 
-  camera::CameraInfo camera_info;
+  camera::IMX296Camera camera(camera::IMX296Template(camera_id, 30));
 
-  switch (camera_id) {
-    case 0:
-      camera_info = camera::gstreamer1_30fps;
-      break;
-    case 1:
-      camera_info = camera::gstreamer2_30fps;
-      break;
-    default:
-      std::cout << "Invalid ID! Only 0 or 1" << std::endl;
-      return 0;
-  }
-
-  camera::IMX296Camera camera(camera_info);
   camera::CscoreStreamer streamer(
       camera::IMX296Streamer("focus_calibrate", 4971, 30));
 
