@@ -11,13 +11,12 @@ SimpleKalman::SimpleKalman(double position, double velocity, double time,
   Eigen::MatrixXd C(1, 2);
   Eigen::MatrixXd Q(2, 2);
   Eigen::MatrixXd R(1, 1);
-  Eigen::MatrixXd P(2, 2);
+  Eigen::MatrixXd P = Eigen::MatrixXd::Identity();
 
   A << 1, placeholder_dt, 0, 1;
   C << 1, 0;
-  Q << process_noise, 0, 0, process_noise;
+  Q << Eigen::MatrixXd::Identity() * process_noise;
   R << measurment_noise;
-  P << 1, 0, 0, 1;
   kalman_filter_ = KalmanFilter(placeholder_dt, A, C, Q, R, P);
   Eigen::VectorXd initial_pose(2);
   initial_pose << position, velocity;
