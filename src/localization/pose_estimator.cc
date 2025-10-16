@@ -5,7 +5,7 @@
 
 namespace localization {
 
-constexpr double DistanceToVarience(double distance) {
+constexpr double DistanceToVariance(double distance) {
   return distance;
 }
 
@@ -25,24 +25,24 @@ void PoseEstimator::Update(std::vector<tag_detection_t> position) {
   for (size_t i = 0; i < position.size(); i++) {
     UpdateKalmanFilter(position[i].translation.x, position[i].translation.y,
                        position[i].rotation.z,
-                       DistanceToVarience(position[i].distance),
+                       DistanceToVariance(position[i].distance),
                        position[i].timestamp);
   }
   update_mutex_.unlock();
 }
 
-void PoseEstimator::Update(double x, double y, double rotation, double varience,
+void PoseEstimator::Update(double x, double y, double rotation, double variance,
                            double time) {
   update_mutex_.lock();
-  UpdateKalmanFilter(x, y, rotation, varience, time);
+  UpdateKalmanFilter(x, y, rotation, variance, time);
   update_mutex_.unlock();
 }
 
 void PoseEstimator::UpdateKalmanFilter(double x, double y, double rotation,
-                                       double varience, double time) {
-  x_filter_.Update(x, time, varience);
-  y_filter_.Update(y, time, varience);
-  rotation_filter_.Update(ClampAngle(rotation), time, varience);
+                                       double variance, double time) {
+  x_filter_.Update(x, time, variance);
+  y_filter_.Update(y, time, variance);
+  rotation_filter_.Update(ClampAngle(rotation), time, variance);
   rotation_filter_.set_position(ClampAngle(rotation_filter_.position()));
 }
 pose2d_t PoseEstimator::GetPose() {
@@ -60,7 +60,7 @@ pose2d_t PoseEstimator::GetPose() {
   return position2d;
 }
 
-pose2d_t PoseEstimator::GetPoseVarience() {
+pose2d_t PoseEstimator::GetPoseVariance() {
   double current_time = frc::Timer::GetFPGATimestamp().to<double>();
   std::pair<Eigen::MatrixXd, Eigen::MatrixXd> x_predicted_state_and_variance =
       x_filter_.Predict(current_time);

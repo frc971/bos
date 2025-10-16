@@ -41,7 +41,7 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> SimpleKalman::Predict(double time) {
 
 
 void SimpleKalman::Update(double position_update, double time,
-                          double varience) {
+                          double variance) {
   double dt = time - time_;
   time_ = time;
 
@@ -50,7 +50,7 @@ void SimpleKalman::Update(double position_update, double time,
 
   Eigen::VectorXd position_update_(1);
   position_update_ << position_update;
-  set_measurment_varience(varience);
+  set_measurment_variance(variance);
   kalman_filter_.update(position_update_, dt, A);
 }
 
