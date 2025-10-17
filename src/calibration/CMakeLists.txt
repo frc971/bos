@@ -21,4 +21,9 @@ target_link_libraries(test_intrinsics PRIVATE ${OpenCV_LIBS} camera nlohmann_jso
 add_executable(focus_calibrate focus_calibrate.cc)
 target_link_libraries(focus_calibrate PRIVATE ${OpenCV_LIBS} camera nlohmann_json::nlohmann_json)
 
-target_precompile_headers(utils PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
+target_precompile_headers(intrinsics_calibrate_lib PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
+target_precompile_headers(intrinsics_calibrate PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
+target_precompile_headers(extrinsics_calibrate PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
+target_precompile_headers(frame_logger PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
+target_precompile_headers(test_intrinsics PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
+target_precompile_headers(focus_calibrate PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)
