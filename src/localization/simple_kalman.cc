@@ -1,6 +1,7 @@
+#include "pch.h"
+
 #include "simple_kalman.h"
 #include <wpilibc/frc/Timer.h>
-#include <iostream>
 
 namespace localization {
 

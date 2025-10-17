@@ -1,4 +1,5 @@
-#include <iostream>
+#include "pch.h"
+
 #include "opencv2/imgproc/imgproc.hpp"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/imx296_camera.h"
@@ -7,7 +8,7 @@
 int main(int argc, char* argv[]) {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
-  std::cout << "What is the id of the camera we are using?\n";
+  std::cout << "What is the id of the camera we are using?\\n";
   int camera_id;
   std::cin >> camera_id;
 
@@ -39,6 +40,6 @@ int main(int argc, char* argv[]) {
     cv::Scalar mean, stddev;
     cv::meanStdDev(laplace, mean, stddev, cv::Mat());
 
-    std::cout << "Focus(bigger is better): " << stddev * stddev << "\n";
+    std::cout << "Focus(bigger is better): " << stddev * stddev << "\\n";
   }
 }

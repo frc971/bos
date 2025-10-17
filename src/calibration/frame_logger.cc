@@ -1,8 +1,9 @@
+#include "pch.h"
+
 #include <atomic>
 #include <filesystem>
 #include <functional>
 #include <iomanip>
-#include <iostream>
 #include <opencv2/opencv.hpp>
 #include <sstream>
 #include <thread>
@@ -23,7 +24,7 @@ void read_camera(camera::CscoreStreamer streamer, camera::IMX296Camera camera,
       std::ostringstream filename;
       filename << data_folder << std::setfill('0') << std::setw(4) << image_idx
                << ".jpg";
-      std::cout << "writing frame to " << filename.str() << "\n";
+      std::cout << "writing frame to " << filename.str() << "\\n";
       cv::imwrite(filename.str(), frame);
       log_image.store(false);
       image_idx++;
@@ -34,7 +35,7 @@ void read_camera(camera::CscoreStreamer streamer, camera::IMX296Camera camera,
 int main() {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
-  std::cout << "What is the id of the camera we are logging?\n";
+  std::cout << "What is the id of the camera we are logging?\\n";
   int camera_id;
   std::cin >> camera_id;
 
@@ -54,9 +55,9 @@ int main() {
 
   std::string data_folder = "data/camera_" + std::to_string(camera_id) + "/";
   if (std::filesystem::create_directory(data_folder)) {
-    std::cout << "data folder created successfully!\n";
+    std::cout << "data folder created successfully!\\n";
   } else {
-    std::cout << "do you want to delete the existing photos? (yes/no)\n";
+    std::cout << "do you want to delete the existing photos? (yes/no)\\n";
     std::string delete_existing_photos;
     std::cin >> delete_existing_photos;
     if (delete_existing_photos == "yes") {
@@ -65,7 +66,7 @@ int main() {
     }
   }
 
-  std::cout << "Do you want to log every single frame? (yes/no)\n";
+  std::cout << "Do you want to log every single frame? (yes/no)\\n";
   std::string log_every_frame_response;
   std::cin >> log_every_frame_response;
   bool log_every_frame = "yes" == log_every_frame_response;
@@ -96,10 +97,3 @@ int main() {
         log_image.store(true);
         continue;
       default:
-        std::cout << "Received invalid key!\n";
-    }
-  }
-
-  cv::destroyAllWindows();
-  return 0;
-}

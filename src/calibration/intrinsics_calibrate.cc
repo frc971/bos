@@ -1,6 +1,7 @@
+#include "pch.h"
+
 #include <cstdlib>
 #include <fstream>
-#include <iostream>
 #include <nlohmann/json.hpp>
 #include <opencv2/aruco.hpp>
 #include <opencv2/aruco/charuco.hpp>
@@ -90,35 +91,3 @@ int main() {
   std::vector<calibration::detection_result_t> detection_results;
   std::thread capture_frames_thread(
       CaptureFrames, detector, camera, streamer, std::ref(detection_results),
-      std::ref(capture_frames), std::ref(log_image));
-
-  bool run = true;
-  while (run) {
-    char key;
-    std::cin >> key;
-    switch (key) {
-      case 'q':
-        run = false;
-      case 'c':
-        log_image.store(true);
-        break;
-      default:
-        std::cout << "Received invalid key!\n";
-    }
-  }
-
-  capture_frames.store(false);
-  capture_frames_thread.join();
-  std::cout << "Calibrating cameras" << std::endl;
-
-  cv::Mat cameraMatrix, distCoeffs;
-  calibration::CalibrateCamera(detection_results, frame_size, cameraMatrix,
-                               distCoeffs);
-
-  std::ofstream file(camera_info.intrinsics_path);
-  json intrinsics = calibration::intrisincs_to_json(cameraMatrix, distCoeffs);
-  file << intrinsics.dump(4);
-  std::cout << "Saved to " << camera_info.intrinsics_path << std::endl;
-  std::cout << "Intrinsics: " << intrinsics.dump(4);
-  file.close();
-}

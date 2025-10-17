@@ -1,15 +1,16 @@
+#include "pch.h"
+
 // https://gist.github.com/SteveRuben/2a15909e384b582c51b5
 #include "streamer.h"
-#include <iostream>
 #include <opencv2/imgcodecs.hpp>
 namespace camera {
 
 static std::string k_header =
-    "HTTP/1.0 200 OK\r\n"
-    "Server: MJPEG-Streamer\r\n"
-    "Cache-Control: no-cache\r\n"
-    "Pragma: no-cache\r\n"
-    "Content-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n";
+    "HTTP/1.0 200 OK\\r\\n"
+    "Server: MJPEG-Streamer\\r\\n"
+    "Cache-Control: no-cache\\r\\n"
+    "Pragma: no-cache\\r\\n"
+    "Content-Type: multipart/x-mixed-replace; boundary=frame\\r\\n\\r\\n";
 
 Streamer::Streamer(uint port, bool verbose, uint skip_frame)
     : status_(false),
@@ -20,7 +21,7 @@ Streamer::Streamer(uint port, bool verbose, uint skip_frame)
 
   server_fd_ = socket(AF_INET, SOCK_STREAM, 0);
   if (server_fd_ == -1) {
-    std::cout << "failed to open socket!\n";
+    std::cout << "failed to open socket!\\n";
     return;
   }
 
@@ -50,7 +51,7 @@ Streamer::Streamer(uint port, bool verbose, uint skip_frame)
           client_fds_[i] = client_fd;
           send(client_fd, k_header.c_str(), k_header.size(), 0);
           if (verbose_){
-            std::cout << "Got new connection with client_fd: " << client_fd << "\n";
+            std::cout << "Got new connection with client_fd: " << client_fd << "\\n";
           }
         }
       }
@@ -64,15 +65,15 @@ void Streamer::WriteFrame(cv::Mat& frame) {
   cv::imencode(".jpg", frame, buf);
 
   std::string part =
-      "--frame\r\n"
-      "Content-Type: image/jpeg\r\n"
+      "--frame\\r\\n"
+      "Content-Type: image/jpeg\\r\\n"
       "Content-Length: " +
-      std::to_string(buf.size()) + "\r\n\r\n";
+      std::to_string(buf.size()) + "\\r\\n\\r\\n";
   for (int i = 0; i < MAX_CLIENTS; i++){
     if (client_fds_[i] != -1){
       send(client_fds_[i], part.c_str(), part.size(), 0);
       send(client_fds_[i], reinterpret_cast<char*>(buf.data()), buf.size(), 0);
-      if (send(client_fds_[i], "\r\n", 2, 0) == -1){
+      if (send(client_fds_[i], "\\r\\n", 2, 0) == -1){
         close(client_fds_[i]);
         client_fds_[i] = -1;
       }

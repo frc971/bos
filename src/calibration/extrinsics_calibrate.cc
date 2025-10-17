@@ -1,6 +1,7 @@
+#include "pch.h"
+
 #include <cstdlib>
 #include <fstream>
-#include <iostream>
 #include <nlohmann/json.hpp>
 #include <opencv2/aruco.hpp>
 #include <opencv2/aruco/charuco.hpp>
@@ -13,7 +14,7 @@
 using json = nlohmann::json;
 
 int main() {
-  std::cout << "What is the id of the camera?\n";
+  std::cout << "What is the id of the camera?\\n";
   int camera_id;
   std::cin >> camera_id;
 
@@ -40,7 +41,7 @@ int main() {
     intrinsics_file >> intrinsics;
   }
 
-  std::cout << "What tag are we calibrating against?\n";
+  std::cout << "What tag are we calibrating against?\\n";
   int tag_id;
   std::cin >> tag_id;
 
@@ -95,28 +96,3 @@ int main() {
 
   std::cout << "True rotation y (meters)";
   std::cin >> true_position.rotation.y;
-
-  std::cout << "True rotation z (meters)";
-  std::cin >> true_position.rotation.z;
-
-  localization::tag_detection_t extrinsics;
-  extrinsics.translation.x =
-      average_position.translation.x - true_position.translation.x;
-  extrinsics.translation.y =
-      average_position.translation.y - true_position.translation.y;
-  extrinsics.translation.z =
-      average_position.translation.z - true_position.translation.z;
-
-  extrinsics.rotation.x =
-      average_position.rotation.x - true_position.rotation.x;
-  extrinsics.rotation.y =
-      average_position.rotation.y - true_position.rotation.y;
-  extrinsics.rotation.z =
-      average_position.rotation.z - true_position.rotation.z;
-
-  std::ofstream file(camera_info.extrinsics_path);
-  json extrinsics_json = localization::ExtrinsicsToJson(extrinsics);
-  file << extrinsics_json.dump(4);
-  std::cout << "Extrinsics: \n" << intrinsics.dump(4);
-  file.close();
-}

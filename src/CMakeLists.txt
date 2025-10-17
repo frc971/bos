@@ -17,3 +17,5 @@ target_link_libraries(game_peice_main PRIVATE ${OpenCV_LIBS} apriltag ntcore cam
 
 add_executable(test test.cc)
 target_link_libraries(test PRIVATE ${OpenCV_LIBS} 971apriltag apriltag cameraserver ntcore cscore wpiutil camera nlohmann_json::nlohmann_json Eigen3::Eigen localization)
+
+target_precompile_headers(main PRIVATE ${CMAKE_SOURCE_DIR}/include/pch.h)

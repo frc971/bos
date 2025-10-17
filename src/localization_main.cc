@@ -1,7 +1,8 @@
+#include "pch.h"
+
 #include <frc/DataLogManager.h>
 #include <networktables/NetworkTableInstance.h>
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include <thread>
 #include "apriltag/apriltag.h"
@@ -74,7 +75,7 @@ int main() {
   //     start_networktables();
   //   }
   // }
-  // std::cout << "this should never happen \n";
+  // std::cout << "this should never happen \\n";
 
   // std::thread camera_two_thread(run_estimator, camera::gstreamer2_30fps,
   //                               std::ref(pose_estimator),

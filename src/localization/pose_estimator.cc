@@ -1,7 +1,8 @@
+#include "pch.h"
+
 #include "pose_estimator.h"
 #include <frc/geometry/Pose2d.h>
 #include <wpilibc/frc/Timer.h>
-#include <iostream>
 
 namespace localization {
 
@@ -74,4 +75,4 @@ pose2d_t PoseEstimator::GetPoseVarience() {
   return position2d;
 }
 
-}  // namespace localization
+}  // namespace localization  
