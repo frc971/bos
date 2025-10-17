@@ -49,17 +49,24 @@ json read_extrinsics(std::string path) {
   return extrinsics;
 }
 
-void run_estimator(std::unique_ptr<camera::Camera> camera, json intrinsics,
+void run_estimator(std::unique_ptr<camera::CVCamera> camera, json intrinsics,
                    json extrinsics,
                    localization::PositionSender& position_sender) {
 
-  localization::TagEstimator tag_estimator(intrinsics, extrinsics);
+  localization::TagEstimator tag_estimator(1280, 720, intrinsics, extrinsics);
+
+  camera::CscoreStreamer streamer(
+      camera::IMX296Streamer("frame_logger", 4971, 30));
 
   cv::Mat frame;
   while (true) {
     camera->GetFrame(frame);
+    std::cout << frame.size[0] << " " << frame.size[1] << " " << std::endl;
+    std::cout << frame.channels() << std::endl;
+    streamer.WriteFrame(frame);
     std::vector<localization::tag_detection_t> estimates =
         tag_estimator.Estimate(frame);
+    std::cout << estimates.size() << std::endl;
     position_sender.Send(estimates);
   }
 }
@@ -70,14 +77,21 @@ int main() {
 
   localization::PositionSender position_sender(false);
 
-  std::thread camera_one_thread(run_estimator,
-                                std::make_unique<camera::CVCamera>(
-                                    cv::VideoCapture(camera::gstreamer1_30fps)),
-                                read_intrinsics(camera::camera1_intrinsics),
-                                read_extrinsics(camera::camera1_extrinsics),
-                                position_sender);
+  // std::thread camera_one_thread(run_estimator,
+  //                               std::make_unique<camera::CVCamera>(
+  //                                   cv::VideoCapture(camera::gstreamer1_30fps)),
+  //                               read_intrinsics(camera::camera1_intrinsics),
+  //                               read_extrinsics(camera::camera1_extrinsics),
+  //                               std::ref(position_sender));
 
-  camera_one_thread.join();
+  std::thread camera_two_thread(
+      run_estimator,
+      std::make_unique<camera::CVCamera>(cv::VideoCapture("/dev/video2")),
+      read_intrinsics(camera::camera1_intrinsics),
+      read_extrinsics(camera::camera1_extrinsics), std::ref(position_sender));
+
+  // camera_one_thread.join();
+  camera_two_thread.join();
 
   return 0;
 }
