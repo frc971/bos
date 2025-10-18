@@ -13,17 +13,16 @@ can then be run anywhere.
 
 ## Docker commands you need to know
 ### How to pull images using docker pull
-On an ORINS' terminal, while it has power and ethernet,<br> 
 run `docker pull ghcr.io/frc971/bos/orin:latest`.
 
-This will pull a docker image from the bos repository <br>
-to make sure the code on the ORIN is up to date.
+This will pull a docker image for you to use on your computer.
 
-### How to run the container on the ORIN
-To run the docker container that is on the ORIN, <br>
+### How to run the container on your computer
+To run the docker container on your computer, <br>
 run the following commands in the terminal:
 ```bash
     docker run --priviliged --network host --name orin -it ghcr.io/frc971/bos/orin:latest
     docker exec -it orin /bin/bash
 ```
-This will run the docker container on the ORIN.
+This will run the docker container on your computer within a <br>
+contained environment that simulates an ORIN.
