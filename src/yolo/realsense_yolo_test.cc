@@ -38,18 +38,20 @@ static void drawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
 }
 
 int main() {
-  std::filesystem::path modelPath = "/bos/src/yolo/secondYOLO.engine";
+  std::filesystem::path modelPath = "/bos/src/yolo/fifthYOLO.engine";
   std::cout << "Importing model from " << modelPath << std::endl;
   std::cout << "File actually exists: " << std::filesystem::exists(modelPath)
             << std::endl;
   yolo::Yolo model(modelPath, true);
   camera::RealSenseCamera rs_camera;
   cv::Mat mat;
+  cv::Mat displayFrame;
   rs_camera.getFrame(mat);
   if (mat.empty()) {
     std::cout << "Couldn't fetch frame properly" << std::endl;
     return 1;
   }
+  displayFrame = mat.clone();
   const std::vector<float> maybe_softmax_results = model.RunModel(mat);
   std::cout << "Detection size: " << maybe_softmax_results.size() << std::endl;
   std::vector<cv::Rect> bboxes(6);
@@ -72,6 +74,8 @@ int main() {
   std::vector<std::string> class_names = {"ALGAE", "CORAl"};
   drawDetections(mat, bboxes, class_ids, confidences, class_names);
   cv::imshow("Test detections", mat);
+  cv::waitKey(0);
+  cv::imshow("Original image", displayFrame);
   cv::waitKey(0);
   std::string filename = "output_image.png";
 
