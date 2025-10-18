@@ -57,21 +57,22 @@ int main() {
   std::vector<cv::Rect> bboxes(6);
   std::vector<float> confidences(6);
   std::vector<int> class_ids(6);
+  const int nms_output_size = 7;
   for (int i = 0; i < 6; i++) {
     std::cout << "Run " << i << std::endl;
-    float c_x = maybe_softmax_results[i * 6];
-    float c_y = maybe_softmax_results[i * 6 + 1];
-    float w = maybe_softmax_results[i * 6 + 2];
-    float h = maybe_softmax_results[i * 6 + 3];
-    float confidence = maybe_softmax_results[i * 6 + 4];
-    int id = maybe_softmax_results[i * 6 + 5];
+    float c_x = maybe_softmax_results[i * nms_output_size];
+    float c_y = maybe_softmax_results[i * nms_output_size + 1];
+    float w = maybe_softmax_results[i * nms_output_size + 2];
+    float h = maybe_softmax_results[i * nms_output_size + 3];
+    float confidence = maybe_softmax_results[i * nms_output_size + 4];
+    int id = maybe_softmax_results[i * nms_output_size + 5];
     printf("CenterX: %f, CenterY: %f,w: %f,h: %f,confidence: %f,id: %d", c_x,
            c_y, w, h, confidence, id);
     bboxes[i] = cv::Rect(c_x - w / 2, c_y - h / 2, w, h);
     confidences[i] = confidence;
     class_ids[i] = id;
   }
-  std::vector<std::string> class_names = {"ALGAE", "CORAl"};
+  std::vector<std::string> class_names = {"ALGAE", "CORAL"};
   drawDetections(mat, bboxes, class_ids, confidences, class_names);
   cv::imshow("Test detections", mat);
   cv::waitKey(0);

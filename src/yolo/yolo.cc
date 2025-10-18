@@ -5,6 +5,7 @@
 #include <iostream>
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/cudaarithm.hpp>
+#include <opencv2/opencv.hpp>
 #include <vector>
 
 namespace yolo {
@@ -45,7 +46,8 @@ cv::cuda::GpuMat preprocess(cv::Mat& img) {
   cv::cuda::split(img_gpu, input_channels);  // HWC -> CHW
   cv::cuda::GpuMat output;
   gpu_dst.convertTo(output, CV_32FC3, 1.f / 255.f);
-  std::cout << "Finished preprocessing";
+  std::cout << "Finished preprocessing, shape is " << output.channels() << "x"
+            << output.rows << "x" << output.cols << std::endl;
   return output;
 }
 
