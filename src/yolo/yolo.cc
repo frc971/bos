@@ -2,6 +2,7 @@
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
 #include <fstream>
+#include <iostream>
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/cudaarithm.hpp>
 #include <vector>
@@ -30,9 +31,10 @@ size_t getOutputSize(nvinfer1::ICudaEngine* engine) {
 }
 
 cv::cuda::GpuMat preprocess(cv::Mat& img) {
+  std::cout << "Entering preprocessing" << std::endl;
   cv::cuda::GpuMat img_gpu;
   img_gpu.upload(img);
-  cv::cuda::GpuMat gpu_dst(1, img_gpu.rows * img_gpu.cols * 1, CV_8UC3);
+  cv::cuda::GpuMat gpu_dst(1, img_gpu.rows * img_gpu.cols * 3, CV_8UC3);
   size_t width = img_gpu.cols * img_gpu.rows;
   std::vector<cv::cuda::GpuMat> input_channels{
       cv::cuda::GpuMat(img_gpu.rows, img_gpu.cols, CV_8U, &(gpu_dst.ptr()[0])),
@@ -43,6 +45,7 @@ cv::cuda::GpuMat preprocess(cv::Mat& img) {
   cv::cuda::split(img_gpu, input_channels);  // HWC -> CHW
   cv::cuda::GpuMat output;
   gpu_dst.convertTo(output, CV_32FC3, 1.f / 255.f);
+  std::cout << "Finished preprocessing";
   return output;
 }
 
@@ -76,22 +79,28 @@ Yolo::Yolo(std::string model_path, bool verbose) : verbose_(verbose) {
 std::vector<float> Yolo::RunModel(cv::Mat frame) {
   bool status;
   cv::cuda::GpuMat gpu_mat = preprocess(frame);
+  std::cout << "Preprocessed" << std::endl;
   status = context_->setTensorAddress(engine_->getIOTensorName(0),
                                       (void*)gpu_mat.ptr<void>());
   assert(status);
+  std::cout << "Tensor address set 0" << std::endl;
   status = context_->setTensorAddress(engine_->getIOTensorName(1),
                                       (void*)output_buffer_);
   assert(status);
+  std::cout << "Tensor address set 1" << std::endl;
   status = context_->enqueueV3(inferenceCudaStream_);
+  std::cout << "Enqueued" << std::endl;
   assert(status);
 
   cudaStreamSynchronize(inferenceCudaStream_);
+  std::cout << "Stream synchronized" << std::endl;
   std::vector<float> featureVector;
   featureVector.resize(output_size_);
+  std::cout << "Resized" << std::endl;
   cudaMemcpy(featureVector.data(), static_cast<char*>(output_buffer_),
              output_size_ * sizeof(float),
              cudaMemcpyDeviceToHost);  // Probably do not need to cast to char*
-
+  std::cout << "Memcpy" << std::endl;
   if (verbose_) {
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 6; j++) {
