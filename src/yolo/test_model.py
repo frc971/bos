@@ -10,9 +10,9 @@ from tqdm import tqdm
 # -------------------------------
 # Configuration
 # -------------------------------
-ENGINE_PATH = "/bos/src/yolo/thirdYOLO.engine"
+ENGINE_PATH = "/bos/src/yolo/fifthYOLO.engine"
 DATASET_ROOT = "/home/nvidia/Documents/gamepiece-data"  # Root directory containing train/valid/test folders
-SPLIT = "train"  # Which split to evaluate: "train", "valid", or "test"
+SPLIT = "valid"  # Which split to evaluate: "train", "valid", or "test"
 IMG_SIZE = 640  # model input size
 
 CONF_THRESH = 0.25

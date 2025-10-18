@@ -13,3 +13,5 @@ image.tar
 *.swp
 bin/*
 build
+src/yolo/test_images
+output_image.png
