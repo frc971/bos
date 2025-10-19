@@ -133,7 +133,8 @@ json ExtrinsicsToJson(tag_detection_t extrinsics) {
   return output;
 }
 
-TagEstimator::TagEstimator(json intrinsics, json extrinsics,
+TagEstimator::TagEstimator(uint image_width, uint image_height, json intrinsics,
+                           json extrinsics,
                            std::vector<cv::Point3f> apriltag_dimensions,
                            bool verbose)
     : extrinsics_(extrinsics),
@@ -156,7 +157,7 @@ TagEstimator::TagEstimator(json intrinsics, json extrinsics,
   // apriltag_detector_->quad_decimate = 1;
 
   gpu_detector_ = new frc971::apriltag::GpuDetector(
-      1456, 1088, apriltag_detector_,
+      image_width, image_height, apriltag_detector_,
       camera_matrix_from_json<frc971::apriltag::CameraMatrix>(intrinsics),
       distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
           intrinsics));
@@ -173,12 +174,6 @@ std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
   for (tag_detection_t& estimate : estimates) {
     estimate = GetFeildRelitivePosition(estimate);
   }
-  // for (const tag_detection_t& estimate : estimates) {
-  //   if (verbose_) {
-  //     std::cout << estimate << std::endl;
-  //   }
-  //   std::cout << std::endl;
-  // }
   return estimates;
 }
 
