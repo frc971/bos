@@ -33,7 +33,7 @@ json ExtrinsicsToJson(tag_detection_t extrinsics);
 class TagEstimator {
  public:
   TagEstimator(
-      json intrinsics, json extrinsics,
+      uint image_width, uint image_height, json intrinsics, json extrinsics,
       std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions,
       bool verbose = false);
   ~TagEstimator();
