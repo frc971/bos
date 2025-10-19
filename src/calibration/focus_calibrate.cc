@@ -3,29 +3,13 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/imx296_camera.h"
+#include "src/camera/select_camera.h"
 
 int main(int argc, char* argv[]) {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
-  // std::cout << "What is the id of the camera we are using?\n";
-  // int camera_id;
-  // std::cin >> camera_id;
-  //
-  // camera::CameraInfo camera_info;
-  //
-  // switch (camera_id) {
-  //   case 0:
-  //     camera_info = camera::gstreamer1_30fps;
-  //     break;
-  //   case 1:
-  //     camera_info = camera::gstreamer2_30fps;
-  //     break;
-  //   default:
-  //     std::cout << "Invalid ID! Only 0 or 1" << std::endl;
-  //     return 0;
-  // }
+  camera::CVCamera camera = camera::SelectCamera();
 
-  camera::CVCamera camera((cv::VideoCapture(camera::gstreamer1_30fps)));
   camera::CscoreStreamer streamer(
       camera::IMX296Streamer("focus_calibrate", 4971, 30));
 

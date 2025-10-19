@@ -3,7 +3,7 @@
 #include <frc/geometry/Pose3d.h>
 #include <frc/geometry/Rotation2d.h>
 #include <frc/geometry/Rotation3d.h>
-#include <Eigen/Dense>  // easiest: pulls in everything you need
+#include <Eigen/Dense>
 #include <iomanip>
 #include <iostream>
 #include "src/localization/position.h"

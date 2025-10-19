@@ -12,7 +12,6 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
-#include "src/localization/pose_estimator.h"
 
 using json = nlohmann::json;
 

@@ -15,6 +15,7 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/imx296_camera.h"
+#include "src/camera/select_camera.h"
 
 using json = nlohmann::json;
 
@@ -56,11 +57,13 @@ int main() {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
   std::cout << "What is the id of the camera we are logging?\n";
+  int camera_id;
+  std::cin >> camera_id;
 
   camera::CscoreStreamer streamer("intrinsics_calibrate", 4971, 30, 1080, 1080,
                                   true);
 
-  camera::CVCamera camera((cv::VideoCapture("/dev/video2")));
+  camera::CVCamera camera = camera::SelectCamera();
 
   cv::Mat frame;
   camera.GetFrame(frame);

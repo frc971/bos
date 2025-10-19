@@ -9,6 +9,7 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/imx296_camera.h"
+#include "src/camera/select_camera.h"
 
 using json = nlohmann::json;
 
@@ -46,7 +47,7 @@ int main() {
   camera::CscoreStreamer undistorted_streamer(
       camera::IMX296Streamer("undistorted_stream", 4972, 30));
 
-  camera::CVCamera camera(cv::VideoCapture("/dev/video2"));
+  camera::CVCamera camera = camera::SelectCamera();
   cv::Mat frame;
 
   while (true) {
