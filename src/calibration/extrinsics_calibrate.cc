@@ -8,6 +8,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include "src/camera/imx296_camera.h"
+#include "src/camera/select_camera.h"
 #include "src/localization/tag_estimator.h"
 
 using json = nlohmann::json;
@@ -28,11 +29,7 @@ int main() {
     intrinsics_file >> intrinsics;
   }
 
-  std::cout << "What tag are we calibrating against?\n";
-  int tag_id;
-  std::cin >> tag_id;
-
-  camera::IMX296Camera camera(camera_info);
+  camera::CVCamera = camera::IMX296Camera camera(camera_info);
   cv::Mat frame;
 
   localization::TagEstimator estimator(intrinsics, nullptr);

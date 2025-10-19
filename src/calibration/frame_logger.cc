@@ -9,6 +9,7 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/imx296_camera.h"
+#include "src/camera/select_camera.h"
 
 const int k_port = 4971;
 
@@ -36,7 +37,7 @@ int main() {
 
   camera::CscoreStreamer streamer(
       camera::IMX296Streamer("frame_logger", 4971, 30));
-  camera::CVCamera camera(cv::VideoCapture("/dev/video0"));
+  camera::CVCamera camera = camera::SelectCamera();
   std::atomic<bool> log_image(false);
 
   cv::Mat frame;
