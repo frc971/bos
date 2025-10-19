@@ -12,13 +12,16 @@
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 #include <opencv2/objdetect/charuco_detector.hpp>
 #include "src/calibration/intrinsics_calibrate_lib.h"
+#include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
+#include "src/camera/cv_camera.h"
 #include "src/camera/imx296_camera.h"
+#include "src/camera/select_camera.h"
 
 using json = nlohmann::json;
 
 void CaptureFrames(
-    cv::aruco::CharucoDetector detector, camera::IMX296Camera camera,
+    cv::aruco::CharucoDetector detector, camera::CVCamera camera,
     camera::CscoreStreamer streamer,
     std::vector<calibration::detection_result_t>& detection_results,
     std::atomic<bool>& capture_frames_thread, std::atomic<bool>& log_image) {
@@ -58,23 +61,10 @@ int main() {
   int camera_id;
   std::cin >> camera_id;
 
-  camera::CameraInfo camera_info;
-  switch (camera_id) {
-    case 0:
-      camera_info = camera::gstreamer1_30fps;
-      break;
-    case 1:
-      camera_info = camera::gstreamer2_30fps;
-      break;
-    default:
-      std::cout << "Invalid ID! Only 0 or 1" << std::endl;
-      return 0;
-  }
-
   camera::CscoreStreamer streamer("intrinsics_calibrate", 4971, 30, 1080, 1080,
                                   true);
 
-  camera::IMX296Camera camera(camera_info);
+  camera::CVCamera camera = camera::SelectCamera();
 
   cv::Mat frame;
   camera.GetFrame(frame);
@@ -91,3 +81,35 @@ int main() {
   std::vector<calibration::detection_result_t> detection_results;
   std::thread capture_frames_thread(
       CaptureFrames, detector, camera, streamer, std::ref(detection_results),
+      std::ref(capture_frames), std::ref(log_image));
+
+  bool run = true;
+  while (run) {
+    char key;
+    std::cin >> key;
+    switch (key) {
+      case 'q':
+        run = false;
+      case 'c':
+        log_image.store(true);
+        break;
+      default:
+        std::cout << "Received invalid key!\n";
+    }
+  }
+
+  capture_frames.store(false);
+  capture_frames_thread.join();
+  std::cout << "Calibrating cameras" << std::endl;
+
+  cv::Mat cameraMatrix, distCoeffs;
+  calibration::CalibrateCamera(detection_results, frame_size, cameraMatrix,
+                               distCoeffs);
+
+  std::ofstream file(camera::camera1_intrinsics);
+  json intrinsics = calibration::intrisincs_to_json(cameraMatrix, distCoeffs);
+  file << intrinsics.dump(4);
+  std::cout << "Saved to " << camera::camera1_intrinsics << std::endl;
+  std::cout << "Intrinsics: " << std::endl << intrinsics.dump(4) << std::endl;
+  file.close();
+}

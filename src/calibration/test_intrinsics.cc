@@ -1,3 +1,4 @@
+#include <src/camera/cv_camera.h>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -5,8 +6,10 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 #include <sstream>
+#include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/imx296_camera.h"
+#include "src/camera/select_camera.h"
 
 using json = nlohmann::json;
 
@@ -31,25 +34,7 @@ void warmupCamera(std::string pipeline) {
 int main() {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
-  std::cout << "What is the id of the camera we are logging?\n";
-  int camera_id;
-  std::cin >> camera_id;
-
-  camera::CameraInfo camera_info;
-
-  switch (camera_id) {
-    case 0:
-      camera_info = camera::gstreamer1_30fps;
-      break;
-    case 1:
-      camera_info = camera::gstreamer2_30fps;
-      break;
-    default:
-      std::cout << "Invalid ID! Only 0 or 1" << std::endl;
-      return 0;
-  }
-
-  std::ifstream file(camera_info.intrinsics_path);
+  std::ifstream file(camera::camera1_intrinsics);
   json intrinsics;
   file >> intrinsics;
 
@@ -62,7 +47,7 @@ int main() {
   camera::CscoreStreamer undistorted_streamer(
       camera::IMX296Streamer("undistorted_stream", 4972, 30));
 
-  camera::IMX296Camera camera(camera_info);
+  camera::CVCamera camera = camera::SelectCamera();
   cv::Mat frame;
 
   while (true) {
