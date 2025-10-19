@@ -9,6 +9,7 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/imx296_camera.h"
+#include "src/camera/select_camera.h"
 
 const int k_port = 4971;
 
@@ -16,7 +17,8 @@ int main() {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
   std::cout << "What is the id of the camera we are logging?\n";
-  int camera_id = 1;
+  int camera_id;
+  std::cin >> camera_id;
 
   std::string data_folder = "data/camera_" + std::to_string(camera_id) + "/";
   if (std::filesystem::create_directory(data_folder)) {
@@ -34,8 +36,8 @@ int main() {
   std::cout << "Port number: " << k_port << std::endl;
 
   camera::CscoreStreamer streamer(
-      camera::IMX296Streamer("frame_logger", k_port, 30));
-  camera::CVCamera camera((cv::VideoCapture("/dev/video2")));
+      camera::IMX296Streamer("frame_logger", 4971, 30));
+  camera::CVCamera camera = camera::SelectCamera();
   std::atomic<bool> log_image(false);
 
   cv::Mat frame;

@@ -36,10 +36,10 @@ void PositionSender::Send(
   if (mutex_.try_lock()) {
 
     for (size_t i = 0; i < detections.size(); i++) {
-      double varience = detections[i].distance * detections[i].distance;
+      double variance = detections[i].distance * detections[i].distance;
       double tag_estimation[5] = {
           detections[i].translation.x, detections[i].translation.y,
-          detections[i].rotation.z, varience,
+          detections[i].rotation.z, variance,
           detections[i].timestamp +
               instance_.GetServerTimeOffset().value() / 1000000.0};
 
