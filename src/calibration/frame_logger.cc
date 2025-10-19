@@ -1,8 +1,9 @@
+#include "include/pch.h"
+
 #include <atomic>
 #include <filesystem>
 #include <functional>
 #include <iomanip>
-#include <iostream>
 #include <opencv2/opencv.hpp>
 #include <sstream>
 #include <thread>
@@ -16,15 +17,15 @@ const int k_port = 4971;
 int main() {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
-  std::cout << "What is the id of the camera we are logging?\n";
+  std::cout << "What is the id of the camera we are logging?\\n";
   int camera_id;
   std::cin >> camera_id;
 
   std::string data_folder = "data/camera_" + std::to_string(camera_id) + "/";
   if (std::filesystem::create_directory(data_folder)) {
-    std::cout << "data folder created successfully!\n";
+    std::cout << "data folder created successfully!\\n";
   } else {
-    std::cout << "do you want to delete the existing photos? (yes/no)\n";
+    std::cout << "do you want to delete the existing photos? (yes/no)\\n";
     std::string delete_existing_photos;
     std::cin >> delete_existing_photos;
     if (delete_existing_photos == "yes") {
@@ -46,7 +47,6 @@ int main() {
             << std::endl;
 
   while (true) {
-
     cv::Mat frame;
     int image_idx = 0;
     while (true) {
