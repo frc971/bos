@@ -65,4 +65,11 @@ int main() {
   std::cout << "feild to camera: \\n";
   frc::Pose3d feild_to_cacmera = feild_to_tag.TransformBy(tag_to_camera);
   PrintPose3d(feild_to_cacmera);
+
+  std::cout << "feild to robot: \n";
+  frc::Transform3d robot_to_camera{0_m, 0_m, 0_m,
+                                   frc::Rotation3d{0_deg, 0_deg, 0_deg}};
+  frc::Transform3d camera_to_robot(robot_to_camera.Inverse());
+  frc::Pose3d feild_to_robot = feild_to_cacmera.TransformBy(camera_to_robot);
+  PrintPose3d(feild_to_robot);
 }
