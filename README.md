@@ -21,7 +21,7 @@ This will pull a docker image for you to use on your computer.
 To run the docker container on your computer, <br>
 run the following commands in the terminal:
 ```bash
-    docker run --priviliged --network host --name orin -it ghcr.io/frc971/bos/orin:latest
+    docker run --privileged --network host --name orin -it ghcr.io/frc971/bos/orin:latest
     docker exec -it orin /bin/bash
 ```
 This will run the docker container on your computer within a <br>
