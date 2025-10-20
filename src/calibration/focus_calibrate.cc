@@ -1,5 +1,4 @@
-#include "include/pch.h"
-
+#include <iostream>
 #include "opencv2/imgproc/imgproc.hpp"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
@@ -24,6 +23,6 @@ int main(int argc, char* argv[]) {
     cv::Scalar mean, stddev;
     cv::meanStdDev(laplace, mean, stddev, cv::Mat());
 
-    std::cout << "Focus(bigger is better): " << stddev * stddev << "\\n";
+    std::cout << "Focus(bigger is better): " << stddev * stddev << "\n";
   }
 }

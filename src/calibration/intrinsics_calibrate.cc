@@ -1,7 +1,6 @@
-#include "include/pch.h"
-
 #include <cstdlib>
 #include <fstream>
+#include <iostream>
 #include <nlohmann/json.hpp>
 #include <opencv2/aruco.hpp>
 #include <opencv2/aruco/charuco.hpp>

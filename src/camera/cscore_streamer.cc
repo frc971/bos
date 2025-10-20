@@ -1,9 +1,7 @@
-#include "include/pch.h"
-
 #include "cscore_streamer.h"
 #include <cscore_cpp.h>
 #include <cscore_cv.h>
-
+#include <iostream>
 namespace camera {
 
 CscoreStreamer::CscoreStreamer(std::string name, uint port, uint fps,
