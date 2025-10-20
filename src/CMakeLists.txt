@@ -7,7 +7,6 @@ include_directories(/usr/local/cuda/include)
 add_subdirectory(camera)
 add_subdirectory(localization)
 add_subdirectory(calibration)
-add_subdirectory(pathing)
 add_subdirectory(yolo)
 
 add_executable(localization_main localization_main.cc)
