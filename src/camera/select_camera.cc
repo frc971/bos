@@ -43,7 +43,7 @@ namespace camera {
 
             switch (camNumMIPI) {
                 case 1:
-                    return std::make_unique<camera::CVCamer>(cv::VideoCapture(camera::gstreamer1_30fps));
+                    return std::make_unique<camera::CVCamera>(cv::VideoCapture(camera::gstreamer1_30fps));
                 
                 case 2:
                     return std::make_unique<camera::CVCamera>(cv::VideoCapture(camera::gstreamer2_30fps));
