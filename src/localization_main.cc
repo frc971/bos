@@ -76,21 +76,26 @@ int main() {
 
   localization::PositionSender position_sender(false);
 
-  // std::thread camera_one_thread(run_estimator,
-  //                               std::make_unique<camera::CVCamera>(
-  //                                   cv::VideoCapture(camera::gstreamer1_30fps)),
-  //                               read_intrinsics(camera::camera1_intrinsics),
-  //                               read_extrinsics(camera::camera1_extrinsics),
-  //                               std::ref(position_sender));
+  std::thread imx1_thread(run_estimator,
+                                std::make_unique<camera::CVCamera>(
+                                    cv::VideoCapture(camera::IMX296Pipeline(0, 30))),
+                                read_intrinsics(camera::camera1_intrinsics),
+                                read_extrinsics(camera::camera1_extrinsics),
+                                std::ref(position_sender));
+  std::thread imx2_thread(run_estimator,
+                                std::make_unique<camera::CVCamera>(
+                                    cv::VideoCapture(camera::IMX296Pipeline(1, 30))),
+                                read_intrinsics(camera::camera1_intrinsics),
+                                read_extrinsics(camera::camera1_extrinsics),
+                                std::ref(position_sender));
 
-  std::thread camera_two_thread(
+  std::thread usb_thread(
       run_estimator,
       std::make_unique<camera::CVCamera>(cv::VideoCapture("/dev/video2")),
       read_intrinsics(camera::camera1_intrinsics),
       read_extrinsics(camera::camera1_extrinsics), std::ref(position_sender));
 
-  // camera_one_thread.join();
-  camera_two_thread.join();
+  usb_thread.join();
 
   return 0;
 }
