@@ -16,11 +16,7 @@ const int k_port = 4971;
 int main() {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
-  std::cout << "What is the id of the camera we are logging?\n";
-  int camera_id;
-  std::cin >> camera_id;
-
-  std::string data_folder = "data/camera_" + std::to_string(camera_id) + "/";
+  std::string data_folder = "data/camera/";
   if (std::filesystem::create_directory(data_folder)) {
     std::cout << "data folder created successfully!\n";
   } else {
@@ -37,7 +33,12 @@ int main() {
 
   camera::CscoreStreamer streamer(
       camera::IMX296Streamer("frame_logger", 4971, 30));
-  camera::CVCamera camera = camera::SelectCamera();
+  // camera::CVCamera camera = camera::SelectCamera();
+  int video_num;
+  std::cout << "Enter video num" << std::endl;
+  std::cin >> video_num;
+  std::cout << "Testing camera " << video_num << std::endl;
+  camera::CVCamera camera(cv::VideoCapture("/dev/video" + std::to_string(video_num)));
   std::atomic<bool> log_image(false);
 
   cv::Mat frame;

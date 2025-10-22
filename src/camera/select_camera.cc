@@ -16,29 +16,10 @@ namespace camera {
         std::cin >> camType;
 
         if (camType == 1) {
-            std::cout << "Which camera number; 1-4: ";
+            std::cout << "Which camera number; 0-3: ";
             int camNumUSB; // Which USB camera to to use
             std::cin >> camNumUSB;
-
-            switch (camNumUSB) {
-                case 1:
-                    return camera::CVCamera(cv::VideoCapture("/dev/video0"));
-
-                case 2:
-                    return camera::CVCamera(cv::VideoCapture("/dev/video2"));
-
-                case 3:
-                    return camera::CVCamera(cv::VideoCapture("/dev/video4"));
-
-                case 4:
-                    return camera::CVCamera(cv::VideoCapture("/dev/video6"));
-
-                default:
-                    std::cout << "INVALID INPUT: must be a number from 1 to 4.";
-                    return SelectCamera();
-            }
-            
-
+            return camera::CVCamera(cv::VideoCapture("/dev/video" + std::to_string(camNumUSB));
         } else if (camType == 2) {
             std::cout << "Which camera number; 1-2: ";
             int camNumMIPI; // Which MIPI camera to use

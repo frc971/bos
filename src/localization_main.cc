@@ -60,12 +60,12 @@ void run_estimator(std::unique_ptr<camera::CVCamera> camera, json intrinsics,
   cv::Mat frame;
   while (true) {
     camera->GetFrame(frame);
-    std::cout << frame.size[0] << " " << frame.size[1] << " " << std::endl;
-    std::cout << frame.channels() << std::endl;
+    // std::cout << frame.size[0] << " " << frame.size[1] << " " << std::endl;
+    // std::cout << frame.channels() << std::endl;
     streamer.WriteFrame(frame);
     std::vector<localization::tag_detection_t> estimates =
         tag_estimator.Estimate(frame);
-    std::cout << estimates.size() << std::endl;
+    // std::cout << estimates.size() << std::egdl;
     position_sender.Send(estimates);
   }
 }
@@ -76,26 +76,32 @@ int main() {
 
   localization::PositionSender position_sender(false);
 
-  std::thread imx1_thread(run_estimator,
-                                std::make_unique<camera::CVCamera>(
-                                    cv::VideoCapture(camera::IMX296Pipeline(0, 30))),
-                                read_intrinsics(camera::camera1_intrinsics),
-                                read_extrinsics(camera::camera1_extrinsics),
-                                std::ref(position_sender));
-  std::thread imx2_thread(run_estimator,
-                                std::make_unique<camera::CVCamera>(
-                                    cv::VideoCapture(camera::IMX296Pipeline(1, 30))),
-                                read_intrinsics(camera::camera1_intrinsics),
-                                read_extrinsics(camera::camera1_extrinsics),
-                                std::ref(position_sender));
+  // std::thread imx1_thread(run_estimator,
+  //                               std::make_unique<camera::CVCamera>(
+  //                                   cv::VideoCapture(camera::IMX296Pipeline(0, 30))),
+  //                               read_intrinsics(camera::imx296_camera1_intrinsics),
+  //                               read_extrinsics(camera::imx296_camera1_extrinsics),
+  //                               std::ref(position_sender));
+  // std::thread imx2_thread(run_estimator,
+  //                               std::make_unique<camera::CVCamera>(
+  //                                   cv::VideoCapture(camera::IMX296Pipeline(1, 30))),
+  //                               read_intrinsics(camera::imx296_camera2_intrinsics),
+  //                               read_extrinsics(camera::imx296_camera2_extrinsics),
+  //                               std::ref(position_sender));
 
-  std::thread usb_thread(
+  std::thread usb1_thread(
       run_estimator,
-      std::make_unique<camera::CVCamera>(cv::VideoCapture("/dev/video2")),
-      read_intrinsics(camera::camera1_intrinsics),
-      read_extrinsics(camera::camera1_extrinsics), std::ref(position_sender));
+      std::make_unique<camera::CVCamera>(cv::VideoCapture("/dev/video0")),
+      read_intrinsics(camera::usb_camera1_intrinsics),
+      read_extrinsics(camera::usb_camera1_extrinsics), std::ref(position_sender));
 
-  usb_thread.join();
+  // std::thread usb2_thread(
+  //     run_estimator,
+  //     std::make_unique<camera::CVCamera>(cv::VideoCapture("/dev/video2")),
+  //     read_intrinsics(camera::usb_camera2_intrinsics),
+  //     read_extrinsics(camera::usb_camera2_extrinsics), std::ref(position_sender));
+
+  usb1_thread.join();
 
   return 0;
 }

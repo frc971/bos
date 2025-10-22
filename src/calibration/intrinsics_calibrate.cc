@@ -105,10 +105,10 @@ int main() {
   calibration::CalibrateCamera(detection_results, frame_size, cameraMatrix,
                                distCoeffs);
 
-  std::ofstream file(camera::camera1_intrinsics);
+  std::ofstream file(camera::imx296_camera1_intrinsics);
   json intrinsics = calibration::intrisincs_to_json(cameraMatrix, distCoeffs);
   file << intrinsics.dump(4);
-  std::cout << "Saved to " << camera::camera1_intrinsics << std::endl;
+  std::cout << "Saved to " << camera::imx296_camera1_intrinsics << std::endl;
   std::cout << "Intrinsics: " << std::endl << intrinsics.dump(4) << std::endl;
   file.close();
 }
