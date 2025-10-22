@@ -34,7 +34,7 @@ void warmupCamera(std::string pipeline) {
 int main() {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
-  std::ifstream file(camera::camera1_intrinsics);
+  std::ifstream file(camera::imx296_camera1_intrinsics);
   json intrinsics;
   file >> intrinsics;
 
