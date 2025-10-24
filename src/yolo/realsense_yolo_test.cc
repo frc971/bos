@@ -9,6 +9,40 @@ static void drawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
                            const std::vector<int>& class_ids,
                            const std::vector<float>& confidences,
                            const std::vector<std::string>& class_names) {
+  const int target_size = 640;  // new_shape
+  const int channels = 3;
+
+  // Compute scale factor to preserve aspect ratio
+  int orig_h = img.rows;
+  int orig_w = img.cols;
+  float scale =
+      std::min(target_size / (float)orig_h, target_size / (float)orig_w);
+
+  // Compute new unpadded size
+  int new_w = round(orig_w * scale);
+  int new_h = round(orig_h * scale);
+  std::cout << "O_H: " << orig_h << " O_W: " << orig_w << std::endl;
+  std::cout << "N_H: " << new_h << " N_W: " << new_w << std::endl;
+
+  // Compute padding
+  int dw = target_size - new_w;
+  int dh = target_size - new_h;
+  int top = int(round(dh / 2.0 - 0.1));
+  int bottom = int(round(dh / 2.0 + 0.1));
+  int left = int(round(dw / 2.0 - 0.1));
+  int right = int(round(dw / 2.0 + 0.1));
+
+  // Resize image to new unpadded size
+  cv::resize(img, img, cv::Size(new_w, new_h), 0, 0, cv::INTER_LINEAR);
+
+  // Pad image to target size with gray color (114)
+  cv::Scalar color(114, 114, 114);
+  cv::copyMakeBorder(img, img, top, bottom, left, right, cv::BORDER_CONSTANT,
+                     color);
+
+  // Normalize to 0-1
+  img.convertTo(img, CV_32FC3, 1.f / 255.f);
+
   for (size_t i = 0; i < boxes.size(); i++) {
     cv::Scalar color(0, 255, 0);
     cv::rectangle(img, boxes[i], color, 2);
@@ -76,7 +110,7 @@ int main() {
   std::string filename = "output_image.png";
   cv::Mat train_img = cv::imread(
       "/home/nvidia/Documents/gamepiece-data/test/images/"
-      "20250122_101406_jpg.rf.0eacf8c2b7e1e10ea6520ff58ccba153.jpg");
+      "20250122_110501_mp4-0057_jpg.rf.ae930171a2c38361d57e04db5d1e07f3.jpg");
   std::vector<float> softmax_results =
       SoftmaxResults(model, train_img, bboxes, confidences, class_ids);
   drawDetections(train_img, bboxes, class_ids, confidences, class_names);

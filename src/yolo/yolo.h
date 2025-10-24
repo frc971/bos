@@ -14,8 +14,8 @@ class Yolo {
   std::vector<float> RunModel(const cv::Mat& frame);
 
  private:
-  void preprocessImage(const cv::Mat& frame, float* gpu_input,
-                       const nvinfer1::Dims64& dims);
+  static void preprocessImage(const cv::Mat& frame, float* gpu_input,
+                              const nvinfer1::Dims64& dims);
   nvinfer1::IRuntime* runtime_;
   nvinfer1::ICudaEngine* engine_;
   nvinfer1::IExecutionContext* context_;
