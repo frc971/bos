@@ -1,17 +1,16 @@
-#ifndef POSITION_SENDER_H
-#define POSITION_SENDER_H
+#pragma once
 
 #include <networktables/BooleanTopic.h>
 #include <networktables/DoubleTopic.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
-#include "main/localization/position.h"
+#include "src/localization/position.h"
 #include "tag_estimator.h"
 
 namespace localization {
 class PositionSender {
  public:
-  PositionSender(bool verbose=false);
+  PositionSender(bool verbose = false);
   void Send(pose2d_t position_estimate, pose2d_t varience);
 
  private:
@@ -31,4 +30,3 @@ class PositionSender {
   bool verbose_;
 };
 }  // namespace localization
-#endif  // POSITION_SENDER_H

@@ -6,8 +6,8 @@
 #include <opencv2/opencv.hpp>
 #include <sstream>
 #include <thread>
-#include "main/camera/cscore_streamer.h"
-#include "main/camera/imx296_camera.h"
+#include "src/camera/cscore_streamer.h"
+#include "src/camera/imx296_camera.h"
 
 const int k_port = 5200;
 

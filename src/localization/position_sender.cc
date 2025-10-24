@@ -1,7 +1,7 @@
 #include "position_sender.h"
 #include <networktables/NetworkTableInstance.h>
 #include <string>
-#include "main/localization/position.h"
+#include "src/localization/position.h"
 
 namespace localization {
 
@@ -49,7 +49,9 @@ void PositionSender::Send(pose2d_t position_estimates, pose2d_t varience) {
     rotation_varience_publisher_.Set(varience.rotation);
     mutex_.unlock();
   }
-  if (verbose_){
+  if (verbose_) {
+    std::cout << "Position Sender: "
+              << "\n";
     std::cout << "Translation: "
               << "\n";
     std::cout << position_estimates.x << "\n";
