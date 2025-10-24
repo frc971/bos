@@ -65,30 +65,30 @@ def draw_boxes(img, predictions, ground_truths, matched_preds, matched_ground_tr
     h, w = img.shape[:2]
     
     # Draw False Negatives (unmatched ground truths) in BLUE
-    for gt_idx, gt in enumerate(ground_truths):
-        if gt_idx not in matched_ground_truths:
-            x1, y1, x2, y2, cls = gt
+    for ground_truth_idx, ground_truth in enumerate(ground_truths):
+        if ground_truth_idx not in matched_ground_truths:
+            x1, y1, x2, y2, class_id = ground_truth
             x1, y1, x2, y2 = int(x1 * w), int(y1 * h), int(x2 * w), int(y2 * h)
             cv2.rectangle(img_vis, (x1, y1), (x2, y2), (255, 0, 0), 2)
-            cv2.putText(img_vis, f'FN cls:{int(cls)}', (x1, y1 - 5), 
+            cv2.putText(img_vis, f'FN class_id:{int(class_id)}', (x1, y1 - 5), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
     
     # Draw False Positives (unmatched predictions) in RED
     for pred_idx in fp_preds:
         pred = predictions[pred_idx]
-        x1, y1, x2, y2, conf, cls = pred
+        x1, y1, x2, y2, conf, class_id = pred
         x1, y1, x2, y2 = int(x1 * w), int(y1 * h), int(x2 * w), int(y2 * h)
         cv2.rectangle(img_vis, (x1, y1), (x2, y2), (0, 0, 255), 2)
-        cv2.putText(img_vis, f'FP {conf:.2f} cls:{cls}', (x1, y1 - 5), 
+        cv2.putText(img_vis, f'FP {conf:.2f} class_id:{class_id}', (x1, y1 - 5), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
     
     # Draw True Positives (matched predictions) in GREEN
     for pred_idx in matched_preds:
         pred = predictions[pred_idx]
-        x1, y1, x2, y2, conf, cls = pred
+        x1, y1, x2, y2, conf, class_id = pred
         x1, y1, x2, y2 = int(x1 * w), int(y1 * h), int(x2 * w), int(y2 * h)
         cv2.rectangle(img_vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.putText(img_vis, f'TP {conf:.2f} cls:{cls}', (x1, y1 - 5), 
+        cv2.putText(img_vis, f'TP {conf:.2f} class_id:{class_id}', (x1, y1 - 5), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
     
     return img_vis
@@ -179,7 +179,7 @@ class TRTInfer:
 def process_predictions(output, ratio, padding, orig_shape, conf_thresh=0.25):
     """
     Process model output with NMS already applied.
-    Assumes output format: [num_detections, 6] where each row is [x1, y1, x2, y2, conf, cls]
+    Assumes output format: [num_detections, 6] where each row is [x1, y1, x2, y2, conf, class_id]
     
     Converts coordinates back to original image space and filters by confidence.
     """
@@ -200,7 +200,7 @@ def process_predictions(output, ratio, padding, orig_shape, conf_thresh=0.25):
     
     predictions = []
     for detection in output:
-        x1, y1, x2, y2, conf, cls = detection
+        x1, y1, x2, y2, conf, class_id = detection
         if conf < conf_thresh:
             continue
         
@@ -222,7 +222,7 @@ def process_predictions(output, ratio, padding, orig_shape, conf_thresh=0.25):
         x2_norm = x2 / w_orig
         y2_norm = y2 / h_orig
         
-        predictions.append([x1_norm, y1_norm, x2_norm, y2_norm, conf, int(cls)])
+        predictions.append([x1_norm, y1_norm, x2_norm, y2_norm, conf, int(class_id)])
     
     return predictions
 
@@ -289,7 +289,6 @@ def evaluate():
             raw_count = output.shape[0]
         total_raw_detections += raw_count
         
-        # Process predictions
         preds = process_predictions(output, ratio, padding, orig_shape, CONF_THRESH)
         total_filtered_detections += len(preds)
         
@@ -301,40 +300,29 @@ def evaluate():
             for line in f.readlines():
                 parts = line.strip().split()
                 if len(parts) == 5:
-                    cls, x_center, y_center, w, h = map(float, parts)
-                    # Convert from center format to corner format (normalized)
+                    class_id, x_center, y_center, w, h = map(float, parts)
                     x1 = x_center - w / 2
                     y1 = y_center - h / 2
                     x2 = x_center + w / 2
                     y2 = y_center + h / 2
-                    ground_truths.append([x1, y1, x2, y2, cls])
+                    ground_truths.append([x1, y1, x2, y2, class_id])
         all_ground_truths.append(ground_truths)
         
-        # Store image data for later visualization
         image_data.append((img_path, img, preds, ground_truths))
 
-    # print(f"\n{'='*60}")
-    # print(f"Detection Summary:")
-    # print(f"  Total raw detections: {total_raw_detections}")
-    # print(f"  Total filtered detections (conf > {CONF_THRESH}): {total_filtered_detections}")
-    # print(f"  Average detections per image: {total_filtered_detections / len(img_files):.2f}")
-    # print(f"{'='*60}\n")
-
-    # Compute precision/recall (mAP@0.5)
-    tp, fp, fn = 0, 0, 0
-    total_gt = sum(len(g) for g in all_ground_truths)
+    true_positive, false_positive, false_negative = 0, 0, 0
+    total_ground_truth = sum(len(truth) for truth in all_ground_truths)
     
     # Track examples for each category - store with counts for prioritization
-    tp_candidates = []  # Images with ONLY true positives (all preds matched, all GTs matched)
-    fp_candidates = []  # Images with ONLY false positives (preds but no GT, or unmatched preds)
-    fn_candidates = []  # Images with ONLY false negatives (GT but no preds, or unmatched GTs)
-    tn_candidates = []  # Images with true negatives (no predictions, no GT)
+    true_positives = []  # Images with ONLY true positives (all preds matched, all GTs matched)
+    false_positive = []  # Images with ONLY false positives (preds but no GT, or unmatched preds)
+    false_negatives = []  # Images with ONLY false negatives (GT but no preds, or unmatched GTs)
+    true_negatives = []  # Images with true negatives (no predictions, no GT)
     
-    # Store detailed results per image
     image_results = []
     
     for idx, (preds, ground_truths) in enumerate(zip(all_preds, all_ground_truths)):
-        matched_gt = set()
+        matched_ground_truth = set()
         matched_pred = set()
         fp_preds = set()
         
@@ -342,28 +330,28 @@ def evaluate():
         for pred_idx, pred in enumerate(preds):
             p_box = pred[:4]  # [x1, y1, x2, y2] in normalized coords
             best_iou = 0
-            best_gt_idx = -1
+            best_ground_truth_idx = -1
             
-            for gt_idx, gt in enumerate(ground_truths):
-                if gt_idx in matched_gt:
+            for ground_truth_idx, ground_truth in enumerate(ground_truths):
+                if ground_truth_idx in matched_ground_truth:
                     continue
-                g_box = gt[:4]  # [x1, y1, x2, y2] in normalized coords
+                g_box = ground_truth[:4]  # [x1, y1, x2, y2] in normalized coords
                 curr_iou = iou(p_box, g_box)
                 if curr_iou > best_iou:
                     best_iou = curr_iou
-                    best_gt_idx = gt_idx
+                    best_ground_truth_idx = ground_truth_idx
             
-            if best_iou > 0.5 and best_gt_idx != -1:
-                tp += 1
-                matched_gt.add(best_gt_idx)
+            if best_iou > 0.5 and best_ground_truth_idx != -1:
+                true_positive += 1
+                matched_ground_truth.add(best_ground_truth_idx)
                 matched_pred.add(pred_idx)
             else:
-                fp += 1
+                false_positive += 1
                 fp_preds.add(pred_idx)
         
         # Count false negatives (unmatched ground truth)
-        num_fn = len(ground_truths) - len(matched_gt)
-        fn += num_fn
+        num_fn = len(ground_truths) - len(matched_ground_truth)
+        false_negative += num_fn
         
         # Count each type for this image
         num_tp = len(matched_pred)
@@ -372,7 +360,7 @@ def evaluate():
         image_results.append({
             'idx': idx,
             'matched_pred': matched_pred,
-            'matched_gt': matched_gt,
+            'matched_ground_truth': matched_ground_truth,
             'fp_preds': fp_preds,
             'num_tp': num_tp,
             'num_fp': num_fp,
@@ -441,7 +429,7 @@ def evaluate():
                     # Draw boxes for other categories
                     img_vis = draw_boxes(img, preds, ground_truths, 
                                         result['matched_pred'], 
-                                        result['matched_gt'], 
+                                        result['matched_ground_truth'], 
                                         result['fp_preds'])
                 
                 output_path = os.path.join(OUTPUT_DIR, category, 
@@ -451,20 +439,20 @@ def evaluate():
         print(f"Saved {len(tp_examples)} TP, {len(fp_examples)} FP, "
               f"{len(fn_examples)} FN, {len(tn_examples)} TN examples")
 
-    precision = tp / (tp + fp + 1e-6)
-    recall = tp / (total_gt + 1e-6)
+    precision = true_positive / (true_positive + false_positive + 1e-6)
+    recall = true_positive / (total_ground_truth + 1e-6)
     f1 = 2 * precision * recall / (precision + recall + 1e-6)
     
     print(f"\n{'='*60}")
     print(f"Evaluation Results:")
     print(f"{'='*60}")
-    print(f"True Positives (TP):   {tp}")
-    print(f"False Positives (FP):  {fp}")
-    print(f"False Negatives (FN):  {fn}")
-    print(f"Total Ground Truth:    {total_gt}")
+    print(f"True Positives (TP):   {true_positive}")
+    print(f"False Positives (FP):  {false_positive}")
+    print(f"False Negatives (FN):  {false_negative}")
+    print(f"Total Ground Truth:    {total_ground_truth}")
     print(f"{'='*60}")
-    print(f"Precision:  {precision:.3f} ({tp}/{tp + fp})")
-    print(f"Recall:     {recall:.3f} ({tp}/{total_gt})")
+    print(f"Precision:  {precision:.3f} ({true_positive}/{true_positive + false_positive})")
+    print(f"Recall:     {recall:.3f} ({true_positive}/{total_ground_truth})")
     print(f"F1 Score:   {f1:.3f}")
     print(f"{'='*60}\n")
 
