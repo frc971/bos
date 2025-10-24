@@ -78,7 +78,7 @@ int main() {
       "/home/nvidia/Documents/gamepiece-data/test/images/"
       "20250122_101406_jpg.rf.0eacf8c2b7e1e10ea6520ff58ccba153.jpg");
   std::vector<float> softmax_results =
-      SoftmaxResults(model, mat, bboxes, confidences, class_ids);
+      SoftmaxResults(model, train_img, bboxes, confidences, class_ids);
   drawDetections(train_img, bboxes, class_ids, confidences, class_names);
   cv::imshow("TrainImg", train_img);
   cv::waitKey(0);

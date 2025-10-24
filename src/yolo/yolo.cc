@@ -2,10 +2,12 @@
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/opencv.hpp>
+#include <ostream>
 #include <vector>
 #include "opencv2/cudawarping.hpp"
 
@@ -76,20 +78,31 @@ void Yolo::preprocessImage(const cv::Mat& img, float* gpu_input,
   // Normalize to 0-1
   cv::cuda::GpuMat normalized;
   padded.convertTo(normalized, CV_32FC3, 1.f / 255.f);
-
-  // Prepare CHW layout directly in gpu_input
-  int channel_size = target_size * target_size;
-  std::vector<cv::cuda::GpuMat> chw;
-  chw.reserve(channels);
-  for (int i = 0; i < channels; i++) {
-    chw.emplace_back(cv::cuda::GpuMat(cv::Size(target_size, target_size),
-                                      CV_32FC1, gpu_input + i * channel_size));
-  }
-  cv::cuda::split(normalized, chw);
   cv::Mat cpu_mat;
   normalized.download(cpu_mat);
-  cv::imshow("Modified image", cpu_mat);
-  cv::waitKey(0);
+  std::cout << "Rows: " << cpu_mat.rows << " Cols: " << cpu_mat.cols
+            << std::endl;
+  // exit(0);
+
+  int channel_size = target_size * target_size;
+  // Split into channels (HWC -> CHW)
+  std::vector<cv::cuda::GpuMat> chw(channels);
+  cv::cuda::split(normalized, chw);
+  for (int i = 0; i < channels; i++) {
+    cudaMemcpy(gpu_input + i * channel_size, chw[i].data,
+               channel_size * sizeof(float), cudaMemcpyDeviceToDevice);
+  }
+  const int display_num = 50;
+  const int skip_padding = 640 * 140 - 3;
+  std::vector<float> host_data(display_num);
+  // cudaMemcpy(host_data.data(), gpu_input + skip_padding,
+  // display_num * sizeof(float), cudaMemcpyDeviceToHost);
+
+  std::cout << "First " << display_num << " values:" << std::endl;
+  for (int i = 0; i < display_num; i++) {
+    // std::cout << std::fixed << std::setprecision(2) << host_data[i] << ",";
+  }
+  std::cout << std::endl;
 }
 
 class Logger : public nvinfer1::ILogger {
