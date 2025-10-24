@@ -141,22 +141,6 @@ class TRTInfer:
         h_orig, w_orig = orig_shape
 
         # Preprocess
-        count = 0;
-        max = 30;
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        for row in img:
-            if (count >= max):
-                break
-            for col in row:
-                if (count >= max):
-                    break
-                for channel in col:
-                    count += 1
-                    print(channel, '', end='')
-                    if (count >= max):
-                        break
-        print()
-
         img, ratio, (dw, dh) = letterbox(img, IMG_SIZE)
         img = img.transpose(2, 0, 1)
         img = np.expand_dims(img, 0)
@@ -187,7 +171,6 @@ def process_predictions(output, ratio, padding, orig_shape, conf_thresh=0.25):
     h_orig, w_orig = orig_shape
     
     # Handle different output shapes
-    print("Shape of output: ", output.shape)
     if len(output.shape) == 3:
         output = output[0]  # Remove batch dimension if present
     
@@ -254,7 +237,8 @@ def evaluate():
         print(f"Output directory created: {OUTPUT_DIR}\n")
     
     inferer = TRTInfer(ENGINE_PATH)
-    img_files = sorted(glob(os.path.join(DATASET_DIR, "/home/nvidia/Documents/gamepiece-data/test/images/20250122_101406_jpg.rf.0eacf8c2b7e1e10ea6520ff58ccba153.jpg")) + glob(os.path.join(DATASET_DIR, "asdhfashd.png")))
+    # img_files = sorted(glob(os.path.join(DATASET_DIR, "/home/nvidia/Documents/gamepiece-data/test/images/20250122_101406_jpg.rf.0eacf8c2b7e1e10ea6520ff58ccba153.jpg")) + glob(os.path.join(DATASET_DIR, "asdhfashd.png")))
+    img_files = sorted(glob(os.path.join(DATASET_DIR, "*.jpg")) + glob(os.path.join(DATASET_DIR, "*.png")))
     if len(img_files) == 0:
         print("Img_files is empty!")
         exit(0)
@@ -279,7 +263,6 @@ def evaluate():
             continue
         
         orig_shape = img.shape[:2]
-        print("Full shape:", img.shape)
         output, ratio, padding = inferer.infer(img, orig_shape)
         
         # Count raw detections
