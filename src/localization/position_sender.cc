@@ -33,24 +33,30 @@ PositionSender::PositionSender(bool verbose)
 
 void PositionSender::Send(
     std::vector<localization::tag_detection_t> detections) {
-  for (size_t i = 0; i < detections.size(); i++) {
-    double varience = detections[i].distance * detections[i].distance;
-    double tag_estimation[5] = {
-        detections[i].translation.x, detections[i].translation.y,
-        detections[i].rotation.z, varience,
-        detections[i].timestamp +
-            instance_.GetServerTimeOffset().value() / 1000000.0};
+  if (mutex_.try_lock()) {
 
-    pose_publisher_.Set(frc::Pose2d(units::meter_t{detections[i].translation.x},
-                                    units::meter_t{detections[i].translation.y},
-                                    units::radian_t{detections[i].rotation.z}));
+    for (size_t i = 0; i < detections.size(); i++) {
+      double varience = detections[i].distance * detections[i].distance;
+      double tag_estimation[5] = {
+          detections[i].translation.x, detections[i].translation.y,
+          detections[i].rotation.z, varience,
+          detections[i].timestamp +
+              instance_.GetServerTimeOffset().value() / 1000000.0};
 
-    tag_estimation_publisher_.Set(tag_estimation);
+      pose_publisher_.Set(
+          frc::Pose2d(units::meter_t{detections[i].translation.x},
+                      units::meter_t{detections[i].translation.y},
+                      units::radian_t{detections[i].rotation.z}));
 
-    std::cout << "latency: "
-              << frc::Timer::GetFPGATimestamp().value() -
-                     detections[i].timestamp
-              << "\n";
+      tag_estimation_publisher_.Set(tag_estimation);
+
+      std::cout << "latency: "
+                << frc::Timer::GetFPGATimestamp().value() -
+                       detections[i].timestamp
+                << "\n";
+    }
+
+    mutex_.unlock();
   }
 }
 }  // namespace localization
