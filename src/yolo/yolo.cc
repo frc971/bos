@@ -7,6 +7,7 @@
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include "opencv2/cudawarping.hpp"
 
 namespace yolo {
 std::vector<char> loadEngineFile(const std::string& filename) {
@@ -31,26 +32,60 @@ size_t getOutputSize(nvinfer1::ICudaEngine* engine) {
   return output_size;
 }
 
-void preprocessImage(const cv::Mat& img, float* gpu_input,
-                     const nvinfer1::Dims& dims) {
-  std::cout << "Entering preprocessing" << std::endl;
+void Yolo::preprocessImage(const cv::Mat& img, float* gpu_input,
+                           const nvinfer1::Dims64& dims) {
+  // cv::Mat rgb_image;
+  // cv::cvtColor(img, rgb_image, cv::COLOR_BGR2RGB);
   cv::cuda::GpuMat img_gpu;
   img_gpu.upload(img);
-  const int channels = dims.d[0];
-  const int height = dims.d[1];
-  const int width = dims.d[2];
+
+  const int target_size = 640;  // new_shape
+  const int channels = 3;
+
+  // Compute scale factor to preserve aspect ratio
+  int orig_h = img.rows;
+  int orig_w = img.cols;
+  float r = std::min(target_size / (float)orig_h, target_size / (float)orig_w);
+
+  // Compute new unpadded size
+  int new_w = int(round(orig_w * r));
+  int new_h = int(round(orig_h * r));
+
+  // Compute padding
+  int dw = target_size - new_w;
+  int dh = target_size - new_h;
+  int top = int(round(dh / 2.0 - 0.1));
+  int bottom = int(round(dh / 2.0 + 0.1));
+  int left = int(round(dw / 2.0 - 0.1));
+  int right = int(round(dw / 2.0 + 0.1));
+
+  // Resize image to new unpadded size
   cv::cuda::GpuMat resized;
-  cv::resize(img_gpu, resized, cv::Size(width, height), 0, 0, cv::INTER_LINEAR);
+  cv::cuda::resize(img_gpu, resized, cv::Size(new_w, new_h), 0, 0,
+                   cv::INTER_LINEAR);
+
+  // Pad image to target size with gray color (114)
+  cv::cuda::GpuMat padded;
+  cv::Scalar color(114, 114, 114);
+  cv::cuda::copyMakeBorder(resized, padded, top, bottom, left, right,
+                           cv::BORDER_CONSTANT, color);
+
+  // Normalize to 0-1
   cv::cuda::GpuMat normalized;
-  resized.convertTo(normalized, CV_32FC3, 1.f / 255.f);
-  const int channel_width = width * height;
+  padded.convertTo(normalized, CV_32FC3, 1.f / 255.f);
+
+  // Prepare CHW layout directly in gpu_input
+  int channel_size = target_size * target_size;
   std::vector<cv::cuda::GpuMat> chw;
-  chw.reserve(channels);
   for (int i = 0; i < channels; i++) {
-    chw.emplace_back(cv::cuda::GpuMat(cv::Size(width, height), CV_32FC3,
-                                      gpu_input + i * channel_width));
+    chw.emplace_back(cv::cuda::GpuMat(cv::Size(target_size, target_size),
+                                      CV_32FC1, gpu_input + i * channel_size));
   }
   cv::cuda::split(normalized, chw);
+  cv::Mat cpu_mat;
+  normalized.download(cpu_mat);
+  cv::imshow("Modified image", cpu_mat);
+  cv::waitKey(0);
 }
 
 class Logger : public nvinfer1::ILogger {
@@ -88,7 +123,7 @@ Yolo::Yolo(std::string model_path, bool verbose) : verbose_(verbose) {
   cudaStreamCreate(&(inferenceCudaStream_));
 }
 
-std::vector<float> Yolo::RunModel(cv::Mat frame) {
+std::vector<float> Yolo::RunModel(const cv::Mat& frame) {
   bool status;
   preprocessImage(frame, input_buffer_, input_dims_);
   std::cout << "Preprocessed" << std::endl;

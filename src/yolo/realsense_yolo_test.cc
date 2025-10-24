@@ -52,7 +52,7 @@ int main() {
     return 1;
   }
   displayFrame = mat.clone();
-  const std::vector<float> maybe_softmax_results = model.RunModel(mat);
+  std::vector<float> maybe_softmax_results = model.RunModel(mat);
   std::cout << "Detection size: " << maybe_softmax_results.size() << std::endl;
   std::vector<cv::Rect> bboxes(6);
   std::vector<float> confidences(6);
@@ -76,9 +76,29 @@ int main() {
   drawDetections(mat, bboxes, class_ids, confidences, class_names);
   cv::imshow("Test detections", mat);
   cv::waitKey(0);
-  cv::imshow("Original image", displayFrame);
-  cv::waitKey(0);
   std::string filename = "output_image.png";
+  cv::Mat train_img = cv::imread(
+      "/home/nvidia/Documents/gamepiece-data/test/images/"
+      "20250122_101406_jpg.rf.0eacf8c2b7e1e10ea6520ff58ccba153.jpg");
+  maybe_softmax_results = model.RunModel(train_img);
+  std::cout << "Detection size: " << maybe_softmax_results.size() << std::endl;
+  for (int i = 0; i < 6; i++) {
+    std::cout << "Run " << i << std::endl;
+    float c_x = maybe_softmax_results[i * nms_output_size];
+    float c_y = maybe_softmax_results[i * nms_output_size + 1];
+    float w = maybe_softmax_results[i * nms_output_size + 2];
+    float h = maybe_softmax_results[i * nms_output_size + 3];
+    float confidence = maybe_softmax_results[i * nms_output_size + 4];
+    int id = maybe_softmax_results[i * nms_output_size + 5];
+    printf("CenterX: %f, CenterY: %f,w: %f,h: %f,confidence: %f,id: %d", c_x,
+           c_y, w, h, confidence, id);
+    bboxes[i] = cv::Rect(c_x - w / 2, c_y - h / 2, w, h);
+    confidences[i] = confidence;
+    class_ids[i] = id;
+  }
+  drawDetections(train_img, bboxes, class_ids, confidences, class_names);
+  cv::imshow("Actual", train_img);
+  cv::waitKey(0);
 
   bool success = cv::imwrite(filename, mat);
 
