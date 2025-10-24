@@ -46,6 +46,7 @@ static void drawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
   for (size_t i = 0; i < boxes.size(); i++) {
     cv::Scalar color(0, 255, 0);
     cv::rectangle(img, boxes[i], color, 2);
+    std::cout << "CLass id: " << class_ids[i] << " on run " << i << std::endl;
     std::string label =
         class_names[class_ids[i]] + " " + cv::format("%.2f", confidences[i]);
     int baseline = 0;
@@ -91,27 +92,27 @@ int main() {
   std::cout << "File actually exists: " << std::filesystem::exists(modelPath)
             << std::endl;
   yolo::Yolo model(modelPath, true);
-  // camera::RealSenseCamera rs_camera;
+  camera::RealSenseCamera rs_camera;
   cv::Mat mat;
-  // rs_camera.getFrame(mat);
-  // if (mat.empty()) {
-  //  std::cout << "Couldn't fetch frame properly" << std::endl;
-  //  return 1;
-  //}
+  rs_camera.getFrame(mat);
+  if (mat.empty()) {
+    std::cout << "Couldn't fetch frame properly" << std::endl;
+    return 1;
+  }
   std::vector<cv::Rect> bboxes(6);
   std::vector<float> confidences(6);
   std::vector<int> class_ids(6);
-  // std::vector<float> softmax_results =
-  //  SoftmaxResults(model, mat, bboxes, confidences, class_ids);
+  std::vector<float> softmax_results =
+      SoftmaxResults(model, mat, bboxes, confidences, class_ids);
   std::vector<std::string> class_names = {"ALGAE", "CORAL"};
-  // drawDetections(mat, bboxes, class_ids, confidences, class_names);
-  // cv::imshow("Test detections", mat);
-  // cv::waitKey(0);
+  drawDetections(mat, bboxes, class_ids, confidences, class_names);
+  cv::imshow("Test detections", mat);
+  cv::waitKey(0);
   std::string filename = "output_image.png";
   cv::Mat train_img = cv::imread(
       "/home/nvidia/Documents/gamepiece-data/test/images/"
       "20250122_110501_mp4-0057_jpg.rf.ae930171a2c38361d57e04db5d1e07f3.jpg");
-  std::vector<float> softmax_results =
+  softmax_results =
       SoftmaxResults(model, train_img, bboxes, confidences, class_ids);
   drawDetections(train_img, bboxes, class_ids, confidences, class_names);
   cv::imshow("TrainImg", train_img);
