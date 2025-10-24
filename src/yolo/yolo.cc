@@ -31,24 +31,26 @@ size_t getOutputSize(nvinfer1::ICudaEngine* engine) {
   return output_size;
 }
 
-cv::cuda::GpuMat preprocess(cv::Mat& img) {
+void preprocessImage(const cv::Mat& img, float* gpu_input,
+                     const nvinfer1::Dims& dims) {
   std::cout << "Entering preprocessing" << std::endl;
   cv::cuda::GpuMat img_gpu;
   img_gpu.upload(img);
-  cv::cuda::GpuMat gpu_dst(1, img_gpu.rows * img_gpu.cols * 3, CV_8UC3);
-  size_t width = img_gpu.cols * img_gpu.rows;
-  std::vector<cv::cuda::GpuMat> input_channels{
-      cv::cuda::GpuMat(img_gpu.rows, img_gpu.cols, CV_8U, &(gpu_dst.ptr()[0])),
-      cv::cuda::GpuMat(img_gpu.rows, img_gpu.cols, CV_8U,
-                       &(gpu_dst.ptr()[width])),
-      cv::cuda::GpuMat(img_gpu.rows, img_gpu.cols, CV_8U,
-                       &(gpu_dst.ptr()[width * 2]))};
-  cv::cuda::split(img_gpu, input_channels);  // HWC -> CHW
-  cv::cuda::GpuMat output;
-  gpu_dst.convertTo(output, CV_32FC3, 1.f / 255.f);
-  std::cout << "Finished preprocessing, shape is " << output.channels() << "x"
-            << output.rows << "x" << output.cols << std::endl;
-  return output;
+  const int channels = dims.d[0];
+  const int height = dims.d[1];
+  const int width = dims.d[2];
+  cv::cuda::GpuMat resized;
+  cv::resize(img_gpu, resized, cv::Size(width, height), 0, 0, cv::INTER_LINEAR);
+  cv::cuda::GpuMat normalized;
+  resized.convertTo(normalized, CV_32FC3, 1.f / 255.f);
+  const int channel_width = width * height;
+  std::vector<cv::cuda::GpuMat> chw;
+  chw.reserve(channels);
+  for (int i = 0; i < channels; i++) {
+    chw.emplace_back(cv::cuda::GpuMat(cv::Size(width, height), CV_32FC3,
+                                      gpu_input + i * channel_width));
+  }
+  cv::cuda::split(normalized, chw);
 }
 
 class Logger : public nvinfer1::ILogger {
@@ -72,6 +74,14 @@ Yolo::Yolo(std::string model_path, bool verbose) : verbose_(verbose) {
   context_ = engine_->createExecutionContext();
   assert(context_ != nullptr);
 
+  const nvinfer1::Dims& input_dims_ =
+      engine_->getTensorShape(engine_->getIOTensorName(0));
+  size_t input_size = 1;
+  for (int i = 0; i < input_dims_.nbDims; ++i) {
+    input_size *= input_dims_.d[i];
+  }
+
+  cudaMalloc((void**)&input_buffer_, sizeof(float) * input_size);
   output_size_ = getOutputSize(engine_);
   cudaMalloc((void**)&(output_buffer_), sizeof(float) * output_size_);
 
@@ -80,14 +90,14 @@ Yolo::Yolo(std::string model_path, bool verbose) : verbose_(verbose) {
 
 std::vector<float> Yolo::RunModel(cv::Mat frame) {
   bool status;
-  cv::cuda::GpuMat gpu_mat = preprocess(frame);
+  preprocessImage(frame, input_buffer_, input_dims_);
   std::cout << "Preprocessed" << std::endl;
-  status = context_->setTensorAddress(engine_->getIOTensorName(0),
-                                      (void*)gpu_mat.ptr<void>());
+  status =
+      context_->setTensorAddress(engine_->getIOTensorName(0), input_buffer_);
   assert(status);
   std::cout << "Tensor address set 0" << std::endl;
-  status = context_->setTensorAddress(engine_->getIOTensorName(1),
-                                      (void*)output_buffer_);
+  status =
+      context_->setTensorAddress(engine_->getIOTensorName(1), output_buffer_);
   assert(status);
   std::cout << "Tensor address set 1" << std::endl;
   status = context_->enqueueV3(inferenceCudaStream_);
@@ -99,14 +109,13 @@ std::vector<float> Yolo::RunModel(cv::Mat frame) {
   std::vector<float> featureVector;
   featureVector.resize(output_size_);
   std::cout << "Resized" << std::endl;
-  cudaMemcpy(featureVector.data(), static_cast<char*>(output_buffer_),
-             output_size_ * sizeof(float),
-             cudaMemcpyDeviceToHost);  // Probably do not need to cast to char*
+  cudaMemcpy(featureVector.data(), output_buffer_, output_size_ * sizeof(float),
+             cudaMemcpyDeviceToHost);
   std::cout << "Memcpy" << std::endl;
   if (verbose_) {
     for (int i = 0; i < 10; i++) {
-      for (int j = 0; j < 6; j++) {
-        printf("%f ", featureVector[i * 6 + j]);
+      for (int j = 0; j < 7; j++) {
+        printf("%f ", featureVector[i * 7 + j]);
       }
       printf("\n");
     }
