@@ -7,34 +7,17 @@ import pycuda.autoinit  # initializes CUDA driver automatically
 from glob import glob
 from tqdm import tqdm
 
-# -------------------------------
-# Configuration
-# -------------------------------
 ENGINE_PATH = "/bos/src/yolo/fifthYOLO.engine"
-DATASET_ROOT = "/home/nvidia/Documents/gamepiece-data"  # Root directory containing train/valid/test folders
-SPLIT = "test"  # Which split to evaluate: "train", "valid", or "test"
-IMG_SIZE = 640  # model input size
+DATASET_ROOT = "/home/nvidia/Documents/gamepiece-data"
+SPLIT = "test"
+IMG_SIZE = 640
 
 CONF_THRESH = 0.25
 IOU_THRESH = 0.45
 
-# Visualization settings
-SAVE_EXAMPLES = True  # Whether to save example images
-EXAMPLES_PER_TYPE = 5  # Number of examples to save per detection type
-OUTPUT_DIR = "test_images"  # Directory to save visualization images
-
-# YOLOv11 dataset structure:
-# dataset_root/
-#   ├── train/
-#   │   ├── images/
-#   │   └── labels/
-#   ├── valid/
-#   │   ├── images/
-#   │   └── labels/
-#   ├── test/
-#   │   ├── images/
-#   │   └── labels/
-#   └── data.yaml
+SAVE_EXAMPLES = True
+EXAMPLES_PER_TYPE = 5
+OUTPUT_DIR = "test_images" 
 
 DATASET_DIR = os.path.join(DATASET_ROOT, SPLIT, "images")
 LABEL_DIR = os.path.join(DATASET_ROOT, SPLIT, "labels")
@@ -47,12 +30,12 @@ def letterbox(img, new_shape=640, color=(114, 114, 114)):
     """Resize image to fit model input (same as YOLOv5 preprocessing)."""
     shape = img.shape[:2]  # current shape [height, width]
     r = min(new_shape / shape[0], new_shape / shape[1])
-    new_unpad = (int(round(shape[1] * r)), int(round(shape[0] * r)))
-    dw, dh = new_shape - new_unpad[0], new_shape - new_unpad[1]
+    new_unpadding = (int(round(shape[1] * r)), int(round(shape[0] * r)))
+    dw, dh = new_shape - new_unpadding[0], new_shape - new_unpadding[1]
     dw /= 2
     dh /= 2
 
-    img = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
+    img = cv2.resize(img, new_unpadding, interpolation=cv2.INTER_LINEAR)
     top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
     left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
     img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
@@ -71,7 +54,7 @@ def iou(box1, box2):
     return inter_area / (box1_area + box2_area - inter_area + 1e-6)
 
 
-def draw_boxes(img, predictions, ground_truths, matched_preds, matched_gts, fp_preds):
+def draw_boxes(img, predictions, ground_truths, matched_preds, matched_ground_truths, fp_preds):
     """
     Draw bounding boxes on image with color coding:
     - Green: True Positives (matched predictions)
@@ -83,7 +66,7 @@ def draw_boxes(img, predictions, ground_truths, matched_preds, matched_gts, fp_p
     
     # Draw False Negatives (unmatched ground truths) in BLUE
     for gt_idx, gt in enumerate(ground_truths):
-        if gt_idx not in matched_gts:
+        if gt_idx not in matched_ground_truths:
             x1, y1, x2, y2, cls = gt
             x1, y1, x2, y2 = int(x1 * w), int(y1 * h), int(x2 * w), int(y2 * h)
             cv2.rectangle(img_vis, (x1, y1), (x2, y2), (255, 0, 0), 2)
@@ -122,45 +105,32 @@ class TRTInfer:
             self.engine = runtime.deserialize_cuda_engine(f.read())
         
         if self.engine is None:
-            print("Engine is nullptr, tried to load it from " + engine_path)
-            print("Engine file exists: " + ("true" if os.path.exists(engine_path) else "false"))
-            raise RuntimeError("Failed to load TensorRT engine")
+            raise RuntimeError(print("Engine loaded from " + engine_path + " is nullptr, file " + ("does" if os.path.exists(engine_path) else "doesn't") + " exist"))
         
         self.context = self.engine.create_execution_context()
         
-        # Use TensorRT 10.x API
-        self.input_names = []
-        self.output_names = []
+        input_names = []
+        output_names = []
         
         for i in range(self.engine.num_io_tensors):
             name = self.engine.get_tensor_name(i)
             mode = self.engine.get_tensor_mode(name)
             if mode == trt.TensorIOMode.INPUT:
-                self.input_names.append(name)
+                input_names.append(name)
             else:
-                self.output_names.append(name)
+                output_names.append(name)
         
-        print("Input tensors:", self.input_names)
-        print("Output tensors:", self.output_names)
-        
-        # Assume first input and output
-        self.input_name = self.input_names[0]
-        self.output_name = self.output_names[0]
+        self.input_name = input_names[0]
+        self.output_name = output_names[0]
         
         self.stream = cuda.Stream()
         
-        # Get shapes using new API
         self.input_shape = self.engine.get_tensor_shape(self.input_name)
         self.output_shape = self.engine.get_tensor_shape(self.output_name)
         
-        print(f"Input shape: {self.input_shape}")
-        print(f"Output shape: {self.output_shape}")
-        
-        # Calculate sizes
         self.input_nbytes = trt.volume(self.input_shape) * np.dtype(np.float32).itemsize
         self.output_nbytes = trt.volume(self.output_shape) * np.dtype(np.float32).itemsize
         
-        # Allocate device memory
         self.d_input = cuda.mem_alloc(self.input_nbytes)
         self.d_output = cuda.mem_alloc(self.output_nbytes)
 
@@ -170,8 +140,6 @@ class TRTInfer:
         """
         h_orig, w_orig = orig_shape
 
-        print("Orig shape:", orig_shape)
-        
         # Preprocess
         count = 0;
         max = 30;
@@ -189,103 +157,72 @@ class TRTInfer:
                         break
         print()
 
-        # img, ratio, (dw, dh) = letterbox(img, IMG_SIZE)
+        img, ratio, (dw, dh) = letterbox(img, IMG_SIZE)
         img = img.transpose(2, 0, 1)
         img = np.expand_dims(img, 0)
         img = np.ascontiguousarray(img, dtype=np.float32) / 255.0
-        img = img * 255.0;
-        print("Img shape:", img.shape)
-        count = 0;
-        for channel in img[0]:
-            if (count >= max):
-                break
-            for row in channel:
-                if (count >= max):
-                    break
-                for col in row:
-                    count += 1
-                    print(col, '', end='')
-                    if (count >= max):
-                        break
-        print()
-        return asdufh;
-
-        # Copy input to device
+        
         cuda.memcpy_htod_async(self.d_input, img, self.stream)
         
-        # Set tensor addresses using new API
         self.context.set_tensor_address(self.input_name, int(self.d_input))
         self.context.set_tensor_address(self.output_name, int(self.d_output))
         
-        # Execute inference
         self.context.execute_async_v3(stream_handle=self.stream.handle)
         
-        # Copy output back to host
         output = np.empty(self.output_shape, dtype=np.float32)
         cuda.memcpy_dtoh_async(output, self.d_output, self.stream)
         self.stream.synchronize()
 
-        return output, ratio, (dw, dh), (h_orig, w_orig)
+        return output, ratio, (dw, dh)
 
 
-def process_predictions(output, ratio, pad, orig_shape, conf_thresh=0.25):
+def process_predictions(output, ratio, padding, orig_shape, conf_thresh=0.25):
     """
     Process model output with NMS already applied.
     Assumes output format: [num_detections, 6] where each row is [x1, y1, x2, y2, conf, cls]
-    or [1, num_detections, 6] or [num_detections, 7] (with batch index)
     
     Converts coordinates back to original image space and filters by confidence.
     """
-    dw, dh = pad
+    dw, dh = padding
     h_orig, w_orig = orig_shape
     
     # Handle different output shapes
+    print("Shape of output: ", output.shape)
     if len(output.shape) == 3:
         output = output[0]  # Remove batch dimension if present
-        print("6 outputs as expected")
     
     if output.shape[0] == 0:
+        print("No detections")
         return []
-    
-    # Debug: print first few detections
-    # print(f"  Raw output shape: {output.shape}")
-    # print(f"  First detection (raw): {output[0] if len(output) > 0 else 'None'}")
+    elif output.shape[1] != 6:
+        print("Incorrect output shape")
+        return []
     
     predictions = []
     for detection in output:
-        # Handle different formats
-        if len(detection) >= 6:
-            # Format: [x1, y1, x2, y2, conf, cls] or [batch, x1, y1, x2, y2, conf, cls]
-            if len(detection) == 7:
-                _, x1, y1, x2, y2, conf, cls = detection
-                print("7 things")
-            else:
-                x1, y1, x2, y2, conf, cls = detection[:6]
-            
-            # Filter by confidence
-            if conf < conf_thresh:
-                continue
-            
-            # Convert from letterbox coordinates to original image coordinates
-            # Remove padding
-            x1 = (x1 - dw) / ratio
-            y1 = (y1 - dh) / ratio
-            x2 = (x2 - dw) / ratio
-            y2 = (y2 - dh) / ratio
-            
-            # Clip to image bounds
-            x1 = max(0, min(x1, w_orig))
-            y1 = max(0, min(y1, h_orig))
-            x2 = max(0, min(x2, w_orig))
-            y2 = max(0, min(y2, h_orig))
-            
-            # Convert to normalized coordinates [0, 1] to match ground truth
-            x1_norm = x1 / w_orig
-            y1_norm = y1 / h_orig
-            x2_norm = x2 / w_orig
-            y2_norm = y2 / h_orig
-            
-            predictions.append([x1_norm, y1_norm, x2_norm, y2_norm, conf, int(cls)])
+        x1, y1, x2, y2, conf, cls = detection
+        if conf < conf_thresh:
+            continue
+        
+        # Convert from letterbox coordinates to original image coordinates and remove paddingding
+        x1 = (x1 - dw) / ratio
+        y1 = (y1 - dh) / ratio
+        x2 = (x2 - dw) / ratio
+        y2 = (y2 - dh) / ratio
+        
+        # Clip to image bounds
+        x1 = max(0, min(x1, w_orig))
+        y1 = max(0, min(y1, h_orig))
+        x2 = max(0, min(x2, w_orig))
+        y2 = max(0, min(y2, h_orig))
+        
+        # Convert to normalized coordinates [0, 1] to match ground truth
+        x1_norm = x1 / w_orig
+        y1_norm = y1 / h_orig
+        x2_norm = x2 / w_orig
+        y2_norm = y2 / h_orig
+        
+        predictions.append([x1_norm, y1_norm, x2_norm, y2_norm, conf, int(cls)])
     
     return predictions
 
@@ -310,34 +247,13 @@ def evaluate():
         print(f"Expected YOLOv11 structure: {DATASET_ROOT}/{SPLIT}/labels/")
         exit(1)
     
-    # Create output directory for visualizations
     if SAVE_EXAMPLES:
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         for subdir in ['true_positive', 'false_positive', 'false_negative', 'true_negative']:
             os.makedirs(os.path.join(OUTPUT_DIR, subdir), exist_ok=True)
         print(f"Output directory created: {OUTPUT_DIR}\n")
     
-    # Check for data.yaml
-    data_yaml_path = os.path.join(DATASET_ROOT, "data.yaml")
-    if os.path.exists(data_yaml_path):
-        print(f"Found data.yaml at: {data_yaml_path}")
-        try:
-            with open(data_yaml_path, 'r') as f:
-                print("data.yaml contents:")
-                print(f.read())
-        except:
-            pass
-    else:
-        print(f"Warning: data.yaml not found at {data_yaml_path}")
-    
-    print(f"\nDataset structure:")
-    print(f"  Root: {DATASET_ROOT}")
-    print(f"  Split: {SPLIT}")
-    print(f"  Images: {DATASET_DIR}")
-    print(f"  Labels: {LABEL_DIR}\n")
-    
     inferer = TRTInfer(ENGINE_PATH)
-    print("Inferer created\n")
     img_files = sorted(glob(os.path.join(DATASET_DIR, "/home/nvidia/Documents/gamepiece-data/test/images/20250122_101406_jpg.rf.0eacf8c2b7e1e10ea6520ff58ccba153.jpg")) + glob(os.path.join(DATASET_DIR, "asdhfashd.png")))
     if len(img_files) == 0:
         print("Img_files is empty!")
@@ -345,12 +261,11 @@ def evaluate():
 
     print(f"Found {len(img_files)} images\n")
 
-    all_preds, all_gts = [], []
+    all_preds, all_ground_truths = [], []
     total_raw_detections = 0
     total_filtered_detections = 0
     
-    # Store image data for visualization
-    image_data = []  # List of (img_path, img, preds, gts)
+    image_data = []  # List of (img_path, img, preds, ground_truths)
     
     for idx, img_path in enumerate(tqdm(img_files, desc="Evaluating")):
         label_path = os.path.join(LABEL_DIR, os.path.basename(img_path).rsplit(".", 1)[0] + ".txt")
@@ -365,7 +280,7 @@ def evaluate():
         
         orig_shape = img.shape[:2]
         print("Full shape:", img.shape)
-        output, ratio, pad, orig = inferer.infer(img, orig_shape)
+        output, ratio, padding = inferer.infer(img, orig_shape)
         
         # Count raw detections
         if len(output.shape) == 3:
@@ -375,21 +290,13 @@ def evaluate():
         total_raw_detections += raw_count
         
         # Process predictions
-        preds = process_predictions(output, ratio, pad, orig, CONF_THRESH)
+        preds = process_predictions(output, ratio, padding, orig_shape, CONF_THRESH)
         total_filtered_detections += len(preds)
-        
-    #    if idx < 3:  # Debug first 3 images
-            # print(f"\nImage {idx}: {os.path.basename(img_path)}")
-            # print(f"  Original shape: {orig_shape}")
-            # print(f"  Raw detections: {raw_count}")
-            # print(f"  Filtered detections: {len(preds)}")
-    #        if len(preds) > 0:
-                # print(f"  First prediction: {preds[0]}")
         
         all_preds.append(preds)
 
         # Load ground truth in YOLO format (normalized coordinates)
-        gts = []
+        ground_truths = []
         with open(label_path) as f:
             for line in f.readlines():
                 parts = line.strip().split()
@@ -400,11 +307,11 @@ def evaluate():
                     y1 = y_center - h / 2
                     x2 = x_center + w / 2
                     y2 = y_center + h / 2
-                    gts.append([x1, y1, x2, y2, cls])
-        all_gts.append(gts)
+                    ground_truths.append([x1, y1, x2, y2, cls])
+        all_ground_truths.append(ground_truths)
         
         # Store image data for later visualization
-        image_data.append((img_path, img, preds, gts))
+        image_data.append((img_path, img, preds, ground_truths))
 
     # print(f"\n{'='*60}")
     # print(f"Detection Summary:")
@@ -415,7 +322,7 @@ def evaluate():
 
     # Compute precision/recall (mAP@0.5)
     tp, fp, fn = 0, 0, 0
-    total_gt = sum(len(g) for g in all_gts)
+    total_gt = sum(len(g) for g in all_ground_truths)
     
     # Track examples for each category - store with counts for prioritization
     tp_candidates = []  # Images with ONLY true positives (all preds matched, all GTs matched)
@@ -426,7 +333,7 @@ def evaluate():
     # Store detailed results per image
     image_results = []
     
-    for idx, (preds, gts) in enumerate(zip(all_preds, all_gts)):
+    for idx, (preds, ground_truths) in enumerate(zip(all_preds, all_ground_truths)):
         matched_gt = set()
         matched_pred = set()
         fp_preds = set()
@@ -437,7 +344,7 @@ def evaluate():
             best_iou = 0
             best_gt_idx = -1
             
-            for gt_idx, gt in enumerate(gts):
+            for gt_idx, gt in enumerate(ground_truths):
                 if gt_idx in matched_gt:
                     continue
                 g_box = gt[:4]  # [x1, y1, x2, y2] in normalized coords
@@ -455,7 +362,7 @@ def evaluate():
                 fp_preds.add(pred_idx)
         
         # Count false negatives (unmatched ground truth)
-        num_fn = len(gts) - len(matched_gt)
+        num_fn = len(ground_truths) - len(matched_gt)
         fn += num_fn
         
         # Count each type for this image
@@ -474,7 +381,7 @@ def evaluate():
         
         # Categorize image by predominant type
         # Priority: TN > pure TP > pure FP > pure FN > mixed
-        if len(preds) == 0 and len(gts) == 0:
+        if len(preds) == 0 and len(ground_truths) == 0:
             # True Negative: no predictions, no ground truth
             tn_candidates.append((idx, 1))
         elif num_tp > 0 and num_fp == 0 and num_fn == 0:
@@ -497,7 +404,7 @@ def evaluate():
         
         # Debug first few images
     #    if idx < 3:
-            # print(f"Image {idx}: {len(preds)} preds, {len(gts)} GTs, TP:{num_tp} FP:{num_fp} FN:{num_fn}")
+            # print(f"Image {idx}: {len(preds)} preds, {len(ground_truths)} GTs, TP:{num_tp} FP:{num_fp} FN:{num_fn}")
     
     # Sort candidates by count (descending) and select top examples
     tp_candidates.sort(key=lambda x: x[1], reverse=True)
@@ -522,7 +429,7 @@ def evaluate():
                                      ('false_negative', fn_examples),
                                      ('true_negative', tn_examples)]:
             for i, img_idx in enumerate(examples):
-                img_path, img, preds, gts = image_data[img_idx]
+                img_path, img, preds, ground_truths = image_data[img_idx]
                 result = image_results[img_idx]
                 
                 if category == 'true_negative':
@@ -532,7 +439,7 @@ def evaluate():
                                (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
                 else:
                     # Draw boxes for other categories
-                    img_vis = draw_boxes(img, preds, gts, 
+                    img_vis = draw_boxes(img, preds, ground_truths, 
                                         result['matched_pred'], 
                                         result['matched_gt'], 
                                         result['fp_preds'])
