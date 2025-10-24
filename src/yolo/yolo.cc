@@ -34,10 +34,10 @@ size_t getOutputSize(nvinfer1::ICudaEngine* engine) {
 
 void Yolo::preprocessImage(const cv::Mat& img, float* gpu_input,
                            const nvinfer1::Dims64& dims) {
-  // cv::Mat rgb_image;
-  // cv::cvtColor(img, rgb_image, cv::COLOR_BGR2RGB);
+  cv::Mat rgb_image;
+  cv::cvtColor(img, rgb_image, cv::COLOR_BGR2RGB);
   cv::cuda::GpuMat img_gpu;
-  img_gpu.upload(img);
+  img_gpu.upload(rgb_image);
 
   const int target_size = 640;  // new_shape
   const int channels = 3;
@@ -45,11 +45,14 @@ void Yolo::preprocessImage(const cv::Mat& img, float* gpu_input,
   // Compute scale factor to preserve aspect ratio
   int orig_h = img.rows;
   int orig_w = img.cols;
-  float r = std::min(target_size / (float)orig_h, target_size / (float)orig_w);
+  float scale =
+      std::min(target_size / (float)orig_h, target_size / (float)orig_w);
 
   // Compute new unpadded size
-  int new_w = int(round(orig_w * r));
-  int new_h = int(round(orig_h * r));
+  int new_w = round(orig_w * scale);
+  int new_h = round(orig_h * scale);
+  std::cout << "O_H: " << orig_h << " O_W: " << orig_w << std::endl;
+  std::cout << "N_H: " << new_h << " N_W: " << new_w << std::endl;
 
   // Compute padding
   int dw = target_size - new_w;
@@ -77,6 +80,7 @@ void Yolo::preprocessImage(const cv::Mat& img, float* gpu_input,
   // Prepare CHW layout directly in gpu_input
   int channel_size = target_size * target_size;
   std::vector<cv::cuda::GpuMat> chw;
+  chw.reserve(channels);
   for (int i = 0; i < channels; i++) {
     chw.emplace_back(cv::cuda::GpuMat(cv::Size(target_size, target_size),
                                       CV_32FC1, gpu_input + i * channel_size));
@@ -115,6 +119,7 @@ Yolo::Yolo(std::string model_path, bool verbose) : verbose_(verbose) {
   for (int i = 0; i < input_dims_.nbDims; ++i) {
     input_size *= input_dims_.d[i];
   }
+  std::cout << "Input size: " << input_size << std::endl;
 
   cudaMalloc((void**)&input_buffer_, sizeof(float) * input_size);
   output_size_ = getOutputSize(engine_);
@@ -149,8 +154,8 @@ std::vector<float> Yolo::RunModel(const cv::Mat& frame) {
   std::cout << "Memcpy" << std::endl;
   if (verbose_) {
     for (int i = 0; i < 10; i++) {
-      for (int j = 0; j < 7; j++) {
-        printf("%f ", featureVector[i * 7 + j]);
+      for (int j = 0; j < 6; j++) {
+        printf("%f ", featureVector[i * 6 + j]);
       }
       printf("\n");
     }

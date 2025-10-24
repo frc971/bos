@@ -12,7 +12,7 @@ from tqdm import tqdm
 # -------------------------------
 ENGINE_PATH = "/bos/src/yolo/fifthYOLO.engine"
 DATASET_ROOT = "/home/nvidia/Documents/gamepiece-data"  # Root directory containing train/valid/test folders
-SPLIT = "valid"  # Which split to evaluate: "train", "valid", or "test"
+SPLIT = "test"  # Which split to evaluate: "train", "valid", or "test"
 IMG_SIZE = 640  # model input size
 
 CONF_THRESH = 0.25
@@ -169,13 +169,46 @@ class TRTInfer:
         Returns predictions and metadata needed for coordinate conversion.
         """
         h_orig, w_orig = orig_shape
+
+        print("Orig shape:", orig_shape)
         
         # Preprocess
+        count = 0;
+        max = 30;
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img, ratio, (dw, dh) = letterbox(img, IMG_SIZE)
+        for row in img:
+            if (count >= max):
+                break
+            for col in row:
+                if (count >= max):
+                    break
+                for channel in col:
+                    count += 1
+                    print(channel, '', end='')
+                    if (count >= max):
+                        break
+        print()
+
+        # img, ratio, (dw, dh) = letterbox(img, IMG_SIZE)
         img = img.transpose(2, 0, 1)
         img = np.expand_dims(img, 0)
         img = np.ascontiguousarray(img, dtype=np.float32) / 255.0
+        img = img * 255.0;
+        print("Img shape:", img.shape)
+        count = 0;
+        for channel in img[0]:
+            if (count >= max):
+                break
+            for row in channel:
+                if (count >= max):
+                    break
+                for col in row:
+                    count += 1
+                    print(col, '', end='')
+                    if (count >= max):
+                        break
+        print()
+        return asdufh;
 
         # Copy input to device
         cuda.memcpy_htod_async(self.d_input, img, self.stream)
@@ -209,6 +242,7 @@ def process_predictions(output, ratio, pad, orig_shape, conf_thresh=0.25):
     # Handle different output shapes
     if len(output.shape) == 3:
         output = output[0]  # Remove batch dimension if present
+        print("6 outputs as expected")
     
     if output.shape[0] == 0:
         return []
@@ -224,6 +258,7 @@ def process_predictions(output, ratio, pad, orig_shape, conf_thresh=0.25):
             # Format: [x1, y1, x2, y2, conf, cls] or [batch, x1, y1, x2, y2, conf, cls]
             if len(detection) == 7:
                 _, x1, y1, x2, y2, conf, cls = detection
+                print("7 things")
             else:
                 x1, y1, x2, y2, conf, cls = detection[:6]
             
@@ -303,7 +338,7 @@ def evaluate():
     
     inferer = TRTInfer(ENGINE_PATH)
     print("Inferer created\n")
-    img_files = sorted(glob(os.path.join(DATASET_DIR, "*.jpg")) + glob(os.path.join(DATASET_DIR, "*.png")))
+    img_files = sorted(glob(os.path.join(DATASET_DIR, "/home/nvidia/Documents/gamepiece-data/test/images/20250122_101406_jpg.rf.0eacf8c2b7e1e10ea6520ff58ccba153.jpg")) + glob(os.path.join(DATASET_DIR, "asdhfashd.png")))
     if len(img_files) == 0:
         print("Img_files is empty!")
         exit(0)
@@ -329,6 +364,7 @@ def evaluate():
             continue
         
         orig_shape = img.shape[:2]
+        print("Full shape:", img.shape)
         output, ratio, pad, orig = inferer.infer(img, orig_shape)
         
         # Count raw detections
@@ -531,3 +567,4 @@ if __name__ == "__main__":
     print(f"Confidence threshold: {CONF_THRESH}")
     print(f"IoU threshold: {IOU_THRESH}\n")
     evaluate()
+
