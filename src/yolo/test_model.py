@@ -54,7 +54,7 @@ def iou(box1, box2):
     return inter_area / (box1_area + box2_area - inter_area + 1e-6)
 
 
-def draw_boxes(img, predictions, ground_truths, matched_preds, matched_ground_truths, fp_preds):
+def draw_boxes(img, predictions, ground_truths, matched_preds, matched_ground_truths, false_positives_preds):
     """
     Draw bounding boxes on image with color coding:
     - Green: True Positives (matched predictions)
@@ -74,7 +74,7 @@ def draw_boxes(img, predictions, ground_truths, matched_preds, matched_ground_tr
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
     
     # Draw False Positives (unmatched predictions) in RED
-    for pred_idx in fp_preds:
+    for pred_idx in false_positives_preds:
         pred = predictions[pred_idx]
         x1, y1, x2, y2, conf, class_id = pred
         x1, y1, x2, y2 = int(x1 * w), int(y1 * h), int(x2 * w), int(y2 * h)
@@ -310,12 +310,12 @@ def evaluate():
         
         image_data.append((img_path, img, preds, ground_truths))
 
-    true_positive, false_positive, false_negative = 0, 0, 0
+    num_true_positives, num_false_positives, num_false_negatives = 0, 0, 0
     total_ground_truth = sum(len(truth) for truth in all_ground_truths)
     
     # Track examples for each category - store with counts for prioritization
     true_positives = []  # Images with ONLY true positives (all preds matched, all GTs matched)
-    false_positive = []  # Images with ONLY false positives (preds but no GT, or unmatched preds)
+    false_positives = []  # Images with ONLY false positives (preds but no GT, or unmatched preds)
     false_negatives = []  # Images with ONLY false negatives (GT but no preds, or unmatched GTs)
     true_negatives = []  # Images with true negatives (no predictions, no GT)
     
@@ -324,7 +324,7 @@ def evaluate():
     for idx, (preds, ground_truths) in enumerate(zip(all_preds, all_ground_truths)):
         matched_ground_truth = set()
         matched_pred = set()
-        fp_preds = set()
+        false_positives_preds = set()
         
         # Match predictions to ground truth
         for pred_idx, pred in enumerate(preds):
@@ -342,80 +342,72 @@ def evaluate():
                     best_ground_truth_idx = ground_truth_idx
             
             if best_iou > 0.5 and best_ground_truth_idx != -1:
-                true_positive += 1
+                num_true_positives += 1
                 matched_ground_truth.add(best_ground_truth_idx)
                 matched_pred.add(pred_idx)
             else:
-                false_positive += 1
-                fp_preds.add(pred_idx)
+                num_false_positives += 1
+                false_positives_preds.add(pred_idx)
         
         # Count false negatives (unmatched ground truth)
-        num_fn = len(ground_truths) - len(matched_ground_truth)
-        false_negative += num_fn
+        num_new_false_negatives = len(ground_truths) - len(matched_ground_truth)
+        num_false_negatives += num_new_false_negatives
         
         # Count each type for this image
-        num_tp = len(matched_pred)
-        num_fp = len(fp_preds)
+        num_new_true_positives = len(matched_pred)
+        num_new_false_positives = len(false_positives_preds)
         
         image_results.append({
             'idx': idx,
             'matched_pred': matched_pred,
             'matched_ground_truth': matched_ground_truth,
-            'fp_preds': fp_preds,
-            'num_tp': num_tp,
-            'num_fp': num_fp,
-            'num_fn': num_fn
+            'false_positives_preds': false_positives_preds,
+            'num_true_positives': num_new_true_positives,
+            'num_false_positives': num_new_false_positives,
+            'num_false_negatives': num_new_false_negatives
         })
         
         # Categorize image by predominant type
         # Priority: TN > pure TP > pure FP > pure FN > mixed
         if len(preds) == 0 and len(ground_truths) == 0:
             # True Negative: no predictions, no ground truth
-            tn_candidates.append((idx, 1))
-        elif num_tp > 0 and num_fp == 0 and num_fn == 0:
+            true_negatives.append((idx, 1))
+        elif num_true_positives > 0 and num_false_positives == 0 and num_false_negatives == 0:
             # Pure True Positive: all predictions matched, all GTs matched
-            tp_candidates.append((idx, num_tp))
-        elif num_fp > 0 and num_tp == 0 and num_fn == 0:
+            true_positives.append((idx, num_true_positives))
+        elif num_false_positives > 0 and num_true_positives == 0 and num_false_negatives == 0:
             # Pure False Positive: only wrong predictions, no GT
-            fp_candidates.append((idx, num_fp))
-        elif num_fn > 0 and num_tp == 0 and num_fp == 0:
+            false_positives.append((idx, num_false_positives))
+        elif num_false_negatives > 0 and num_true_positives == 0 and num_false_positives == 0:
             # Pure False Negative: only missed detections, no predictions
-            fn_candidates.append((idx, num_fn))
+            false_negatives.append((idx, num_false_negatives))
         else:
             # Mixed case - categorize by what dominates
-            if num_tp > num_fp and num_tp > num_fn:
-                tp_candidates.append((idx, num_tp))
-            elif num_fp > num_tp and num_fp > num_fn:
-                fp_candidates.append((idx, num_fp))
-            elif num_fn > 0:
-                fn_candidates.append((idx, num_fn))
+            if num_true_positives > num_false_positives and num_true_positives > num_false_negatives:
+                true_positives.append((idx, num_true_positives))
+            elif num_false_positives > num_true_positives and num_false_positives > num_false_negatives:
+                false_positives.append((idx, num_false_positives))
+            elif num_false_negatives > 0:
+                false_negatives.append((idx, num_false_negatives))
         
-        # Debug first few images
-    #    if idx < 3:
-            # print(f"Image {idx}: {len(preds)} preds, {len(ground_truths)} GTs, TP:{num_tp} FP:{num_fp} FN:{num_fn}")
-    
     # Sort candidates by count (descending) and select top examples
-    tp_candidates.sort(key=lambda x: x[1], reverse=True)
-    fp_candidates.sort(key=lambda x: x[1], reverse=True)
-    fn_candidates.sort(key=lambda x: x[1], reverse=True)
-    tn_candidates.sort(key=lambda x: x[1], reverse=True)
+    true_positives.sort(key=lambda x: x[1], reverse=True)
+    false_positives.sort(key=lambda x: x[1], reverse=True)
+    false_negatives.sort(key=lambda x: x[1], reverse=True)
+    true_negatives.sort(key=lambda x: x[1], reverse=True)
     
-    tp_examples = [idx for idx, _ in tp_candidates[:EXAMPLES_PER_TYPE]]
-    fp_examples = [idx for idx, _ in fp_candidates[:EXAMPLES_PER_TYPE]]
-    fn_examples = [idx for idx, _ in fn_candidates[:EXAMPLES_PER_TYPE]]
-    tn_examples = [idx for idx, _ in tn_candidates[:EXAMPLES_PER_TYPE]]
+    true_positives_examples = [idx for idx, _ in true_positives[:EXAMPLES_PER_TYPE]]
+    false_positives_examples = [idx for idx, _ in false_positives[:EXAMPLES_PER_TYPE]]
+    false_negatives_examples = [idx for idx, _ in false_negatives[:EXAMPLES_PER_TYPE]]
+    true_negatives_examples = [idx for idx, _ in true_negatives[:EXAMPLES_PER_TYPE]]
     
-    # print(f"\nFound {len(tp_candidates)} TP images, {len(fp_candidates)} FP images, "
-    #      f"{len(fn_candidates)} FN images, {len(tn_candidates)} TN images")
-    
-    # Save example images
     if SAVE_EXAMPLES:
         print(f"\nSaving example images to {OUTPUT_DIR}/...")
         
-        for category, examples in [('true_positive', tp_examples), 
-                                     ('false_positive', fp_examples),
-                                     ('false_negative', fn_examples),
-                                     ('true_negative', tn_examples)]:
+        for category, examples in [('true_positive', true_positives_examples), 
+                                     ('false_positive', false_positives_examples),
+                                     ('false_negative', false_negatives_examples),
+                                     ('true_negative', true_negatives_examples)]:
             for i, img_idx in enumerate(examples):
                 img_path, img, preds, ground_truths = image_data[img_idx]
                 result = image_results[img_idx]
@@ -430,29 +422,29 @@ def evaluate():
                     img_vis = draw_boxes(img, preds, ground_truths, 
                                         result['matched_pred'], 
                                         result['matched_ground_truth'], 
-                                        result['fp_preds'])
+                                        result['false_positives_preds'])
                 
                 output_path = os.path.join(OUTPUT_DIR, category, 
                                           f"{i:03d}_{os.path.basename(img_path)}")
                 cv2.imwrite(output_path, img_vis)
         
-        print(f"Saved {len(tp_examples)} TP, {len(fp_examples)} FP, "
-              f"{len(fn_examples)} FN, {len(tn_examples)} TN examples")
+        print(f"Saved {len(true_positives_examples)} TP, {len(false_positives_examples)} FP, "
+              f"{len(false_negatives_examples)} FN, {len(true_negatives_examples)} TN examples")
 
-    precision = true_positive / (true_positive + false_positive + 1e-6)
-    recall = true_positive / (total_ground_truth + 1e-6)
+    precision = num_true_positives / (num_true_positives + num_false_positives + 1e-6)
+    recall = num_true_positives / (total_ground_truth + 1e-6)
     f1 = 2 * precision * recall / (precision + recall + 1e-6)
     
     print(f"\n{'='*60}")
     print(f"Evaluation Results:")
     print(f"{'='*60}")
-    print(f"True Positives (TP):   {true_positive}")
-    print(f"False Positives (FP):  {false_positive}")
-    print(f"False Negatives (FN):  {false_negative}")
+    print(f"True Positives (TP):   {num_true_positives}")
+    print(f"False Positives (FP):  {num_false_positives}")
+    print(f"False Negatives (FN):  {num_false_negatives}")
     print(f"Total Ground Truth:    {total_ground_truth}")
     print(f"{'='*60}")
-    print(f"Precision:  {precision:.3f} ({true_positive}/{true_positive + false_positive})")
-    print(f"Recall:     {recall:.3f} ({true_positive}/{total_ground_truth})")
+    print(f"Precision:  {precision:.3f} ({num_true_positives}/{num_true_positives + num_false_positives})")
+    print(f"Recall:     {recall:.3f} ({num_true_positives}/{total_ground_truth})")
     print(f"F1 Score:   {f1:.3f}")
     print(f"{'='*60}\n")
 
