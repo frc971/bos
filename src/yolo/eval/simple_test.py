@@ -8,7 +8,7 @@ from glob import glob
 from tqdm import tqdm
 from scipy.optimize import linear_sum_assignment
 
-ENGINE_PATH = "/bos/src/yolo/fifthYOLO.engine"
+ENGINE_PATH = "/bos/src/yolo/model/fifthYOLO.engine"
 DATASET_ROOT = "/home/nvidia/Documents/gamepiece-data"
 SPLIT = "test"
 IMG_SIZE = 640
@@ -238,19 +238,28 @@ def process_predictions(output, scale_ratio, padding, orig_shape, conf_thresh=0.
         
         if conf < conf_thresh:
             continue
+
+        print("Original")
+        print("x1: ", x1, "y1: ", y1, "x2: ", x2, "y2: ", y2)
         
         # Convert from letterbox coordinates to original image coordinates
         x1 = (x1 - pad_left) / scale_ratio
         y1 = (y1 - pad_top) / scale_ratio
         x2 = (x2 - pad_left) / scale_ratio
         y2 = (y2 - pad_top) / scale_ratio
+
+        print("Depadded and unscaled")
+        print("x1: ", x1, "y1: ", y1, "x2: ", x2, "y2: ", y2)
         
         # Clip to image bounds
         x1 = max(0, min(x1, orig_width))
         y1 = max(0, min(y1, orig_height))
         x2 = max(0, min(x2, orig_width))
         y2 = max(0, min(y2, orig_height))
-        
+
+        print("Bounding applied")
+        print("x1: ", x1, "y1: ", y1, "x2: ", x2, "y2: ", y2)
+
         # Convert to normalized coordinates [0, 1]
         x1_norm = x1 / orig_width
         y1_norm = y1 / orig_height
@@ -258,7 +267,6 @@ def process_predictions(output, scale_ratio, padding, orig_shape, conf_thresh=0.
         y2_norm = y2 / orig_height
 
         print("x1_norm:", x1_norm,"y1_norm:", y1_norm,"x2_norm:", x2_norm,"y2_norm:", y2_norm)
-        exit(0)
         
         predictions.append([x1_norm, y1_norm, x2_norm, y2_norm, conf, int(class_id)])
     
@@ -312,6 +320,7 @@ def evaluate():
             continue
 
         image = cv2.imread(img_path)
+        orig_image = image.copy()
         if image is None:
             print(f"ERROR: Failed to read image: {img_path}")
             continue
@@ -328,8 +337,13 @@ def evaluate():
         
         predictions = process_predictions(output, scale_ratio, padding, orig_shape, 
                                          CONF_THRESH, apply_nms=True)
+
+        pred = predictions[0]
+        cv2.rectangle(orig_image, (int(pred[0] * image.shape[1]), int(pred[1] * image.shape[0])), (int(pred[2] * image.shape[1]), int(pred[3] * image.shape[0])), (0, 255, 0), 2)
+        cv2.imshow("Nothing", orig_image)
+        cv2.waitKey(0)
         total_filtered_detections += len(predictions)
-        
+
         all_predictions.append(predictions)
 
         # Load ground truth in YOLO format (normalized coordinates)
