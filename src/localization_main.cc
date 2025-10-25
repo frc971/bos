@@ -12,6 +12,7 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 
+
 using json = nlohmann::json;
 
 void start_networktables() {
@@ -91,15 +92,15 @@ int main() {
   std::thread usb0_thread(
       run_estimator,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(camera::usb_camera0)),
-      read_intrinsics(camera::usb_camera0_intrinsics),
-      read_extrinsics(camera::usb_camera0_extrinsics),
+      read_intrinsics(camera::camera_constants[camera::Cameras::USB0].intrinsics_path),
+      read_extrinsics(camera::camera_constants[camera::Cameras::USB0].extrinsics_path),
       std::ref(position_sender));
 
   std::thread usb1_thread(
       run_estimator,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(camera::usb_camera1)),
-      read_intrinsics(camera::usb_camera1_intrinsics),
-      read_extrinsics(camera::usb_camera1_extrinsics),
+      read_intrinsics(camera::camera_constants[camera::Cameras::USB1].intrinsics_path),
+      read_extrinsics(camera::camera_constants[camera::Cameras::USB1].extrinsics_path),
       std::ref(position_sender));
 
   // std::thread usb2_thread(

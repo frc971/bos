@@ -11,5 +11,5 @@
 #include "src/localization/tag_estimator.h"
 
 int main() {
-  std::cout << camera::a[0].pipeline << std::endl;
+  std::cout << camera::camera_constants[0].pipeline << std::endl;
 }
