@@ -13,9 +13,18 @@ static void drawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
   for (size_t i = 0; i < boxes.size(); i++) {
     cv::Scalar color(0, 255, 0);
     cv::rectangle(img, boxes[i], color, 2);
-    std::cout << "CLass id: " << class_ids[i] << " on run " << i << std::endl;
     std::string label =
         class_names[class_ids[i]] + " " + cv::format("%.2f", confidences[i]);
+    int baseline = 0;
+    cv::Size label_size =
+        cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
+
+    cv::rectangle(
+        img, cv::Point(boxes[i].x, boxes[i].y - label_size.height - baseline),
+        cv::Point(boxes[i].x + label_size.width, boxes[i].y), color,
+        cv::FILLED);
+    cv::putText(img, label, cv::Point(boxes[i].x, boxes[i].y - baseline),
+                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 1);
   }
 }
 
@@ -39,10 +48,8 @@ std::vector<float> SoftmaxResults(yolo::Yolo& model, cv::Mat mat,
   float pad_top = (target_size - new_h) / 2.0;
 
   std::vector<float> softmax_results = model.RunModel(mat);
-  std::cout << "Detection size: " << softmax_results.size() << std::endl;
   const int nms_output_size = 6;
   for (int i = 0; i < 10; i++) {
-    std::cout << "Run " << i << std::endl;
     float x1 = softmax_results[i * nms_output_size];
     float y1 = softmax_results[i * nms_output_size + 1];
     float x2 = softmax_results[i * nms_output_size + 2];
@@ -76,38 +83,32 @@ int main() {
   std::cout << "File actually exists: " << std::filesystem::exists(modelPath)
             << std::endl;
   yolo::Yolo model(modelPath, true);
-  // camera::RealSenseCamera rs_camera;
-  // cv::Mat mat;
-  // rs_camera.getFrame(mat);
-  // if (mat.empty()) {
-  //   std::cout << "Couldn't fetch frame properly" << std::endl;
-  //   return 1;
-  // }
+  camera::RealSenseCamera rs_camera;
+  cv::Mat mat;
   std::vector<cv::Rect> bboxes(6);
   std::vector<float> confidences(6);
   std::vector<int> class_ids(6);
-  cv::Mat mat;
-  // std::vector<float> softmax_results =
-  //  SoftmaxResults(model, mat, bboxes, confidences, class_ids);
-  std::vector<std::string> class_names = {"ALGAE", "CORAL"};
-  // drawDetections(mat, bboxes, class_ids, confidences, class_names);
-  // cv::imshow("Test detections", mat);
-  // cv::waitKey(0);
-  std::string filename = "output_image.png";
-  cv::Mat train_img = cv::imread(
-      "/home/nvidia/Documents/gamepiece-data/test/images/"
-      "20250122_101406_jpg.rf.0eacf8c2b7e1e10ea6520ff58ccba153.jpg");
-  std::vector<float> softmax_results =
-      SoftmaxResults(model, train_img, bboxes, confidences, class_ids);
-  drawDetections(train_img, bboxes, class_ids, confidences, class_names);
-  cv::imshow("TrainImg", train_img);
-  cv::waitKey(0);
-
-  bool success = cv::imwrite(filename, mat);
-
-  if (success) {
-    std::cout << "Image saved successfully to " << filename << std::endl;
-  } else {
-    std::cerr << "Error: Could not save image to " << filename << std::endl;
+  std::vector<float> softmax_results;
+  std::vector<std::string> class_names = {"CORAL", "ALGAE"};
+  while (true) {
+    std::cout << 1 << std::endl;
+    bboxes.clear();
+    confidences.clear();
+    class_ids.clear();
+    std::cout << 2 << std::endl;
+    rs_camera.getFrame(mat);
+    if (mat.empty()) {
+      std::cout << "Couldn't fetch frame properly" << std::endl;
+      return 1;
+    }
+    std::cout << 3 << std::endl;
+    softmax_results =
+        SoftmaxResults(model, mat, bboxes, confidences, class_ids);
+    std::cout << 4 << std::endl;
+    drawDetections(mat, bboxes, class_ids, confidences, class_names);
+    std::cout << 5 << std::endl;
+    cv::imshow("Test detections", mat);
+    cv::waitKey(0);
+    cv::destroyAllWindows();
   }
 }

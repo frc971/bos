@@ -53,8 +53,6 @@ void Yolo::preprocessImage(const cv::Mat& img, float* gpu_input,
   // Compute new unpadded size
   int new_w = round(orig_w * scale);
   int new_h = round(orig_h * scale);
-  std::cout << "O_H: " << orig_h << " O_W: " << orig_w << std::endl;
-  std::cout << "N_H: " << new_h << " N_W: " << new_w << std::endl;
 
   // Compute padding
   int dw = target_size - new_w;
@@ -80,9 +78,6 @@ void Yolo::preprocessImage(const cv::Mat& img, float* gpu_input,
   padded.convertTo(normalized, CV_32FC3, 1.f / 255.f);
   cv::Mat cpu_mat;
   normalized.download(cpu_mat);
-  std::cout << "Rows: " << cpu_mat.rows << " Cols: " << cpu_mat.cols
-            << std::endl;
-  // exit(0);
 
   int channel_size = target_size * target_size;
   // Split into channels (HWC -> CHW)
@@ -92,17 +87,6 @@ void Yolo::preprocessImage(const cv::Mat& img, float* gpu_input,
     cudaMemcpy(gpu_input + i * channel_size, chw[i].data,
                channel_size * sizeof(float), cudaMemcpyDeviceToDevice);
   }
-  const int display_num = 50;
-  const int skip_padding = 640 * 140 - 3;
-  std::vector<float> host_data(display_num);
-  // cudaMemcpy(host_data.data(), gpu_input + skip_padding,
-  // display_num * sizeof(float), cudaMemcpyDeviceToHost);
-
-  std::cout << "First " << display_num << " values:" << std::endl;
-  for (int i = 0; i < display_num; i++) {
-    // std::cout << std::fixed << std::setprecision(2) << host_data[i] << ",";
-  }
-  std::cout << std::endl;
 }
 
 class Logger : public nvinfer1::ILogger {
