@@ -8,10 +8,8 @@
 #include <thread>
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
-#include "src/camera/imx296_camera.h"
 #include "src/camera/select_camera.h"
-#include "src/camera/usb_camera.h"
-
+#include "src/camera/camera_constants.h"
 const int k_port = 4971;
 
 int main() {

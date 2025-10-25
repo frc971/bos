@@ -2,7 +2,6 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
-#include "src/camera/imx296_camera.h"
 #include "src/camera/select_camera.h"
 
 int main(int argc, char* argv[]) {

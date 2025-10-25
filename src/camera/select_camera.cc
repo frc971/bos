@@ -2,7 +2,6 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include "cv_camera.h"
-#include "src/camera/imx296_camera.h"
 
 namespace camera {
 
@@ -25,8 +24,8 @@ CVCamera SelectCamera() {
     int camNumMIPI;  // Which MIPI camera to use
     std::cin >> camNumMIPI;
 
-    return camera::CVCamera(
-        cv::VideoCapture(camera::IMX296Pipeline(camNumMIPI, 30)));
+    
+    return SelectCamera(); // temporary
 
   } else {
     std::cout << "INVALID INPUT: 1 or 2";

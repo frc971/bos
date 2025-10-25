@@ -6,13 +6,11 @@
 #include <sstream>
 #include <thread>
 #include "apriltag/apriltag.h"
-#include "camera/imx296_camera.h"
 #include "localization/position_sender.h"
 #include "localization/tag_estimator.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
-#include "src/camera/usb_camera.h"
 
 using json = nlohmann::json;
 
@@ -93,15 +91,15 @@ int main() {
   std::thread usb0_thread(
       run_estimator,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(camera::usb_camera0)),
-      read_intrinsics("constants/usb_camera0_intrinsics.json"),
-      read_extrinsics("constants/usb_camera0_extrinsics.json"),
+      read_intrinsics(camera::usb_camera0_intrinsics),
+      read_extrinsics(camera::usb_camera0_extrinsics),
       std::ref(position_sender));
 
   std::thread usb1_thread(
       run_estimator,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(camera::usb_camera1)),
-      read_intrinsics("constants/usb_camera1_intrinsics.json"),
-      read_extrinsics("constants/usb_camera1_extrinsics.json"),
+      read_intrinsics(camera::usb_camera1_intrinsics),
+      read_extrinsics(camera::usb_camera1_extrinsics),
       std::ref(position_sender));
 
   // std::thread usb2_thread(

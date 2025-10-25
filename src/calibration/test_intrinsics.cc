@@ -8,9 +8,7 @@
 #include <sstream>
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
-#include "src/camera/imx296_camera.h"
 #include "src/camera/select_camera.h"
-#include "src/camera/usb_camera.h"
 
 using json = nlohmann::json;
 
