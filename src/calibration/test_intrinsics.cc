@@ -10,6 +10,7 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/imx296_camera.h"
 #include "src/camera/select_camera.h"
+#include "src/camera/usb_camera.h"
 
 using json = nlohmann::json;
 
@@ -34,7 +35,7 @@ void warmupCamera(std::string pipeline) {
 int main() {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
-  std::ifstream file(camera::imx296_camera1_intrinsics);
+  std::ifstream file("/bos/constants/usb_camera1_intrinsics.json");
   json intrinsics;
   file >> intrinsics;
 
@@ -47,7 +48,7 @@ int main() {
   camera::CscoreStreamer undistorted_streamer(
       camera::IMX296Streamer("undistorted_stream", 4972, 30));
 
-  camera::CVCamera camera = camera::SelectCamera();
+  camera::CVCamera camera((cv::VideoCapture(camera::usb_camera1)));
   cv::Mat frame;
 
   while (true) {

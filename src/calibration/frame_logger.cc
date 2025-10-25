@@ -10,56 +10,32 @@
 #include "src/camera/cv_camera.h"
 #include "src/camera/imx296_camera.h"
 #include "src/camera/select_camera.h"
+#include "src/camera/usb_camera.h"
 
 const int k_port = 4971;
 
 int main() {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
-  std::string data_folder = "data/camera/";
-  if (std::filesystem::create_directory(data_folder)) {
-    std::cout << "data folder created successfully!\n";
-  } else {
-    std::cout << "do you want to delete the existing photos? (yes/no)\n";
-    std::string delete_existing_photos;
-    std::cin >> delete_existing_photos;
-    if (delete_existing_photos == "yes") {
-      std::filesystem::remove_all(data_folder);
-      std::filesystem::create_directory(data_folder);
-    }
-  }
-
   std::cout << "Port number: " << k_port << std::endl;
 
   camera::CscoreStreamer streamer(
       camera::IMX296Streamer("frame_logger", 4971, 30));
-  // camera::CVCamera camera = camera::SelectCamera();
-  int video_num;
-  std::cout << "Enter video num" << std::endl;
-  std::cin >> video_num;
-  std::cout << "Testing camera " << video_num << std::endl;
-  camera::CVCamera camera(cv::VideoCapture("/dev/video" + std::to_string(video_num)));
-  std::atomic<bool> log_image(false);
+
+  camera::CVCamera camera((cv::VideoCapture(camera::usb_camera0)));
 
   cv::Mat frame;
 
-  std::cout << "Camera opened successfully. Press 'c' to capture, 'q' to quit."
-            << std::endl;
+  std::cout << "Camera opened successfully" << std::endl;
 
   while (true) {
 
     cv::Mat frame;
-    int image_idx = 0;
     while (true) {
+      std::cout << "Getting frame" << std::endl;
       camera.GetFrame(frame);
       streamer.WriteFrame(frame);
-      std::ostringstream filename;
-      filename << data_folder << std::setfill('0') << std::setw(4) << image_idx
-               << ".jpg";
-      std::cout << "writing frame to " << filename.str() << "\n";
-      cv::imwrite(filename.str(), frame);
-      log_image.store(false);
-      image_idx++;
+      std::cout << "Got frame" << std::endl;
     }
   }
   cv::destroyAllWindows();
