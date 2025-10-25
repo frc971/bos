@@ -17,7 +17,7 @@ enum Camera {
 };
 
 inline const camera_constant_t camera_constants[4] = {
-    [Camera::IMX296_0] = camera_constant_t{.pipeline = " nvarguscamerasrc sensor-id=0 " 
+    [Camera::IMX296_0] = camera_constant_t{.pipeline = "nvarguscamerasrc sensor-id=0 " 
                                                         "aelock=true exposuretimerange=\"100000 "
                                                         "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
                                                         "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, "
@@ -28,7 +28,7 @@ inline const camera_constant_t camera_constants[4] = {
                                                         "appsink",                        
                                                 .intrinsics_path = "constants/imx296_camera0_intrinsics.json",
                                                 .extrinsics_path = "constants/imx296_camera0_extrinsics.json"},
-    [Camera::IMX296_1] = camera_constant_t{.pipeline = " nvarguscamerasrc sensor-id=1 " 
+    [Camera::IMX296_1] = camera_constant_t{.pipeline = "nvarguscamerasrc sensor-id=1 " 
                                                         "aelock=true exposuretimerange=\"100000 "
                                                         "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
                                                         "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, "
