@@ -9,27 +9,31 @@ namespace camera {
     Asks Users for input and selects camera based on that.
     If any input is invalid, the function returns a call to itself.
 */
-CVCamera SelectCamera() {
-  std::cout << "Which input do you want to use; usb or mipi; use 1 or 2: ";
-  int camType;  // Which camera type to use
-  std::cin >> camType;
-  if (camType == 1) {
-    std::cout << "Which camera number; 0-3: ";
-    int camNumUSB;  // Which USB camera to to use
-    std::cin >> camNumUSB;
-    return camera::CVCamera(
-        cv::VideoCapture("/dev/video" + std::to_string(camNumUSB)));
-  } else if (camType == 2) {
-    std::cout << "Which camera number; 1-2: ";
-    int camNumMIPI;  // Which MIPI camera to use
-    std::cin >> camNumMIPI;
+Camera SelectCamera() {
+  std::cout << "Please type in what cameras you want" << std::endl;
+  std::cout << "Options: " << std::endl;
+  std::cout << "mipi0" << std::endl;
+  std::cout << "mipi1" << std::endl;
+  std::cout << "usb0" << std::endl;
+  std::cout << "usb1" << std::endl;
 
-    
-    return SelectCamera(); // temporary
+  std::string choice;
+  std::cin >> choice;
 
-  } else {
-    std::cout << "INVALID INPUT: 1 or 2";
-    return SelectCamera();
-  }
+  if (choice == "mipi0")
+    return Camera::IMX296_0;
+
+  if (choice == "mipi1")
+    return Camera::IMX296_1;
+
+  if (choice == "usb0")
+    return Camera::USB0;
+
+  if (choice == "usb1")
+    return Camera::USB1;
+
+  std::cout << "You did not give a valid input. Retrying..." << std::endl;
+
+  return SelectCamera();
 }
 }  // namespace camera

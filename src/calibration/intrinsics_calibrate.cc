@@ -53,15 +53,15 @@ void CaptureFrames(
 }
 
 int main() {
-  std::cout << "OpenCV version: " << CV_VERSION << std::endl;
-
   camera::CscoreStreamer streamer("intrinsics_calibrate", 4971, 30, 1080, 1080,
                                   true);
 
-  camera::CVCamera camera((cv::VideoCapture(camera::usb_camera1)));
+  camera::Camera camera = camera::SelectCamera();
+  camera::CVCamera cap(
+      cv::VideoCapture(camera::camera_constants[camera].pipeline));
 
   cv::Mat frame;
-  camera.GetFrame(frame);
+  cap.GetFrame(frame);
   cv::Size frame_size = frame.size();
 
   cv::aruco::CharucoDetector detector = calibration::CreateDetector(
@@ -74,7 +74,7 @@ int main() {
 
   std::vector<calibration::detection_result_t> detection_results;
   std::thread capture_frames_thread(
-      CaptureFrames, detector, camera, streamer, std::ref(detection_results),
+      CaptureFrames, detector, cap, streamer, std::ref(detection_results),
       std::ref(capture_frames), std::ref(log_image));
 
   bool run = true;
@@ -103,6 +103,6 @@ int main() {
   std::ofstream file("intrinsics.json");
   json intrinsics = calibration::intrisincs_to_json(cameraMatrix, distCoeffs);
   file << intrinsics.dump(4);
-  std::cout << "Intrinsics: " << std::endl << intrinsics.dump(4) << std::endl;
+  std::cout << "Intrinsics: \n" << std::endl << intrinsics.dump(4) << std::endl;
   file.close();
 }

@@ -10,6 +10,4 @@
 #include "src/localization/position.h"
 #include "src/localization/tag_estimator.h"
 
-int main() {
-  std::cout << camera::camera_constants[0].pipeline << std::endl;
-}
+int main() {}

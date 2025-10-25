@@ -6,21 +6,18 @@
 #include <opencv2/opencv.hpp>
 #include <sstream>
 #include <thread>
+#include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
-#include "src/camera/camera_constants.h"
-const int k_port = 4971;
 
 int main() {
-  std::cout << "OpenCV version: " << CV_VERSION << std::endl;
-
-  std::cout << "Port number: " << k_port << std::endl;
-
   camera::CscoreStreamer streamer(
       camera::IMX296Streamer("frame_logger", 4971, 30));
 
-  camera::CVCamera camera((cv::VideoCapture(camera::usb_camera0)));
+  camera::Camera camera = camera::SelectCamera();
+  camera::CVCamera cap(
+      cv::VideoCapture(camera::camera_constants[camera].pipeline));
 
   cv::Mat frame;
 
@@ -31,7 +28,7 @@ int main() {
     cv::Mat frame;
     while (true) {
       std::cout << "Getting frame" << std::endl;
-      camera.GetFrame(frame);
+      cap.GetFrame(frame);
       streamer.WriteFrame(frame);
       std::cout << "Got frame" << std::endl;
     }

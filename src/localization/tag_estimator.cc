@@ -240,21 +240,29 @@ tag_detection_t TagEstimator::GetFeildRelitivePosition(
 
   frc::Transform3d tag_to_camera = camera_to_tag.Inverse();
 
-  std::cout << "tag to camera: \n";
-  PrintTransform3d(tag_to_camera);
-  std::cout << "\n\n";
+  if (verbose_) {
+    std::cout << "tag to camera: \n";
+    PrintTransform3d(tag_to_camera);
+    std::cout << "\n\n";
+  }
 
-  std::cout << "tag id: " << tag_relative_position.tag_id << std::endl;
   frc::Pose3d tag_pose =
       apriltag_layout_.GetTagPose(tag_relative_position.tag_id).value();
-  std::cout << "tagpose: \n";
-  PrintPose3d(tag_pose);
-  std::cout << "\n\n";
+
+  if (verbose_) {
+    std::cout << "tag id: " << tag_relative_position.tag_id << std::endl;
+    std::cout << "tagpose: \n";
+    PrintPose3d(tag_pose);
+    std::cout << "\n\n";
+  }
 
   frc::Pose3d camera_pose = tag_pose.TransformBy(tag_to_camera);
-  std::cout << "camerapose: \n";
-  PrintPose3d(camera_pose);
-  std::cout << "\n\n";
+
+  if (verbose_) {
+    std::cout << "camerapose: \n";
+    PrintPose3d(camera_pose);
+    std::cout << "\n\n";
+  }
 
   frc::Transform3d robot_to_camera(
       units::meter_t{static_cast<double>(extrinsics_["translation_x"])},
