@@ -16,6 +16,7 @@
 #include "src/camera/cv_camera.h"
 #include "src/camera/imx296_camera.h"
 #include "src/camera/select_camera.h"
+#include "src/camera/usb_camera.h"
 
 using json = nlohmann::json;
 
@@ -29,7 +30,7 @@ void CaptureFrames(
   while (true) {
     camera.GetFrame(frame);
     frame_count++;
-    if (frame_count % 10 == 0) {
+    if (frame_count % 3 == 0) {
       cv::cvtColor(frame, frame, cv::COLOR_BGRA2RGB);
       calibration::detection_result_t detection_result =
           calibration::DetectCharucoBoard(frame, detector);
@@ -56,14 +57,10 @@ void CaptureFrames(
 int main() {
   std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
-  std::cout << "What is the id of the camera we are logging?\n";
-  int camera_id;
-  std::cin >> camera_id;
-
   camera::CscoreStreamer streamer("intrinsics_calibrate", 4971, 30, 1080, 1080,
                                   true);
 
-  camera::CVCamera camera = camera::SelectCamera();
+  camera::CVCamera camera((cv::VideoCapture(camera::usb_camera1)));
 
   cv::Mat frame;
   camera.GetFrame(frame);
@@ -105,10 +102,9 @@ int main() {
   calibration::CalibrateCamera(detection_results, frame_size, cameraMatrix,
                                distCoeffs);
 
-  std::ofstream file(camera::camera1_intrinsics);
+  std::ofstream file("intrinsics.json");
   json intrinsics = calibration::intrisincs_to_json(cameraMatrix, distCoeffs);
   file << intrinsics.dump(4);
-  std::cout << "Saved to " << camera::camera1_intrinsics << std::endl;
   std::cout << "Intrinsics: " << std::endl << intrinsics.dump(4) << std::endl;
   file.close();
 }
