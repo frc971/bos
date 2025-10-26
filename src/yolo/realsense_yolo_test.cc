@@ -9,7 +9,7 @@ static void drawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
                            const std::vector<int>& class_ids,
                            const std::vector<float>& confidences,
                            const std::vector<std::string>& class_names) {
-
+  std::cout << "Drawing " << boxes.size() << " boxes" << std::endl;
   for (size_t i = 0; i < boxes.size(); i++) {
     cv::Scalar color(0, 255, 0);
     cv::rectangle(img, boxes[i], color, 2);
@@ -92,21 +92,17 @@ int main() {
   std::vector<std::string> class_names = {"CORAL", "ALGAE"};
   while (true) {
     std::cout << 1 << std::endl;
-    bboxes.clear();
-    confidences.clear();
-    class_ids.clear();
-    std::cout << 2 << std::endl;
     rs_camera.getFrame(mat);
     if (mat.empty()) {
       std::cout << "Couldn't fetch frame properly" << std::endl;
       return 1;
     }
-    std::cout << 3 << std::endl;
+    std::cout << 2 << std::endl;
     softmax_results =
         SoftmaxResults(model, mat, bboxes, confidences, class_ids);
-    std::cout << 4 << std::endl;
+    std::cout << 3 << std::endl;
     drawDetections(mat, bboxes, class_ids, confidences, class_names);
-    std::cout << 5 << std::endl;
+    std::cout << 4 << std::endl;
     cv::imshow("Test detections", mat);
     cv::waitKey(0);
     cv::destroyAllWindows();
