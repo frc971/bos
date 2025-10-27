@@ -4,20 +4,67 @@
 namespace camera {
 
 RealSenseCamera::RealSenseCamera() : pipe_() {
-  pipe_.start();
-  std::cout << "Device: " << pipe_.get_active_profile() << std::endl;
+  std::cout << "RealSenseCamera constructor starting..." << std::endl;
+  std::cout << "pipe_ address: " << &pipe_ << std::endl;
+
+  try {
+    rs2::context ctx;
+    auto devices = ctx.query_devices();
+    if (devices.size() == 0) {
+      throw std::runtime_error("No RealSense devices found!");
+    }
+
+    std::cout << "Found " << devices.size() << " device(s)" << std::endl;
+
+    rs2::config cfg;
+    cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGB8, 30);
+
+    std::cout << "About to start pipeline..." << std::endl;
+    auto profile = pipe_.start(cfg);
+    std::cout << "Pipeline started successfully!" << std::endl;
+
+    // Verify it works immediately
+    std::cout << "Testing initial frame fetch..." << std::endl;
+    rs2::frameset test_frames = pipe_.wait_for_frames(5000);
+    std::cout << "Initial frame fetch successful!" << std::endl;
+
+  } catch (const rs2::error& e) {
+    std::cerr << "RealSense error in constructor: " << e.what() << std::endl;
+    throw;
+  } catch (const std::exception& e) {
+    std::cerr << "Standard exception in constructor: " << e.what() << std::endl;
+    throw;
+  }
+
+  std::cout << "RealSenseCamera constructor completed successfully"
+            << std::endl;
 }
 
 RealSenseCamera::~RealSenseCamera() {
-  pipe_.stop();
+  std::cout << "RealSenseCamera destructor called" << std::endl;
+  try {
+    pipe_.stop();
+    std::cout << "Pipeline stopped successfully" << std::endl;
+  } catch (const std::exception& e) {
+    std::cerr << "Error stopping pipeline: " << e.what() << std::endl;
+  }
 }
 
 void RealSenseCamera::getFrame(cv::Mat& mat) {
+  std::cout << "this pointer: " << this << std::endl;
+  std::cout << "pipe_ address: " << &pipe_ << std::endl;
   for (int i = 0; i < 14; i++) {
-    std::cout << "Fetching frame: " << i << " with pipe address: " << &pipe_
-              << std::endl;
-    rs2::frameset frames = pipe_.wait_for_frames(5000);
+    try {
+      std::cout << "Fetching frame: " << i << " with pipe address: " << &pipe_
+                << std::endl;
+      rs2::frameset frames = pipe_.wait_for_frames(5000);
+    } catch (const rs2::error& e) {
+      std::cerr << "RealSense error: " << e.what() << std::endl;
+    } catch (const std::exception& e) {
+      std::cerr << "Standard exception: " << e.what() << std::endl;
+    }
   }
+  std::cout << "Made it past all frame fetches" << std::endl;
   rs2::frameset frames = pipe_.wait_for_frames(5000);
   std::cout << "Made it past frameset creation" << std::endl;
   rs2::video_frame color_frame = frames.get_color_frame();
@@ -30,8 +77,9 @@ void RealSenseCamera::getFrame(cv::Mat& mat) {
   cv::Mat frameRGB(cv::Size(color_frame.get_width(), color_frame.get_height()),
                    CV_8UC3, (void*)color_frame.get_data(), cv::Mat::AUTO_STEP);
 
-  // Copy and convert in one go
+  std::cout << "Made it past mat creation" << std::endl;
+
   cv::cvtColor(frameRGB, mat, cv::COLOR_RGB2BGR);
-  mat = mat.clone();  // ensure mat owns its data
+  std::cout << "Made it past mat coloring" << std::endl;
 }
 }  // namespace camera

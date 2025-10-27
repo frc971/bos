@@ -28,7 +28,7 @@ static void drawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
   }
 }
 
-std::vector<float> SoftmaxResults(yolo::Yolo& model, cv::Mat mat,
+std::vector<float> SoftmaxResults(yolo::Yolo& model, const cv::Mat& mat,
                                   std::vector<cv::Rect>& bboxes,
                                   std::vector<float>& confidences,
                                   std::vector<int>& class_ids) {
@@ -84,7 +84,6 @@ int main() {
             << std::endl;
   yolo::Yolo model(modelPath, true);
   camera::RealSenseCamera rs_camera;
-  cv::Mat mat;
   std::vector<cv::Rect> bboxes(6);
   std::vector<float> confidences(6);
   std::vector<int> class_ids(6);
@@ -92,6 +91,7 @@ int main() {
   std::vector<std::string> class_names = {"CORAL", "ALGAE"};
   while (true) {
     std::cout << 1 << std::endl;
+    cv::Mat mat;
     rs_camera.getFrame(mat);
     if (mat.empty()) {
       std::cout << "Couldn't fetch frame properly" << std::endl;
@@ -103,8 +103,8 @@ int main() {
     std::cout << 3 << std::endl;
     drawDetections(mat, bboxes, class_ids, confidences, class_names);
     std::cout << 4 << std::endl;
-    cv::imshow("Test detections", mat);
-    cv::waitKey(0);
-    cv::destroyAllWindows();
+    // cv::imshow("Test detections", mat);
+    // cv::waitKey(0);
+    // cv::destroyAllWindows();
   }
 }
