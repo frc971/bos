@@ -46,10 +46,9 @@ std::vector<float> SoftmaxResults(yolo::Yolo& model, const cv::Mat& mat,
 
   float pad_left = (target_size - new_w) / 2.0;
   float pad_top = (target_size - new_h) / 2.0;
-
   std::vector<float> softmax_results = model.RunModel(mat);
   const int nms_output_size = 6;
-  for (int i = 0; i < 10; i++) {
+  for (size_t i = 0; i < bboxes.size(); i++) {
     float x1 = softmax_results[i * nms_output_size];
     float y1 = softmax_results[i * nms_output_size + 1];
     float x2 = softmax_results[i * nms_output_size + 2];
@@ -84,10 +83,10 @@ int main() {
             << std::endl;
   yolo::Yolo model(modelPath, true);
   camera::RealSenseCamera rs_camera;
-  std::vector<cv::Rect> bboxes(6);
-  std::vector<float> confidences(6);
-  std::vector<int> class_ids(6);
-  std::vector<float> softmax_results;
+  const int max_detections = 6;
+  std::vector<cv::Rect> bboxes(max_detections);
+  std::vector<float> confidences(max_detections);
+  std::vector<int> class_ids(max_detections);
   std::vector<std::string> class_names = {"CORAL", "ALGAE"};
   while (true) {
     std::cout << 1 << std::endl;
@@ -98,13 +97,12 @@ int main() {
       return 1;
     }
     std::cout << 2 << std::endl;
-    softmax_results =
-        SoftmaxResults(model, mat, bboxes, confidences, class_ids);
+    SoftmaxResults(model, mat, bboxes, confidences, class_ids);
     std::cout << 3 << std::endl;
     drawDetections(mat, bboxes, class_ids, confidences, class_names);
     std::cout << 4 << std::endl;
-    // cv::imshow("Test detections", mat);
-    // cv::waitKey(0);
-    // cv::destroyAllWindows();
+    cv::imshow("Test detections", mat);
+    cv::waitKey(0);
+    cv::destroyAllWindows();
   }
 }

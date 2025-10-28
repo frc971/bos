@@ -116,6 +116,7 @@ Yolo::Yolo(std::string model_path, bool verbose) : verbose_(verbose) {
   for (int i = 0; i < input_dims_.nbDims; ++i) {
     input_size *= input_dims_.d[i];
   }
+
   std::cout << "Input size: " << input_size << std::endl;
 
   cudaMalloc((void**)&input_buffer_, sizeof(float) * input_size);

@@ -1,5 +1,6 @@
 #include "realsense_camera.h"
 #include <iostream>
+#include <thread>
 #include "opencv2/opencv.hpp"
 namespace camera {
 
@@ -8,19 +9,8 @@ RealSenseCamera::RealSenseCamera() : pipe_() {
   std::cout << "pipe_ address: " << &pipe_ << std::endl;
 
   try {
-    rs2::context ctx;
-    auto devices = ctx.query_devices();
-    if (devices.size() == 0) {
-      throw std::runtime_error("No RealSense devices found!");
-    }
-
-    std::cout << "Found " << devices.size() << " device(s)" << std::endl;
-
-    rs2::config cfg;
-    cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGB8, 30);
-
     std::cout << "About to start pipeline..." << std::endl;
-    auto profile = pipe_.start(cfg);
+    auto profile = pipe_.start();
     std::cout << "Pipeline started successfully!" << std::endl;
 
     // Verify it works immediately
@@ -64,16 +54,13 @@ void RealSenseCamera::getFrame(cv::Mat& mat) {
       std::cerr << "Standard exception: " << e.what() << std::endl;
     }
   }
-  std::cout << "Made it past all frame fetches" << std::endl;
   rs2::frameset frames = pipe_.wait_for_frames(5000);
-  std::cout << "Made it past frameset creation" << std::endl;
   rs2::video_frame color_frame = frames.get_color_frame();
-  rs2::depth_frame depth_frame = frames.get_depth_frame();
-  std::cout << "Made it past frame collection" << std::endl;
   if (!color_frame) {
     std::cerr << "Invalid color frame!" << std::endl;
     return;
   }
+
   cv::Mat frameRGB(cv::Size(color_frame.get_width(), color_frame.get_height()),
                    CV_8UC3, (void*)color_frame.get_data(), cv::Mat::AUTO_STEP);
 
