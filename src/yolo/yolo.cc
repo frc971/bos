@@ -117,8 +117,6 @@ Yolo::Yolo(std::string model_path, bool verbose) : verbose_(verbose) {
     input_size *= input_dims_.d[i];
   }
 
-  std::cout << "Input size: " << input_size << std::endl;
-
   cudaMalloc((void**)&input_buffer_, sizeof(float) * input_size);
   output_size_ = getOutputSize(engine_);
   cudaMalloc((void**)&(output_buffer_), sizeof(float) * output_size_);
@@ -129,27 +127,20 @@ Yolo::Yolo(std::string model_path, bool verbose) : verbose_(verbose) {
 std::vector<float> Yolo::RunModel(const cv::Mat& frame) {
   bool status;
   preprocessImage(frame, input_buffer_, input_dims_);
-  std::cout << "Preprocessed" << std::endl;
   status =
       context_->setTensorAddress(engine_->getIOTensorName(0), input_buffer_);
   assert(status);
-  std::cout << "Tensor address set 0" << std::endl;
   status =
       context_->setTensorAddress(engine_->getIOTensorName(1), output_buffer_);
   assert(status);
-  std::cout << "Tensor address set 1" << std::endl;
   status = context_->enqueueV3(inferenceCudaStream_);
-  std::cout << "Enqueued" << std::endl;
   assert(status);
 
   cudaStreamSynchronize(inferenceCudaStream_);
-  std::cout << "Stream synchronized" << std::endl;
   std::vector<float> featureVector;
   featureVector.resize(output_size_);
-  std::cout << "Resized" << std::endl;
   cudaMemcpy(featureVector.data(), output_buffer_, output_size_ * sizeof(float),
              cudaMemcpyDeviceToHost);
-  std::cout << "Memcpy" << std::endl;
   if (verbose_) {
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 6; j++) {
