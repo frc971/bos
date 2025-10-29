@@ -10,6 +10,7 @@ class RealSenseCamera {
   RealSenseCamera();
   ~RealSenseCamera();
   void getFrame(cv::Mat& mat);
+  static void showDevices();
 
  private:
   rs2::pipeline pipe_;

@@ -5,8 +5,15 @@
 namespace camera {
 
 RealSenseCamera::RealSenseCamera() : pipe_() {
-  pipe_.start();
+  /*showDevices();
+  exit(0);*/
+  rs2::config cfg;
+  cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 15);
+  std::cout << "cfg created" << std::endl;
+  pipe_.start(cfg);
+  std::cout << "pipe started" << std::endl;
   rs2::frameset test_frames = pipe_.wait_for_frames(5000);
+  std::cout << "testframes acquired" << std::endl;
 }
 
 RealSenseCamera::~RealSenseCamera() {
@@ -28,5 +35,29 @@ void RealSenseCamera::getFrame(cv::Mat& mat) {
                    CV_8UC3, (void*)color_frame.get_data(), cv::Mat::AUTO_STEP);
 
   cv::cvtColor(frameRGB, mat, cv::COLOR_RGB2BGR);
+}
+
+void RealSenseCamera::showDevices() {
+  rs2::context ctx;
+  auto devices = ctx.query_devices();
+  if (devices.size() == 0) {
+    std::cout << "No RealSense device connected!" << std::endl;
+    return;
+  }
+  auto dev = devices[0];
+  std::cout << "Device: " << dev.get_info(RS2_CAMERA_INFO_NAME) << std::endl;
+
+  // Query available stream profiles
+  auto sensors = dev.query_sensors();
+  for (auto sensor : sensors) {
+    auto profiles = sensor.get_stream_profiles();
+    for (auto profile : profiles) {
+      if (auto vp = profile.as<rs2::video_stream_profile>()) {
+        std::cout << "Stream: " << vp.stream_type() << " " << vp.width() << "x"
+                  << vp.height() << " @ " << vp.fps() << "fps "
+                  << " Format: " << vp.format() << std::endl;
+      }
+    }
+  }
 }
 }  // namespace camera

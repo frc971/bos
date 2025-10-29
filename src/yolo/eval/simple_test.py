@@ -8,7 +8,7 @@ from glob import glob
 from tqdm import tqdm
 from scipy.optimize import linear_sum_assignment
 
-ENGINE_PATH = "/bos/src/yolo/model/fifthYOLO.engine"
+ENGINE_PATH = "/bos/src/yolo/model/seventhYOLO.engine"
 DATASET_ROOT = "/home/nvidia/Documents/gamepiece-data"
 SPLIT = "test"
 IMG_SIZE = 640
@@ -338,6 +338,8 @@ def evaluate():
         predictions = process_predictions(output, scale_ratio, padding, orig_shape, 
                                          CONF_THRESH, apply_nms=True)
 
+        if (len(predictions) < 0): 
+            continue
         pred = predictions[0]
         cv2.rectangle(orig_image, (int(pred[0] * image.shape[1]), int(pred[1] * image.shape[0])), (int(pred[2] * image.shape[1]), int(pred[3] * image.shape[0])), (0, 255, 0), 2)
         cv2.imshow("Nothing", orig_image)
