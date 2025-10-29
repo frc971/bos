@@ -17,3 +17,4 @@ src/yolo/test_images
 output_image.png
 yoloing
 test_images
+docker
