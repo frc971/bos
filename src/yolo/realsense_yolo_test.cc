@@ -77,7 +77,7 @@ std::vector<float> SoftmaxResults(yolo::Yolo& model, const cv::Mat& mat,
 }
 
 int main() {
-  std::filesystem::path modelPath = "/bos/src/yolo/model/fifthYOLO.engine";
+  std::filesystem::path modelPath = "/bos/src/yolo/model/seventhYOLO.engine";
   std::cout << "Importing model from " << modelPath << std::endl;
   std::cout << "File actually exists: " << std::filesystem::exists(modelPath)
             << std::endl;
