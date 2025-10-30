@@ -72,15 +72,15 @@ int main() {
 
   localization::PositionSender position_sender(false);
 
-  std::thread usb0_thread(
-      run_estimator,
-      std::make_unique<camera::CVCamera>(cv::VideoCapture(
-          camera::camera_constants[camera::Camera::USB0].pipeline)),
-      read_intrinsics(
-          camera::camera_constants[camera::Camera::USB0].intrinsics_path),
-      read_extrinsics(
-          camera::camera_constants[camera::Camera::USB0].extrinsics_path),
-      std::ref(position_sender));
+  // std::thread usb0_thread(
+  //     run_estimator,
+  //     std::make_unique<camera::CVCamera>(cv::VideoCapture(
+  //         camera::camera_constants[camera::Camera::USB0].pipeline)),
+  //     read_intrinsics(
+  //         camera::camera_constants[camera::Camera::USB0].intrinsics_path),
+  //     read_extrinsics(
+  //         camera::camera_constants[camera::Camera::USB0].extrinsics_path),
+  //     std::ref(position_sender));
 
   std::thread usb1_thread(
       run_estimator,
