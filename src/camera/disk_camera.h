@@ -6,7 +6,7 @@
 
 namespace camera {
 
-class DiskCamera : Camera {
+class DiskCamera : ICamera {
  public:
   DiskCamera(std::string image_folder_path);
   void GetFrame(cv::Mat& frame);

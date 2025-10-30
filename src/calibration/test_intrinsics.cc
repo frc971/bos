@@ -8,9 +8,7 @@
 #include <sstream>
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
-#include "src/camera/imx296_camera.h"
 #include "src/camera/select_camera.h"
-#include "src/camera/usb_camera.h"
 
 using json = nlohmann::json;
 
@@ -33,8 +31,6 @@ void warmupCamera(std::string pipeline) {
   cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
 }
 int main() {
-  std::cout << "OpenCV version: " << CV_VERSION << std::endl;
-
   std::ifstream file("/bos/constants/usb_camera1_intrinsics.json");
   json intrinsics;
   file >> intrinsics;
@@ -48,11 +44,13 @@ int main() {
   camera::CscoreStreamer undistorted_streamer(
       camera::IMX296Streamer("undistorted_stream", 4972, 30));
 
-  camera::CVCamera camera((cv::VideoCapture(camera::usb_camera1)));
+  camera::Camera camera = camera::SelectCamera();
+  camera::CVCamera cap(
+      cv::VideoCapture(camera::camera_constants[camera].pipeline));
   cv::Mat frame;
 
   while (true) {
-    camera.GetFrame(frame);
+    cap.GetFrame(frame);
     raw_streamer.WriteFrame(frame);
 
     cv::Mat undistorted;

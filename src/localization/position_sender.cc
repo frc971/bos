@@ -6,6 +6,7 @@
 #include <networktables/NetworkTableInstance.h>
 #include <units/angle.h>
 #include <wpilibc/frc/Timer.h>
+#include <cmath>
 #include <string>
 #include "frc/DataLogManager.h"
 #include "src/localization/position.h"
@@ -36,7 +37,8 @@ void PositionSender::Send(
   if (mutex_.try_lock()) {
 
     for (size_t i = 0; i < detections.size(); i++) {
-      double variance = detections[i].distance * detections[i].distance;
+      double variance = std::pow(detections[i].distance, 1);
+      variance *= 0.5;
       double tag_estimation[5] = {
           detections[i].translation.x, detections[i].translation.y,
           detections[i].rotation.z, variance,
