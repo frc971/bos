@@ -1,21 +1,22 @@
 #include <iostream>
+#include <opencv2/videoio.hpp>
 #include "opencv2/imgproc/imgproc.hpp"
+#include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
-#include "src/camera/imx296_camera.h"
 #include "src/camera/select_camera.h"
 
 int main(int argc, char* argv[]) {
-  std::cout << "OpenCV version: " << CV_VERSION << std::endl;
-
-  camera::CVCamera camera = camera::SelectCamera();
+  camera::Camera camera = camera::SelectCamera();
+  camera::CVCamera cap(
+      cv::VideoCapture(camera::camera_constants[camera].pipeline));
 
   camera::CscoreStreamer streamer(
       camera::IMX296Streamer("focus_calibrate", 4971, 30));
 
   cv::Mat frame, gray, laplace;
   while (true) {
-    camera.GetFrame(frame);
+    cap.GetFrame(frame);
     streamer.WriteFrame(frame);
 
     cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
