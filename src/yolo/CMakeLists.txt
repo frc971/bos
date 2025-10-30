@@ -4,3 +4,5 @@ target_link_libraries(yolo PRIVATE ${OpenCV_LIBS} nvinfer nvinfer_plugin cudart)
 add_executable(realsense_yolo_test realsense_yolo_test.cc)
 target_link_libraries(realsense_yolo_test PRIVATE camera yolo)
 
+add_subdirectory(training)
+
