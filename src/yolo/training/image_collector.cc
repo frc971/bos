@@ -1,5 +1,6 @@
 #include <chrono>
 #include <ctime>
+#include <filesystem>
 #include <opencv2/opencv.hpp>
 #include <thread>
 #include "src/camera/realsense_camera.h"
@@ -11,19 +12,18 @@ int main() {
   int i = 0;
   while (true) {
     cv::Mat frame;
+    // cv::namedWindow("Captured Frame");
     rs_camera.getFrame(frame);
-    if (i % 10 == 0) {
-      cv::imshow("Display", frame);
-      cv::waitKey(0);
-      cv::destroyAllWindows();
-    }
+    /*cv::imshow("Captured Frame", frame);
+    cv::waitKey(0);*/
     std::cout << "Writing" << std::endl;
-    cv::imwrite("frame_" + std::to_string(localTime->tm_mday) + "_" +
+    cv::imwrite("/home/nvidia/Documents/collected_imgs/frame_" +
+                    std::to_string(localTime->tm_mday) + "_" +
                     std::to_string(localTime->tm_hour) + "_" +
                     std::to_string(localTime->tm_min) + "_" +
-                    std::to_string(i) + ".png",
+                    std::to_string(i) + ".bmp",
                 frame);
     i++;
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
 }

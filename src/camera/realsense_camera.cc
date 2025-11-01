@@ -8,7 +8,7 @@ RealSenseCamera::RealSenseCamera() : pipe_() {
   /*showDevices();
   exit(0);*/
   rs2::config cfg;
-  cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 15);
+  cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGB8, 30);
   std::cout << "cfg created" << std::endl;
   pipe_.start(cfg);
   std::cout << "pipe started" << std::endl;

@@ -13,6 +13,8 @@ static void drawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
   for (size_t i = 0; i < boxes.size(); i++) {
     cv::Scalar color(0, 255, 0);
     cv::rectangle(img, boxes[i], color, 2);
+    std::cout << "Class_ids[0]" << class_ids[0] << std::endl;
+    std::cout << "Confidences[0]" << confidences[0] << std::endl;
     std::string label =
         class_names[class_ids[i]] + " " + cv::format("%.2f", confidences[i]);
     int baseline = 0;
@@ -23,6 +25,7 @@ static void drawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
         img, cv::Point(boxes[i].x, boxes[i].y - label_size.height - baseline),
         cv::Point(boxes[i].x + label_size.width, boxes[i].y), color,
         cv::FILLED);
+    std::cout << "Writing: " << label << std::endl;
     cv::putText(img, label, cv::Point(boxes[i].x, boxes[i].y - baseline),
                 cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 1);
   }
@@ -77,7 +80,7 @@ std::vector<float> SoftmaxResults(yolo::Yolo& model, const cv::Mat& mat,
 }
 
 int main() {
-  std::filesystem::path modelPath = "/bos/src/yolo/model/eighthYOLO.engine";
+  std::filesystem::path modelPath = "/bos/src/yolo/model/ninthYOLO.engine";
   std::cout << "Importing model from " << modelPath << std::endl;
   std::cout << "File actually exists: " << std::filesystem::exists(modelPath)
             << std::endl;
@@ -87,22 +90,31 @@ int main() {
   std::vector<cv::Rect> bboxes(max_detections);
   std::vector<float> confidences(max_detections);
   std::vector<int> class_ids(max_detections);
-  std::vector<std::string> class_names = {"CORAL", "ALGAE"};
-  while (true) {
-    std::cout << 1 << std::endl;
-    cv::Mat mat;
-    rs_camera.getFrame(mat);
-    if (mat.empty()) {
-      std::cout << "Couldn't fetch frame properly" << std::endl;
-      return 1;
+  std::vector<std::string> class_names = {"Algae", "ALGAE", "Coral", "CORAL"};
+  const bool test_collected = false;
+  if (test_collected) {
+    for (const auto& entry : std::filesystem::directory_iterator(
+             "/home/nvidia/Documents/collected_imgs")) {
+      cv::Mat mat = cv::imread(entry.path().string());
+      SoftmaxResults(model, mat, bboxes, confidences, class_ids);
+      drawDetections(mat, bboxes, class_ids, confidences, class_names);
+      cv::imshow("Test detections", mat);
+      cv::waitKey(0);
+      cv::destroyAllWindows();
     }
-    std::cout << 2 << std::endl;
-    SoftmaxResults(model, mat, bboxes, confidences, class_ids);
-    std::cout << 3 << std::endl;
-    drawDetections(mat, bboxes, class_ids, confidences, class_names);
-    std::cout << 4 << std::endl;
-    cv::imshow("Test detections", mat);
-    cv::waitKey(0);
-    cv::destroyAllWindows();
+  } else {
+    while (true) {
+      cv::Mat mat;
+      rs_camera.getFrame(mat);
+      if (mat.empty()) {
+        std::cout << "Couldn't fetch frame properly" << std::endl;
+        return 1;
+      }
+      SoftmaxResults(model, mat, bboxes, confidences, class_ids);
+      drawDetections(mat, bboxes, class_ids, confidences, class_names);
+      cv::imshow("Test detections", mat);
+      cv::waitKey(0);
+      cv::destroyAllWindows();
+    }
   }
 }

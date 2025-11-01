@@ -8,7 +8,7 @@ from glob import glob
 from tqdm import tqdm
 from scipy.optimize import linear_sum_assignment
 
-ENGINE_PATH = "/bos/src/yolo/model/seventhYOLO.engine"
+ENGINE_PATH = "/bos/src/yolo/model/ninthYOLO.engine"
 DATASET_ROOT = "/home/nvidia/Documents/gamepiece-data"
 SPLIT = "test"
 IMG_SIZE = 640
@@ -239,34 +239,22 @@ def process_predictions(output, scale_ratio, padding, orig_shape, conf_thresh=0.
         if conf < conf_thresh:
             continue
 
-        print("Original")
-        print("x1: ", x1, "y1: ", y1, "x2: ", x2, "y2: ", y2)
-        
         # Convert from letterbox coordinates to original image coordinates
         x1 = (x1 - pad_left) / scale_ratio
         y1 = (y1 - pad_top) / scale_ratio
         x2 = (x2 - pad_left) / scale_ratio
         y2 = (y2 - pad_top) / scale_ratio
 
-        print("Depadded and unscaled")
-        print("x1: ", x1, "y1: ", y1, "x2: ", x2, "y2: ", y2)
-        
-        # Clip to image bounds
         x1 = max(0, min(x1, orig_width))
         y1 = max(0, min(y1, orig_height))
         x2 = max(0, min(x2, orig_width))
         y2 = max(0, min(y2, orig_height))
 
-        print("Bounding applied")
-        print("x1: ", x1, "y1: ", y1, "x2: ", x2, "y2: ", y2)
-
-        # Convert to normalized coordinates [0, 1]
         x1_norm = x1 / orig_width
         y1_norm = y1 / orig_height
         x2_norm = x2 / orig_width
         y2_norm = y2 / orig_height
 
-        print("x1_norm:", x1_norm,"y1_norm:", y1_norm,"x2_norm:", x2_norm,"y2_norm:", y2_norm)
         
         predictions.append([x1_norm, y1_norm, x2_norm, y2_norm, conf, int(class_id)])
     
@@ -338,7 +326,7 @@ def evaluate():
         predictions = process_predictions(output, scale_ratio, padding, orig_shape, 
                                          CONF_THRESH, apply_nms=True)
 
-        if (len(predictions) < 0): 
+        if (len(predictions) <= 0): 
             continue
         pred = predictions[0]
         cv2.rectangle(orig_image, (int(pred[0] * image.shape[1]), int(pred[1] * image.shape[0])), (int(pred[2] * image.shape[1]), int(pred[3] * image.shape[0])), (0, 255, 0), 2)
