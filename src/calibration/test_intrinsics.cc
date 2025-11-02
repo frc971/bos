@@ -31,7 +31,7 @@ void warmupCamera(std::string pipeline) {
   cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
 }
 int main() {
-  std::ifstream file("/bos/constants/usb_camera1_intrinsics.json");
+  std::ifstream file("/bos/constants/usb_camera0_intrinsics.json");
   json intrinsics;
   file >> intrinsics;
 
