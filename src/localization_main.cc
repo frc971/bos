@@ -47,11 +47,11 @@ json read_extrinsics(std::string path) {
   return extrinsics;
 }
 
-void run_estimator(std::unique_ptr<camera::CVCamera> cap, json intrinsics,
+void run_estimator(const int frame_width, const int frame_height, std::unique_ptr<camera::CVCamera> cap, json intrinsics,
                    json extrinsics,
                    localization::PositionSender& position_sender) {
 
-  localization::TagEstimator tag_estimator(1280, 720, intrinsics, extrinsics);
+  localization::TagEstimator tag_estimator(frame_width, frame_height, intrinsics, extrinsics);
 
   camera::CscoreStreamer streamer(
       camera::IMX296Streamer("frame_logger", 4971, 30));
@@ -74,6 +74,7 @@ int main() {
 
   std::thread usb0_thread(
       run_estimator,
+    640, 480,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::USB0].pipeline)),
       read_intrinsics(
@@ -82,17 +83,18 @@ int main() {
           camera::camera_constants[camera::Camera::USB0].extrinsics_path),
       std::ref(position_sender));
 
-  std::thread usb1_thread(
+  /*std::thread usb1_thread(
       run_estimator,
+    1280, 720,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::USB1].pipeline)),
       read_intrinsics(
           camera::camera_constants[camera::Camera::USB1].intrinsics_path),
       read_extrinsics(
           camera::camera_constants[camera::Camera::USB1].extrinsics_path),
-      std::ref(position_sender));
+      std::ref(position_sender));*/
 
-  usb1_thread.join();
+  usb0_thread.join();
 
   return 0;
 }
