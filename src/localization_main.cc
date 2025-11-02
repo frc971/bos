@@ -83,7 +83,7 @@ int main() {
           camera::camera_constants[camera::Camera::USB0].extrinsics_path),
       std::ref(position_sender));
 
-  /*std::thread usb1_thread(
+  std::thread usb1_thread(
       run_estimator,
     1280, 720,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
@@ -92,7 +92,7 @@ int main() {
           camera::camera_constants[camera::Camera::USB1].intrinsics_path),
       read_extrinsics(
           camera::camera_constants[camera::Camera::USB1].extrinsics_path),
-      std::ref(position_sender));*/
+      std::ref(position_sender));
 
   usb0_thread.join();
 
