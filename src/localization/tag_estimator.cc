@@ -144,7 +144,7 @@ TagEstimator::TagEstimator(uint image_width, uint image_height, json intrinsics,
       distortion_coefficients_(
           distortion_coefficients_from_json<cv::Mat>(intrinsics)),
       apriltag_dimensions_(apriltag_dimensions),
-      verbose_(verbose) {
+      verbose_(true) {
 
   apriltag_detector_ = apriltag_detector_create();
 
