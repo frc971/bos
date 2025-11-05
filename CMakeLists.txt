@@ -27,6 +27,7 @@ link_directories(/usr/lib/aarch64-linux-gnu/nvidia)
 find_package(wpilib REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(realsense2 REQUIRED)
 
 add_subdirectory(third_party/json)
 add_subdirectory(third_party/971apriltag)
