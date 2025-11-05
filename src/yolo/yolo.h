@@ -12,6 +12,14 @@ class Yolo {
   Yolo(std::string model_path, bool verbose = false);
   ~Yolo();
   std::vector<float> RunModel(const cv::Mat& frame);
+  std::vector<float> Postprocess(const cv::Mat& mat,
+                                 std::vector<cv::Rect>& bboxes,
+                                 std::vector<float>& confidences,
+                                 std::vector<int>& class_ids);
+  static void DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
+                             const std::vector<int>& class_ids,
+                             const std::vector<float>& confidences,
+                             const std::vector<std::string>& class_names);
 
  private:
   static void preprocessImage(const cv::Mat& frame, float* gpu_input,
