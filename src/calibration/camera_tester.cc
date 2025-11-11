@@ -12,8 +12,7 @@
 #include "src/camera/select_camera.h"
 
 int main() {
-  camera::CscoreStreamer streamer(
-      camera::IMX296Streamer("frame_logger", 4971, 30));
+  camera::CscoreStreamer streamer("frame_logger", 4971, 30, 1080, 1080, false);
 
   camera::Camera camera = camera::SelectCamera();
   camera::CVCamera cap(
