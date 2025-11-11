@@ -1,4 +1,5 @@
 #include "disk_camera.h"
+#include <filesystem>
 #include <opencv2/opencv.hpp>
 
 namespace camera {
@@ -10,7 +11,7 @@ void DiskCamera::GetFrame(cv::Mat& frame) {
 
   std::ostringstream filename;
   filename << image_folder_path_ << "/" << std::setfill('0') << std::setw(4)
-           << current_frame_ << ".jpg";
+           << current_frame_ << ".png";
   frame = cv::imread(filename.str());
 }
 
