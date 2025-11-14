@@ -17,10 +17,10 @@ constexpr double RadianToDegree(double radian) {
   return radian * (180 / M_PI);
 }
 
-PositionSender::PositionSender(bool verbose)
+PositionSender::PositionSender(std::string camera_name, bool verbose)
     : instance_(nt::NetworkTableInstance::GetDefault()), verbose_(verbose) {
   std::shared_ptr<nt::NetworkTable> table =
-      instance_.GetTable("Orin/PoseEstimate");
+      instance_.GetTable("Orin/PoseEstimate/" + camera_name);
 
   nt::StructTopic<frc::Pose2d> pose_topic =
       table->GetStructTopic<frc::Pose2d>("Pose");
