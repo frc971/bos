@@ -1,6 +1,7 @@
 #pragma once
 
 #include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
+#include <frc/geometry/Pose3d.h>
 #include <networktables/DoubleArrayTopic.h>
 #include <networktables/StructTopic.h>
 #include <nlohmann/json.hpp>
@@ -48,8 +49,7 @@ class TagEstimator {
   // should be pointer?
   // Changes the position estimate to be tag relative to absolute feild position
   tag_detection_t ApplyExtrinsics(tag_detection_t position) const;
-  cv::Mat GetOdometryRotationVector() const;
-  cv::Mat GetOdometryTranslationVector() const;
+  std::pair<cv::Mat, cv::Mat> GetTagRelitiveOdometry(int tag_id) const;
 
  private:
   json extrinsics_;

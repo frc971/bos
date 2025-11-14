@@ -206,11 +206,7 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
         imagePoints.emplace_back(gpu_detection->p[i][0],
                                  gpu_detection->p[i][1]);
       }
-      // cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
-      // cv::Mat tvec =
-      //     cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
-      cv::Mat rvec = GetOdometryRotationVector();
-      cv::Mat tvec = GetOdometryTranslationVector();
+      auto [tvec, rvec] = GetTagRelitiveOdometry(gpu_detection->id);
 
       cv::solvePnP(apriltag_dimensions_, imagePoints, camera_matrix_,
                    distortion_coefficients_, rvec, tvec, true,
@@ -327,22 +323,34 @@ tag_detection_t TagEstimator::ApplyExtrinsics(tag_detection_t position) const {
 // 3 -> rx
 // 4 -> ry
 // 5 -> rz
-cv::Mat TagEstimator::GetOdometryRotationVector() const {
-  std::vector<double> odometry_pose = odometry_pose_subscriber_.Get();
-  cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
-  rvec.at<double>(2) = odometry_pose[3];
-  rvec.at<double>(0) = odometry_pose[4];
-  rvec.at<double>(1) = odometry_pose[5];
-  return rvec;
-}
+// meters, radians
+std::pair<cv::Mat, cv::Mat> TagEstimator::GetTagRelitiveOdometry(
+    int tag_id) const {
+  std::vector<double> odometry_pose_raw = odometry_pose_subscriber_.Get();
+  frc::Transform3d odometry_pose(
+      frc::Translation3d(units::meter_t{odometry_pose_raw[0]},
+                         units::meter_t{odometry_pose_raw[1]},
+                         units::meter_t{odometry_pose_raw[2]}),
+      frc::Rotation3d(units::radian_t{odometry_pose_raw[3]},
+                      units::radian_t{odometry_pose_raw[4]},
+                      units::radian_t{odometry_pose_raw[5]}));
 
-cv::Mat TagEstimator::GetOdometryTranslationVector() const {
-  std::vector<double> odometry_pose = odometry_pose_subscriber_.Get();
+  frc::Pose3d tag_pose = apriltag_layout_.GetTagPose(tag_id).value();
+  frc::Pose3d robot_to_tag = tag_pose.TransformBy(odometry_pose.Inverse());
+
   cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);
-  tvec.at<double>(2) = odometry_pose[0];
-  tvec.at<double>(0) = odometry_pose[1];
-  tvec.at<double>(1) = odometry_pose[2];
-  return tvec;
-}
+  tvec.at<double>(2) = robot_to_tag.Translation().X().value();
+  tvec.at<double>(0) = robot_to_tag.Translation().Y().value();
+  tvec.at<double>(1) = robot_to_tag.Translation().Z().value();
 
+  cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
+  rvec.at<double>(2) = robot_to_tag.Rotation().X().value();
+  rvec.at<double>(0) = robot_to_tag.Rotation().Y().value();
+  rvec.at<double>(1) = robot_to_tag.Rotation().Z().value();
+
+  std::cout << "rvec = " << rvec << std::endl;
+  std::cout << "tvec = " << tvec << std::endl;
+
+  return std::pair<cv::Mat, cv::Mat>(tvec, rvec);
+}
 }  // namespace localization
