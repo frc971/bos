@@ -24,11 +24,12 @@ link_directories(/usr/local/cuda-12.6/compat)
 link_directories(/usr/lib/aarch64-linux-gnu/nvidia)
 
 # find_package(wpilib REQUIRED)
-find_package(OpenCV REQUIRED)
-find_package(Eigen3 REQUIRED)
+# find_package(OpenCV REQUIRED)
+# find_package(Eigen3 REQUIRED)
+message(STATUS "Eigen version found: ${Eigen3_VERSION}")
 
 add_subdirectory(third_party/json)
-# add_subdirectory(third_party/971apriltag)
+add_subdirectory(third_party/971apriltag)
 # add_subdirectory(third_party/kalman-cpp)
 
 add_compile_options(-Wno-psabi)

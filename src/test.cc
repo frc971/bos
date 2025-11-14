@@ -1,14 +1,14 @@
-#include <frc/apriltag/AprilTagFieldLayout.h>
+// #include <frc/apriltag/AprilTagFieldLayout.h>
 #include <frc/geometry/Pose2d.h>
 #include <frc/geometry/Pose3d.h>
 #include <frc/geometry/Rotation2d.h>
 #include <frc/geometry/Rotation3d.h>
-#include <Eigen/Dense>  // easiest: pulls in everything you need
+// #include <Eigen/Dense>  // easiest: pulls in everything you need*/
 #include <iomanip>
 #include <iostream>
-#include "src/localization/position.h"
-#include "src/localization/tag_estimator.h"
-
+// #include "src/localization/position.h"
+//  #include "src/localization/tag_estimator.h"
+/*
 void PrintPose3d(const frc::Pose3d& pose) {
   // Extract translation (in meters)
   double x = pose.X().value();
@@ -72,4 +72,7 @@ int main() {
   frc::Transform3d camera_to_robot(robot_to_camera.Inverse());
   frc::Pose3d feild_to_robot = feild_to_cacmera.TransformBy(camera_to_robot);
   PrintPose3d(feild_to_robot);
+}*/
+int main() {
+  std::cout << "Fake main" << std::endl;
 }
