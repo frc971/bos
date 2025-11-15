@@ -9,6 +9,7 @@ int main() {
   const int snapshots_per = 5;
   const int step_distance = 3; // inches because I don't have a meter stick :(
   const int num_steps = 20;
+  const int start_dist = 39; // inches
   std::vector<std::vector<float>> distances(num_steps, std::vector<float>(snapshots_per));
   for (std::vector<float>& position_results : distances) {
     for (float& distance : position_results) {
@@ -33,18 +34,31 @@ int main() {
       } while (distance == 0 || distance > 3.5);
     }
     std::cout << "Moving on to the next batch, please go " << step_distance << " inches forward. Waiting for input... " << std::endl;
-    int idk_how_to_c;
-    std::cin >> idk_how_to_c;
+    std::string tmp;
+    std::getline(std::cin, tmp);
+    if (tmp.starts_with('q')) {
+      break;
+    }
   }
-  std::ofstream out("distance_results.txt");
+  std::cout << "distances size: " << distances.size() << std::endl;
+  for (const auto& v : distances) {
+      std::cout << "  inner size: " << v.size() << std::endl;
+  }
+  std::ofstream out("/bos/src/yolo/distance_results.txt");
   if (out.is_open()) {
+    int true_dist_inches = start_dist;
     for (const std::vector<float>& position_results : distances) {
+      out << "===========Results at " << true_dist_inches << " inches=============";
       for (const float& distance : position_results) {
         out << distance << " ";
       }
       out << std::endl;
+      true_dist_inches -= step_distance;
     }
     out.close();
+  }
+  else {
+    std::cerr << "FAILED TO OPEN FILE" << std::endl;
   }
   for (std::vector<float>& position_results : distances) {
     for (float& distance : position_results) {
