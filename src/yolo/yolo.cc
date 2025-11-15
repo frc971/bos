@@ -122,7 +122,7 @@ Yolo::Yolo(std::string model_path, bool verbose) : verbose_(verbose) {
 
 std::vector<float> Yolo::RunModel(const cv::Mat& frame) {
   bool status;
-  preprocessImage(frame, input_buffer_, input_dims_);
+  PreprocessImage(frame, input_buffer_, input_dims_);
   status =
       context_->setTensorAddress(engine_->getIOTensorName(0), input_buffer_);
   assert(status);
