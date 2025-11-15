@@ -7,7 +7,7 @@ target_link_libraries(realsense_yolo_test PRIVATE camera yolo)
 # add_executable(angle_tester angle_tester.cc)
 # target_link_libraries(angle_tester PRIVATE camera yolo)
 
-# add_executable(distance_tester distance_tester.cc)
-# target_link_libraries(distance_tester PRIVATE camera yolo)
+add_executable(distance_acquirer distance_acquirer.cc)
+target_link_libraries(distance_acquirer PRIVATE camera yolo)
 
 add_subdirectory(training)
