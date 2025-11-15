@@ -10,4 +10,7 @@ target_link_libraries(realsense_yolo_test PRIVATE camera yolo)
 add_executable(distance_acquirer distance_acquirer.cc)
 target_link_libraries(distance_acquirer PRIVATE camera yolo)
 
+add_executable(ir_tuner ir_tuner.cc)
+target_link_libraries(ir_tuner PRIVATE camera)
+
 add_subdirectory(training)
