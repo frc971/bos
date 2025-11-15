@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 include_directories(. /usr/local/cuda/include ${OpenCV_INCLUDE_DIRS})
 
 find_package(wpilib REQUIRED)
+message(STATUS "Eigen version found in 971apriltag: ${Eigen3_VERSION}")
 
 add_library(971apriltag_dep STATIC apriltag.c)
 
