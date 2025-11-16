@@ -19,6 +19,7 @@ binaries=(
   "build/src/calibration/frame_logger"
   "build/src/calibration/intrinsics_calibrate"
   "build/src/calibration/test_intrinsics"
+  "build/src/test/apriltag_detect_test"
 )
 for binary in "${binaries[@]}"; do
   if [[ -f "$binary" ]]; then
