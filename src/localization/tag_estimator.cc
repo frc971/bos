@@ -189,7 +189,6 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
     for (int i = 0; i < zarray_size(detections); ++i) {
       apriltag_detection_t* gpu_detection;
       zarray_get(detections, i, &gpu_detection);
-      cv::Point point(gpu_detection->c[0], gpu_detection->c[1]);
 
       std::vector<cv::Point2f> imagePoints;
       for (int i = 0; i < 4; ++i) {
