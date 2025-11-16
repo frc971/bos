@@ -58,7 +58,7 @@ int main() {
   auto camera_config = camera::Camera::USB0;
 
   auto intrinsics =
-      read_intrinsics(camera::camera_constants[camera_config].pipeline);
+      read_intrinsics(camera::camera_constants[camera_config].intrinsics_path);
 
   auto gpu_detector_ = new frc971::apriltag::GpuDetector(
       640, 480, apriltag_detector_, camera_matrix_from_json(intrinsics),
