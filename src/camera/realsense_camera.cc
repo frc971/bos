@@ -56,11 +56,10 @@ void RealSenseCamera::getFrame(cv::Mat& color_mat, cv::Mat& depth_mat) {
   cv::Mat frameRGB(cv::Size(color_frame.get_width(), color_frame.get_height()),
                    CV_8UC3, (void*)color_frame.get_data(), cv::Mat::AUTO_STEP);
 
-  std::cout << "MIDDLE_DIST: " << depth_frame.get_distance(depth_frame.get_width()/2, depth_frame.get_height()/2);
-
   cv::cvtColor(frameRGB, color_mat, cv::COLOR_RGB2BGR);
-  cv::Mat z16 = cv::Mat(cv::Size(depth_frame.get_width(), depth_frame.get_height()),
-                   CV_16UC1, (void*)depth_frame.get_data(), cv::Mat::AUTO_STEP);
+  cv::Mat z16 =
+      cv::Mat(cv::Size(depth_frame.get_width(), depth_frame.get_height()),
+              CV_16UC1, (void*)depth_frame.get_data(), cv::Mat::AUTO_STEP);
   z16.convertTo(depth_mat, CV_32FC1, depth_frame.get_units());
 }
 
