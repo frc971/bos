@@ -31,8 +31,30 @@ int main() {
         }
         break;
       }
-      const float distance = depth.at<float>(bboxes[i].y + bboxes[i].height / 2,
-                                             bboxes[i].x + bboxes[i].width / 2);
+      const int c_y = bboxes[i].y + bboxes[i].height / 2;
+      const int c_x = bboxes[i].x + bboxes[i].width / 2;
+      float distance = depth.at<float>(c_y, c_x);
+      if (distance == 0) {
+        for (int j = 0; distance == 0 && j < bboxes[i].width / 2;
+             j += bboxes[i].width / 10) {
+          distance = depth.at<float>(c_y, c_x + j);
+          if (distance == 0)
+            distance = depth.at<float>(c_y, c_x - j);
+        }
+        for (int j = 0; distance == 0 && j < bboxes[i].height / 2;
+             j += bboxes[i].height / 10) {
+          distance = depth.at<float>(c_y + j, c_x);
+          if (distance == 0)
+            distance = depth.at<float>(c_y - j, c_x);
+        }
+        if (distance == 0) {
+          std::cout << "Couldn't find reasonable distance value after scan, "
+                       "discarding this one"
+                    << std::endl;
+          continue;
+        }
+      }
+
       std::cout << "Detected a " << class_names[class_ids[i]] << " " << distance
                 << " meters away" << std::endl;
     }
