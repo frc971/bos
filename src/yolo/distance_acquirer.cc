@@ -28,9 +28,22 @@ int main() {
     model.Postprocess(color_mat, bboxes, confidences, class_ids);
     yolo::Yolo::DrawDetections(color_mat, bboxes, class_ids, confidences,
                                class_names);
+    const int c_x = bboxes[0].x + bboxes[0].width / 2;
+    const int c_y = bboxes[0].y + bboxes[0].height / 2;
+
+    std::string depth_label =
+        "Depth " + std::to_string(depth_mat.at<float>(c_x, c_y));
+    std::cout << "Considering pixel: (" << c_x << ", " << c_y << ")"
+              << std::endl;
+    cv::Size label_size =
+        cv::getTextSize(depth_label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, 0);
+    cv::putText(
+        color_mat, depth_label,
+        cv::Point(c_x - label_size.width / 2, c_y + label_size.height / 2),
+        cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 1);
+
     cv::imshow("Test detections", color_mat);
     cv::waitKey(0);
     cv::destroyAllWindows();
-    std::cout << "Center distance: " << depth_mat.at<float>(depth_mat.rows/2,depth_mat.cols/2) << std::endl;
   }
 }
