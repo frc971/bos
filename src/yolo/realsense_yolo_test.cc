@@ -18,6 +18,7 @@ int main() {
   std::vector<int> class_ids(max_detections);
   std::vector<std::string> class_names = {"Algae", "ALGAE", "Coral", "CORAL"};
   const bool test_collected = false;
+  cv::Mat color;
   if (test_collected) {
     for (const auto& entry : std::filesystem::directory_iterator(
              "/home/nvidia/Documents/collected_imgs")) {
@@ -31,16 +32,15 @@ int main() {
     }
   } else {
     while (true) {
-      cv::Mat mat;
-      rs_camera.getFrame(mat);
-      if (mat.empty()) {
+      rs_camera.getFrame(color);
+      if (color.empty()) {
         std::cout << "Couldn't fetch frame properly" << std::endl;
         return 1;
       }
-      model.Postprocess(mat, bboxes, confidences, class_ids);
-      yolo::Yolo::DrawDetections(mat, bboxes, class_ids, confidences,
+      model.Postprocess(color, bboxes, confidences, class_ids);
+      yolo::Yolo::DrawDetections(color, bboxes, class_ids, confidences,
                                  class_names);
-      cv::imshow("Test detections", mat);
+      cv::imshow("Test detections", color);
       cv::waitKey(0);
       cv::destroyAllWindows();
     }
