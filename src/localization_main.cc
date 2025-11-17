@@ -1,5 +1,3 @@
-#include <frc/DataLogManager.h>
-#include <networktables/NetworkTableInstance.h>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -11,18 +9,9 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
+#include "src/nt_utils.h"
 
 using json = nlohmann::json;
-
-void start_networktables() {
-  nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
-  inst.StopClient();
-  inst.StopLocal();
-  inst.StartClient4("orin_localization");
-  inst.SetServerTeam(971);
-  frc::DataLogManager::Start("/bos/logs/");
-  std::cout << "Started networktables!" << std::endl;
-}
 
 json read_intrinsics(std::string path) {
   json intrinsics;
@@ -70,7 +59,7 @@ void run_estimator(std::string name, const int frame_width,
 
 int main() {
 
-  start_networktables();
+  NTUtils::start_networktables();
 
   localization::PositionSender position_sender(true);
 
