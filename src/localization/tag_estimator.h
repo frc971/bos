@@ -1,6 +1,9 @@
 #pragma once
 
 #include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
+#include <frc/geometry/Pose3d.h>
+#include <networktables/DoubleArrayTopic.h>
+#include <networktables/StructTopic.h>
 #include <nlohmann/json.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
@@ -46,6 +49,7 @@ class TagEstimator {
   // should be pointer?
   // Changes the position estimate to be tag relative to absolute feild position
   tag_detection_t ApplyExtrinsics(tag_detection_t position) const;
+  std::pair<cv::Mat, cv::Mat> GetTagRelitiveOdometry(int tag_id) const;
 
  private:
   json extrinsics_;
@@ -55,6 +59,7 @@ class TagEstimator {
   cv::Mat camera_matrix_;
   cv::Mat distortion_coefficients_;
   std::vector<cv::Point3f> apriltag_dimensions_;
+  nt::DoubleArraySubscriber odometry_pose_subscriber_;
   bool verbose_;
 };
 }  // namespace localization

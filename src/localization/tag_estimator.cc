@@ -3,12 +3,14 @@
 #include <frc/apriltag/AprilTagFields.h>
 #include <frc/geometry/Pose3d.h>
 #include <frc/geometry/Rotation3d.h>
+#include <networktables/NetworkTableEntry.h>
 #include <ntcore_cpp_types.h>
 #include <units/angle.h>
 #include <units/length.h>
 #include <wpilibc/frc/Timer.h>
 #include <cmath>
 #include <fstream>
+#include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 #include "src/localization/position.h"
 
@@ -144,7 +146,7 @@ TagEstimator::TagEstimator(uint image_width, uint image_height, json intrinsics,
       distortion_coefficients_(
           distortion_coefficients_from_json<cv::Mat>(intrinsics)),
       apriltag_dimensions_(apriltag_dimensions),
-      verbose_(true) {
+      verbose_(verbose) {
 
   apriltag_detector_ = apriltag_detector_create();
 
@@ -160,6 +162,13 @@ TagEstimator::TagEstimator(uint image_width, uint image_height, json intrinsics,
       camera_matrix_from_json<frc971::apriltag::CameraMatrix>(intrinsics),
       distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
           intrinsics));
+
+  nt::NetworkTableInstance instance(nt::NetworkTableInstance::GetDefault());
+  std::shared_ptr<nt::NetworkTable> table = instance.GetTable("Orin/Odometry");
+
+  nt::DoubleArrayTopic odometry_pose_topic = table->GetDoubleArrayTopic("Pose");
+  odometry_pose_subscriber_ =
+      odometry_pose_topic.Subscribe(std::vector<double>{});
 }
 
 TagEstimator::~TagEstimator() {
@@ -196,12 +205,11 @@ std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
         imagePoints.emplace_back(gpu_detection->p[i][0],
                                  gpu_detection->p[i][1]);
       }
-      cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
-      cv::Mat tvec =
-          cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
+      auto [tvec, rvec] = GetTagRelitiveOdometry(gpu_detection->id);
+
       cv::solvePnP(apriltag_dimensions_, imagePoints, camera_matrix_,
-                   distortion_coefficients_, rvec, tvec, false,
-                   cv::SOLVEPNP_IPPE_SQUARE);
+                   distortion_coefficients_, rvec, tvec, true,
+                   cv::SOLVEPNP_ITERATIVE);
 
       tag_detection_t estimate;
       // Currently we do not use transation z, rotation x and rotation y
@@ -308,4 +316,40 @@ tag_detection_t TagEstimator::ApplyExtrinsics(tag_detection_t position) const {
   return position;
 }
 
+// 0 -> tx
+// 1 -> ty
+// 2 -> tz
+// 3 -> rx
+// 4 -> ry
+// 5 -> rz
+// meters, radians
+std::pair<cv::Mat, cv::Mat> TagEstimator::GetTagRelitiveOdometry(
+    int tag_id) const {
+  std::vector<double> odometry_pose_raw = odometry_pose_subscriber_.Get();
+  frc::Transform3d odometry_pose(
+      frc::Translation3d(units::meter_t{odometry_pose_raw[0]},
+                         units::meter_t{odometry_pose_raw[1]},
+                         units::meter_t{odometry_pose_raw[2]}),
+      frc::Rotation3d(units::radian_t{odometry_pose_raw[3]},
+                      units::radian_t{odometry_pose_raw[4]},
+                      units::radian_t{odometry_pose_raw[5]}));
+
+  frc::Pose3d tag_pose = apriltag_layout_.GetTagPose(tag_id).value();
+  frc::Pose3d robot_to_tag = tag_pose.TransformBy(odometry_pose.Inverse());
+
+  cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);
+  tvec.at<double>(2) = robot_to_tag.Translation().X().value();
+  tvec.at<double>(0) = robot_to_tag.Translation().Y().value();
+  tvec.at<double>(1) = robot_to_tag.Translation().Z().value();
+
+  cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
+  rvec.at<double>(2) = robot_to_tag.Rotation().X().value();
+  rvec.at<double>(0) = robot_to_tag.Rotation().Y().value();
+  rvec.at<double>(1) = robot_to_tag.Rotation().Z().value();
+
+  std::cout << "rvec = " << rvec << std::endl;
+  std::cout << "tvec = " << tvec << std::endl;
+
+  return std::pair<cv::Mat, cv::Mat>(tvec, rvec);
+}
 }  // namespace localization
