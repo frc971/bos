@@ -2,12 +2,16 @@
 
 cmake --build build
 
-HOST="$1"
+CMD="$1"
+REMOTE="$2"
 
-if [ -z "$HOST" ]; then
-  echo "Usage: $0 <host>"
-  exit 1
-fi
+# HOST="$2"
+# HOST="localhost"
+#
+# if [ -z "$HOST" ]; then
+#   echo "Usage: $0 <host>"
+#   exit 1
+# fi
 
 mkdir -p bin
 
@@ -33,5 +37,5 @@ done
 
 find . -type f \( -name "*.so" -o -name "*.a" \) -exec cp {} bin/ \;
 
-rsync -avz bin "$HOST":/bos
-rsync -avz constants "$HOST":/bos
+rsync -avz -e "$CMD" bin "$REMOTE":/bos
+rsync -avz -e "$CMD" constants "$REMOTE":/bos
