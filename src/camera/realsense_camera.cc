@@ -19,7 +19,7 @@ RealSenseCamera::~RealSenseCamera() {
   pipe_.stop();
 }
 
-void RealSenseCamera::getFrame(cv::Mat& mat) {
+void RealSenseCamera::GetFrame(cv::Mat& mat) {
   for (int i = 0; i < 14; i++) {
     rs2::frameset frames = pipe_.wait_for_frames(5000);
   }
@@ -36,7 +36,7 @@ void RealSenseCamera::getFrame(cv::Mat& mat) {
   cv::cvtColor(frameRGB, mat, cv::COLOR_RGB2BGR);
 }
 
-void RealSenseCamera::getFrame(cv::Mat& color_mat, cv::Mat& depth_mat) {
+void RealSenseCamera::GetFrame(cv::Mat& color_mat, cv::Mat& depth_mat) {
   for (int i = 0; i < 14; i++) {
     rs2::frameset frames = pipe_.wait_for_frames(5000);
   }

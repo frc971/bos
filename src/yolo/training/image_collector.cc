@@ -13,7 +13,7 @@ int main() {
   while (true) {
     cv::Mat frame;
     // cv::namedWindow("Captured Frame");
-    rs_camera.getFrame(frame);
+    rs_camera.GetFrame(frame);
     /*cv::imshow("Captured Frame", frame);
     cv::waitKey(0);*/
     std::cout << "Writing" << std::endl;

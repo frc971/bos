@@ -3,14 +3,15 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
+#include "src/camera/camera.h"
 namespace camera {
 
-class RealSenseCamera {
+class RealSenseCamera : public ICamera {
  public:
   RealSenseCamera();
   ~RealSenseCamera();
-  void getFrame(cv::Mat& mat);
-  void getFrame(cv::Mat& color_mat, cv::Mat& depth_mat);
+  void GetFrame(cv::Mat& mat);
+  void GetFrame(cv::Mat& color_mat, cv::Mat& depth_mat);
   static void showDevices();
 
  private:

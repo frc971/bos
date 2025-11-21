@@ -16,7 +16,7 @@ int main() {
       do {
         cv::Mat color_mat;
         cv::Mat depth_mat;
-        rs_camera.getFrame(color_mat, depth_mat);
+        rs_camera.GetFrame(color_mat, depth_mat);
         if (color_mat.empty() || depth_mat.empty()) {
           std::cout << "Couldn't fetch frame properly" << std::endl;
           return 1;

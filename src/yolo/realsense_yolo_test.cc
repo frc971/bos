@@ -32,7 +32,7 @@ int main() {
     }
   } else {
     while (true) {
-      rs_camera.getFrame(color);
+      rs_camera.GetFrame(color);
       if (color.empty()) {
         std::cout << "Couldn't fetch frame properly" << std::endl;
         return 1;

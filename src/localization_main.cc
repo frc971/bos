@@ -13,29 +13,6 @@
 
 using json = nlohmann::json;
 
-json read_intrinsics(std::string path) {
-  json intrinsics;
-
-  std::ifstream intrinsics_file(path);
-  if (!intrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open intrinsics file: " << path << std::endl;
-  } else {
-    intrinsics_file >> intrinsics;
-  }
-  return intrinsics;
-}
-
-json read_extrinsics(std::string path) {
-  json extrinsics;
-  std::ifstream extrinsics_file(path);
-  if (!extrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open extrinsics file: " << path << std::endl;
-  } else {
-    extrinsics_file >> extrinsics;
-  }
-  return extrinsics;
-}
-
 void run_estimator(std::string name, const int frame_width,
                    const int frame_height,
                    std::unique_ptr<camera::CVCamera> cap, json intrinsics,
@@ -67,9 +44,9 @@ int main() {
       run_estimator, "back_left", 640, 480,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::USB0].pipeline)),
-      read_intrinsics(
+      camera::ICamera::read_intrinsics(
           camera::camera_constants[camera::Camera::USB0].intrinsics_path),
-      read_extrinsics(
+      camera::ICamera::read_extrinsics(
           camera::camera_constants[camera::Camera::USB0].extrinsics_path),
       std::ref(position_sender), 4971);
 
@@ -77,9 +54,9 @@ int main() {
       run_estimator, "back_right", 1280, 720,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::USB1].pipeline)),
-      read_intrinsics(
+      camera::ICamera::read_intrinsics(
           camera::camera_constants[camera::Camera::USB1].intrinsics_path),
-      read_extrinsics(
+      camera::ICamera::read_extrinsics(
           camera::camera_constants[camera::Camera::USB1].extrinsics_path),
       std::ref(position_sender), 4972);
 
