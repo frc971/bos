@@ -72,8 +72,6 @@ void Yolo::PreprocessImage(const cv::Mat& img, float* gpu_input,
   // Normalize to 0-1
   cv::cuda::GpuMat normalized;
   padded.convertTo(normalized, CV_32FC3, 1.f / 255.f);
-  cv::Mat cpu_mat;
-  normalized.download(cpu_mat);
 
   int channel_size = target_size * target_size;
   // Split into channels (HWC -> CHW)

@@ -8,16 +8,16 @@ import os
 def main():
     # Path to dataset.yaml
     data_yaml = "/mnt/c/Users/Yasen/Documents/more-gamepiece-data/data.yaml"
-    device_num = 0;
+    device_num = 0
 
-    model = YOLO("/home/yasen/Training/runs/detect/train/weights/best.pt")
+    model = YOLO("runs/detect/train/weights/best.pt")  # Use relative path for portability
 
     print("="*60)
     print("Starting YOLO11n Training")
     print("="*60)
 
     # Train the model
-    results = model.train(
+    model.train(
         data=data_yaml,
         epochs=100,
         imgsz=640,
