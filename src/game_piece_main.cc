@@ -13,7 +13,7 @@
 
 static constexpr int MAX_DETECTIONS = 6;
 
-void run_gamepiece_detect(yolo::Yolo& model, std::unique_ptr<camera::CVCamera> camera, nt::StructTopic<frc::Pose2d>& coral_topic, nt::StructTopic<frc::Pose2d>& algae_topic/*, nlohmann::json intrinsics, nlohmann::json extrinsics*/) {
+void run_gamepiece_detect(yolo::Yolo& model, std::unique_ptr<camera::CVCamera> camera, nt::StructTopic<frc::Pose2d>& coral_topic, nt::StructTopic<frc::Pose2d>& algae_topic, nlohmann::json intrinsics, nlohmann::json extrinsics) {
   
 }
 
@@ -102,7 +102,10 @@ int main() {
     camera_threads.reserve(2);
     std::unique_ptr<camera::CVCamera> usb0 = std::make_unique<camera::CVCamera>(cv::VideoCapture(camera::camera_constants[camera::Camera::USB0].pipeline));
 std::unique_ptr<camera::CVCamera> usb1 = std::make_unique<camera::CVCamera>(cv::VideoCapture(camera::camera_constants[camera::Camera::USB0].pipeline));
-    camera_threads.emplace_back(run_gamepiece_detect, std::ref(model), std::move(usb0), std::ref(coral_topic), std::ref(algae_topic));
+    camera_threads.emplace_back(run_gamepiece_detect, std::ref(model), std::move(usb0), std::ref(coral_topic), std::ref(algae_topic), camera::ICamera::read_intrinsics(
+          camera::camera_constants[camera::Camera::USB0].intrinsics_path),
+      camera::ICamera::read_extrinsics(
+          camera::camera_constants[camera::Camera::USB0].extrinsics_path));
     // camera_threads.emplace_back(run_gamepiece_detect, std::ref(model), usb1, coral_pub, algae_pub);
 
   }
