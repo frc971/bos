@@ -13,7 +13,7 @@
 
 static constexpr int MAX_DETECTIONS = 6;
 
-void run_gamepiece_detect(yolo::Yolo& model, std::unique_ptr<camera::CVCamera> camera/*, nt::StructPublisher<frc::Pose2d> coral_pub, nt::StructPublisher<frc::Pose2d> algae_pub, nlohmann::json intrinsics, nlohmann::json extrinsics*/) {
+void run_gamepiece_detect(yolo::Yolo& model, std::unique_ptr<camera::CVCamera> camera, nt::StructTopic<frc::Pose2d>& coral_topic, nt::StructTopic<frc::Pose2d>& algae_topic/*, nlohmann::json intrinsics, nlohmann::json extrinsics*/) {
   
 }
 
@@ -91,9 +91,7 @@ int main() {
   std::shared_ptr<nt::NetworkTable> coral_table = inst.GetTable("Orin/Gamepiece/coral");
   std::shared_ptr<nt::NetworkTable> algae_table = inst.GetTable("Orin/Gamepiece/algae");
   nt::StructTopic<frc::Pose2d> coral_topic = coral_table->GetStructTopic<frc::Pose2d>("Pose");
-  nt::StructPublisher coral_pub = coral_topic.Publish();
   nt::StructTopic<frc::Pose2d> algae_topic = algae_table->GetStructTopic<frc::Pose2d>("Pose");
-  nt::StructPublisher algae_pub = algae_topic.Publish();
 
   std::vector<std::thread> camera_threads;
   const bool using_rs = true;
@@ -104,7 +102,7 @@ int main() {
     camera_threads.reserve(2);
     std::unique_ptr<camera::CVCamera> usb0 = std::make_unique<camera::CVCamera>(cv::VideoCapture(camera::camera_constants[camera::Camera::USB0].pipeline));
 std::unique_ptr<camera::CVCamera> usb1 = std::make_unique<camera::CVCamera>(cv::VideoCapture(camera::camera_constants[camera::Camera::USB0].pipeline));
-    camera_threads.emplace_back(run_gamepiece_detect, std::ref(model), std::move(usb0)/*, coral_pub, algae_pub*/);
+    camera_threads.emplace_back(run_gamepiece_detect, std::ref(model), std::move(usb0), std::ref(coral_topic), std::ref(algae_topic));
     // camera_threads.emplace_back(run_gamepiece_detect, std::ref(model), usb1, coral_pub, algae_pub);
 
   }
