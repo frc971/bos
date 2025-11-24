@@ -9,6 +9,7 @@
 #include <wpilibc/frc/Timer.h>
 #include <cmath>
 #include <fstream>
+#include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 #include "src/localization/position.h"
 
