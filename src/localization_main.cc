@@ -50,8 +50,9 @@ json read_extrinsics(std::string path) {
 void run_estimator(std::string name, const int frame_width,
                    const int frame_height,
                    std::unique_ptr<camera::CVCamera> cap, json intrinsics,
-                   json extrinsics,
-                   localization::PositionSender& position_sender, int port) {
+                   json extrinsics, int port) {
+
+  localization::PositionSender position_sender(name);
 
   localization::TagEstimator tag_estimator(frame_width, frame_height,
                                            intrinsics, extrinsics);
@@ -72,27 +73,25 @@ int main() {
 
   start_networktables();
 
-  localization::PositionSender position_sender(true);
-
   std::thread usb0_thread(
-      run_estimator, "back_left", 640, 480,
+      run_estimator, "BackLeft", 640, 480,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::USB0].pipeline)),
       read_intrinsics(
           camera::camera_constants[camera::Camera::USB0].intrinsics_path),
       read_extrinsics(
           camera::camera_constants[camera::Camera::USB0].extrinsics_path),
-      std::ref(position_sender), 4971);
+      4971);
 
   std::thread usb1_thread(
-      run_estimator, "back_right", 1280, 720,
+      run_estimator, "BackRight", 1280, 720,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::USB1].pipeline)),
       read_intrinsics(
           camera::camera_constants[camera::Camera::USB1].intrinsics_path),
       read_extrinsics(
           camera::camera_constants[camera::Camera::USB1].extrinsics_path),
-      std::ref(position_sender), 4972);
+      4972);
 
   usb1_thread.join();
 

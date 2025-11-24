@@ -12,7 +12,7 @@
 namespace localization {
 class PositionSender {
  public:
-  PositionSender(bool verbose = false);
+  PositionSender(std::string camera_name, bool verbose = false);
   void Send(pose2d_t position_estimate, pose2d_t variance);
   void Send(std::vector<localization::tag_detection_t> detections);
 
