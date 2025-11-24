@@ -13,16 +13,50 @@
 
 using json = nlohmann::json;
 
-void run_estimator(std::string name, const int frame_width,
+void start_networktables() {
+  nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
+  inst.StopClient();
+  inst.StopLocal();
+  inst.StartClient4("orin_localization");
+  inst.SetServerTeam(971);
+  frc::DataLogManager::Start("/bos/logs/");
+  std::cout << "Started networktables!" << std::endl;
+}
+
+json read_intrinsics(std::string path) {
+  json intrinsics;
+
+  std::ifstream intrinsics_file(path);
+  if (!intrinsics_file.is_open()) {
+    std::cerr << "Error: Cannot open intrinsics file: " << path << std::endl;
+  } else {
+    intrinsics_file >> intrinsics;
+  }
+  return intrinsics;
+}
+
+json read_extrinsics(std::string path) {
+  json extrinsics;
+  std::ifstream extrinsics_file(path);
+  if (!extrinsics_file.is_open()) {
+    std::cerr << "Error: Cannot open extrinsics file: " << path << std::endl;
+  } else {
+    extrinsics_file >> extrinsics;
+  }
+  return extrinsics;
+}
+
+void run_estimator(std::string camera_name, const int frame_width,
                    const int frame_height,
                    std::unique_ptr<camera::CVCamera> cap, json intrinsics,
-                   json extrinsics,
-                   localization::PositionSender& position_sender, int port) {
+                   json extrinsics, uint port) {
 
   localization::TagEstimator tag_estimator(frame_width, frame_height,
                                            intrinsics, extrinsics);
+  localization::PositionSender position_sender(camera_name);
 
-  camera::CscoreStreamer streamer(name, port, 30, 480, 480, false);
+  camera::CscoreStreamer streamer(
+      camera::IMX296Streamer(camera_name, port, 30));
 
   cv::Mat frame;
   while (true) {
@@ -38,8 +72,6 @@ int main() {
 
   NTUtils::start_networktables();
 
-  localization::PositionSender position_sender(true);
-
   std::thread usb0_thread(
       run_estimator, "back_left", 640, 480,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
@@ -48,7 +80,7 @@ int main() {
           camera::camera_constants[camera::Camera::USB0].intrinsics_path),
       camera::ICamera::read_extrinsics(
           camera::camera_constants[camera::Camera::USB0].extrinsics_path),
-      std::ref(position_sender), 4971);
+      4971);
 
   std::thread usb1_thread(
       run_estimator, "back_right", 1280, 720,
@@ -58,7 +90,7 @@ int main() {
           camera::camera_constants[camera::Camera::USB1].intrinsics_path),
       camera::ICamera::read_extrinsics(
           camera::camera_constants[camera::Camera::USB1].extrinsics_path),
-      std::ref(position_sender), 4972);
+      4972);
 
   usb1_thread.join();
 
