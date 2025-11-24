@@ -17,10 +17,10 @@ constexpr double RadianToDegree(double radian) {
   return radian * (180 / M_PI);
 }
 
-PositionSender::PositionSender(bool verbose)
+PositionSender::PositionSender(std::string camera_name, bool verbose)
     : instance_(nt::NetworkTableInstance::GetDefault()), verbose_(verbose) {
   std::shared_ptr<nt::NetworkTable> table =
-      instance_.GetTable("Orin/PoseEstimate");
+      instance_.GetTable("Orin/" + camera_name + "/PoseEstimate");
 
   nt::StructTopic<frc::Pose2d> pose_topic =
       table->GetStructTopic<frc::Pose2d>("Pose");
@@ -37,13 +37,15 @@ void PositionSender::Send(
   if (mutex_.try_lock()) {
 
     for (size_t i = 0; i < detections.size(); i++) {
-      double variance = std::pow(detections[i].distance, 1);
-      variance *= 0.5;
-      double tag_estimation[5] = {
-          detections[i].translation.x, detections[i].translation.y,
-          detections[i].rotation.z, variance,
+      double variance = detections[i].distance;
+      double tag_estimation[6] = {
+          detections[i].translation.x,
+          detections[i].translation.y,
+          detections[i].rotation.z,
+          variance,
           detections[i].timestamp +
-              instance_.GetServerTimeOffset().value() / 1000000.0};
+              instance_.GetServerTimeOffset().value() / 1000000.0,
+          (double)detections[i].tag_id};
 
       pose_publisher_.Set(
           frc::Pose2d(units::meter_t{detections[i].translation.x},
@@ -52,10 +54,12 @@ void PositionSender::Send(
 
       tag_estimation_publisher_.Set(tag_estimation);
 
-      std::cout << "latency: "
-                << frc::Timer::GetFPGATimestamp().value() -
-                       detections[i].timestamp
-                << "\n";
+      if (verbose_) {
+        std::cout << "latency: "
+                  << frc::Timer::GetFPGATimestamp().value() -
+                         detections[i].timestamp
+                  << "\n";
+      }
     }
 
     mutex_.unlock();
