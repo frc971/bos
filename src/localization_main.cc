@@ -50,14 +50,14 @@ json read_extrinsics(std::string path) {
 void run_estimator(std::string camera_name, const int frame_width,
                    const int frame_height,
                    std::unique_ptr<camera::CVCamera> cap, json intrinsics,
-                   json extrinsics) {
+                   json extrinsics, uint port) {
 
   localization::TagEstimator tag_estimator(frame_width, frame_height,
                                            intrinsics, extrinsics);
   localization::PositionSender position_sender(camera_name);
 
   camera::CscoreStreamer streamer(
-      camera::IMX296Streamer(camera_name, 4971, 30));
+      camera::IMX296Streamer(camera_name, port, 30));
 
   cv::Mat frame;
   while (true) {
@@ -80,7 +80,8 @@ int main() {
       read_intrinsics(
           camera::camera_constants[camera::Camera::USB0].intrinsics_path),
       read_extrinsics(
-          camera::camera_constants[camera::Camera::USB0].extrinsics_path));
+          camera::camera_constants[camera::Camera::USB0].extrinsics_path),
+      4971);
 
   std::thread usb1_thread(
       run_estimator, "back_right", 1280, 720,
@@ -89,7 +90,8 @@ int main() {
       read_intrinsics(
           camera::camera_constants[camera::Camera::USB1].intrinsics_path),
       read_extrinsics(
-          camera::camera_constants[camera::Camera::USB1].extrinsics_path));
+          camera::camera_constants[camera::Camera::USB1].extrinsics_path),
+      4972);
 
   usb1_thread.join();
 
