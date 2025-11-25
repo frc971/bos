@@ -167,6 +167,11 @@ Yolo::~Yolo() {
     output_buffer_ = nullptr;
   }
 
+  if (input_buffer_) {
+    cudaFree(input_buffer_);
+    input_buffer_ = nullptr;
+  }
+
   if (inferenceCudaStream_) {
     cudaStreamDestroy(inferenceCudaStream_);
     inferenceCudaStream_ = nullptr;
@@ -187,7 +192,7 @@ void Yolo::DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
         cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
 
     cv::rectangle(
-        img, cv::Point(boxes[i].x, boxes[i].y - label_size.height - baseline),
+        img, cv::Point(boxes[i].x, std::max(0, boxes[i].y - label_size.height - baseline)),
         cv::Point(boxes[i].x + label_size.width, boxes[i].y), color,
         cv::FILLED);
     cv::putText(img, label, cv::Point(boxes[i].x, boxes[i].y - baseline),

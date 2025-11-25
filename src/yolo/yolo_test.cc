@@ -22,7 +22,7 @@ int main() {
   cv::Mat color;
   if (test_collected) {
     for (const auto& entry : std::filesystem::directory_iterator(
-             "/home/nvidia/Documents/collected_imgs")) {
+             std::string(std::getenv("HOME")) + "/Documents/collected_imgs")) {
       cv::Mat mat = cv::imread(entry.path().string());
       model.Postprocess(mat, bboxes, confidences, class_ids);
       yolo::Yolo::DrawDetections(mat, bboxes, class_ids, confidences,
