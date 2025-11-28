@@ -3,3 +3,6 @@ target_link_libraries(apriltag_detect_test PRIVATE ${OpenCV_LIBS} 971apriltag ap
 
 add_executable(intrinsics_test intrinsics_test.cc)
 target_link_libraries(intrinsics_test PRIVATE ${OpenCV_LIBS} camera nlohmann_json::nlohmann_json)
+
+add_executable(camera_source_test camera_source_test.cc)
+target_link_libraries(camera_source_test PRIVATE ${OpenCV_LIBS} camera)
