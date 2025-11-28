@@ -2,37 +2,36 @@
 #include <wpilibc/frc/Timer.h>
 #include <algorithm>
 #include <cstdlib>
+#include <iostream>
 #include <memory>
+#include <opencv2/imgcodecs.hpp>
 
 namespace camera {
-
-CameraSource::CameraSource(int width, int height, int channels, int image_type,
-                           std::unique_ptr<ICamera> camera, int length)
-    : width_(width),
-      height_(height),
-      channels_(channels),
-      image_type_(image_type),
-      image_size_(width * height * channels * sizeof(uint8_t)),
-      camera_(std::move(camera)),
-      length_(length),
-      head_(-1) {
-  buffer_ = static_cast<uint8_t*>(malloc(image_size_ * length));
+CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera)
+    : name_(name), camera_(std::move(camera)) {
+  cv::Mat frame;
+  camera_->GetFrame(frame);
+  frame_ = frame;
+  timestamp_ = frc::Timer::GetFPGATimestamp().to<double>();
   thread_ = std::thread([this] {
     while (true) {
-      cv::Mat mat(height_, width_, image_type_,
-                  buffer_ + image_size_ * (head_ + 1));
-      camera_->GetFrame(mat);
-      timestamp_[head_ + 1] = frc::Timer::GetFPGATimestamp().to<double>();
-
-      head_ += 1;
+      cv::Mat frame;
+      camera_->GetFrame(frame);
+      const double timestamp = frc::Timer::GetFPGATimestamp().to<double>();
+      mutex_.lock();
+      frame_ = frame;
+      timestamp_ = timestamp;
+      mutex_.unlock();
     }
   });
 }
 
-frame_t CameraSource::Get() {
-  cv::Mat mat(height_, width_, image_type_, buffer_ + image_size_ * head_);
-  double timestamp = timestamp_[head_];
-  return frame_t{.mat = mat, .timestamp = timestamp};
+timestamped_frame_t CameraSource::Get() {
+  mutex_.lock();
+  cv::Mat frame = frame_;
+  double timestamp = timestamp_;
+  mutex_.unlock();
+  return timestamped_frame_t{.frame = frame, .timestamp = timestamp};
 }
 
 }  // namespace camera

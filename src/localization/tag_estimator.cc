@@ -169,8 +169,10 @@ TagEstimator::~TagEstimator() {
   return;
 }
 
-std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
-  std::vector<tag_detection_t> estimates = GetRawPositionEstimates(frame);
+std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame,
+                                                    double timestamp) const {
+  std::vector<tag_detection_t> estimates =
+      GetRawPositionEstimates(frame, timestamp);
   for (tag_detection_t& estimate : estimates) {
     estimate = GetFeildRelitivePosition(estimate);
   }
@@ -178,8 +180,7 @@ std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
 }
 
 std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
-    cv::Mat& frame) const {
-  const double timestamp = frc::Timer::GetFPGATimestamp().to<double>();
+    cv::Mat& frame, double timestamp) const {
   cv::Mat gray;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
