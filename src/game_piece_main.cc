@@ -14,6 +14,7 @@
 
 static constexpr int MAX_DETECTIONS = 6;
 static std::vector<std::string> class_names = {"algae", "algae", "coral", "coral"}; // Chopped because I screwed up on the dataset, and technically the model outputs "CORAL", "coral", "ALGAE" or "algae"
+static std::mutex mutex;
 
 void run_gamepiece_detect(yolo::Yolo& model, std::unique_ptr<camera::CVCamera> camera, nt::StructTopic<frc::Pose2d>& coral_topic, nt::StructTopic<frc::Pose2d>& algae_topic, nlohmann::json intrinsics, nlohmann::json extrinsics) {
   nt::StructPublisher<frc::Pose2d> coral_pub = coral_topic.Publish();
@@ -33,8 +34,10 @@ void run_gamepiece_detect(yolo::Yolo& model, std::unique_ptr<camera::CVCamera> c
   frc::Pose3d target_pose_robot_relative;
   while (true) {
     camera->GetFrame(color);
+    mutex.lock();
     model.RunModel(color);
     model.Postprocess(color, bboxes, confidences, class_ids);
+    mutex.unlock();
     for (size_t i = 0; i < MAX_DETECTIONS; i++) {
       const int c_y = bboxes[i].y + bboxes[i].height / 2;
       const int c_x = bboxes[i].x + bboxes[i].width / 2;
@@ -74,13 +77,15 @@ void run_gamepiece_detect_realsense(yolo::Yolo& model, std::unique_ptr<camera::R
   frc::Pose3d target_pose_robot_relative;
   while (true) {
     rs->GetFrame(color, depth);
+    mutex.lock();
     model.RunModel(color);
+    model.Postprocess(color, bboxes, confidences, class_ids);
+    mutex.unlock();
     if (color.empty()) {
       std::cout << "Couldn't fetch frame properly" << std::endl;
       continue;
     }
     for (size_t i = 0; i < MAX_DETECTIONS; i++) {
-      model.Postprocess(color, bboxes, confidences, class_ids);
       if (bboxes[i].empty()) {
         if (i == 0) {
           std::cout << "No detections" << std::endl;
@@ -126,7 +131,7 @@ void run_gamepiece_detect_realsense(yolo::Yolo& model, std::unique_ptr<camera::R
         coral_pub.Set(target_pose_robot_relative.ToPose2d());
       }
       else {
-          algae_pub.Set(target_pose_robot_relative.ToPose2d());
+        algae_pub.Set(target_pose_robot_relative.ToPose2d());
       }
     }
   }
