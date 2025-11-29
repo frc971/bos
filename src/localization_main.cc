@@ -1,5 +1,3 @@
-#include <frc/DataLogManager.h>
-#include <networktables/NetworkTableInstance.h>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -11,6 +9,7 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
+#include "src/nt_utils.h"
 
 using json = nlohmann::json;
 
@@ -71,15 +70,15 @@ void run_estimator(std::string camera_name, const int frame_width,
 
 int main() {
 
-  start_networktables();
+  NTUtils::start_networktables();
 
   std::thread usb0_thread(
       run_estimator, "back_left", 640, 480,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::USB0].pipeline)),
-      read_intrinsics(
+      camera::ICamera::read_intrinsics(
           camera::camera_constants[camera::Camera::USB0].intrinsics_path),
-      read_extrinsics(
+      camera::ICamera::read_extrinsics(
           camera::camera_constants[camera::Camera::USB0].extrinsics_path),
       4971);
 
@@ -87,9 +86,9 @@ int main() {
       run_estimator, "back_right", 1280, 720,
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::USB1].pipeline)),
-      read_intrinsics(
+      camera::ICamera::read_intrinsics(
           camera::camera_constants[camera::Camera::USB1].intrinsics_path),
-      read_extrinsics(
+      camera::ICamera::read_extrinsics(
           camera::camera_constants[camera::Camera::USB1].extrinsics_path),
       4972);
 
