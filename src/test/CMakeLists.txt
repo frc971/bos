@@ -3,3 +3,9 @@ target_link_libraries(apriltag_detect_test PRIVATE ${OpenCV_LIBS} 971apriltag ap
 
 add_executable(intrinsics_test intrinsics_test.cc)
 target_link_libraries(intrinsics_test PRIVATE ${OpenCV_LIBS} camera nlohmann_json::nlohmann_json)
+
+add_executable(realsense_yolo_test realsense_yolo_test.cc)
+target_link_libraries(realsense_yolo_test PRIVATE camera yolo)
+
+add_executable(distance_measurer distance_measurer.cc)
+target_link_libraries(distance_measurer PRIVATE camera)

@@ -17,13 +17,13 @@ void run_gamepiece_detect(yolo::Yolo& model, std::unique_ptr<camera::CVCamera> c
   
 }
 
-void run_gamepiece_detect_w_ir(yolo::Yolo& model, std::unique_ptr<camera::RealSenseCamera> rs, nt::StructPublisher<frc::Pose2d> coral_pub, nt::StructPublisher<frc::Pose2d> algae_pub/*, nlohmann::json intrinsics, nlohmann::json extrinsics*/) {
+void run_gamepiece_detect_realsense(yolo::Yolo& model, std::unique_ptr<camera::RealSenseCamera> rs, nt::StructPublisher<frc::Pose2d> coral_pub, nt::StructPublisher<frc::Pose2d> algae_pub/*, nlohmann::json intrinsics, nlohmann::json extrinsics*/) {
   cv::Mat color;
   cv::Mat depth;
   std::vector<cv::Rect> bboxes(MAX_DETECTIONS);
   std::vector<float> confidences(MAX_DETECTIONS);
   std::vector<int> class_ids(MAX_DETECTIONS);
-  std::vector<std::string> class_names = {"algae", "algae", "coral", "coral"};
+  std::vector<std::string> class_names = {"algae", "algae", "coral", "coral"}; // Chopped because I screwed up on the dataset, and technically the model outputs "CORAL", "coral", "ALGAE" or "algae"
   while (true) {
     rs->GetFrame(color, depth);
     if (color.empty()) {
@@ -96,7 +96,7 @@ int main() {
   std::vector<std::thread> camera_threads;
   const bool using_rs = true;
   if (using_rs) {
-    // camera_threads.emplace_back(run_gamepiece_detect_w_ir, std::ref(model), std::make_unique<camera::RealSenseCamera>(), coral_pub, algae_pub);
+    // camera_threads.emplace_back(run_gamepiece_detect_realsense, std::ref(model), std::make_unique<camera::RealSenseCamera>(), coral_pub, algae_pub);
   }
   else {
     camera_threads.reserve(2);

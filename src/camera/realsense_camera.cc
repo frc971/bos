@@ -4,7 +4,7 @@
 #include "opencv2/opencv.hpp"
 namespace camera {
 
-RealSenseCamera::RealSenseCamera() : pipe_(), align_to_color(RS2_STREAM_COLOR) {
+RealSenseCamera::RealSenseCamera() : pipe_(), align_to_color_(RS2_STREAM_COLOR) {
   rs2::config cfg;
   cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGB8, 30);
   cfg.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 30);
@@ -41,7 +41,7 @@ void RealSenseCamera::GetFrame(cv::Mat& color_mat, cv::Mat& depth_mat) {
     rs2::frameset frames = pipe_.wait_for_frames(5000);
   }
   rs2::frameset frames = pipe_.wait_for_frames(5000);
-  frames = align_to_color.process(frames);
+  frames = align_to_color_.process(frames);
   rs2::video_frame color_frame = frames.get_color_frame();
   rs2::depth_frame depth_frame = frames.get_depth_frame();
   if (!color_frame) {
