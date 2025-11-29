@@ -17,7 +17,7 @@ int main() {
   std::vector<cv::Rect> bboxes(max_detections);
   std::vector<float> confidences(max_detections);
   std::vector<int> class_ids(max_detections);
-  std::vector<std::string> class_names = {"Algae", "ALGAE", "Coral", "CORAL"};
+  std::vector<std::string> class_names = {"Algae", "ALGAE", "Coral", "CORAL"}; // Chopped because I screwed up on the dataset, and technically the model outputs "CORAL", "coral", "ALGAE" or "algae"
   const bool test_collected = false;
   cv::Mat color;
   if (test_collected) {
