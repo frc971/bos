@@ -29,6 +29,8 @@ void run_gamepiece_detect(yolo::Yolo& model, std::unique_ptr<camera::CVCamera> c
   const float focal_length_horizontal = intrinsics["fx"];
   const float cam_pitch = -(float)extrinsics["rotation_y"]; // negative because if the camera is tilted up, phi should be smaller than the theta read by camera
   const frc::Pose3d cam_pose{frc::Translation3d{units::meter_t{extrinsics["translation_x"]}, units::meter_t{extrinsics["translation_y"]}, units::meter_t{extrinsics["translation_z"]}}, frc::Rotation3d{units::radian_t{extrinsics["rotation_x"]}, units::radian_t{extrinsics["rotation_y"]}, units::radian_t{(float)extrinsics["rotation_z"]}}};
+  frc::Transform3d target_pose_cam_relative;
+  frc::Pose3d target_pose_robot_relative;
   while (true) {
     camera->GetFrame(color);
     model.RunModel(color);
@@ -43,8 +45,8 @@ void run_gamepiece_detect(yolo::Yolo& model, std::unique_ptr<camera::CVCamera> c
       std::cout << "Detected a " << class_name << " " << distance
                 << " meters away" << std::endl;
       const float cam_relative_yaw = atan2(c_x - cam_cx, focal_length_horizontal);
-      const frc::Transform3d target_pose_cam_relative{frc::Translation3d{units::meter_t{distance * cos(cam_relative_pitch) * cos(cam_relative_yaw)}, units::meter_t{distance * cos(cam_relative_pitch) * sin(cam_relative_yaw)}, units::meter_t{distance * sin(cam_relative_pitch)}}, frc::Rotation3d{0_rad, units::radian_t{cam_relative_pitch}, units::radian_t{cam_relative_yaw}}};
-      const frc::Pose3d target_pose_robot_relative = cam_pose.TransformBy(target_pose_cam_relative);
+      target_pose_cam_relative = {frc::Translation3d{units::meter_t{distance * cos(cam_relative_pitch) * cos(cam_relative_yaw)}, units::meter_t{distance * cos(cam_relative_pitch) * sin(cam_relative_yaw)}, units::meter_t{distance * sin(cam_relative_pitch)}}, frc::Rotation3d{0_rad, units::radian_t{cam_relative_pitch}, units::radian_t{cam_relative_yaw}}};
+      target_pose_robot_relative = cam_pose.TransformBy(target_pose_cam_relative);
       if (class_name == "coral") {
         coral_pub.Set(target_pose_robot_relative.ToPose2d());
       }
@@ -68,6 +70,8 @@ void run_gamepiece_detect_realsense(yolo::Yolo& model, std::unique_ptr<camera::R
   const float cam_cy = intrinsics["cy"];
   const float focal_length_vertical = intrinsics["fy"];
   const float focal_length_horizontal = intrinsics["fx"];
+  frc::Transform3d target_pose_cam_relative;
+  frc::Pose3d target_pose_robot_relative;
   while (true) {
     rs->GetFrame(color, depth);
     model.RunModel(color);
@@ -115,8 +119,8 @@ void run_gamepiece_detect_realsense(yolo::Yolo& model, std::unique_ptr<camera::R
 
       const float cam_relative_pitch = atan2(c_y - cam_cy, focal_length_vertical);
       const float cam_relative_yaw = atan2(c_x - cam_cx, focal_length_horizontal);
-      const frc::Transform3d target_pose_cam_relative{frc::Translation3d{units::meter_t{distance * cos(cam_relative_pitch) * cos(cam_relative_yaw)}, units::meter_t{distance * cos(cam_relative_pitch) * sin(cam_relative_yaw)}, units::meter_t{distance * sin(cam_relative_pitch)}}, frc::Rotation3d{0_rad, units::radian_t{cam_relative_pitch}, units::radian_t{cam_relative_yaw}}};
-      const frc::Pose3d target_pose_robot_relative = cam_pose.TransformBy(target_pose_cam_relative);
+      target_pose_cam_relative = {frc::Translation3d{units::meter_t{distance * cos(cam_relative_pitch) * cos(cam_relative_yaw)}, units::meter_t{distance * cos(cam_relative_pitch) * sin(cam_relative_yaw)}, units::meter_t{distance * sin(cam_relative_pitch)}}, frc::Rotation3d{0_rad, units::radian_t{cam_relative_pitch}, units::radian_t{cam_relative_yaw}}};
+      target_pose_robot_relative = cam_pose.TransformBy(target_pose_cam_relative);
       
       if (class_name == "coral") {
         coral_pub.Set(target_pose_robot_relative.ToPose2d());
@@ -150,14 +154,13 @@ int main() {
           camera::camera_constants[camera::Camera::USB0].extrinsics_path));
   }
   else {
-    camera_threads.reserve(2);
+    camera_threads.reserve(1);
     std::unique_ptr<camera::CVCamera> usb0 = std::make_unique<camera::CVCamera>(cv::VideoCapture(camera::camera_constants[camera::Camera::USB0].pipeline));
 std::unique_ptr<camera::CVCamera> usb1 = std::make_unique<camera::CVCamera>(cv::VideoCapture(camera::camera_constants[camera::Camera::USB0].pipeline));
     camera_threads.emplace_back(run_gamepiece_detect, std::ref(model), std::move(usb0), std::ref(coral_topic), std::ref(algae_topic), camera::ICamera::read_intrinsics(
           camera::camera_constants[camera::Camera::USB0].intrinsics_path),
       camera::ICamera::read_extrinsics(
           camera::camera_constants[camera::Camera::USB0].extrinsics_path));
-    // camera_threads.emplace_back(run_gamepiece_detect, std::ref(model), usb1, coral_pub, algae_pub);
-
   }
+  camera_threads[0].join();
 }
