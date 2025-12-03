@@ -192,7 +192,9 @@ void Yolo::DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
         cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
 
     cv::rectangle(
-        img, cv::Point(boxes[i].x, std::max(0, boxes[i].y - label_size.height - baseline)),
+        img,
+        cv::Point(boxes[i].x,
+                  std::max(0, boxes[i].y - label_size.height - baseline)),
         cv::Point(boxes[i].x + label_size.width, boxes[i].y), color,
         cv::FILLED);
     cv::putText(img, label, cv::Point(boxes[i].x, boxes[i].y - baseline),
