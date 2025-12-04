@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
+add_subdirectory(utils)
 add_subdirectory(camera)
 add_subdirectory(localization)
 add_subdirectory(calibration)
