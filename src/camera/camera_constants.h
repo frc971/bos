@@ -16,9 +16,11 @@ enum Camera {
   USB1 = 3,
   USB2 = 4,
   USB3 = 5,
+  DEFAULT_USB0 = 6,
+  CAMERA_LENGTH,
 };
 
-inline const camera_constant_t camera_constants[6] = {
+inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
     [Camera::IMX296_0] = camera_constant_t{.pipeline = "nvarguscamerasrc sensor-id=0 " 
                                                         "aelock=true exposuretimerange=\"100000 "
                                                         "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
@@ -53,5 +55,8 @@ inline const camera_constant_t camera_constants[6] = {
   [Camera::USB3] = camera_constant_t{.pipeline = "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.8:1.0-video-index0", 
     .intrinsics_path = "/bos/constants/usb_camera3_intrinsics.json", 
     .extrinsics_path = "/bos/constants/usb_camera3_extrinsics.json"},
+  [Camera::DEFAULT_USB0] = camera_constant_t{.pipeline = "/dev/video0", 
+    .intrinsics_path = "/bos/constants/default_usb_camera0_intrinsics.json", 
+    .extrinsics_path = "/bos/constants/default_usb_camera0_extrinsics.json"},
 };
 };  // namespace camera
