@@ -17,10 +17,7 @@ int main() {
       camera::CVCamera(cv::VideoCapture(camera::SelectCamera()));
   while (true) {
     cv::Mat frame;
-    // cv::namedWindow("Captured Frame");
     camera.GetFrame(frame);
-    /*cv::imshow("Captured Frame", frame);
-    cv::waitKey(0);*/
     cv::imwrite(img_dir + name_start + std::to_string(localTime->tm_min) + "_" +
                     std::to_string(i) + ".bmp",
                 frame);
