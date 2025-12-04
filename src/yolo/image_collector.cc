@@ -9,8 +9,7 @@ int main() {
   std::time_t now = std::time(nullptr);
   std::tm* localTime = std::localtime(&now);
   int i = 0;
-  const std::string img_dir =
-      std::string(std::getenv("HOME")) + "/Documents/collected_imgs/";
+  const std::string img_dir = "/bos/logs/collected_imgs/";
   std::filesystem::create_directories(img_dir);
   const std::string name_start = "frame_" + std::to_string(localTime->tm_mday) +
                                  "_" + std::to_string(localTime->tm_hour) + "_";
