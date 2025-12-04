@@ -6,6 +6,7 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
+#include "src/camera/select_camera.h"
 #include "third_party/971apriltag/971apriltag.h"
 
 using json = nlohmann::json;
@@ -55,7 +56,7 @@ int main() {
   camera::CscoreStreamer streamer("apriltag_detect_test", 4971, 30, 640, 480,
                                   false);
 
-  auto camera_config = camera::Camera::USB0;
+  auto camera_config = camera::SelectCamera();
 
   auto intrinsics =
       read_intrinsics(camera::camera_constants[camera_config].intrinsics_path);

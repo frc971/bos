@@ -13,7 +13,7 @@
 
 int main() {
   camera::CscoreStreamer streamer(
-      camera::IMX296Streamer("frame_logger", 4971, 30));
+      camera::IMX296Streamer("frame_shower", 4971, 30));
 
   camera::Camera camera = camera::SelectCamera();
   camera::CVCamera cap(
@@ -30,6 +30,7 @@ int main() {
       std::cout << "Getting frame" << std::endl;
       cap.GetFrame(frame);
       streamer.WriteFrame(frame);
+      std::cout << frame.size << std::endl;
       std::cout << "Got frame" << std::endl;
     }
   }

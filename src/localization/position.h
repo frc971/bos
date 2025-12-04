@@ -1,4 +1,5 @@
 #pragma once
+#include <math.h>
 #include <wpi/struct/Struct.h>
 #include <wpilibc/frc/Timer.h>
 #include <cmath>
@@ -28,6 +29,11 @@ typedef struct TagDetection {
     os << t.rotation.x * 180 / M_PI << "\n";
     os << t.rotation.y * 180 / M_PI << "\n";
     os << t.rotation.z * 180 / M_PI << "\n";
+    os << "Distance(xy): "
+       << "\n";
+    os << sqrt(t.translation.x * t.translation.x +
+               t.translation.y * t.translation.y)
+       << "\n";
     return os;
   }
 } tag_detection_t;
