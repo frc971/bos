@@ -7,29 +7,6 @@
 
 using json = nlohmann::json;
 
-json read_intrinsics(std::string path) {
-  json intrinsics;
-
-  std::ifstream intrinsics_file(path);
-  if (!intrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open intrinsics file: " << path << std::endl;
-  } else {
-    intrinsics_file >> intrinsics;
-  }
-  return intrinsics;
-}
-
-json read_extrinsics(std::string path) {
-  json extrinsics;
-  std::ifstream extrinsics_file(path);
-  if (!extrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open extrinsics file: " << path << std::endl;
-  } else {
-    extrinsics_file >> extrinsics;
-  }
-  return extrinsics;
-}
-
 int main() {
   camera::CscoreStreamer streamer(
       camera::IMX296Streamer("tag_estimator_test", 4971, 30));
@@ -41,9 +18,8 @@ int main() {
   cap.GetFrame(frame);
 
   localization::TagEstimator tag_estimator(
-      frame.cols, frame.rows,
-      read_intrinsics(camera::camera_constants[camera].intrinsics_path),
-      read_extrinsics(camera::camera_constants[camera].extrinsics_path));
+      frame.cols, frame.rows, camera::camera_constants[camera].intrinsics_path,
+      camera::camera_constants[camera].extrinsics_path);
   while (true) {
     cap.GetFrame(frame);
     streamer.WriteFrame(frame);
@@ -52,6 +28,8 @@ int main() {
     for (auto& estimate : estimates) {
       std::cout << estimate;
     }
-    std::cout << "----------" << std::endl;
+    if (!estimates.empty()) {
+      std::cout << "----------" << std::endl;
+    }
   }
 }

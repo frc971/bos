@@ -19,12 +19,14 @@ binaries=(
   "build/src/calibration/frame_shower"
   "build/src/calibration/intrinsics_calibrate"
   "build/src/calibration/test_intrinsics"
+  "build/src/calibration/frame_logger"
   "build/src/test/apriltag_detect_test"
   "build/src/test/tag_estimator_test"
   "build/src/test/intrinsics_test"
   "build/src/test/camera_source_test"
   "build/src/test/timer_test"
 )
+
 for binary in "${binaries[@]}"; do
   if [[ -f "$binary" ]]; then
     cp "$binary" bin/
