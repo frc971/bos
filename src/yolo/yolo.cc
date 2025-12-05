@@ -31,14 +31,17 @@ size_t getOutputSize(nvinfer1::ICudaEngine* engine) {
 }
 
 void Yolo::PreprocessImage(const cv::Mat& img, float* gpu_input,
-                           const nvinfer1::Dims64& dims) {
-  cv::Mat rgb_image;
-  cv::cvtColor(img, rgb_image, cv::COLOR_BGR2RGB);
+                           const nvinfer1::Dims64& dims, const int channels) {
+  cv::Mat possibly_colorswitched_mat;
+  if (channels == 3) {
+    cv::cvtColor(img, possibly_colorswitched_mat, cv::COLOR_BGR2RGB);
+  } else {
+    possibly_colorswitched_mat = img;
+  }
   cv::cuda::GpuMat img_gpu;
-  img_gpu.upload(rgb_image);
+  img_gpu.upload(possibly_colorswitched_mat);
 
   const int target_size = 640;  // new_shape
-  const int channels = 3;
 
   // Compute scale factor to preserve aspect ratio
   int orig_h = img.rows;
@@ -71,7 +74,8 @@ void Yolo::PreprocessImage(const cv::Mat& img, float* gpu_input,
 
   // Normalize to 0-1
   cv::cuda::GpuMat normalized;
-  padded.convertTo(normalized, CV_32FC3, 1.f / 255.f);
+  padded.convertTo(normalized, channels == 3 ? CV_32FC3 : CV_32FC1,
+                   1.f / 255.f);
 
   int channel_size = target_size * target_size;
   // Split into channels (HWC -> CHW)
@@ -118,9 +122,9 @@ Yolo::Yolo(std::string model_path, bool verbose) : verbose_(verbose) {
   cudaStreamCreate(&(inferenceCudaStream_));
 }
 
-std::vector<float> Yolo::RunModel(const cv::Mat& frame) {
+std::vector<float> Yolo::RunModel(const cv::Mat& frame, const bool color) {
   bool status;
-  PreprocessImage(frame, input_buffer_, input_dims_);
+  PreprocessImage(frame, input_buffer_, input_dims_, color ? 3 : 1);
   status =
       context_->setTensorAddress(engine_->getIOTensorName(0), input_buffer_);
   assert(status);
@@ -198,7 +202,8 @@ void Yolo::DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
 std::vector<float> Yolo::Postprocess(const cv::Mat& mat,
                                      std::vector<cv::Rect>& bboxes,
                                      std::vector<float>& confidences,
-                                     std::vector<int>& class_ids) {
+                                     std::vector<int>& class_ids,
+                                     const bool color) {
   const int orig_h = mat.rows;
   const int orig_w = mat.cols;
 
@@ -211,7 +216,7 @@ std::vector<float> Yolo::Postprocess(const cv::Mat& mat,
 
   float pad_left = (target_size - new_w) / 2.0;
   float pad_top = (target_size - new_h) / 2.0;
-  std::vector<float> softmax_results = RunModel(mat);
+  std::vector<float> softmax_results = RunModel(mat, color);
   const int nms_output_size = 6;
   for (size_t i = 0; i < bboxes.size(); i++) {
     float x1 = softmax_results[i * nms_output_size];

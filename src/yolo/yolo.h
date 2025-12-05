@@ -11,11 +11,11 @@ class Yolo {
  public:
   Yolo(std::string model_path, bool verbose = false);
   ~Yolo();
-  std::vector<float> RunModel(const cv::Mat& frame);
+  std::vector<float> RunModel(const cv::Mat& frame, bool color);
   std::vector<float> Postprocess(const cv::Mat& mat,
                                  std::vector<cv::Rect>& bboxes,
                                  std::vector<float>& confidences,
-                                 std::vector<int>& class_ids);
+                                 std::vector<int>& class_ids, bool color);
   static void DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
                              const std::vector<int>& class_ids,
                              const std::vector<float>& confidences,
@@ -23,7 +23,7 @@ class Yolo {
 
  private:
   static void PreprocessImage(const cv::Mat& frame, float* gpu_input,
-                              const nvinfer1::Dims64& dims);
+                              const nvinfer1::Dims64& dims, int channels);
   nvinfer1::IRuntime* runtime_;
   nvinfer1::ICudaEngine* engine_;
   nvinfer1::IExecutionContext* context_;
