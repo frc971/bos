@@ -36,8 +36,8 @@ int main() {
       cv::destroyAllWindows();
     }
   } else {
+    cv::Mat frame;
     while (true) {
-      cv::Mat frame;
       camera.GetFrame(frame);
       if (frame.empty()) {
         std::cout << "Couldn't fetch frame properly" << std::endl;
