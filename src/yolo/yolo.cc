@@ -32,13 +32,17 @@ size_t getOutputSize(nvinfer1::ICudaEngine* engine) {
 
 void Yolo::PreprocessImage(const cv::Mat& img, float* gpu_input,
                            const nvinfer1::Dims64& dims) {
-  cv::Mat rgb_image;
-  cv::cvtColor(img, rgb_image, cv::COLOR_BGR2RGB);
+  cv::Mat maybe_rgb;
+  if (channels_ == 3) {
+    cv::cvtColor(img, maybe_rgb, cv::COLOR_BGR2RGB);
+  }
+  else {
+    maybe_rgb = img;
+  }
   cv::cuda::GpuMat img_gpu;
-  img_gpu.upload(rgb_image);
+  img_gpu.upload(maybe_rgb);
 
   const int target_size = 640;  // new_shape
-  const int channels = 3;
 
   // Compute scale factor to preserve aspect ratio
   int orig_h = img.rows;
@@ -74,10 +78,11 @@ void Yolo::PreprocessImage(const cv::Mat& img, float* gpu_input,
   padded.convertTo(normalized, CV_32FC3, 1.f / 255.f);
 
   int channel_size = target_size * target_size;
+
   // Split into channels (HWC -> CHW)
-  std::vector<cv::cuda::GpuMat> chw(channels);
+  std::vector<cv::cuda::GpuMat> chw(channels_);
   cv::cuda::split(normalized, chw);
-  for (int i = 0; i < channels; i++) {
+  for (int i = 0; i < channels_; i++) {
     cudaMemcpy(gpu_input + i * channel_size, chw[i].data,
                channel_size * sizeof(float), cudaMemcpyDeviceToDevice);
   }
@@ -90,7 +95,7 @@ class Logger : public nvinfer1::ILogger {
   }
 };
 
-Yolo::Yolo(std::string model_path, bool verbose) : verbose_(verbose) {
+Yolo::Yolo(std::string model_path, const int channels, const bool verbose) : channels_(channels), verbose_(verbose) {
   Logger logger;
   std::vector<char> engine_data = loadEngineFile(model_path);
 
@@ -209,7 +214,7 @@ std::vector<float> Yolo::Postprocess(const cv::Mat& mat,
   const int orig_h = mat.rows;
   const int orig_w = mat.cols;
 
-  const int target_size = 640;
+  constexpr int target_size = 640;
   float scale =
       std::min(target_size / (float)orig_h, target_size / (float)orig_w);
 
