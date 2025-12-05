@@ -36,9 +36,15 @@ class TagEstimator {
       uint image_width, uint image_height, json intrinsics, json extrinsics,
       std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions,
       bool verbose = false);
+  TagEstimator(
+      uint image_width, uint image_height, std::string intrinsics_path,
+      std::string extrinsics_path,
+      std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions,
+      bool verbose = false);
   ~TagEstimator();
-  std::vector<tag_detection_t> Estimate(cv::Mat& frame) const;
-  std::vector<tag_detection_t> GetRawPositionEstimates(cv::Mat& frame) const;
+  std::vector<tag_detection_t> Estimate(cv::Mat& frame, double timestamp) const;
+  std::vector<tag_detection_t> GetRawPositionEstimates(cv::Mat& frame,
+                                                       double timestamp) const;
   tag_detection_t GetFeildRelitivePosition(
       tag_detection_t tag_relative_position) const;
 

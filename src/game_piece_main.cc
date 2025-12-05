@@ -9,7 +9,8 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/realsense_camera.h"
-#include "src/nt_utils.h"
+#include "src/utils/camera_utils.h"
+#include "src/utils/nt_utils.h"
 #include "src/yolo/yolo.h"
 
 static constexpr int MAX_DETECTIONS = 6;
@@ -187,7 +188,7 @@ int main() {
   std::cout << "Starting gamepiece main" << std::endl;
   std::cout << "Started networktables" << std::endl;
   yolo::Yolo model("/bos/src/yolo/model/ninthYOLO.engine");
-  NTUtils::start_networktables();
+  utils::StartNetworktables();
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   std::shared_ptr<nt::NetworkTable> coral_table =
       inst.GetTable("Orin/Gamepiece/coral");
@@ -206,9 +207,9 @@ int main() {
         run_gamepiece_detect_realsense, std::ref(model),
         std::make_unique<camera::RealSenseCamera>(), std::ref(coral_topic),
         std::ref(algae_topic),
-        camera::ICamera::read_intrinsics(
+        utils::read_intrinsics(
             camera::camera_constants[camera::Camera::USB0].intrinsics_path),
-        camera::ICamera::read_extrinsics(
+        utils::read_extrinsics(
             camera::camera_constants[camera::Camera::USB0].extrinsics_path));
   } else {
     camera_threads.reserve(1);
@@ -221,9 +222,9 @@ int main() {
     camera_threads.emplace_back(
         run_gamepiece_detect, std::ref(model), std::move(usb0),
         std::ref(coral_topic), std::ref(algae_topic),
-        camera::ICamera::read_intrinsics(
+        utils::read_intrinsics(
             camera::camera_constants[camera::Camera::USB0].intrinsics_path),
-        camera::ICamera::read_extrinsics(
+        utils::read_extrinsics(
             camera::camera_constants[camera::Camera::USB0].extrinsics_path));
   }
   camera_threads[0].join();

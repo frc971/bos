@@ -21,7 +21,7 @@ Camera SelectCamera() {
   std::cout << "mipi0" << std::endl;
   std::cout << "mipi1" << std::endl;
   std::cout << "usb0" << std::endl;
-  std::cout << "usb1" << std::endl;
+  std::cout << "defaultusb0" << std::endl;
 
   std::string choice;
   std::cin >> choice;
@@ -44,6 +44,11 @@ Camera SelectCamera() {
   if (choice == "usb1") {
     PrintCameraConstant(Camera::USB1);
     return Camera::USB1;
+  }
+
+  if (choice == "defaultusb0") {
+    PrintCameraConstant(Camera::DEFAULT_USB0);
+    return Camera::DEFAULT_USB0;
   }
 
   std::cout << "You did not give a valid input. Retrying..." << std::endl;

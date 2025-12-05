@@ -134,6 +134,29 @@ json ExtrinsicsToJson(tag_detection_t extrinsics) {
   return output;
 }
 
+json read_intrinsics(std::string path) {
+  json intrinsics;
+
+  std::ifstream intrinsics_file(path);
+  if (!intrinsics_file.is_open()) {
+    std::cerr << "Error: Cannot open intrinsics file: " << path << std::endl;
+  } else {
+    intrinsics_file >> intrinsics;
+  }
+  return intrinsics;
+}
+
+json read_extrinsics(std::string path) {
+  json extrinsics;
+  std::ifstream extrinsics_file(path);
+  if (!extrinsics_file.is_open()) {
+    std::cerr << "Error: Cannot open extrinsics file: " << path << std::endl;
+  } else {
+    extrinsics_file >> extrinsics;
+  }
+  return extrinsics;
+}
+
 TagEstimator::TagEstimator(uint image_width, uint image_height, json intrinsics,
                            json extrinsics,
                            std::vector<cv::Point3f> apriltag_dimensions,
@@ -163,14 +186,25 @@ TagEstimator::TagEstimator(uint image_width, uint image_height, json intrinsics,
           intrinsics));
 }
 
+TagEstimator::TagEstimator(uint image_width, uint image_height,
+                           std::string intrinsics_path,
+                           std::string extrinsics_path,
+                           std::vector<cv::Point3f> apriltag_dimensions,
+                           bool verbose)
+    : TagEstimator(image_width, image_height, read_intrinsics(intrinsics_path),
+                   read_extrinsics(extrinsics_path), apriltag_dimensions,
+                   verbose) {}
+
 TagEstimator::~TagEstimator() {
   delete gpu_detector_;
   delete apriltag_detector_;
   return;
 }
 
-std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
-  std::vector<tag_detection_t> estimates = GetRawPositionEstimates(frame);
+std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame,
+                                                    double timestamp) const {
+  std::vector<tag_detection_t> estimates =
+      GetRawPositionEstimates(frame, timestamp);
   for (tag_detection_t& estimate : estimates) {
     estimate = GetFeildRelitivePosition(estimate);
   }
@@ -178,8 +212,7 @@ std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame) const {
 }
 
 std::vector<tag_detection_t> TagEstimator::GetRawPositionEstimates(
-    cv::Mat& frame) const {
-  const double timestamp = frc::Timer::GetFPGATimestamp().to<double>();
+    cv::Mat& frame, double timestamp) const {
   cv::Mat gray;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());

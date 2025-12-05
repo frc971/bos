@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
+add_subdirectory(utils)
 add_subdirectory(camera)
 add_subdirectory(localization)
 add_subdirectory(calibration)
@@ -13,7 +14,8 @@ target_include_directories(NTUtils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(NTUtils PUBLIC ${OpenCV_LIBS} ntcore wpilibc)
 
 add_executable(localization_main localization_main.cc)
-target_link_libraries(localization_main PRIVATE ${OpenCV_LIBS} NTUtils apriltag camera nlohmann_json::nlohmann_json Eigen3::Eigen localization)
 
 add_executable(game_piece_main game_piece_main.cc)
-target_link_libraries(game_piece_main PRIVATE ${OpenCV_LIBS} NTUtils camera yolo)
+target_link_libraries(game_piece_main PRIVATE ${OpenCV_LIBS} utils camera yolo)
+
+target_link_libraries(localization_main PRIVATE ${OpenCV_LIBS} apriltag ntcore camera nlohmann_json::nlohmann_json Eigen3::Eigen localization utils)
