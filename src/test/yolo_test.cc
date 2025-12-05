@@ -6,6 +6,9 @@
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
 
+const bool TEST_COLLECTED = false;
+const bool COLOR = true;
+
 int main() {
   std::filesystem::path modelPath = "/bos/src/yolo/model/ninthYOLO.engine";
   std::cout << "Importing model from " << modelPath << std::endl;
@@ -21,13 +24,12 @@ int main() {
   std::vector<std::string> class_names = {
       "Algae", "ALGAE", "Coral",
       "CORAL"};  // Chopped because I screwed up on the dataset, and technically the model outputs "CORAL", "coral", "ALGAE" or "algae"
-  const bool test_collected = false;
   cv::Mat color;
-  if (test_collected) {
+  if (TEST_COLLECTED) {
     for (const auto& entry : std::filesystem::directory_iterator(
              std::string(std::getenv("HOME")) + "/Documents/collected_imgs")) {
       cv::Mat mat = cv::imread(entry.path().string());
-      model.Postprocess(mat, bboxes, confidences, class_ids);
+      model.Postprocess(mat.rows, mat.cols, model.RunModel(mat), bboxes, confidences, class_ids);
       yolo::Yolo::DrawDetections(mat, bboxes, class_ids, confidences,
                                  class_names);
       cv::imshow("Test detections", mat);
@@ -41,7 +43,7 @@ int main() {
         std::cout << "Couldn't fetch frame properly" << std::endl;
         return 1;
       }
-      model.Postprocess(color, bboxes, confidences, class_ids);
+      model.Postprocess(color.rows, color.cols, model.RunModel(color), bboxes, confidences, class_ids);
       yolo::Yolo::DrawDetections(color, bboxes, class_ids, confidences,
                                  class_names);
       cv::imshow("Test detections", color);

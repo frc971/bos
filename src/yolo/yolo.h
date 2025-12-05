@@ -9,10 +9,10 @@ namespace yolo {
 
 class Yolo {
  public:
-  Yolo(std::string model_path, int channels, bool verbose = false);
+  Yolo(std::string model_path, bool color, bool verbose = false);
   ~Yolo();
   std::vector<float> RunModel(const cv::Mat& frame);
-  std::vector<float> Postprocess(const cv::Mat& mat,
+  std::vector<float> Postprocess(const int original_height, const int original_width, const std::vector<float>& results,
                                  std::vector<cv::Rect>& bboxes,
                                  std::vector<float>& confidences,
                                  std::vector<int>& class_ids);
@@ -20,6 +20,7 @@ class Yolo {
                              const std::vector<int>& class_ids,
                              const std::vector<float>& confidences,
                              const std::vector<std::string>& class_names);
+  static constexpr int TARGET_SIZE = 640;
 
  private:
   void PreprocessImage(const cv::Mat& frame, float* gpu_input,
@@ -29,7 +30,7 @@ class Yolo {
   nvinfer1::IExecutionContext* context_;
   cudaStream_t inferenceCudaStream_;
   nvinfer1::Dims64 input_dims_;
-  const int channels_;
+  const bool color_;
   float* input_buffer_;
   float* output_buffer_;
   size_t output_size_;

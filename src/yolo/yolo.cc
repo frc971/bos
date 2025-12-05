@@ -33,7 +33,7 @@ size_t getOutputSize(nvinfer1::ICudaEngine* engine) {
 void Yolo::PreprocessImage(const cv::Mat& img, float* gpu_input,
                            const nvinfer1::Dims64& dims) {
   cv::Mat maybe_rgb;
-  if (channels_ == 3) {
+  if (color_) {
     cv::cvtColor(img, maybe_rgb, cv::COLOR_BGR2RGB);
   }
   else {
@@ -42,21 +42,19 @@ void Yolo::PreprocessImage(const cv::Mat& img, float* gpu_input,
   cv::cuda::GpuMat img_gpu;
   img_gpu.upload(maybe_rgb);
 
-  const int target_size = 640;  // new_shape
-
   // Compute scale factor to preserve aspect ratio
   int orig_h = img.rows;
   int orig_w = img.cols;
   float scale =
-      std::min(target_size / (float)orig_h, target_size / (float)orig_w);
+      std::min(TARGET_SIZE / (float)orig_h, TARGET_SIZE / (float)orig_w);
 
   // Compute new unpadded size
   int new_w = round(orig_w * scale);
   int new_h = round(orig_h * scale);
 
   // Compute padding
-  int dw = target_size - new_w;
-  int dh = target_size - new_h;
+  int dw = TARGET_SIZE - new_w;
+  int dh = TARGET_SIZE - new_h;
   int top = int(round(dh / 2.0 - 0.1));
   int bottom = int(round(dh / 2.0 + 0.1));
   int left = int(round(dw / 2.0 - 0.1));
@@ -75,16 +73,20 @@ void Yolo::PreprocessImage(const cv::Mat& img, float* gpu_input,
 
   // Normalize to 0-1
   cv::cuda::GpuMat normalized;
-  padded.convertTo(normalized, CV_32FC3, 1.f / 255.f);
+  padded.convertTo(normalized, color_ ? CV_32FC3 : CV_32FC1, 1.f / 255.f);
 
-  int channel_size = target_size * target_size;
+  int channel_size = TARGET_SIZE * TARGET_SIZE;
 
-  // Split into channels (HWC -> CHW)
-  std::vector<cv::cuda::GpuMat> chw(channels_);
-  cv::cuda::split(normalized, chw);
-  for (int i = 0; i < channels_; i++) {
-    cudaMemcpy(gpu_input + i * channel_size, chw[i].data,
-               channel_size * sizeof(float), cudaMemcpyDeviceToDevice);
+  if (color_) {
+    const int channels = color_ ? 3 : 1;
+
+    // Split into channels (HWC -> CHW)
+    std::vector<cv::cuda::GpuMat> chw(channels);
+    cv::cuda::split(normalized, chw);
+    for (int i = 0; i < channels; i++) {
+      cudaMemcpy(gpu_input + i * channel_size, chw[i].data,
+                 channel_size * sizeof(float), cudaMemcpyDeviceToDevice);
+    }
   }
 }
 
@@ -95,7 +97,7 @@ class Logger : public nvinfer1::ILogger {
   }
 };
 
-Yolo::Yolo(std::string model_path, const int channels, const bool verbose) : channels_(channels), verbose_(verbose) {
+Yolo::Yolo(std::string model_path, const bool color, const bool verbose) : color_(color), verbose_(verbose) {
   Logger logger;
   std::vector<char> engine_data = loadEngineFile(model_path);
 
@@ -207,41 +209,36 @@ void Yolo::DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
   }
 }
 
-std::vector<float> Yolo::Postprocess(const cv::Mat& mat,
+std::vector<float> Yolo::Postprocess(const int original_height, const int original_width, const std::vector<float>& results,
                                      std::vector<cv::Rect>& bboxes,
                                      std::vector<float>& confidences,
                                      std::vector<int>& class_ids) {
-  const int orig_h = mat.rows;
-  const int orig_w = mat.cols;
-
-  constexpr int target_size = 640;
   float scale =
-      std::min(target_size / (float)orig_h, target_size / (float)orig_w);
+      std::min(TARGET_SIZE / (float)original_height, TARGET_SIZE / (float)original_width);
 
-  const int new_w = round(orig_w * scale);
-  const int new_h = round(orig_h * scale);
+  const int new_w = round(original_width * scale);
+  const int new_h = round(original_height * scale);
 
-  float pad_left = (target_size - new_w) / 2.0;
-  float pad_top = (target_size - new_h) / 2.0;
-  std::vector<float> softmax_results = RunModel(mat);
+  float pad_left = (TARGET_SIZE - new_w) / 2.0;
+  float pad_top = (TARGET_SIZE - new_h) / 2.0;
   const int nms_output_size = 6;
   for (size_t i = 0; i < bboxes.size(); i++) {
-    float x1 = softmax_results[i * nms_output_size];
-    float y1 = softmax_results[i * nms_output_size + 1];
-    float x2 = softmax_results[i * nms_output_size + 2];
-    float y2 = softmax_results[i * nms_output_size + 3];
-    float confidence = softmax_results[i * nms_output_size + 4];
-    int id = softmax_results[i * nms_output_size + 5];
+    float x1 = results[i * nms_output_size];
+    float y1 = results[i * nms_output_size + 1];
+    float x2 = results[i * nms_output_size + 2];
+    float y2 = results[i * nms_output_size + 3];
+    float confidence = results[i * nms_output_size + 4];
+    int id = results[i * nms_output_size + 5];
 
     x1 = (x1 - pad_left) / scale;
     y1 = (y1 - pad_top) / scale;
     x2 = (x2 - pad_left) / scale;
     y2 = (y2 - pad_top) / scale;
 
-    x1 = std::max(0.0f, std::min(x1, (float)orig_w));
-    y1 = std::max(0.0f, std::min(y1, (float)orig_h));
-    x2 = std::max(0.0f, std::min(x2, (float)orig_w));
-    y2 = std::max(0.0f, std::min(y2, (float)orig_h));
+    x1 = std::max(0.0f, std::min(x1, (float)original_width));
+    y1 = std::max(0.0f, std::min(y1, (float)original_height));
+    x2 = std::max(0.0f, std::min(x2, (float)original_width));
+    y2 = std::max(0.0f, std::min(y2, (float)original_height));
 
     float bbox_width = x2 - x1;
     float bbox_height = y2 - y1;
@@ -250,7 +247,7 @@ std::vector<float> Yolo::Postprocess(const cv::Mat& mat,
     confidences[i] = confidence;
     class_ids[i] = id;
   }
-  return softmax_results;
+  return results;
 }
 
 }  // namespace yolo
