@@ -11,7 +11,7 @@ int main() {
   std::cout << "Importing model from " << modelPath << std::endl;
   std::cout << "File actually exists: " << std::filesystem::exists(modelPath)
             << std::endl;
-  yolo::Yolo model(modelPath);
+  yolo::Yolo model(modelPath, 3);
   camera::CVCamera camera =
       camera::CVCamera(cv::VideoCapture(camera::SelectCamera()));
   const int max_detections = 6;
