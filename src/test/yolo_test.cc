@@ -24,7 +24,6 @@ int main() {
   std::vector<std::string> class_names = {
       "Algae", "ALGAE", "Coral",
       "CORAL"};  // Chopped because I screwed up on the dataset, and technically the model outputs "CORAL", "coral", "ALGAE" or "algae"
-  cv::Mat color;
   if (TEST_COLLECTED) {
     for (const auto& entry : std::filesystem::directory_iterator(
              std::string(std::getenv("HOME")) + "/Documents/collected_imgs")) {
@@ -38,15 +37,16 @@ int main() {
     }
   } else {
     while (true) {
-      camera.GetFrame(color);
-      if (color.empty()) {
+      cv::Mat frame;
+      camera.GetFrame(frame);
+      if (frame.empty()) {
         std::cout << "Couldn't fetch frame properly" << std::endl;
         return 1;
       }
-      model.Postprocess(color.rows, color.cols, model.RunModel(color), bboxes, confidences, class_ids);
-      yolo::Yolo::DrawDetections(color, bboxes, class_ids, confidences,
+      model.Postprocess(frame.rows, frame.cols, model.RunModel(frame), bboxes, confidences, class_ids);
+      yolo::Yolo::DrawDetections(frame, bboxes, class_ids, confidences,
                                  class_names);
-      cv::imshow("Test detections", color);
+      cv::imshow("Test detections", frame);
       cv::waitKey(0);
       cv::destroyAllWindows();
     }
