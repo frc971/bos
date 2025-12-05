@@ -8,19 +8,19 @@
 
 const bool TEST_COLLECTED = false;
 const bool COLOR = true;
+const int MAX_DETECTIONS = 6;
 
 int main() {
   std::filesystem::path modelPath = "/bos/src/yolo/model/ninthYOLO.engine";
   std::cout << "Importing model from " << modelPath << std::endl;
   std::cout << "File actually exists: " << std::filesystem::exists(modelPath)
             << std::endl;
-  yolo::Yolo model(modelPath, 3);
+  yolo::Yolo model(modelPath, COLOR);
   camera::CVCamera camera =
       camera::CVCamera(cv::VideoCapture(camera::SelectCamera()));
-  const int max_detections = 6;
-  std::vector<cv::Rect> bboxes(max_detections);
-  std::vector<float> confidences(max_detections);
-  std::vector<int> class_ids(max_detections);
+  std::vector<cv::Rect> bboxes(MAX_DETECTIONS);
+  std::vector<float> confidences(MAX_DETECTIONS);
+  std::vector<int> class_ids(MAX_DETECTIONS);
   std::vector<std::string> class_names = {
       "Algae", "ALGAE", "Coral",
       "CORAL"};  // Chopped because I screwed up on the dataset, and technically the model outputs "CORAL", "coral", "ALGAE" or "algae"
