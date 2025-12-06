@@ -202,7 +202,7 @@ int main() {
       algae_table->GetStructTopic<frc::Pose2d>("Pose");
 
   std::vector<std::thread> camera_threads;
-  const bool using_rs = true;
+  const bool using_rs = false;
   if (using_rs) {
     // purely for testing bc mechanical is mean to realsense :(
     camera_threads.emplace_back(
