@@ -7,6 +7,7 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
+#include "src/utils/camera_utils.h"
 #include "third_party/971apriltag/971apriltag.h"
 
 using json = nlohmann::json;
@@ -31,18 +32,6 @@ frc971::apriltag::DistCoeffs distortion_coefficients_from_json(
   return distortion_coefficients;
 }
 
-json read_intrinsics(std::string path) {
-  json intrinsics;
-
-  std::ifstream intrinsics_file(path);
-  if (!intrinsics_file.is_open()) {
-    std::cerr << "Error: Cannot open intrinsics file: " << path << std::endl;
-  } else {
-    intrinsics_file >> intrinsics;
-  }
-  return intrinsics;
-}
-
 int main() {
   auto apriltag_detector_ = apriltag_detector_create();
 
@@ -58,8 +47,8 @@ int main() {
 
   auto camera_config = camera::SelectCamera();
 
-  auto intrinsics =
-      read_intrinsics(camera::camera_constants[camera_config].intrinsics_path);
+  auto intrinsics = utils::read_intrinsics(
+      camera::camera_constants[camera_config].intrinsics_path);
 
   auto gpu_detector_ = new frc971::apriltag::GpuDetector(
       640, 480, apriltag_detector_, camera_matrix_from_json(intrinsics),
