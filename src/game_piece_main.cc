@@ -41,12 +41,12 @@ void run_gamepiece_detect(yolo::Yolo& model,
       -(float)extrinsics
           ["rotation_y"];  // negative because if the camera is tilted up, phi should be smaller than the theta read by camera
   const frc::Pose3d cam_pose{
-      frc::Translation3d{units::meter_t{extrinsics["translation_x"]},
-                         units::meter_t{extrinsics["translation_y"]},
-                         units::meter_t{extrinsics["translation_z"]}},
-      frc::Rotation3d{units::radian_t{extrinsics["rotation_x"]},
-                      units::radian_t{extrinsics["rotation_y"]},
-                      units::radian_t{(float)extrinsics["rotation_z"]}}};
+      frc::Translation3d{units::meter_t{extrinsics["translation_x"].get<float>()},
+                         units::meter_t{extrinsics["translation_y"].get<float>()},
+                         units::meter_t{extrinsics["translation_z"].get<float>()}},
+      frc::Rotation3d{units::radian_t{extrinsics["rotation_x"].get<float>()},
+                      units::radian_t{extrinsics["rotation_y"].get<float>()},
+                      units::radian_t{(float)extrinsics["rotation_z"].get<float>()}}};
   frc::Transform3d target_pose_cam_relative;
   frc::Pose3d target_pose_robot_relative;
   while (true) {
@@ -101,12 +101,12 @@ void run_gamepiece_detect_realsense(yolo::Yolo& model,
   std::vector<float> confidences(MAX_DETECTIONS);
   std::vector<int> class_ids(MAX_DETECTIONS);
   const frc::Pose3d cam_pose{
-      frc::Translation3d{units::meter_t{extrinsics["translation_x"]},
-                         units::meter_t{extrinsics["translation_y"]},
-                         units::meter_t{extrinsics["translation_z"]}},
-      frc::Rotation3d{units::radian_t{extrinsics["rotation_x"]},
-                      units::radian_t{extrinsics["rotation_y"]},
-                      units::radian_t{(float)extrinsics["rotation_z"]}}};
+      frc::Translation3d{units::meter_t{extrinsics["translation_x"].get<float>()},
+                         units::meter_t{extrinsics["translation_y"].get<float>()},
+                         units::meter_t{extrinsics["translation_z"].get<float>()}},
+      frc::Rotation3d{units::radian_t{extrinsics["rotation_x"].get<float>()},
+                      units::radian_t{extrinsics["rotation_y"].get<float>()},
+                      units::radian_t{(float)extrinsics["rotation_z"].get<float>()}}};
   const float cam_cx = intrinsics["cx"];
   const float cam_cy = intrinsics["cy"];
   const float focal_length_vertical = intrinsics["fy"];
