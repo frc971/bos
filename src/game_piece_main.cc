@@ -75,7 +75,7 @@ void run_gamepiece_detect(yolo::Yolo& model,
                              sin(cam_relative_yaw)},
               units::meter_t{distance * sin(cam_relative_pitch)}},
           frc::Rotation3d{0_rad, units::radian_t{cam_relative_pitch},
-                          units::radian_t{cam_relative_yaw}}};
+                          units::radian_t{-cam_relative_yaw}}};
       target_pose_robot_relative =
           cam_pose.TransformBy(target_pose_cam_relative);
       if (class_name == "coral") {
@@ -172,7 +172,7 @@ void run_gamepiece_detect_realsense(yolo::Yolo& model,
                              sin(cam_relative_yaw)},
               units::meter_t{distance * sin(cam_relative_pitch)}},
           frc::Rotation3d{0_rad, units::radian_t{cam_relative_pitch},
-                          units::radian_t{cam_relative_yaw}}};
+                          units::radian_t{-cam_relative_yaw}}};
       target_pose_robot_relative =
           cam_pose.TransformBy(target_pose_cam_relative);
 
