@@ -13,3 +13,4 @@ image.tar
 *.swp
 bin/*
 build
+logs/
