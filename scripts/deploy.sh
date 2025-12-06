@@ -25,6 +25,9 @@ binaries=(
   "build/src/test/intrinsics_test"
   "build/src/test/camera_source_test"
   "build/src/test/timer_test"
+  "build/src/yolo/image_collector"
+  "build/src/game_piece_main"
+  "build/src/test/yolo_test"
 )
 
 for binary in "${binaries[@]}"; do
