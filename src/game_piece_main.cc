@@ -20,7 +20,7 @@ static std::vector<std::string> class_names = {
 static std::mutex mutex;
 
 void run_gamepiece_detect(yolo::Yolo& model,
-                          std::unique_ptr<camera::CVCamera> camera,
+                          std::unique_ptr<camera::ICamera> camera,
                           nt::StructTopic<frc::Pose2d>& coral_topic,
                           nt::StructTopic<frc::Pose2d>& algae_topic,
                           nlohmann::json intrinsics,
@@ -41,12 +41,14 @@ void run_gamepiece_detect(yolo::Yolo& model,
       -(float)extrinsics
           ["rotation_y"];  // negative because if the camera is tilted up, phi should be smaller than the theta read by camera
   const frc::Pose3d cam_pose{
-      frc::Translation3d{units::meter_t{extrinsics["translation_x"].get<float>()},
-                         units::meter_t{extrinsics["translation_y"].get<float>()},
-                         units::meter_t{extrinsics["translation_z"].get<float>()}},
-      frc::Rotation3d{units::radian_t{extrinsics["rotation_x"].get<float>()},
-                      units::radian_t{extrinsics["rotation_y"].get<float>()},
-                      units::radian_t{(float)extrinsics["rotation_z"].get<float>()}}};
+      frc::Translation3d{
+          units::meter_t{extrinsics["translation_x"].get<float>()},
+          units::meter_t{extrinsics["translation_y"].get<float>()},
+          units::meter_t{extrinsics["translation_z"].get<float>()}},
+      frc::Rotation3d{
+          units::radian_t{extrinsics["rotation_x"].get<float>()},
+          units::radian_t{extrinsics["rotation_y"].get<float>()},
+          units::radian_t{(float)extrinsics["rotation_z"].get<float>()}}};
   frc::Transform3d target_pose_cam_relative;
   frc::Pose3d target_pose_robot_relative;
   while (true) {
@@ -56,6 +58,12 @@ void run_gamepiece_detect(yolo::Yolo& model,
                       confidences, class_ids);
     mutex.unlock();
     for (size_t i = 0; i < MAX_DETECTIONS; i++) {
+      if (bboxes[i].empty()) {
+        if (i == 0) {
+          std::cout << "No detections" << std::endl;
+        }
+        break;
+      }
       const int c_y = bboxes[i].y + bboxes[i].height / 2;
       const int c_x = bboxes[i].x + bboxes[i].width / 2;
       const float cam_relative_pitch =
@@ -101,12 +109,14 @@ void run_gamepiece_detect_realsense(yolo::Yolo& model,
   std::vector<float> confidences(MAX_DETECTIONS);
   std::vector<int> class_ids(MAX_DETECTIONS);
   const frc::Pose3d cam_pose{
-      frc::Translation3d{units::meter_t{extrinsics["translation_x"].get<float>()},
-                         units::meter_t{extrinsics["translation_y"].get<float>()},
-                         units::meter_t{extrinsics["translation_z"].get<float>()}},
-      frc::Rotation3d{units::radian_t{extrinsics["rotation_x"].get<float>()},
-                      units::radian_t{extrinsics["rotation_y"].get<float>()},
-                      units::radian_t{(float)extrinsics["rotation_z"].get<float>()}}};
+      frc::Translation3d{
+          units::meter_t{extrinsics["translation_x"].get<float>()},
+          units::meter_t{extrinsics["translation_y"].get<float>()},
+          units::meter_t{extrinsics["translation_z"].get<float>()}},
+      frc::Rotation3d{
+          units::radian_t{extrinsics["rotation_x"].get<float>()},
+          units::radian_t{extrinsics["rotation_y"].get<float>()},
+          units::radian_t{(float)extrinsics["rotation_z"].get<float>()}}};
   const float cam_cx = intrinsics["cx"];
   const float cam_cy = intrinsics["cy"];
   const float focal_length_vertical = intrinsics["fy"];
@@ -189,7 +199,7 @@ int main() {
   std::cout << "Starting gamepiece main" << std::endl;
   std::cout << "Started networktables" << std::endl;
   yolo::Yolo color_model("/bos/src/yolo/model/color.engine", true);
-  yolo::Yolo gray_model("/bos/src/yolo/model/gray.engine", false);
+  // yolo::Yolo gray_model("/bos/src/yolo/model/gray.engine", false);
   utils::StartNetworktables();
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   std::shared_ptr<nt::NetworkTable> coral_table =
@@ -214,21 +224,12 @@ int main() {
         utils::read_extrinsics(
             camera::camera_constants[camera::Camera::USB0].extrinsics_path));
   } else {
-    camera_threads.reserve(1);  // extremely important optimization
-    std::unique_ptr<camera::CVCamera> usb0 =
-        std::make_unique<camera::CVCamera>(cv::VideoCapture(
-            camera::camera_constants[camera::Camera::USB0].pipeline));
-    std::unique_ptr<camera::CVCamera> usb1 =
-        std::make_unique<camera::CVCamera>(cv::VideoCapture(
-            camera::camera_constants[camera::Camera::USB0].pipeline));
-    // TODO replace with correct model depending on stream type
     camera_threads.emplace_back(
-        run_gamepiece_detect, std::ref(gray_model), std::move(usb0),
-        std::ref(coral_topic), std::ref(algae_topic),
-        utils::read_intrinsics(
-            camera::camera_constants[camera::Camera::USB0].intrinsics_path),
-        utils::read_extrinsics(
-            camera::camera_constants[camera::Camera::USB0].extrinsics_path));
+        run_gamepiece_detect, std::ref(color_model),
+        std::make_unique<camera::RealSenseCamera>(), std::ref(coral_topic),
+        std::ref(algae_topic),
+        utils::read_intrinsics("/bos/constants/realsense_intrinsics.json"),
+        utils::read_extrinsics("/bos/constants/realsense_extrinsics.json"));
   }
   camera_threads[0].join();
 }
