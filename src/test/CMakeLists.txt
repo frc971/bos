@@ -8,7 +8,7 @@ add_executable(intrinsics_test intrinsics_test.cc)
 target_link_libraries(intrinsics_test PRIVATE ${OpenCV_LIBS} camera nlohmann_json::nlohmann_json)
 
 add_executable(yolo_test yolo_test.cc)
-target_link_libraries(yolo_test PRIVATE camera yolo)
+target_link_libraries(yolo_test PRIVATE camera yolo utils)
 
 add_executable(camera_source_test camera_source_test.cc)
 target_link_libraries(camera_source_test PRIVATE ${OpenCV_LIBS} camera)

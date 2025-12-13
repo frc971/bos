@@ -8,6 +8,7 @@
 using json = nlohmann::json;
 
 int main() {
+  // TODO no more imx296 streamer
   camera::CscoreStreamer streamer(
       camera::IMX296Streamer("tag_estimator_test", 4971, 30));
 
