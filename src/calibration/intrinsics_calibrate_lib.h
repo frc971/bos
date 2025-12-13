@@ -20,11 +20,11 @@ typedef struct DetectionResult {
 
 } detection_result_t;
 
-const static int ksquares_x = 2;
+const static int ksquares_x = 12;
 const static int ksquares_y = 9;
 const static float ksquares_length = 0.025;
 const static float kpixel_per_square = 128;
-const static float kmarker_length = 1;
+const static float kmarker_length = 0.020;
 const static int kmargin_squares = 0;
 
 cv::aruco::CharucoDetector CreateDetector(
