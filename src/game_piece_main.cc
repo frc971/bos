@@ -19,6 +19,16 @@ static std::vector<std::string> class_names = {
     "coral"};  // Chopped because I screwed up on the dataset, and technically the model outputs "CORAL", "coral", "ALGAE" or "algae"
 static std::mutex mutex;
 
+std::ostream& operator<<(std::ostream& os, const frc::Pose3d& p) {
+    os << "Point(" << p.X().value() << ", " << p.Y().value() << ", " << p.Z().value() << ")" << "\nRotation:\nPitch:\t" << p.Rotation().Y().value() << "\nRoll:\t" << p.Rotation().X().value() << "\nYaw:\t" << p.Rotation().Z().value() << ")";
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const frc::Transform3d& p) {
+    os << "Point(" << p.X().value() << ", " << p.Y().value() << ", " << p.Z().value() << ")" << "\nRotation:\nPitch:\t" << p.Rotation().Y().value() << "\nRoll:\t" << p.Rotation().X().value() << "\nYaw:\t" << p.Rotation().Z().value() << ")";
+    return os;
+}
+
 void run_gamepiece_detect(yolo::Yolo& model,
                           std::unique_ptr<camera::ICamera> camera,
                           nt::StructTopic<frc::Pose2d>& coral_topic,
@@ -49,14 +59,23 @@ void run_gamepiece_detect(yolo::Yolo& model,
           units::radian_t{extrinsics["rotation_x"].get<float>()},
           units::radian_t{extrinsics["rotation_y"].get<float>()},
           units::radian_t{(float)extrinsics["rotation_z"].get<float>()}}};
+  std::cout << "CamPose: " << cam_pose << std::endl;
   frc::Transform3d target_pose_cam_relative;
   frc::Pose3d target_pose_robot_relative;
+  int i = 0;
   while (true) {
+    i++;
     camera->GetFrame(color);
     mutex.lock();
     model.Postprocess(color.rows, color.cols, model.RunModel(color), bboxes,
                       confidences, class_ids);
     mutex.unlock();
+    model.DrawDetections(color, bboxes, class_ids, confidences, class_names);
+    if (!cv::imwrite(std::string(std::getenv("HOME")) + "/Documents/tested/" +
+                      std::to_string(i) + ".png",
+                  color)) {
+      std::cout << "Hallo, I failed bc I'm a bum" << std::endl;
+    }
     for (size_t i = 0; i < MAX_DETECTIONS; i++) {
       if (bboxes[i].empty()) {
         if (i == 0) {
@@ -84,6 +103,7 @@ void run_gamepiece_detect(yolo::Yolo& model,
               units::meter_t{distance * sin(cam_relative_pitch)}},
           frc::Rotation3d{0_rad, units::radian_t{cam_relative_pitch},
                           units::radian_t{-cam_relative_yaw}}};
+      std::cout << "TargetPose: " << target_pose_cam_relative << std::endl;
       target_pose_robot_relative =
           cam_pose.TransformBy(target_pose_cam_relative);
       if (class_name == "coral") {
@@ -119,9 +139,9 @@ void run_gamepiece_detect_realsense(yolo::Yolo& model,
           units::radian_t{(float)extrinsics["rotation_z"].get<float>()}}};
   const float cam_cx = intrinsics["cx"];
   const float cam_cy = intrinsics["cy"];
-  const float focal_length_vertical = intrinsics["fy"];
   const float focal_length_horizontal = intrinsics["fx"];
   frc::Transform3d target_pose_cam_relative;
+  const float focal_length_vertical = intrinsics["fy"];
   frc::Pose3d target_pose_robot_relative;
   while (true) {
     rs->GetFrame(color, depth);
@@ -198,8 +218,8 @@ void run_gamepiece_detect_realsense(yolo::Yolo& model,
 int main() {
   std::cout << "Starting gamepiece main" << std::endl;
   std::cout << "Started networktables" << std::endl;
-  yolo::Yolo color_model("/bos/src/yolo/model/color.engine", true);
-  // yolo::Yolo gray_model("/bos/src/yolo/model/gray.engine", false);
+  yolo::Yolo color_model("/bos/models/color.engine", true);
+  // yolo::Yolo gray_model("/bos/models/gray.engine", false);
   utils::StartNetworktables();
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   std::shared_ptr<nt::NetworkTable> coral_table =
