@@ -21,6 +21,7 @@ Camera SelectCamera() {
   std::cout << "mipi0" << std::endl;
   std::cout << "mipi1" << std::endl;
   std::cout << "usb0" << std::endl;
+  std::cout << "usb1" << std::endl;
   std::cout << "defaultusb0" << std::endl;
 
   std::string choice;
