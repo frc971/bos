@@ -12,8 +12,11 @@ const int MAX_DETECTIONS = 10;
 
 int main() {
   std::string model_path = "/bos/models/model.engine";
+  std::cout << "Model path\n";
+  std::cin >> model_path;
+
   yolo::Yolo model(model_path, true, true);
-  auto camera = camera::Camera::USB0;
+  auto camera = camera::SelectCamera();
   camera::CVCamera cap = camera::CVCamera(
       cv::VideoCapture(camera::camera_constants[camera].pipeline));
 
@@ -34,7 +37,10 @@ int main() {
       std::cout << "Couldn't fetch frame properly" << std::endl;
       return 1;
     }
-    model.RunModel(frame);
+    model.Postprocess(frame.rows, frame.cols, model.RunModel(frame), bboxes,
+                      confidences, class_ids);
+    yolo::Yolo::DrawDetections(frame, bboxes, class_ids, confidences,
+                               class_names);
     streamer.WriteFrame(frame);
   }
 }
