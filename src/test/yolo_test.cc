@@ -6,13 +6,14 @@
 #include "src/camera/cv_camera.h"
 #include "src/camera/realsense_camera.h"
 #include "src/camera/select_camera.h"
+#include <opencv2/opencv.hpp>
 
 const bool TEST_COLLECTED = false;
 const bool COLOR = true;
 const int MAX_DETECTIONS = 6;
 
 int main() {
-  std::filesystem::path modelPath = "/bos/src/yolo/model/color.engine";
+  std::filesystem::path modelPath = "/bos/models/color.engine";
   std::cout << "Importing model from " << modelPath << std::endl;
   std::cout << "File actually exists: " << std::filesystem::exists(modelPath)
             << std::endl;
@@ -29,7 +30,9 @@ int main() {
     for (const auto& entry : std::filesystem::directory_iterator(
              std::string(std::getenv("HOME")) + "/Documents/collected_imgs")) {
       i++;
+      std::cout << "Handling entry: " << i << std::endl;
       cv::Mat mat = cv::imread(entry.path().string());
+      // cv::cvtColor(mat, mat, cv::COLOR_RGB2GRAY);
       model.Postprocess(mat.rows, mat.cols, model.RunModel(mat), bboxes,
                         confidences, class_ids);
       yolo::Yolo::DrawDetections(mat, bboxes, class_ids, confidences,
@@ -47,6 +50,7 @@ int main() {
         return 1;
       }
       i++;
+      std::cout << "Handling entry: " << i << std::endl;
       model.Postprocess(frame.rows, frame.cols, model.RunModel(frame), bboxes,
                         confidences, class_ids);
       yolo::Yolo::DrawDetections(frame, bboxes, class_ids, confidences,
