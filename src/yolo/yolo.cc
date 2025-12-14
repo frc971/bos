@@ -1,6 +1,7 @@
 #include "yolo.h"
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
+#include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -184,6 +185,12 @@ Yolo::~Yolo() {
     cudaStreamDestroy(inferenceCudaStream_);
     inferenceCudaStream_ = nullptr;
   }
+}
+
+double Yolo::GetObjectAngle(double object_position, double fov,
+                            int image_width) {
+  double focal_length = image_width / std::tan(fov / 2.0);
+  return std::atan2(object_position - (image_width / 2.0), focal_length);
 }
 
 void Yolo::DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
