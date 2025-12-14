@@ -12,10 +12,14 @@ class Yolo {
   Yolo(std::string model_path, bool color, bool verbose = false);
   ~Yolo();
   std::vector<float> RunModel(const cv::Mat& frame);
-  std::vector<float> Postprocess(const int original_height, const int original_width, const std::vector<float>& results,
+  std::vector<float> Postprocess(const int original_height,
+                                 const int original_width,
+                                 const std::vector<float>& results,
                                  std::vector<cv::Rect>& bboxes,
                                  std::vector<float>& confidences,
                                  std::vector<int>& class_ids);
+  static double GetObjectAngle(double object_position, double fov,
+                               int image_width = 640);
   static void DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
                              const std::vector<int>& class_ids,
                              const std::vector<float>& confidences,
@@ -24,7 +28,7 @@ class Yolo {
 
  private:
   void PreprocessImage(const cv::Mat& frame, float* gpu_input,
-                              const nvinfer1::Dims64& dims);
+                       const nvinfer1::Dims64& dims);
   nvinfer1::IRuntime* runtime_;
   nvinfer1::ICudaEngine* engine_;
   nvinfer1::IExecutionContext* context_;
