@@ -198,16 +198,15 @@ void Yolo::DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
     int baseline = 0;
     cv::Size label_size =
         cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
-    (void)label_size;
 
-    // cv::rectangle(
-    //     img,
-    //     cv::Point(boxes[i].x,
-    //               std::max(0, boxes[i].y - label_size.height - baseline)),
-    //     cv::Point(boxes[i].x + label_size.width, boxes[i].y), color,
-    //     cv::FILLED);
-    // cv::putText(img, label, cv::Point(boxes[i].x, boxes[i].y - baseline),
-    //             cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 1);
+    cv::rectangle(
+        img,
+        cv::Point(boxes[i].x,
+                  std::max(0, boxes[i].y - label_size.height - baseline)),
+        cv::Point(boxes[i].x + label_size.width, boxes[i].y), color,
+        cv::FILLED);
+    cv::putText(img, label, cv::Point(boxes[i].x, boxes[i].y - baseline),
+                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 1);
   }
 }
 
