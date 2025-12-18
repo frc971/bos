@@ -21,8 +21,11 @@ RealSenseCamera::~RealSenseCamera() {
 }
 
 void RealSenseCamera::GetFrame(cv::Mat& mat) {
-  for (int i = 0; i < 14; i++) {
-    rs2::frameset frames = pipe_.wait_for_frames(5000);
+  if (!warmed_up_) {
+    for (int i = 0; i < 14; i++) {
+      rs2::frameset frames = pipe_.wait_for_frames(5000);
+    }
+    warmed_up_ = true;
   }
   rs2::frameset frames = pipe_.wait_for_frames(5000);
   rs2::video_frame color_frame = frames.get_color_frame();
@@ -38,8 +41,11 @@ void RealSenseCamera::GetFrame(cv::Mat& mat) {
 }
 
 void RealSenseCamera::GetFrame(cv::Mat& color_mat, cv::Mat& depth_mat) {
-  for (int i = 0; i < 14; i++) {
-    rs2::frameset frames = pipe_.wait_for_frames(5000);
+  if (!warmed_up_) {
+    for (int i = 0; i < 14; i++) {
+      rs2::frameset frames = pipe_.wait_for_frames(5000);
+    }
+    warmed_up_ = true;
   }
   rs2::frameset frames = pipe_.wait_for_frames(5000);
   frames = align_to_color_.process(frames);

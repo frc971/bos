@@ -12,6 +12,8 @@
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 #include "src/yolo/yolo.h"
+#include <chrono>
+#include <iomanip>
 
 static constexpr int MAX_DETECTIONS = 6;
 static std::vector<std::string> class_names = {
@@ -45,8 +47,8 @@ void run_gamepiece_detect(yolo::Yolo& model,
       ["translation_z"];  // Height of the center of the camera, must be from GROUND not bumpers or smthn
   const float cam_cx = intrinsics["cx"];
   const float cam_cy = intrinsics["cy"];
-  const float focal_length_vertical = intrinsics["fy"];
-  const float focal_length_horizontal = intrinsics["fx"];
+  const float focal_length_vertical = intrinsics["fy"].get<float>() / 1000; // needs to be meters
+  const float focal_length_horizontal = intrinsics["fx"].get<float>() / 1000;
   const float cam_pitch =
       -(float)extrinsics
           ["rotation_y"];  // negative because if the camera is tilted up, phi should be smaller than the theta read by camera
@@ -59,23 +61,14 @@ void run_gamepiece_detect(yolo::Yolo& model,
           units::radian_t{extrinsics["rotation_x"].get<float>()},
           units::radian_t{extrinsics["rotation_y"].get<float>()},
           units::radian_t{(float)extrinsics["rotation_z"].get<float>()}}};
-  std::cout << "CamPose: " << cam_pose << std::endl;
   frc::Transform3d target_pose_cam_relative;
   frc::Pose3d target_pose_robot_relative;
-  int i = 0;
   while (true) {
-    i++;
     camera->GetFrame(color);
     mutex.lock();
     model.Postprocess(color.rows, color.cols, model.RunModel(color), bboxes,
                       confidences, class_ids);
     mutex.unlock();
-    model.DrawDetections(color, bboxes, class_ids, confidences, class_names);
-    if (!cv::imwrite(std::string(std::getenv("HOME")) + "/Documents/tested/" +
-                      std::to_string(i) + ".png",
-                  color)) {
-      std::cout << "Hallo, I failed bc I'm a bum" << std::endl;
-    }
     for (size_t i = 0; i < MAX_DETECTIONS; i++) {
       if (bboxes[i].empty()) {
         if (i == 0) {
@@ -90,6 +83,7 @@ void run_gamepiece_detect(yolo::Yolo& model,
       const float phi = cam_relative_pitch + cam_pitch;
       const float distance = pinhole_height / sin(phi);
       const std::string& class_name = class_names[class_ids[i]];
+      std::cout << "\tc_y:\t" << c_y << "\tcam_relative_pitch:\t" << cam_relative_pitch << "\tphi:\t" << phi << std::endl;
       std::cout << "Detected a " << class_name << " " << distance
                 << " meters away" << std::endl;
       const float cam_relative_yaw =
@@ -108,6 +102,11 @@ void run_gamepiece_detect(yolo::Yolo& model,
           cam_pose.TransformBy(target_pose_cam_relative);
       if (class_name == "coral") {
         coral_pub.Set(target_pose_robot_relative.ToPose2d());
+        model.DrawDetections(color, bboxes, class_ids, confidences, class_names);
+        cv::imwrite(std::string(std::getenv("HOME")) + "/Documents/tested/" +
+                        "frame.png",
+                    color);
+        std::exit(0);
       } else {
         algae_pub.Set(target_pose_robot_relative.ToPose2d());
       }
@@ -216,6 +215,7 @@ void run_gamepiece_detect_realsense(yolo::Yolo& model,
 }
 
 int main() {
+  std::cout << std::fixed << std::setprecision(2);
   std::cout << "Starting gamepiece main" << std::endl;
   std::cout << "Started networktables" << std::endl;
   yolo::Yolo color_model("/bos/models/color.engine", true);
