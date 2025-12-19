@@ -45,11 +45,25 @@ int main() {
                       class_ids);
     yolo::Yolo::DrawDetections(frame, bboxes, class_ids, confidences,
                                class_names);
-    std::cout << "Object angle: "
+    std::cout << "yaw angle: "
               << yolo::Yolo::GetObjectAngle(
-                     (detections[0] + detections[2]) / 2.0,
+                     (detections[yolo::OuputBufferIndexes::X1] +
+                      detections[yolo::OuputBufferIndexes::X2]) /
+                         2.0,
                      std::numbers::pi * (3.0 / 4.0))
               << "\n";
+
+    const double pitch_angle =
+        yolo::Yolo::GetObjectAngle((detections[yolo::OuputBufferIndexes::Y1] +
+                                    detections[yolo::OuputBufferIndexes::Y2]) /
+                                       2.0,
+                                   std::numbers::pi * (3.0 / 4.0));
+    std::cout << "pith angle: " << pitch_angle << "\n";
+
+    const double estimated_distance =
+        yolo::Yolo::GetObjectDistance(std::abs(pitch_angle), 1.0);
+    std::cout << "estimated_distance: " << estimated_distance << "\n";
+
     streamer.WriteFrame(frame);
   }
 }

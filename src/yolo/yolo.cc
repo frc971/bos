@@ -193,6 +193,10 @@ double Yolo::GetObjectAngle(double object_position, double fov,
   return std::atan2(object_position - (image_width / 2.0), focal_length);
 }
 
+double Yolo::GetObjectDistance(double object_pitch, double camera_height) {
+  return camera_height / std::tan(object_pitch);
+}
+
 void Yolo::DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
                           const std::vector<int>& class_ids,
                           const std::vector<float>& confidences,

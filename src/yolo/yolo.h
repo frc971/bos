@@ -7,6 +7,16 @@
 #include <vector>
 namespace yolo {
 
+enum OuputBufferIndexes {
+  X1 = 0,
+  Y1 = 1,
+  X2 = 2,
+  Y2 = 3,
+  CONFIDENCE = 4,
+  ID = 5,
+  STRIDE,
+};
+
 class Yolo {
  public:
   Yolo(std::string model_path, bool color, bool verbose = false);
@@ -20,6 +30,8 @@ class Yolo {
                                  std::vector<int>& class_ids);
   static double GetObjectAngle(double object_position, double fov,
                                int image_width = 640);
+
+  static double GetObjectDistance(double object_pitch, double camera_height);
   static void DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
                              const std::vector<int>& class_ids,
                              const std::vector<float>& confidences,
