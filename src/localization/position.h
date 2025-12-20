@@ -29,10 +29,11 @@ typedef struct TagDetection {
     os << t.rotation.x * 180 / M_PI << "\n";
     os << t.rotation.y * 180 / M_PI << "\n";
     os << t.rotation.z * 180 / M_PI << "\n";
-    os << "Distance(xy): "
+    os << "Distance(xyz): "
        << "\n";
     os << sqrt(t.translation.x * t.translation.x +
-               t.translation.y * t.translation.y)
+               t.translation.y * t.translation.y +
+               t.translation.z * t.translation.z)
        << "\n";
     return os;
   }

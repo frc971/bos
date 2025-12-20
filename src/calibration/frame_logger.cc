@@ -12,8 +12,7 @@
 int main() {
   utils::StartNetworktables();
 
-  camera::CscoreStreamer streamer(
-      camera::IMX296Streamer("frame_shower", 4971, 30));
+  camera::CscoreStreamer streamer("frame_shower", 4971, 30, 1080, 1080);
 
   auto camera = camera::SelectCamera();
   camera::CVCamera cap(

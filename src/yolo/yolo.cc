@@ -1,6 +1,7 @@
 #include "yolo.h"
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
+#include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -35,8 +36,7 @@ void Yolo::PreprocessImage(const cv::Mat& img, float* gpu_input,
   cv::Mat maybe_rgb;
   if (color_) {
     cv::cvtColor(img, maybe_rgb, cv::COLOR_BGR2RGB);
-  }
-  else {
+  } else {
     maybe_rgb = img;
   }
   cv::cuda::GpuMat img_gpu;
@@ -97,7 +97,8 @@ class Logger : public nvinfer1::ILogger {
   }
 };
 
-Yolo::Yolo(std::string model_path, const bool color, const bool verbose) : color_(color), verbose_(verbose) {
+Yolo::Yolo(std::string model_path, const bool color, const bool verbose)
+    : color_(color), verbose_(verbose) {
   Logger logger;
   std::vector<char> engine_data = loadEngineFile(model_path);
 
@@ -127,6 +128,7 @@ Yolo::Yolo(std::string model_path, const bool color, const bool verbose) : color
 
 std::vector<float> Yolo::RunModel(const cv::Mat& frame) {
   bool status;
+  (void)status;
   PreprocessImage(frame, input_buffer_, input_dims_);
   status =
       context_->setTensorAddress(engine_->getIOTensorName(0), input_buffer_);
@@ -185,6 +187,12 @@ Yolo::~Yolo() {
   }
 }
 
+double Yolo::GetObjectAngle(double object_position, double fov,
+                            int image_width) {
+  double focal_length = image_width / std::tan(fov / 2.0);
+  return std::atan2(object_position - (image_width / 2.0), focal_length);
+}
+
 void Yolo::DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
                           const std::vector<int>& class_ids,
                           const std::vector<float>& confidences,
@@ -209,12 +217,14 @@ void Yolo::DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
   }
 }
 
-std::vector<float> Yolo::Postprocess(const int original_height, const int original_width, const std::vector<float>& results,
+std::vector<float> Yolo::Postprocess(const int original_height,
+                                     const int original_width,
+                                     const std::vector<float>& results,
                                      std::vector<cv::Rect>& bboxes,
                                      std::vector<float>& confidences,
                                      std::vector<int>& class_ids) {
-  float scale =
-      std::min(TARGET_SIZE / (float)original_height, TARGET_SIZE / (float)original_width);
+  float scale = std::min(TARGET_SIZE / (float)original_height,
+                         TARGET_SIZE / (float)original_width);
 
   const int new_w = round(original_width * scale);
   const int new_h = round(original_height * scale);
