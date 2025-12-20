@@ -43,8 +43,8 @@ void run_gamepiece_detect(yolo::Yolo& model,
                           std::unique_ptr<camera::ICamera> camera,
                           nt::StructTopic<frc::Pose2d>& coral_topic,
                           nt::StructTopic<frc::Pose2d>& algae_topic,
-                          nlohmann::json intrinsics,
-                          nlohmann::json extrinsics) {
+                          nlohmann::json intrinsics, nlohmann::json extrinsics,
+                          bool debug) {
   nt::StructPublisher<frc::Pose2d> coral_pub = coral_topic.Publish();
   nt::StructPublisher<frc::Pose2d> algae_pub = algae_topic.Publish();
   cv::Mat color;
@@ -90,10 +90,6 @@ void run_gamepiece_detect(yolo::Yolo& model,
       const float phi = cam_relative_pitch + cam_pitch;
       const float distance = pinhole_height / sin(phi);
       const std::string& class_name = class_names[class_ids[i]];
-      std::cout << "\tc_y:\t" << c_y << "\tcam_relative_pitch:\t"
-                << cam_relative_pitch << "\tphi:\t" << phi << std::endl;
-      std::cout << "Detected a " << class_name << " " << distance
-                << " meters away" << std::endl;
       const float cam_relative_yaw =
           atan2(c_x - cam_cx, focal_length_horizontal);
       target_pose_cam_relative = {
@@ -105,20 +101,23 @@ void run_gamepiece_detect(yolo::Yolo& model,
               units::meter_t{distance * sin(cam_relative_pitch)}},
           frc::Rotation3d{0_rad, units::radian_t{cam_relative_pitch},
                           units::radian_t{-cam_relative_yaw}}};
-      std::cout << "TargetPose: " << target_pose_cam_relative << std::endl;
       target_pose_robot_relative =
           cam_pose.TransformBy(target_pose_cam_relative);
       if (class_name == "coral") {
         coral_pub.Set(target_pose_robot_relative.ToPose2d());
-        model.DrawDetections(color, bboxes, class_ids, confidences,
-                             class_names);
-        cv::imwrite(std::string(std::getenv("HOME")) + "/Documents/tested/" +
-                        "frame.png",
-                    color);
-        std::exit(0);
       } else {
         algae_pub.Set(target_pose_robot_relative.ToPose2d());
       }
+      if (debug) {
+        std::cout << "\tc_y:\t" << c_y << "\tcam_relative_pitch:\t"
+                  << cam_relative_pitch << "\tphi:\t" << phi << "\tyaw:\t"
+                  << cam_relative_yaw << std::endl;
+        std::cout << "Detected a " << class_name << " " << distance
+                  << " meters away" << std::endl;
+      }
+      std::cout << "TargetPose: " << target_pose_cam_relative << std::endl;
+      std::cout << "Robot_relative: " << target_pose_robot_relative
+                << std::endl;
     }
   }
 }
@@ -146,6 +145,6 @@ int main() {
       std::make_unique<camera::RealSenseCamera>(), std::ref(coral_topic),
       std::ref(algae_topic),
       utils::read_intrinsics("/bos/constants/realsense_intrinsics.json"),
-      utils::read_extrinsics("/bos/constants/realsense_extrinsics.json"));
+      utils::read_extrinsics("/bos/constants/realsense_extrinsics.json"), true);
   camera_threads[0].join();
 }
