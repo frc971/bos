@@ -25,8 +25,7 @@ void run_estimator(const int frame_width, const int frame_height,
                                            intrinsics, extrinsics);
   localization::PositionSender position_sender(source.GetName());
 
-  camera::CscoreStreamer streamer(
-      camera::IMX296Streamer(source.GetName(), port, 30));
+  camera::CscoreStreamer streamer(source.GetName(), 4971, 30, 1080, 1080);
 
   while (true) {
     camera::timestamped_frame_t timestamped_frame = source.Get();
@@ -42,8 +41,8 @@ void run_yolo(const int frame_width, const int frame_height,
               std::string model_path, camera::CameraSource& source,
               std::string extrinsics, uint port) {
   yolo::Yolo model(model_path, true, true);
-  camera::CscoreStreamer streamer(
-      camera::IMX296Streamer(source.GetName(), port, 30));
+
+  camera::CscoreStreamer streamer(source.GetName(), 4971, 30, 1080, 1080);
 
   std::vector<cv::Rect> bboxes(6);
   std::vector<float> confidences(6);

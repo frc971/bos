@@ -39,10 +39,9 @@ int main() {
   cv::Mat distortion_coefficients =
       distortion_coefficients_from_json(intrinsics);
 
-  camera::CscoreStreamer raw_streamer(
-      camera::IMX296Streamer("raw_stream", 4971, 30));
-  camera::CscoreStreamer undistorted_streamer(
-      camera::IMX296Streamer("undistorted_stream", 4972, 30));
+  camera::CscoreStreamer raw_streamer("raw_stream", 4971, 30, 1080, 1080);
+  camera::CscoreStreamer undistorted_streamer("undistorted_stream", 4971, 30,
+                                              1080, 1080);
 
   camera::Camera camera = camera::SelectCamera();
   camera::CVCamera cap(

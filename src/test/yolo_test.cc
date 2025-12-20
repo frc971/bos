@@ -23,8 +23,7 @@ int main() {
   camera::CVCamera cap = camera::CVCamera(
       cv::VideoCapture(camera::camera_constants[camera].pipeline));
 
-  camera::CscoreStreamer streamer(
-      camera::IMX296Streamer("yolo_test", 4971, 30));
+  camera::CscoreStreamer streamer("yolo_test", 4971, 30, 1080, 1080);
 
   std::vector<cv::Rect> bboxes(MAX_DETECTIONS);
   std::vector<float> confidences(MAX_DETECTIONS);

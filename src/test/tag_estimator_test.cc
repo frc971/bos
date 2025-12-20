@@ -9,8 +9,8 @@ using json = nlohmann::json;
 
 int main() {
   // TODO no more imx296 streamer
-  camera::CscoreStreamer streamer(
-      camera::IMX296Streamer("tag_estimator_test", 4971, 30));
+
+  camera::CscoreStreamer streamer("tag_estimator_test", 4971, 30, 1080, 1080);
 
   auto camera = camera::SelectCamera();
   camera::CVCamera cap(
