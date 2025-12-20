@@ -14,6 +14,16 @@ RealSenseCamera::RealSenseCamera()
   std::cout << "pipe started" << std::endl;
   rs2::frameset test_frames = pipe_.wait_for_frames(5000);
   std::cout << "testframes acquired" << std::endl;
+  rs2::video_stream_profile profile = pipe_.get_active_profile().get_stream(RS2_STREAM_COLOR).as<rs2::video_stream_profile>();
+
+  rs2_intrinsics intr = profile.get_intrinsics();
+
+  float fx = intr.fx;
+  float fy = intr.fy;
+  float cx = intr.ppx;
+  float cy = intr.ppy;
+
+  std::cout << "Fx: " << fx << "\tfy: " << fy << "\tcx: " << cx << "\tcy: " << cy << std::endl;
 }
 
 RealSenseCamera::~RealSenseCamera() {
@@ -21,8 +31,11 @@ RealSenseCamera::~RealSenseCamera() {
 }
 
 void RealSenseCamera::GetFrame(cv::Mat& mat) {
-  for (int i = 0; i < 14; i++) {
-    rs2::frameset frames = pipe_.wait_for_frames(5000);
+  if (!warmed_up_) {
+    for (int i = 0; i < 14; i++) {
+      rs2::frameset frames = pipe_.wait_for_frames(5000);
+    }
+    warmed_up_ = true;
   }
   rs2::frameset frames = pipe_.wait_for_frames(5000);
   rs2::video_frame color_frame = frames.get_color_frame();
@@ -38,8 +51,11 @@ void RealSenseCamera::GetFrame(cv::Mat& mat) {
 }
 
 void RealSenseCamera::GetFrame(cv::Mat& color_mat, cv::Mat& depth_mat) {
-  for (int i = 0; i < 14; i++) {
-    rs2::frameset frames = pipe_.wait_for_frames(5000);
+  if (!warmed_up_) {
+    for (int i = 0; i < 14; i++) {
+      rs2::frameset frames = pipe_.wait_for_frames(5000);
+    }
+    warmed_up_ = true;
   }
   rs2::frameset frames = pipe_.wait_for_frames(5000);
   frames = align_to_color_.process(frames);

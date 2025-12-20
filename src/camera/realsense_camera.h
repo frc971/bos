@@ -17,6 +17,7 @@ class RealSenseCamera : public ICamera {
  private:
   rs2::pipeline pipe_;
   rs2::align align_to_color_;
+  bool warmed_up_ = false;
 };
 
 }  // namespace camera
