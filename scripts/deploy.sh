@@ -28,6 +28,7 @@ binaries=(
   "build/src/yolo/image_collector"
   "build/src/game_piece_main"
   "build/src/test/yolo_test"
+  "build/src/test/game_piece_test"
 )
 
 for binary in "${binaries[@]}"; do

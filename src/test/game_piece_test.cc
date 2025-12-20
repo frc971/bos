@@ -59,7 +59,6 @@ void run_gamepiece_detect(yolo::Yolo& model,
           units::radian_t{(float)extrinsics["rotation_z"].get<float>()}}};
   frc::Transform3d target_pose_cam_relative;
   frc::Pose3d target_pose_robot_relative;
-  while (true) {
     mutex.lock();
     model.Postprocess(frame.rows, frame.cols, model.RunModel(frame), bboxes,
                       confidences, class_ids);
@@ -102,7 +101,6 @@ void run_gamepiece_detect(yolo::Yolo& model,
                     frame);
         std::exit(0);
       }
-    }
   }
 }
 

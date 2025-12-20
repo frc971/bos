@@ -47,8 +47,8 @@ void run_gamepiece_detect(yolo::Yolo& model,
       ["translation_z"];  // Height of the center of the camera, must be from GROUND not bumpers or smthn
   const float cam_cx = intrinsics["cx"];
   const float cam_cy = intrinsics["cy"];
-  const float focal_length_vertical = intrinsics["fy"].get<float>() / 1000; // needs to be meters
-  const float focal_length_horizontal = intrinsics["fx"].get<float>() / 1000;
+  const float focal_length_vertical = intrinsics["fy"].get<float>(); // needs to be meters
+  const float focal_length_horizontal = intrinsics["fx"].get<float>();
   const float cam_pitch =
       -(float)extrinsics
           ["rotation_y"];  // negative because if the camera is tilted up, phi should be smaller than the theta read by camera
@@ -80,10 +80,11 @@ void run_gamepiece_detect(yolo::Yolo& model,
       const int c_x = bboxes[i].x + bboxes[i].width / 2;
       const float cam_relative_pitch =
           atan2(c_y - cam_cy, focal_length_vertical);
-      const float phi = cam_relative_pitch + cam_pitch;
+      const float alt_pitch = (c_y - cam_cy) / (color.rows/2.) * (58/2.) * 3.14 / 180;
+      const float phi = alt_pitch + cam_pitch;
       const float distance = pinhole_height / sin(phi);
       const std::string& class_name = class_names[class_ids[i]];
-      std::cout << "\tc_y:\t" << c_y << "\tcam_relative_pitch:\t" << cam_relative_pitch << "\tphi:\t" << phi << std::endl;
+      std::cout << "\tc_y:\t" << c_y << "\tcam_relative_pitch:\t" << cam_relative_pitch << "\tphi:\t" << phi << "\talt_pitch:\t" << alt_pitch << std::endl;
       std::cout << "Detected a " << class_name << " " << distance
                 << " meters away" << std::endl;
       const float cam_relative_yaw =
