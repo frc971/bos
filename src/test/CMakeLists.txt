@@ -15,3 +15,6 @@ target_link_libraries(camera_source_test PRIVATE ${OpenCV_LIBS} camera)
 
 add_executable(timer_test timer_test.cc)
 target_link_libraries(timer_test PRIVATE utils)
+
+add_executable(game_piece_test game_piece_test.cc)
+target_link_libraries(game_piece_test wpilibc ntcore ${OpenCV_LIBS} camera utils yolo)
