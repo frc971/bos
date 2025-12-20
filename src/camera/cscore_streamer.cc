@@ -21,11 +21,6 @@ CscoreStreamer::CscoreStreamer(std::string name, uint port, uint fps,
   server_.SetSource(source_);
 }
 
-// is this tuff? (prob not)
-CscoreStreamer::CscoreStreamer(IMX296Streamer streamer)
-    : CscoreStreamer(streamer.name, streamer.port, streamer.fps,
-                     streamer.height, streamer.width) {}
-
 void CscoreStreamer::WriteFrame(cv::Mat& mat) {
   source_.PutFrame(mat);
 }

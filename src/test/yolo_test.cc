@@ -1,63 +1,54 @@
 #include "src/yolo/yolo.h"
 #include <filesystem>
 #include <iostream>
+#include <numbers>
 #include <opencv2/opencv.hpp>
 #include <string>
+#include "src/camera/camera_constants.h"
+#include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
-#include "src/camera/realsense_camera.h"
 #include "src/camera/select_camera.h"
-#include <opencv2/opencv.hpp>
+#include "src/utils/timer.h"
 
-const bool TEST_COLLECTED = false;
-const bool COLOR = true;
-const int MAX_DETECTIONS = 6;
+const int MAX_DETECTIONS = 10;
 
 int main() {
-  std::filesystem::path modelPath = "/bos/models/color.engine";
-  std::cout << "Importing model from " << modelPath << std::endl;
-  std::cout << "File actually exists: " << std::filesystem::exists(modelPath)
-            << std::endl;
-  yolo::Yolo model(modelPath, COLOR);
-  camera::RealSenseCamera camera;
+  std::string model_path = "/bos/models/model.engine";
+  std::cout << "Model path\n";
+  std::cin >> model_path;
+
+  yolo::Yolo model(model_path, true, true);
+  auto camera = camera::Camera::DEFAULT_USB0;
+  camera = camera::SelectCamera();
+  camera::CVCamera cap = camera::CVCamera(
+      cv::VideoCapture(camera::camera_constants[camera].pipeline));
+
+  camera::CscoreStreamer streamer("yolo_test", 4971, 30, 1080, 1080);
+
   std::vector<cv::Rect> bboxes(MAX_DETECTIONS);
   std::vector<float> confidences(MAX_DETECTIONS);
   std::vector<int> class_ids(MAX_DETECTIONS);
-  std::vector<std::string> class_names = {
-      "Algae", "ALGAE", "Coral",
-      "CORAL"};  // Chopped because I screwed up on the dataset, and technically the model outputs "CORAL", "coral", "ALGAE" or "algae"
-  int i = 0;
-  if (TEST_COLLECTED) {
-    for (const auto& entry : std::filesystem::directory_iterator(
-             std::string(std::getenv("HOME")) + "/Documents/collected_imgs")) {
-      i++;
-      std::cout << "Handling entry: " << i << std::endl;
-      cv::Mat mat = cv::imread(entry.path().string());
-      // cv::cvtColor(mat, mat, cv::COLOR_RGB2GRAY);
-      model.Postprocess(mat.rows, mat.cols, model.RunModel(mat), bboxes,
-                        confidences, class_ids);
-      yolo::Yolo::DrawDetections(mat, bboxes, class_ids, confidences,
-                                 class_names);
-      cv::imwrite(std::string(std::getenv("HOME")) + "/Documents/tested/" +
-                      std::to_string(i) + ".png",
-                  mat);
-    }
-  } else {
+
+  // Chopped because I screwed up on the dataset, and technically the model outputs "CORAL", "coral", "ALGAE" or "algae"
+  std::vector<std::string> class_names = {"object"};
+  while (true) {
     cv::Mat frame;
-    while (true) {
-      camera.GetFrame(frame);
-      if (frame.empty()) {
-        std::cout << "Couldn't fetch frame properly" << std::endl;
-        return 1;
-      }
-      i++;
-      std::cout << "Handling entry: " << i << std::endl;
-      model.Postprocess(frame.rows, frame.cols, model.RunModel(frame), bboxes,
-                        confidences, class_ids);
-      yolo::Yolo::DrawDetections(frame, bboxes, class_ids, confidences,
-                                 class_names);
-      cv::imwrite(std::string(std::getenv("HOME")) + "/Documents/tested/" +
-                      std::to_string(i) + ".png",
-                  frame);
+    utils::Timer timer("yolo");
+    cap.GetFrame(frame);
+    if (frame.empty()) {
+      std::cout << "Couldn't fetch frame properly" << std::endl;
+      return 1;
     }
+    std::vector<float> detections = model.RunModel(frame);
+    model.Postprocess(frame.rows, frame.cols, detections, bboxes, confidences,
+                      class_ids);
+    yolo::Yolo::DrawDetections(frame, bboxes, class_ids, confidences,
+                               class_names);
+    std::cout << "Object angle: "
+              << yolo::Yolo::GetObjectAngle(
+                     (detections[0] + detections[2]) / 2.0,
+                     std::numbers::pi * (3.0 / 4.0))
+              << "\n";
+    streamer.WriteFrame(frame);
   }
 }

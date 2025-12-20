@@ -11,8 +11,7 @@ int main(int argc, char* argv[]) {
   camera::CVCamera cap(
       cv::VideoCapture(camera::camera_constants[camera].pipeline));
 
-  camera::CscoreStreamer streamer(
-      camera::IMX296Streamer("focus_calibrate", 4971, 30));
+  camera::CscoreStreamer streamer("focus_calibrate", 4971, 30, 1080, 1080);
 
   cv::Mat frame, gray, laplace;
   while (true) {
