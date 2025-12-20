@@ -98,7 +98,7 @@ void run_gamepiece_detect(yolo::Yolo& model,
                              cos(cam_relative_yaw)},
               units::meter_t{distance * cos(cam_relative_pitch) *
                              sin(cam_relative_yaw)},
-              units::meter_t{distance * sin(cam_relative_pitch)}},
+              units::meter_t{distance * -sin(cam_relative_pitch)}},
           frc::Rotation3d{0_rad, units::radian_t{cam_relative_pitch},
                           units::radian_t{-cam_relative_yaw}}};
       target_pose_robot_relative =
@@ -114,10 +114,10 @@ void run_gamepiece_detect(yolo::Yolo& model,
                   << cam_relative_yaw << std::endl;
         std::cout << "Detected a " << class_name << " " << distance
                   << " meters away" << std::endl;
+        std::cout << "TargetPose: " << target_pose_cam_relative << std::endl;
+        std::cout << "Robot_relative: " << target_pose_robot_relative
+                  << std::endl;
       }
-      std::cout << "TargetPose: " << target_pose_cam_relative << std::endl;
-      std::cout << "Robot_relative: " << target_pose_robot_relative
-                << std::endl;
     }
   }
 }
