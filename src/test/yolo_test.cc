@@ -18,11 +18,8 @@ int main() {
   std::cin >> model_path;
 
   yolo::Yolo model(model_path, true, true);
-  auto camera = camera::Camera::DEFAULT_USB0;
-  camera = camera::SelectCamera();
-  camera::CVCamera cap = camera::CVCamera(
-      cv::VideoCapture(camera::camera_constants[camera].pipeline));
-
+  camera::Camera config = camera::SelectCameraConfig();
+  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
   camera::CscoreStreamer streamer("yolo_test", 4971, 30, 1080, 1080);
 
   std::vector<cv::Rect> bboxes(MAX_DETECTIONS);
@@ -34,7 +31,7 @@ int main() {
   while (true) {
     cv::Mat frame;
     utils::Timer timer("yolo");
-    cap.GetFrame(frame);
+    camera->GetFrame(frame);
     if (frame.empty()) {
       std::cout << "Couldn't fetch frame properly" << std::endl;
       return 1;

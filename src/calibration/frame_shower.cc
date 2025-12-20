@@ -14,9 +14,8 @@
 int main() {
   camera::CscoreStreamer streamer("frame_shower", 4971, 30, 1080, 1080);
 
-  camera::Camera camera = camera::SelectCamera();
-  camera::CVCamera cap(
-      cv::VideoCapture(camera::camera_constants[camera].pipeline));
+  std::unique_ptr<camera::ICamera> camera =
+      camera::GetCameraStream(camera::SelectCameraConfig());
 
   cv::Mat frame;
 
@@ -27,7 +26,7 @@ int main() {
     cv::Mat frame;
     while (true) {
       std::cout << "Getting frame" << std::endl;
-      cap.GetFrame(frame);
+      camera->GetFrame(frame);
       streamer.WriteFrame(frame);
       std::cout << frame.size << std::endl;
       std::cout << "Got frame" << std::endl;

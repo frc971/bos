@@ -7,15 +7,14 @@
 #include "src/camera/select_camera.h"
 
 int main(int argc, char* argv[]) {
-  camera::Camera camera = camera::SelectCamera();
-  camera::CVCamera cap(
-      cv::VideoCapture(camera::camera_constants[camera].pipeline));
+  camera::Camera config = camera::SelectCameraConfig();
+  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
 
   camera::CscoreStreamer streamer("focus_calibrate", 4971, 30, 1080, 1080);
 
   cv::Mat frame, gray, laplace;
   while (true) {
-    cap.GetFrame(frame);
+    camera->GetFrame(frame);
     streamer.WriteFrame(frame);
 
     cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
