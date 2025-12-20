@@ -1,6 +1,8 @@
 #include <frc/geometry/Pose2d.h>
 #include <frc/geometry/Pose3d.h>
 #include <networktables/StructTopic.h>
+#include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <thread>
@@ -12,8 +14,6 @@
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 #include "src/yolo/yolo.h"
-#include <chrono>
-#include <iomanip>
 
 static constexpr int MAX_DETECTIONS = 6;
 static std::vector<std::string> class_names = {
@@ -22,13 +22,21 @@ static std::vector<std::string> class_names = {
 static std::mutex mutex;
 
 std::ostream& operator<<(std::ostream& os, const frc::Pose3d& p) {
-    os << "Point(" << p.X().value() << ", " << p.Y().value() << ", " << p.Z().value() << ")" << "\nRotation:\nPitch:\t" << p.Rotation().Y().value() << "\nRoll:\t" << p.Rotation().X().value() << "\nYaw:\t" << p.Rotation().Z().value() << ")";
-    return os;
+  os << "Point(" << p.X().value() << ", " << p.Y().value() << ", "
+     << p.Z().value() << ")"
+     << "\nRotation:\nPitch:\t" << p.Rotation().Y().value() << "\nRoll:\t"
+     << p.Rotation().X().value() << "\nYaw:\t" << p.Rotation().Z().value()
+     << ")";
+  return os;
 }
 
 std::ostream& operator<<(std::ostream& os, const frc::Transform3d& p) {
-    os << "Point(" << p.X().value() << ", " << p.Y().value() << ", " << p.Z().value() << ")" << "\nRotation:\nPitch:\t" << p.Rotation().Y().value() << "\nRoll:\t" << p.Rotation().X().value() << "\nYaw:\t" << p.Rotation().Z().value() << ")";
-    return os;
+  os << "Point(" << p.X().value() << ", " << p.Y().value() << ", "
+     << p.Z().value() << ")"
+     << "\nRotation:\nPitch:\t" << p.Rotation().Y().value() << "\nRoll:\t"
+     << p.Rotation().X().value() << "\nYaw:\t" << p.Rotation().Z().value()
+     << ")";
+  return os;
 }
 
 void run_gamepiece_detect(yolo::Yolo& model,
@@ -47,7 +55,8 @@ void run_gamepiece_detect(yolo::Yolo& model,
       ["translation_z"];  // Height of the center of the camera, must be from GROUND not bumpers or smthn
   const float cam_cx = intrinsics["cx"];
   const float cam_cy = intrinsics["cy"];
-  const float focal_length_vertical = intrinsics["fy"].get<float>(); // needs to be meters
+  const float focal_length_vertical =
+      intrinsics["fy"].get<float>();  // needs to be meters
   const float focal_length_horizontal = intrinsics["fx"].get<float>();
   const float cam_pitch =
       -(float)extrinsics
@@ -80,11 +89,11 @@ void run_gamepiece_detect(yolo::Yolo& model,
       const int c_x = bboxes[i].x + bboxes[i].width / 2;
       const float cam_relative_pitch =
           atan2(c_y - cam_cy, focal_length_vertical);
-      const float alt_pitch = (c_y - cam_cy) / (color.rows/2.) * (58/2.) * 3.14 / 180;
-      const float phi = alt_pitch + cam_pitch;
+      const float phi = cam_relative_pitch + cam_pitch;
       const float distance = pinhole_height / sin(phi);
       const std::string& class_name = class_names[class_ids[i]];
-      std::cout << "\tc_y:\t" << c_y << "\tcam_relative_pitch:\t" << cam_relative_pitch << "\tphi:\t" << phi << "\talt_pitch:\t" << alt_pitch << std::endl;
+      std::cout << "\tc_y:\t" << c_y << "\tcam_relative_pitch:\t"
+                << cam_relative_pitch << "\tphi:\t" << phi << std::endl;
       std::cout << "Detected a " << class_name << " " << distance
                 << " meters away" << std::endl;
       const float cam_relative_yaw =
@@ -103,7 +112,8 @@ void run_gamepiece_detect(yolo::Yolo& model,
           cam_pose.TransformBy(target_pose_cam_relative);
       if (class_name == "coral") {
         coral_pub.Set(target_pose_robot_relative.ToPose2d());
-        model.DrawDetections(color, bboxes, class_ids, confidences, class_names);
+        model.DrawDetections(color, bboxes, class_ids, confidences,
+                             class_names);
         cv::imwrite(std::string(std::getenv("HOME")) + "/Documents/tested/" +
                         "frame.png",
                     color);
