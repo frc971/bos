@@ -14,9 +14,8 @@ int main() {
 
   camera::CscoreStreamer streamer("frame_shower", 4971, 30, 1080, 1080);
 
-  auto camera = camera::SelectCamera();
-  camera::CVCamera cap(
-      cv::VideoCapture(camera::camera_constants[camera].pipeline));
+  camera::Camera config = camera::SelectCameraConfig();
+  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
 
   std::string log_name;
   std::cout << "What is the log name?" << std::endl;
@@ -29,7 +28,7 @@ int main() {
 
   cv::Mat frame;
   while (true) {
-    cap.GetFrame(frame);
+    camera->GetFrame(frame);
     camera::timestamped_frame_t timestamped_frame{
         .frame = frame,
         .timestamp = frc::Timer::GetFPGATimestamp().to<double>()};

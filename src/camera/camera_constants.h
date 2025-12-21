@@ -17,46 +17,76 @@ enum Camera {
   USB2 = 4,
   USB3 = 5,
   DEFAULT_USB0 = 6,
+  REALSENSE = 7,
   CAMERA_LENGTH,
 };
 
 inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
-    [Camera::IMX296_0] = camera_constant_t{.pipeline = "nvarguscamerasrc sensor-id=0 " 
-                                                        "aelock=true exposuretimerange=\"100000 "
-                                                        "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
-                                                        "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, "
-                                                        "format=NV12 ! "
-                                                        "nvvidconv ! "
-                                                        "video/x-raw, format=BGRx ! "
-                                                        "queue ! "
-                                                        "appsink",                        
-                                                .intrinsics_path = "/bos/constants/imx296_camera0_intrinsics.json",
-                                                .extrinsics_path = "/bos/constants/imx296_camera0_extrinsics.json"},
-    [Camera::IMX296_1] = camera_constant_t{.pipeline = "nvarguscamerasrc sensor-id=1 " 
-                                                        "aelock=true exposuretimerange=\"100000 "
-                                                        "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
-                                                        "video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, "
-                                                        "format=NV12 ! "
-                                                        "nvvidconv ! "
-                                                        "video/x-raw, format=BGRx ! "
-                                                        "queue ! "
-                                                        "appsink",
-                                                .intrinsics_path = "/bos/constants/imx296_camera1_intrinsics.json", 
-                                                .extrinsics_path = "/bos/constants/imx296_camera1_extrinsics.json"},
-  [Camera::USB0] = camera_constant_t{.pipeline = "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.1:1.0-video-index0",
-    .intrinsics_path = "/bos/constants/usb_camera0_intrinsics.json",
-    .extrinsics_path = "/bos/constants/usb_camera0_extrinsics.json"},
-  [Camera::USB1] = camera_constant_t{.pipeline = "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.4:1.0-video-index0", 
-    .intrinsics_path = "/bos/constants/usb_camera1_intrinsics.json", 
-    .extrinsics_path = "/bos/constants/usb_camera1_extrinsics.json"},
-  [Camera::USB2] = camera_constant_t{.pipeline = "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.6:1.0-video-index0", 
-    .intrinsics_path = "/bos/constants/usb_camera2_intrinsics.json", 
-    .extrinsics_path = "/bos/constants/usb_camera2_extrinsics.json"},
-  [Camera::USB3] = camera_constant_t{.pipeline = "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.8:1.0-video-index0", 
-    .intrinsics_path = "/bos/constants/usb_camera3_intrinsics.json", 
-    .extrinsics_path = "/bos/constants/usb_camera3_extrinsics.json"},
-  [Camera::DEFAULT_USB0] = camera_constant_t{.pipeline = "/dev/video0", 
-    .intrinsics_path = "/bos/constants/default_usb_camera0_intrinsics.json", 
-    .extrinsics_path = "/bos/constants/default_usb_camera0_extrinsics.json"},
+    [Camera::IMX296_0] =
+        camera_constant_t{
+            .pipeline =
+                "nvarguscamerasrc sensor-id=0 "
+                "aelock=true exposuretimerange=\"100000 "
+                "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
+                "video/x-raw(memory:NVMM), width=1456, height=1088, "
+                "framerate=30/1, "
+                "format=NV12 ! "
+                "nvvidconv ! "
+                "video/x-raw, format=BGRx ! "
+                "queue ! "
+                "appsink",
+            .intrinsics_path = "/bos/constants/imx296_camera0_intrinsics.json",
+            .extrinsics_path = "/bos/constants/imx296_camera0_extrinsics.json"},
+    [Camera::IMX296_1] =
+        camera_constant_t{
+            .pipeline =
+                "nvarguscamerasrc sensor-id=1 "
+                "aelock=true exposuretimerange=\"100000 "
+                "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
+                "video/x-raw(memory:NVMM), width=1456, height=1088, "
+                "framerate=30/1, "
+                "format=NV12 ! "
+                "nvvidconv ! "
+                "video/x-raw, format=BGRx ! "
+                "queue ! "
+                "appsink",
+            .intrinsics_path = "/bos/constants/imx296_camera1_intrinsics.json",
+            .extrinsics_path = "/bos/constants/imx296_camera1_extrinsics.json"},
+    [Camera::USB0] =
+        camera_constant_t{
+            .pipeline = "/dev/v4l/by-path/"
+                        "platform-3610000.usb-usb-0:2.1:1.0-video-index0",
+            .intrinsics_path = "/bos/constants/usb_camera0_intrinsics.json",
+            .extrinsics_path = "/bos/constants/usb_camera0_extrinsics.json"},
+    [Camera::USB1] =
+        camera_constant_t{
+            .pipeline = "/dev/v4l/by-path/"
+                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
+            .intrinsics_path = "/bos/constants/usb_camera1_intrinsics.json",
+            .extrinsics_path = "/bos/constants/usb_camera1_extrinsics.json"},
+    [Camera::USB2] =
+        camera_constant_t{
+            .pipeline = "/dev/v4l/by-path/"
+                        "platform-3610000.usb-usb-0:2.6:1.0-video-index0",
+            .intrinsics_path = "/bos/constants/usb_camera2_intrinsics.json",
+            .extrinsics_path = "/bos/constants/usb_camera2_extrinsics.json"},
+    [Camera::USB3] =
+        camera_constant_t{
+            .pipeline = "/dev/v4l/by-path/"
+                        "platform-3610000.usb-usb-0:2.8:1.0-video-index0",
+            .intrinsics_path = "/bos/constants/usb_camera3_intrinsics.json",
+            .extrinsics_path = "/bos/constants/usb_camera3_extrinsics.json"},
+    [Camera::DEFAULT_USB0] =
+        camera_constant_t{
+            .pipeline = "/dev/video0",
+            .intrinsics_path =
+                "/bos/constants/default_usb_camera0_intrinsics.json",
+            .extrinsics_path =
+                "/bos/constants/default_usb_camera0_extrinsics.json"},
+    [Camera::REALSENSE] =
+        camera_constant_t{
+            .pipeline = "",
+            .intrinsics_path = "/bos/constants/realsense_intrinsics.json",
+            .extrinsics_path = "/bos/constants/realsense_extrinsics.json"},
 };
-};  // namespace camera
+}; // namespace camera

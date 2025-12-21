@@ -11,6 +11,7 @@
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 #include <opencv2/objdetect/charuco_detector.hpp>
 #include "src/calibration/intrinsics_calibrate_lib.h"
+#include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
@@ -19,7 +20,7 @@
 using json = nlohmann::json;
 
 void CaptureFrames(
-    cv::aruco::CharucoDetector detector, camera::CVCamera camera,
+    cv::aruco::CharucoDetector detector, camera::ICamera& camera,
     camera::CscoreStreamer streamer,
     std::vector<calibration::detection_result_t>& detection_results,
     std::atomic<bool>& capture_frames_thread, std::atomic<bool>& log_image) {
@@ -56,12 +57,11 @@ int main() {
   camera::CscoreStreamer streamer("intrinsics_calibrate", 4971, 30, 1080, 1080,
                                   true);
 
-  camera::Camera camera = camera::SelectCamera();
-  camera::CVCamera cap(
-      cv::VideoCapture(camera::camera_constants[camera].pipeline));
+  camera::Camera config = camera::SelectCameraConfig();
+  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
 
   cv::Mat frame;
-  cap.GetFrame(frame);
+  camera->GetFrame(frame);
   cv::Size frame_size = frame.size();
 
   cv::aruco::CharucoDetector detector = calibration::CreateDetector(
@@ -73,9 +73,10 @@ int main() {
   std::atomic<bool> log_image(false);
 
   std::vector<calibration::detection_result_t> detection_results;
-  std::thread capture_frames_thread(
-      CaptureFrames, detector, cap, streamer, std::ref(detection_results),
-      std::ref(capture_frames), std::ref(log_image));
+  std::thread capture_frames_thread(CaptureFrames, detector, std::ref(*camera),
+                                    streamer, std::ref(detection_results),
+                                    std::ref(capture_frames),
+                                    std::ref(log_image));
 
   bool run = true;
   while (run) {
