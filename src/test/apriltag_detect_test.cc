@@ -45,7 +45,7 @@ int main() {
   camera::CscoreStreamer streamer("apriltag_detect_test", 4971, 30, 640, 480,
                                   false);
 
-  auto camera_config = camera::SelectCamera();
+  camera::Camera camera_config = camera::SelectCameraConfig();
 
   auto intrinsics = utils::read_intrinsics(
       camera::camera_constants[camera_config].intrinsics_path);
@@ -53,13 +53,13 @@ int main() {
   auto gpu_detector_ = new frc971::apriltag::GpuDetector(
       640, 480, apriltag_detector_, camera_matrix_from_json(intrinsics),
       distortion_coefficients_from_json(intrinsics));
-  auto camera = camera::CVCamera(
-      cv::VideoCapture(camera::camera_constants[camera_config].pipeline));
+  camera::Camera config = camera::SelectCameraConfig();
+  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
   cv::Mat frame;
   cv::Mat gray;
 
   while (true) {
-    camera.GetFrame(frame);
+    camera->GetFrame(frame);
     cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
     gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
     const zarray_t* detections = gpu_detector_->Detections();

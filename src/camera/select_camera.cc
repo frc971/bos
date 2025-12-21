@@ -3,6 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include "cv_camera.h"
 #include "src/camera/camera_constants.h"
+#include "src/camera/realsense_camera.h"
 
 namespace camera {
 
@@ -15,14 +16,18 @@ void PrintCameraConstant(Camera camera) {
   std::cout << "Selected camera" << std::endl;
   std::cout << "Pipline: " << camera_constants[camera].pipeline << std::endl;
 }
-Camera SelectCamera() {
-  std::cout << "Please type in what cameras you want" << std::endl;
+
+Camera SelectCameraConfig() {
+  std::cout << "Please type in what camera you want." << std::endl;
   std::cout << "Options: " << std::endl;
   std::cout << "mipi0" << std::endl;
   std::cout << "mipi1" << std::endl;
   std::cout << "usb0" << std::endl;
   std::cout << "usb1" << std::endl;
+  std::cout << "usb2" << std::endl;
+  std::cout << "usb3" << std::endl;
   std::cout << "defaultusb0" << std::endl;
+  std::cout << "realsense" << std::endl;
 
   std::string choice;
   std::cin >> choice;
@@ -30,30 +35,40 @@ Camera SelectCamera() {
   if (choice == "mipi0") {
     PrintCameraConstant(Camera::IMX296_0);
     return Camera::IMX296_0;
-  }
-
-  if (choice == "mipi1") {
+  } else if (choice == "mipi1") {
     PrintCameraConstant(Camera::IMX296_1);
     return Camera::IMX296_1;
-  }
-
-  if (choice == "usb0") {
+  } else if (choice == "usb0") {
     PrintCameraConstant(Camera::USB0);
     return Camera::USB0;
-  }
-
-  if (choice == "usb1") {
+  } else if (choice == "usb1") {
     PrintCameraConstant(Camera::USB1);
     return Camera::USB1;
-  }
-
-  if (choice == "defaultusb0") {
+  } else if (choice == "usb2") {
+    PrintCameraConstant(Camera::USB2);
+    return Camera::USB2;
+  } else if (choice == "usb3") {
+    PrintCameraConstant(Camera::USB3);
+    return Camera::USB3;
+  } else if (choice == "defaultusb0") {
     PrintCameraConstant(Camera::DEFAULT_USB0);
     return Camera::DEFAULT_USB0;
+  } else if (choice == "realsense") {
+    PrintCameraConstant(Camera::REALSENSE);
+    return Camera::REALSENSE;
+  } else {
+    std::cout << "You did not give a valid input. Retrying..." << std::endl;
+    return SelectCameraConfig();
   }
+}
 
-  std::cout << "You did not give a valid input. Retrying..." << std::endl;
-
-  return SelectCamera();
+std::unique_ptr<ICamera> GetCameraStream(Camera camera) {
+  switch (camera) {
+    case Camera::REALSENSE:
+      return std::make_unique<camera::RealSenseCamera>();
+    default:
+      return std::make_unique<camera::CVCamera>(
+          cv::VideoCapture(camera_constants[camera].pipeline));
+  }
 }
 }  // namespace camera

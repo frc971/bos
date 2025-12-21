@@ -43,13 +43,12 @@ int main() {
   camera::CscoreStreamer undistorted_streamer("undistorted_stream", 4971, 30,
                                               1080, 1080);
 
-  camera::Camera camera = camera::SelectCamera();
-  camera::CVCamera cap(
-      cv::VideoCapture(camera::camera_constants[camera].pipeline));
+  camera::Camera config = camera::SelectCameraConfig();
+  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
   cv::Mat frame;
 
   while (true) {
-    cap.GetFrame(frame);
+    camera->GetFrame(frame);
     raw_streamer.WriteFrame(frame);
 
     cv::Mat undistorted;
