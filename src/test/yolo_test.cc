@@ -14,7 +14,7 @@
 const int MAX_DETECTIONS = 10;
 
 int main() {
-  yolo::Model model_info = yolo::models.at("color");
+  yolo::ModelInfo model_info = yolo::models[yolo::Model::COLOR];
   yolo::Yolo model(model_info.path, model_info.color, true);
   auto camera = camera::Camera::DEFAULT_USB0;
   camera = camera::SelectCamera();

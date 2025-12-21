@@ -5,22 +5,23 @@
 #include <vector>
 
 namespace yolo {
-struct Model {
+struct ModelInfo {
   const std::string path;
   const std::vector<std::string> class_names;
   const bool color;
 
-  Model(std::string p, std::vector<std::string> names, bool color)
+  ModelInfo(std::string p, std::vector<std::string> names, bool color)
       : path(std::move(p)), class_names(std::move(names)), color(color) {}
 };
 
-const std::map<std::string, Model> models{
-    {
-        "color",
-        Model{"/bos/models/color.engine",
-              std::vector<std::string>{"coral", "coral", "algae", "algae"},
-              true},
-    },
-    {"gray", Model{"/bos/models/gray.engine",
-                   std::vector<std::string>{"coral", "algae"}, true}}};
-}  // namespace yolo
+enum Model { COLOR = 0, GRAY = 1, COUNT };
+
+inline const ModelInfo models[Model::COUNT]{
+    [Model::COLOR] =
+        ModelInfo{"/bos/models/color.engine",
+                  std::vector<std::string>{"coral", "coral", "algae", "algae"},
+                  true},
+    [Model::GRAY] =
+        ModelInfo{"/bos/models/gray.engine",
+                  std::vector<std::string>{"coral", "algae"}, true}};
+} // namespace yolo

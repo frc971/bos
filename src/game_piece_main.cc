@@ -125,7 +125,7 @@ int main() {
   std::cout << std::fixed << std::setprecision(2);
   std::cout << "Starting gamepiece main" << std::endl;
   std::cout << "Started networktables" << std::endl;
-  yolo::Model model_info = yolo::models.at("color");
+  yolo::ModelInfo model_info = yolo::models[yolo::Model::COLOR];
   yolo::Yolo color_model(model_info.path, model_info.color);
   utils::StartNetworktables();
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
