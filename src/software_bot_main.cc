@@ -13,6 +13,7 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/utils/nt_utils.h"
+#include "src/yolo/model_constants.h"
 #include "src/yolo/yolo.h"
 
 using json = nlohmann::json;
@@ -38,16 +39,15 @@ void run_estimator(const int frame_width, const int frame_height,
 }
 
 void run_yolo(const int frame_width, const int frame_height,
-              std::string model_path, camera::CameraSource& source,
+              yolo::Model model_info, camera::CameraSource& source,
               std::string extrinsics, uint port) {
-  yolo::Yolo model(model_path, true, true);
+  yolo::Yolo model(model_info.path, model_info.color, true);
 
   camera::CscoreStreamer streamer(source.GetName(), 4971, 30, 1080, 1080);
 
   std::vector<cv::Rect> bboxes(6);
   std::vector<float> confidences(6);
   std::vector<int> class_ids(6);
-  std::vector<std::string> class_names = {"object"};
 
   while (true) {
     camera::timestamped_frame_t timestamped_frame = source.Get();
@@ -58,7 +58,7 @@ void run_yolo(const int frame_width, const int frame_height,
                       confidences, class_ids);
 
     yolo::Yolo::DrawDetections(timestamped_frame.frame, bboxes, class_ids,
-                               confidences, class_names);
+                               confidences, model_info.class_names);
     streamer.WriteFrame(timestamped_frame.frame);
   }
 }
