@@ -9,17 +9,16 @@
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
 #include "src/utils/timer.h"
+#include "src/yolo/model_constants.h"
 
 const int MAX_DETECTIONS = 10;
 
 int main() {
-  std::string model_path = "/bos/models/model.engine";
-  std::cout << "Model path\n";
-  std::cin >> model_path;
-
-  yolo::Yolo model(model_path, true, true);
+  yolo::ModelInfo model_info = yolo::models[yolo::Model::COLOR];
+  yolo::Yolo model(model_info.path, model_info.color, true);
   camera::Camera config = camera::SelectCameraConfig();
   std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
+
   camera::CscoreStreamer streamer("yolo_test", 4971, 30, 1080, 1080);
 
   std::vector<cv::Rect> bboxes(MAX_DETECTIONS);
@@ -27,7 +26,6 @@ int main() {
   std::vector<int> class_ids(MAX_DETECTIONS);
 
   // Chopped because I screwed up on the dataset, and technically the model outputs "CORAL", "coral", "ALGAE" or "algae"
-  std::vector<std::string> class_names = {"object"};
   while (true) {
     cv::Mat frame;
     utils::Timer timer("yolo");
@@ -40,7 +38,7 @@ int main() {
     model.Postprocess(frame.rows, frame.cols, detections, bboxes, confidences,
                       class_ids);
     yolo::Yolo::DrawDetections(frame, bboxes, class_ids, confidences,
-                               class_names);
+                               model_info.class_names);
     std::cout << "Object angle: "
               << yolo::Yolo::GetObjectAngle(
                      (detections[0] + detections[2]) / 2.0,
