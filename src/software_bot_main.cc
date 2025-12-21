@@ -39,7 +39,7 @@ void run_estimator(const int frame_width, const int frame_height,
 }
 
 void run_yolo(const int frame_width, const int frame_height,
-              yolo::Model model_info, camera::CameraSource& source,
+              yolo::ModelInfo& model_info, camera::CameraSource& source,
               std::string extrinsics, uint port) {
   yolo::Yolo model(model_info.path, model_info.color, true);
 
