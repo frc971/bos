@@ -13,12 +13,10 @@
 #include "src/camera/realsense_camera.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
+#include "src/yolo/model_constants.h"
 #include "src/yolo/yolo.h"
 
 static constexpr int MAX_DETECTIONS = 6;
-static std::vector<std::string> class_names = {
-    "algae", "algae", "coral",
-    "coral"};  // Chopped because I screwed up on the dataset, and technically the model outputs "CORAL", "coral", "ALGAE" or "algae"
 static std::mutex mutex;
 
 std::ostream& operator<<(std::ostream& os, const frc::Pose3d& p) {
@@ -40,6 +38,7 @@ std::ostream& operator<<(std::ostream& os, const frc::Transform3d& p) {
 }
 
 void run_gamepiece_detect(yolo::Yolo& model,
+                          const std::vector<std::string>& class_names,
                           std::unique_ptr<camera::ICamera> camera,
                           nt::StructTopic<frc::Pose2d>& coral_topic,
                           nt::StructTopic<frc::Pose2d>& algae_topic,
@@ -126,8 +125,8 @@ int main() {
   std::cout << std::fixed << std::setprecision(2);
   std::cout << "Starting gamepiece main" << std::endl;
   std::cout << "Started networktables" << std::endl;
-  yolo::Yolo color_model("/bos/models/color.engine", true);
-  // yolo::Yolo gray_model("/bos/models/gray.engine", false);
+  yolo::ModelInfo model_info = yolo::models[yolo::Model::COLOR];
+  yolo::Yolo color_model(model_info.path, model_info.color);
   utils::StartNetworktables();
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   std::shared_ptr<nt::NetworkTable> coral_table =
@@ -142,6 +141,7 @@ int main() {
   std::vector<std::thread> camera_threads;
   camera_threads.emplace_back(
       run_gamepiece_detect, std::ref(color_model),
+      std::ref(model_info.class_names),
       std::make_unique<camera::RealSenseCamera>(), std::ref(coral_topic),
       std::ref(algae_topic),
       utils::read_intrinsics("/bos/constants/realsense_intrinsics.json"),
