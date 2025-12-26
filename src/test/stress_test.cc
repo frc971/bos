@@ -72,7 +72,7 @@ int main() {
   std::thread usb4_thread(
       run_estimator, frame.cols, frame.rows, std::ref(source),
       camera::camera_constants[config].intrinsics_path,
-      camera::camera_constants[config].extrinsics_path, 4974, false);
+      camera::camera_constants[config].extrinsics_path, 4974, true);
 
   usb0_thread.join();
 
