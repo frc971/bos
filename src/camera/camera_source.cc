@@ -34,4 +34,11 @@ timestamped_frame_t CameraSource::Get() {
   return timestamped_frame_t{.frame = frame, .timestamp = timestamp};
 }
 
+cv::Mat CameraSource::GetFrame() {
+  mutex_.lock();
+  cv::Mat frame = frame_;
+  mutex_.unlock();
+  return frame;
+}
+
 }  // namespace camera

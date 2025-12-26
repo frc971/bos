@@ -8,6 +8,7 @@ CVCamera::CVCamera(cv::VideoCapture cap) : cap_(std::move(cap)) {}
 
 void CVCamera::GetFrame(cv::Mat& frame) {
   cap_.read(frame);
+  // TODO remove
   cv::rotate(frame, frame, cv::ROTATE_180);
 }
 
