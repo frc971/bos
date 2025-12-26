@@ -17,6 +17,7 @@ class CameraSource {
  public:
   CameraSource(std::string name, std::unique_ptr<ICamera> camera);
   timestamped_frame_t Get();
+  cv::Mat GetFrame();
   std::string GetName() const { return name_; }
 
  private:

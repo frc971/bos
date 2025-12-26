@@ -15,3 +15,6 @@ target_link_libraries(camera_source_test PRIVATE ${OpenCV_LIBS} camera)
 
 add_executable(timer_test timer_test.cc)
 target_link_libraries(timer_test PRIVATE utils)
+
+add_executable(stress_test stress_test.cc)
+target_link_libraries(stress_test PRIVATE ${OpenCV_LIBS} apriltag ntcore camera nlohmann_json::nlohmann_json Eigen3::Eigen localization utils yolo)
