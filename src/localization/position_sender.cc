@@ -2,6 +2,7 @@
 #include <frc/Timer.h>
 #include <frc/geometry/Pose2d.h>
 #include <frc/geometry/Translation2d.h>
+#include <networktables/DoubleTopic.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
 #include <units/angle.h>
@@ -26,26 +27,29 @@ PositionSender::PositionSender(std::string camera_name, bool verbose)
       table->GetStructTopic<frc::Pose2d>("Pose");
   pose_publisher_ = pose_topic.Publish();
 
+  nt::DoubleTopic latency_topic = table->GetDoubleTopic("Latency");
+  latency_publisher_ = latency_topic.Publish();
+
   nt::DoubleArrayTopic tag_estimation_topic =
       table->GetDoubleArrayTopic("TagEstimation");
   tag_estimation_publisher_ = tag_estimation_topic.Publish(
       {.periodic = 0.01, .sendAll = true, .keepDuplicates = true});
 }
 
-void PositionSender::Send(
-    std::vector<localization::tag_detection_t> detections) {
+void PositionSender::Send(std::vector<localization::tag_detection_t> detections,
+                          double latency) {
   if (mutex_.try_lock()) {
-
     for (size_t i = 0; i < detections.size(); i++) {
       double variance = detections[i].distance;
-      double tag_estimation[6] = {
+      double tag_estimation[7] = {
           detections[i].translation.x,
           detections[i].translation.y,
           detections[i].rotation.z,
           variance,
           detections[i].timestamp +
               instance_.GetServerTimeOffset().value() / 1000000.0,
-          (double)detections[i].tag_id};
+          static_cast<double>(detections[i].tag_id),
+          latency};
 
       pose_publisher_.Set(
           frc::Pose2d(units::meter_t{detections[i].translation.x},
@@ -53,13 +57,7 @@ void PositionSender::Send(
                       units::radian_t{detections[i].rotation.z}));
 
       tag_estimation_publisher_.Set(tag_estimation);
-
-      if (verbose_) {
-        std::cout << "latency: "
-                  << frc::Timer::GetFPGATimestamp().value() -
-                         detections[i].timestamp
-                  << "\n";
-      }
+      latency_publisher_.Set(latency);
     }
 
     mutex_.unlock();
