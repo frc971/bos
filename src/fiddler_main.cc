@@ -24,7 +24,7 @@ void run_estimator(const int frame_width, const int frame_height,
                                            intrinsics, extrinsics);
   localization::PositionSender position_sender(source.GetName());
 
-  camera::CscoreStreamer streamer(source.GetName(), 4971, 30, 1080, 1080);
+  camera::CscoreStreamer streamer(source.GetName(), port, 30, 1080, 1080);
 
   while (true) {
     camera::timestamped_frame_t timestamped_frame = source.Get();
@@ -57,7 +57,7 @@ int main() {
   std::thread usb1_thread(
       run_estimator, 1280, 720, std::ref(back_right_camera),
       camera::camera_constants[camera::Camera::USB1].intrinsics_path,
-      camera::camera_constants[camera::Camera::USB1].extrinsics_path, 4971);
+      camera::camera_constants[camera::Camera::USB1].extrinsics_path, 4972);
 
   usb1_thread.join();
 
