@@ -13,13 +13,14 @@ namespace localization {
 class PositionSender {
  public:
   PositionSender(std::string camera_name, bool verbose = false);
-  void Send(pose2d_t position_estimate, pose2d_t variance);
-  void Send(std::vector<localization::tag_detection_t> detections);
+  void Send(std::vector<localization::tag_detection_t> detections,
+            double latency);
 
  private:
   nt::NetworkTableInstance instance_;
 
   nt::StructPublisher<frc::Pose2d> pose_publisher_;
+  nt::DoublePublisher latency_publisher_;
   nt::DoubleArrayPublisher tag_estimation_publisher_;
 
   std::mutex mutex_;
