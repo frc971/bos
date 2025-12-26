@@ -3,12 +3,13 @@
 namespace utils {
 class Timer {
  public:
-  Timer(std::string name);
+  Timer(std::string name, bool print = true);
   ~Timer();
-  void Stop();
+  double Stop();
 
  private:
   std::string name_;
+  bool print_;
   bool stopped_;
   std::chrono::system_clock::time_point start_;
 };

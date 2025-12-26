@@ -13,6 +13,7 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/utils/nt_utils.h"
+#include "src/utils/timer.h"
 #include "src/yolo/model_constants.h"
 #include "src/yolo/yolo.h"
 
@@ -29,12 +30,13 @@ void run_estimator(const int frame_width, const int frame_height,
   camera::CscoreStreamer streamer(source.GetName(), 4971, 30, 1080, 1080);
 
   while (true) {
+    utils::Timer timer(source.GetName(), false);
     camera::timestamped_frame_t timestamped_frame = source.Get();
     streamer.WriteFrame(timestamped_frame.frame);
     std::vector<localization::tag_detection_t> estimates =
         tag_estimator.Estimate(timestamped_frame.frame,
                                timestamped_frame.timestamp);
-    position_sender.Send(estimates);
+    position_sender.Send(estimates, timer.Stop());
   }
 }
 
