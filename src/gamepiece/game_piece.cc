@@ -51,6 +51,7 @@ GamepieceDetector::GamepieceDetector(yolo::Yolo& model,
 }
 
 void GamepieceDetector::run_gamepiece_detect(bool debug) {
+  camera::CscoreStreamer streamer(camera_->GetName(), 4973, 30, 1080, 1080);
   nt::StructPublisher<frc::Pose2d> coral_pub = coral_topic_.Publish();
   nt::StructPublisher<frc::Pose2d> algae_pub = algae_topic_.Publish();
   cv::Mat color;
@@ -60,7 +61,8 @@ void GamepieceDetector::run_gamepiece_detect(bool debug) {
   frc::Transform3d target_pose_cam_relative;
   frc::Pose3d target_pose_robot_relative;
   while (true) {
-    color = camera_->Get().frame;
+    camera::timestamped_frame_t timestamped_frame = camera_->Get();
+    color = timestamped_frame.frame;
     mutex.lock();
     model_.Postprocess(color.rows, color.cols, model_.RunModel(color), bboxes,
                       confidences, class_ids);
@@ -106,6 +108,9 @@ void GamepieceDetector::run_gamepiece_detect(bool debug) {
         std::cout << "TargetPose: " << target_pose_cam_relative << std::endl;
         std::cout << "Robot_relative: " << target_pose_robot_relative
                   << std::endl;
+        yolo::Yolo::DrawDetections(timestamped_frame.frame, bboxes, class_ids,
+                               confidences, class_names_);
+        streamer.WriteFrame(timestamped_frame.frame);
       }
     }
   }
