@@ -7,6 +7,7 @@ add_subdirectory(camera)
 add_subdirectory(localization)
 add_subdirectory(calibration)
 add_subdirectory(yolo)
+add_subdirectory(gamepiece)
 add_subdirectory(test)
 
 add_executable(game_piece_main game_piece_main.cc)

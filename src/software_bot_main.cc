@@ -40,31 +40,6 @@ void run_estimator(const int frame_width, const int frame_height,
   }
 }
 
-void run_yolo(const int frame_width, const int frame_height,
-              yolo::ModelInfo& model_info, camera::CameraSource& source,
-              std::string extrinsics, uint port) {
-  yolo::Yolo model(model_info.path, model_info.color, true);
-
-  camera::CscoreStreamer streamer(source.GetName(), 4971, 30, 1080, 1080);
-
-  std::vector<cv::Rect> bboxes(6);
-  std::vector<float> confidences(6);
-  std::vector<int> class_ids(6);
-
-  while (true) {
-    camera::timestamped_frame_t timestamped_frame = source.Get();
-
-    std::vector<float> detections = model.RunModel(timestamped_frame.frame);
-    model.Postprocess(timestamped_frame.frame.rows,
-                      timestamped_frame.frame.cols, detections, bboxes,
-                      confidences, class_ids);
-
-    yolo::Yolo::DrawDetections(timestamped_frame.frame, bboxes, class_ids,
-                               confidences, model_info.class_names);
-    streamer.WriteFrame(timestamped_frame.frame);
-  }
-}
-
 int main() {
   utils::StartNetworktables();
 
