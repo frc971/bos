@@ -1,4 +1,4 @@
-#include "src/yolo/game_piece.h"
+#include "src/gamepiece/game_piece.h"
 #include <frc/geometry/Pose2d.h>
 #include <chrono>
 #include <iomanip>
