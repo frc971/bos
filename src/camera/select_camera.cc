@@ -5,6 +5,17 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/realsense_camera.h"
 
+ABSL_FLAG(std::string, camera_choice, "usb0", "Camera options\n"
+"Options:\n"
+"  mipi0\n"
+"  mipi1\n"
+"  usb0\n"
+"  usb1\n"
+"  usb2\n"
+"  usb3\n"
+"  defaultusb0\n"
+"  realsense");
+
 namespace camera {
 
 /*
@@ -18,19 +29,7 @@ void PrintCameraConstant(Camera camera) {
 }
 
 Camera SelectCameraConfig() {
-  std::cout << "Please type in what camera you want." << std::endl;
-  std::cout << "Options: " << std::endl;
-  std::cout << "mipi0" << std::endl;
-  std::cout << "mipi1" << std::endl;
-  std::cout << "usb0" << std::endl;
-  std::cout << "usb1" << std::endl;
-  std::cout << "usb2" << std::endl;
-  std::cout << "usb3" << std::endl;
-  std::cout << "defaultusb0" << std::endl;
-  std::cout << "realsense" << std::endl;
-
-  std::string choice;
-  std::cin >> choice;
+  const std::string& choice = absl::GetFlag(FLAGS_camera_choice);
 
   if (choice == "mipi0") {
     PrintCameraConstant(Camera::IMX296_0);

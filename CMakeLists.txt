@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 project(BOS CXX C CUDA)
 
 set(CMAKE_BUILD_TYPE Release)
@@ -16,6 +16,17 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
+include(FetchContent)
+
+set(ABSL_PROPAGATE_CXX_STD ON)
+
+FetchContent_Declare(
+  abseil-cpp
+  GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+  GIT_TAG 20240116.2
+)
+FetchContent_MakeAvailable(abseil-cpp)
+
 include_directories(/usr/local/cuda/include)
 link_directories(/usr/local/cuda/lib64)
 
@@ -31,6 +42,7 @@ find_package(realsense2 REQUIRED)
 
 add_subdirectory(third_party/json)
 add_subdirectory(third_party/971apriltag)
+
 
 add_compile_options(-Wno-psabi)
 add_subdirectory(src)
