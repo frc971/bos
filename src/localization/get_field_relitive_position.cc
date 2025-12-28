@@ -1,0 +1,135 @@
+#include "src/localization/get_field_relitive_position.h"
+#include <frc/apriltag/AprilTagFieldLayout.h>
+#include <iomanip>
+#include <iostream>
+#include <nlohmann/json.hpp>
+namespace localization {
+
+void PrintPose3d(const frc::Pose3d& pose) {
+  // Extract translation (in meters)
+  double x = pose.X().value();
+  double y = pose.Y().value();
+  double z = pose.Z().value();
+
+  // Extract rotation (in degrees)
+  double roll = pose.Rotation().X().value();  // radians → will convert below
+  double pitch = pose.Rotation().Y().value();
+  double yaw = pose.Rotation().Z().value();
+
+  // Convert radians to degrees
+  roll = roll * 180.0 / M_PI;
+  pitch = pitch * 180.0 / M_PI;
+  yaw = yaw * 180.0 / M_PI;
+
+  std::cout << std::fixed << std::setprecision(3);
+  std::cout << "Pose3d -> X: " << x << " m, Y: " << y << " m, Z: " << z << " m"
+            << ", Roll: " << roll << "°, Pitch: " << pitch << "°, Yaw: " << yaw
+            << "°" << std::endl;
+}
+
+inline void PrintTransform3d(const frc::Transform3d& T) {
+  const auto& tr = T.Translation();
+  const auto& r = T.Rotation();
+
+  fmt::print(
+      "Transform3d: "
+      "translation (x={:.3f} m, y={:.3f} m, z={:.3f} m), "
+      "rotation (roll={:.2f} deg, pitch={:.2f} deg, yaw={:.2f} deg)\n",
+      tr.X().value(), tr.Y().value(), tr.Z().value(),
+      units::degree_t{r.X()}.value(), units::degree_t{r.Y()}.value(),
+      units::degree_t{r.Z()}.value());
+}
+
+tag_detection_t GetFeildRelitivePosition(
+    tag_detection_t tag_relative_position, nlohmann::json extrinsics,
+    frc::AprilTagFieldLayout apriltag_layout, bool verbose) {
+
+  frc::Transform3d camera_to_tag(
+      units::meter_t{tag_relative_position.translation.x},
+      units::meter_t{-tag_relative_position.translation.y},
+      units::meter_t{-tag_relative_position.translation.z},
+      frc::Rotation3d(
+          units::radian_t{tag_relative_position.rotation.x},
+          units::radian_t{-tag_relative_position.rotation.y},
+          units::radian_t{-tag_relative_position.rotation.z} + 180_deg));
+
+  frc::Transform3d tag_to_camera = camera_to_tag.Inverse();
+
+  if (verbose) {
+    std::cout << "tag to camera: \n";
+    PrintTransform3d(tag_to_camera);
+    std::cout << "\n\n";
+  }
+
+  frc::Pose3d tag_pose =
+      apriltag_layout.GetTagPose(tag_relative_position.tag_id).value();
+
+  if (verbose) {
+    std::cout << "tag id: " << tag_relative_position.tag_id << std::endl;
+    std::cout << "tagpose: \n";
+    PrintPose3d(tag_pose);
+    std::cout << "\n\n";
+  }
+
+  frc::Pose3d camera_pose = tag_pose.TransformBy(tag_to_camera);
+
+  if (verbose) {
+    std::cout << "camerapose: \n";
+    PrintPose3d(camera_pose);
+    std::cout << "\n\n";
+  }
+
+  frc::Transform3d robot_to_camera(
+      units::meter_t{static_cast<double>(extrinsics["translation_x"])},
+      units::meter_t{static_cast<double>(extrinsics["translation_y"])},
+      units::meter_t{static_cast<double>(extrinsics["translation_z"])},
+      frc::Rotation3d(units::radian_t{extrinsics["rotation_x"]},
+                      units::radian_t{extrinsics["rotation_y"]},
+                      units::radian_t{extrinsics["rotation_z"]}));
+  frc::Transform3d camera_to_robot = robot_to_camera.Inverse();
+
+  frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot);
+
+  tag_detection_t field_relative_pose;
+
+  field_relative_pose.tag_id = tag_relative_position.tag_id;
+
+  field_relative_pose.rotation.x = robot_pose.Rotation().X().value();
+  field_relative_pose.rotation.y = robot_pose.Rotation().Y().value();
+  field_relative_pose.rotation.z = robot_pose.Rotation().Z().value();
+
+  field_relative_pose.translation.x = robot_pose.Translation().X().value();
+  field_relative_pose.translation.y = robot_pose.Translation().Y().value();
+  field_relative_pose.translation.z = robot_pose.Translation().Z().value();
+
+  field_relative_pose.distance = tag_relative_position.distance;
+
+  field_relative_pose.timestamp = tag_relative_position.timestamp;
+
+  return field_relative_pose;
+}
+
+tag_detection_t ApplyExtrinsics(tag_detection_t& position,
+                                const nlohmann::json& extrinsics) {
+  assert(extrinsics != nullptr);
+  position.translation.x += static_cast<double>(extrinsics["translation_x"]);
+  position.translation.y += static_cast<double>(extrinsics["translation_y"]);
+  position.translation.z += static_cast<double>(extrinsics["translation_z"]);
+
+  position.rotation.x += static_cast<double>(extrinsics["rotation_x"]);
+  position.rotation.y += static_cast<double>(extrinsics["rotation_y"]);
+  position.rotation.z += static_cast<double>(extrinsics["rotation_z"]);
+
+  return position;
+}
+
+std::vector<tag_detection_t> GetFeildRelitivePosition(
+    std::vector<tag_detection_t> detections, nlohmann::json extrinsics,
+    frc::AprilTagFieldLayout apriltag_layout, bool verbose) {
+  for (size_t i = 0; i < detections.size(); ++i) {
+    detections[i] = GetFeildRelitivePosition(detections[i], extrinsics,
+                                             apriltag_layout, verbose);
+  }
+  return detections;
+}
+}  // namespace localization

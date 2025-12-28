@@ -1,5 +1,4 @@
 #pragma once
-
 #include <apriltag/frc/apriltag/AprilTagFieldLayout.h>
 #include <nlohmann/json.hpp>
 #include <opencv2/core/mat.hpp>
@@ -8,17 +7,11 @@
 #include "apriltag/apriltag.h"
 #include "apriltag/tag36h11.h"
 #include "position.h"
+#include "src/localization/apriltag_detector.h"
 #include "third_party/971apriltag/971apriltag.h"
 
 namespace localization {
 using json = nlohmann::json;
-
-constexpr double ktag_size = 0.1651;  // meters
-const std::vector<cv::Point3f> kapriltag_dimensions = {
-    {-ktag_size / 2, ktag_size / 2, 0},
-    {ktag_size / 2, ktag_size / 2, 0},
-    {ktag_size / 2, -ktag_size / 2, 0},
-    {-ktag_size / 2, -ktag_size / 2, 0}};
 
 template <typename T>
 T camera_matrix_from_json(json intrinsics);

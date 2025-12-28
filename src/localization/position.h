@@ -11,10 +11,11 @@ typedef struct Point3d {
   double z;
 } point3d_t;
 
+// TODO use frc::Transform3d
 typedef struct TagDetection {
   point3d_t translation;  // Meters
   point3d_t rotation;     // Radians
-  double timestamp;
+  double timestamp;       // Will not be used because of timestamped frame
   double distance;
   int tag_id;
   friend std::ostream& operator<<(std::ostream& os, const TagDetection& t) {
@@ -23,6 +24,7 @@ typedef struct TagDetection {
        << "\n";
     os << t.translation.x << "\n";
     os << t.translation.y << "\n";
+
     os << t.translation.z << "\n";
     os << "Rotation: "
        << "\n";
