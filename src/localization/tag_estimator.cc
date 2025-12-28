@@ -157,7 +157,7 @@ TagEstimator::TagEstimator(uint image_width, uint image_height, json intrinsics,
   apriltag_detector_->qtp.min_white_black_diff = 4;
   apriltag_detector_->debug = false;
 
-  gpu_detector_ = new frc971::apriltag::GpuDetector(
+  gpu_detector_ = std::make_unique<frc971::apriltag::GpuDetector>(
       image_width, image_height, apriltag_detector_,
       camera_matrix_from_json<frc971::apriltag::CameraMatrix>(intrinsics),
       distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
@@ -175,9 +175,10 @@ TagEstimator::TagEstimator(uint image_width, uint image_height,
                    verbose) {}
 
 TagEstimator::~TagEstimator() {
-  delete gpu_detector_;
-  delete apriltag_detector_;
-  return;
+  if (apriltag_detector_ != nullptr) {
+    apriltag_detector_destroy(apriltag_detector_);
+    assert(apriltag_detector == nullptr);
+  }
 }
 
 std::vector<tag_detection_t> TagEstimator::Estimate(cv::Mat& frame,
