@@ -8,28 +8,6 @@
 namespace localization {
 using json = nlohmann::json;
 
-void PrintPose3d(const frc::Pose3d& pose) {
-  // Extract translation (in meters)
-  double x = pose.X().value();
-  double y = pose.Y().value();
-  double z = pose.Z().value();
-
-  // Extract rotation (in degrees)
-  double roll = pose.Rotation().X().value();  // radians → will convert below
-  double pitch = pose.Rotation().Y().value();
-  double yaw = pose.Rotation().Z().value();
-
-  // Convert radians to degrees
-  roll = roll * 180.0 / M_PI;
-  pitch = pitch * 180.0 / M_PI;
-  yaw = yaw * 180.0 / M_PI;
-
-  std::cout << std::fixed << std::setprecision(3);
-  std::cout << "Pose3d -> X: " << x << " m, Y: " << y << " m, Z: " << z << " m"
-            << ", Roll: " << roll << "°, Pitch: " << pitch << "°, Yaw: " << yaw
-            << "°" << std::endl;
-}
-
 constexpr double square(double x) {
   return x * x;
 }
@@ -84,6 +62,7 @@ GPUAprilTagDetector::GPUAprilTagDetector(
     : camera_matrix_(camera_matrix_from_json<cv::Mat>(intrinsics)),
       distortion_coefficients_(
           distortion_coefficients_from_json<cv::Mat>(intrinsics)),
+      apriltag_dimensions_(apriltag_dimensions),
       verbose_(verbose) {
 
   apriltag_detector_ = apriltag_detector_create();
@@ -152,7 +131,6 @@ std::vector<tag_detection_t> GPUAprilTagDetector::GetTagDetections(
 GPUAprilTagDetector::~GPUAprilTagDetector() {
   if (apriltag_detector_ != nullptr) {
     apriltag_detector_destroy(apriltag_detector_);
-    assert(apriltag_detector == nullptr);
   }
 }
 

@@ -47,7 +47,7 @@ void PositionSender::Send(std::vector<localization::tag_detection_t> detections,
           detections[i].rotation.z,
           variance,
           detections[i].timestamp +
-              instance_.GetServerTimeOffset().value() / 1000000.0,
+              instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
           static_cast<double>(detections[i].tag_id),
           latency};
 

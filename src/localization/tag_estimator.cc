@@ -177,7 +177,6 @@ TagEstimator::TagEstimator(uint image_width, uint image_height,
 TagEstimator::~TagEstimator() {
   if (apriltag_detector_ != nullptr) {
     apriltag_detector_destroy(apriltag_detector_);
-    assert(apriltag_detector == nullptr);
   }
 }
 
