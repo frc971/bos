@@ -65,7 +65,7 @@ void run_gamepiece_detect(yolo::Yolo& model,
       frc::Rotation3d{
           units::radian_t{extrinsics["rotation_x"].get<float>()},
           units::radian_t{extrinsics["rotation_y"].get<float>()},
-          units::radian_t{(float)extrinsics["rotation_z"].get<float>()}}};
+          units::radian_t{extrinsics["rotation_z"].get<float>()}}};
   frc::Transform3d target_pose_cam_relative;
   frc::Pose3d target_pose_robot_relative;
   while (true) {
@@ -119,4 +119,4 @@ void run_gamepiece_detect(yolo::Yolo& model,
     }
   }
 }
-} // gamepiece
+} // namespace gamepiece

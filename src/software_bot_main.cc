@@ -18,22 +18,23 @@
 #include "src/yolo/yolo.h"
 #include "src/gamepiece/gamepiece.h"
 #include "src/utils/camera_utils.h"
+#include "src/gamepiece/gamepiece.h"
 
 using json = nlohmann::json;
 
 void run_estimator(const int frame_width, const int frame_height,
-                   camera::CameraSource& source, std::string intrinsics,
+                   std::shared_ptr<camera::CameraSource> source, std::string intrinsics,
                    std::string extrinsics, uint port) {
 
   localization::TagEstimator tag_estimator(frame_width, frame_height,
                                            intrinsics, extrinsics);
-  localization::PositionSender position_sender(source.GetName());
+  localization::PositionSender position_sender(source->GetName());
 
-  camera::CscoreStreamer streamer(source.GetName(), 4971, 30, 1080, 1080);
+  camera::CscoreStreamer streamer(source->GetName(), 4971, 30, 1080, 1080);
 
   while (true) {
-    utils::Timer timer(source.GetName(), false);
-    camera::timestamped_frame_t timestamped_frame = source.Get();
+    utils::Timer timer(source->GetName(), false);
+    camera::timestamped_frame_t timestamped_frame = source->Get();
     streamer.WriteFrame(timestamped_frame.frame);
     std::vector<localization::tag_detection_t> estimates =
         tag_estimator.Estimate(timestamped_frame.frame,
@@ -80,7 +81,7 @@ int main() {
   std::thread usb0_gamepiece_thread(gamepiece::run_gamepiece_detect, std::ref(color_model), std::ref(model_info.class_names), back_left_camera, std::ref(coral_topic), std::ref(algae_topic), utils::read_intrinsics(camera::camera_constants[camera::Camera::USB1].intrinsics_path),
       utils::read_extrinsics(camera::camera_constants[camera::Camera::USB1].extrinsics_path), true);
 
-  usb1_localization_thread.join();
+  usb0_gamepiece_thread.join();
 
   return 0;
 }
