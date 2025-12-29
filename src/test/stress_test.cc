@@ -16,7 +16,6 @@
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/position_sender.h"
 #include "src/localization/run_localization.h"
-#include "src/localization/tag_estimator.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 #include "src/utils/timer.h"

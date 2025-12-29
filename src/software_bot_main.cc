@@ -7,7 +7,7 @@
 #include <thread>
 #include "apriltag/apriltag.h"
 #include "localization/position_sender.h"
-#include "localization/tag_estimator.h"
+#include "nlohmann/json.hpp"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
