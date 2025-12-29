@@ -61,6 +61,7 @@ std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& frame) {
 
   VPIImage input;
+  std::vector<tag_detection_t> a;
   vpiImageCreateWrapperOpenCVMat(frame.frame, 0, &input);
 
   vpiSubmitAprilTagDetector(stream_, VPI_BACKEND_CPU, payload_, 64, input,
@@ -90,7 +91,6 @@ std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
 
   vpiArrayUnlock(detections_);
   vpiArrayUnlock(poses_);
-  std::vector<tag_detection_t> a;
   return a;
 }
 }  // namespace localization

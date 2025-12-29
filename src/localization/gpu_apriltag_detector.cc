@@ -1,4 +1,5 @@
 #include "src/localization/gpu_apriltag_detector.h"
+#include <frc/geometry/Transform3d.h>
 #include <cmath>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
@@ -114,16 +115,24 @@ std::vector<tag_detection_t> GPUAprilTagDetector::GetTagDetections(
 
       tag_detection_t estimate;
       // Currently we do not use transation z, rotation x and rotation y
-      estimate.translation.x = tvec.ptr<double>()[2];
-      estimate.translation.y = tvec.ptr<double>()[0];
-      estimate.translation.z = tvec.ptr<double>()[1];
+      // Converting to wpi coordinates
+      const double translation_x = tvec.ptr<double>()[2];
+      const double translation_y = tvec.ptr<double>()[0];
+      const double translation_z = tvec.ptr<double>()[1];
 
-      estimate.rotation.x = rvec.ptr<double>()[2];
-      estimate.rotation.y = rvec.ptr<double>()[0];
-      estimate.rotation.z = rvec.ptr<double>()[1];
+      const double rotation_x = rvec.ptr<double>()[2];
+      const double rotation_y = rvec.ptr<double>()[0];
+      const double rotation_z = rvec.ptr<double>()[1];
 
-      estimate.distance =
-          std::hypot(estimate.translation.x, estimate.translation.y);
+      estimate.transform =
+          frc::Pose3d(frc::Translation3d(units::meter_t{translation_x},
+                                         units::meter_t{translation_y},
+                                         units::meter_t{translation_z}),
+                      frc::Rotation3d(units::radian_t{rotation_x},
+                                      units::radian_t{rotation_y},
+                                      units::radian_t{rotation_z}));
+
+      estimate.distance = std::hypot(translation_x, translation_y);
       estimate.tag_id = gpu_detection->id;
 
       estimate.timestamp = timestamped_frame.timestamp;
