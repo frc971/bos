@@ -3,6 +3,7 @@
 #include <vpi/Stream.h>
 #include <Eigen/Geometry>
 #include <vpi/OpenCVInterop.hpp>
+#include "src/localization/position.h"
 #include "src/utils/log.h"
 
 namespace localization {
@@ -16,12 +17,13 @@ frc::Transform3d Transform3dFromMatrix(float matrix[3][4]) {
     }
     std::cout << std::endl;
   }
+  // Transform coordinates to wpi
   const float x_translation = matrix[2][3];
   const float y_translation = matrix[0][3];
   const float z_translation = matrix[1][3];
 
   Eigen::Matrix3d rotation_matrix{{matrix[2][2], matrix[2][0], matrix[2][1]},
-                                  {matrix[0][1], matrix[0][0], matrix[0][1]},
+                                  {matrix[0][2], matrix[0][0], matrix[0][1]},
                                   {matrix[1][2], matrix[1][0], matrix[1][1]}};
   Eigen::Quaterniond quaternion(rotation_matrix);
   return frc::Transform3d(
@@ -88,5 +90,7 @@ std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
 
   vpiArrayUnlock(detections_);
   vpiArrayUnlock(poses_);
+  std::vector<tag_detection_t> a;
+  return a;
 }
 }  // namespace localization

@@ -18,13 +18,15 @@ void run_localization(const int frame_width, const int frame_height,
   camera::CscoreStreamer streamer(source.GetName(), port, 30, 1080, 1080);
 
   nlohmann::json extrinsics_json = utils::read_extrinsics(extrinsics);
+  frc::Transform3d camera_to_robot =
+      localization::ExtrinsicsJsonToCameraToRobot(extrinsics_json);
   while (true) {
     utils::Timer timer(source.GetName(), verbose);
     camera::timestamped_frame_t timestamped_frame = source.Get();
     streamer.WriteFrame(timestamped_frame.frame);
     std::vector<localization::tag_detection_t> estimates =
         localization::GetFeildRelitivePosition(
-            detector.GetTagDetections(timestamped_frame), extrinsics_json);
+            detector.GetTagDetections(timestamped_frame), camera_to_robot);
     position_sender.Send(estimates, timer.Stop());
   }
 }

@@ -7,7 +7,7 @@
 namespace localization {
 
 tag_detection_t GetFeildRelitivePosition(
-    tag_detection_t tag_relative_position, nlohmann::json extrinsics,
+    tag_detection_t tag_relative_position, frc::Transform3d camera_to_robot,
     frc::AprilTagFieldLayout apriltag_layout, bool verbose) {
 
   frc::Transform3d camera_to_tag(
@@ -45,15 +45,6 @@ tag_detection_t GetFeildRelitivePosition(
     std::cout << "\n\n";
   }
 
-  frc::Transform3d robot_to_camera(
-      units::meter_t{static_cast<double>(extrinsics["translation_x"])},
-      units::meter_t{static_cast<double>(extrinsics["translation_y"])},
-      units::meter_t{static_cast<double>(extrinsics["translation_z"])},
-      frc::Rotation3d(units::radian_t{extrinsics["rotation_x"]},
-                      units::radian_t{extrinsics["rotation_y"]},
-                      units::radian_t{extrinsics["rotation_z"]}));
-  frc::Transform3d camera_to_robot = robot_to_camera.Inverse();
-
   frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot);
 
   tag_detection_t field_relative_pose;
@@ -75,25 +66,22 @@ tag_detection_t GetFeildRelitivePosition(
   return field_relative_pose;
 }
 
-tag_detection_t ApplyExtrinsics(tag_detection_t& position,
-                                const nlohmann::json& extrinsics) {
-  assert(extrinsics != nullptr);
-  position.translation.x += static_cast<double>(extrinsics["translation_x"]);
-  position.translation.y += static_cast<double>(extrinsics["translation_y"]);
-  position.translation.z += static_cast<double>(extrinsics["translation_z"]);
-
-  position.rotation.x += static_cast<double>(extrinsics["rotation_x"]);
-  position.rotation.y += static_cast<double>(extrinsics["rotation_y"]);
-  position.rotation.z += static_cast<double>(extrinsics["rotation_z"]);
-
-  return position;
+frc::Transform3d ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json) {
+  frc::Transform3d robot_to_camera(
+      units::meter_t{static_cast<double>(extrinsics_json["translation_x"])},
+      units::meter_t{static_cast<double>(extrinsics_json["translation_y"])},
+      units::meter_t{static_cast<double>(extrinsics_json["translation_z"])},
+      frc::Rotation3d(units::radian_t{extrinsics_json["rotation_x"]},
+                      units::radian_t{extrinsics_json["rotation_y"]},
+                      units::radian_t{extrinsics_json["rotation_z"]}));
+  return robot_to_camera.Inverse();
 }
 
 std::vector<tag_detection_t> GetFeildRelitivePosition(
-    std::vector<tag_detection_t> detections, nlohmann::json extrinsics,
+    std::vector<tag_detection_t> detections, frc::Transform3d camera_to_robot,
     frc::AprilTagFieldLayout apriltag_layout, bool verbose) {
   for (size_t i = 0; i < detections.size(); ++i) {
-    detections[i] = GetFeildRelitivePosition(detections[i], extrinsics,
+    detections[i] = GetFeildRelitivePosition(detections[i], camera_to_robot,
                                              apriltag_layout, verbose);
   }
   return detections;

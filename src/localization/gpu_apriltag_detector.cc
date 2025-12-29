@@ -1,4 +1,5 @@
 #include "src/localization/gpu_apriltag_detector.h"
+#include <cmath>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
 #include "apriltag/apriltag.h"
@@ -82,9 +83,14 @@ GPUAprilTagDetector::GPUAprilTagDetector(
 }
 std::vector<tag_detection_t> GPUAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame) {
-  cv::Mat gray;
-  cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
-  gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
+  if (timestamped_frame.frame.channels() == 1) {
+    gpu_detector_->DetectGrayHost(
+        (unsigned char*)timestamped_frame.frame.ptr());
+  } else if (timestamped_frame.frame.channels() == 3) {
+    cv::Mat gray;
+    cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
+    gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
+  }
   const zarray_t* detections = gpu_detector_->Detections();
   std::vector<tag_detection_t> estimates;
 
@@ -117,7 +123,7 @@ std::vector<tag_detection_t> GPUAprilTagDetector::GetTagDetections(
       estimate.rotation.z = rvec.ptr<double>()[1];
 
       estimate.distance =
-          sqrt(square(estimate.translation.x) + square(estimate.translation.y));
+          std::hypot(estimate.translation.x, estimate.translation.y);
       estimate.tag_id = gpu_detection->id;
 
       estimate.timestamp = timestamped_frame.timestamp;
