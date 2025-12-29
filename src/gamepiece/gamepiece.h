@@ -13,4 +13,4 @@ void run_gamepiece_detect(yolo::Yolo& model,
                           nt::StructTopic<frc::Pose2d>& algae_topic,
                           nlohmann::json intrinsics, nlohmann::json extrinsics,
                           bool debug);
-}
+} // namespace gamepiece
