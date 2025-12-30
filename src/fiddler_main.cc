@@ -34,18 +34,24 @@ int main() {
           camera::camera_constants[camera::Camera::USB1].pipeline)));
 
   std::thread usb0_thread(
-      localization::run_localization, 640, 480, std::ref(back_left_camera),
-      camera::camera_constants[camera::Camera::USB0].intrinsics_path,
+      localization::run_localization, std::ref(back_left_camera),
+      std::make_unique<localization::GPUAprilTagDetector>(
+          640, 480,
+          utils::read_intrinsics(
+              camera::camera_constants[camera::Camera::USB0].intrinsics_path)),
       camera::camera_constants[camera::Camera::USB0].extrinsics_path, 4971,
       false);
 
   std::thread usb1_thread(
-      localization::run_localization, 1280, 720, std::ref(back_right_camera),
-      camera::camera_constants[camera::Camera::USB1].intrinsics_path,
+      localization::run_localization, std::ref(back_right_camera),
+      std::make_unique<localization::GPUAprilTagDetector>(
+          1280, 720,
+          utils::read_intrinsics(
+              camera::camera_constants[camera::Camera::USB1].intrinsics_path)),
       camera::camera_constants[camera::Camera::USB1].extrinsics_path, 4972,
       false);
 
-  usb1_thread.join();
+  usb0_thread.join();
 
   return 0;
 }

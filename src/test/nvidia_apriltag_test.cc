@@ -34,7 +34,7 @@ frc::Transform3d Transform3dFromMatrix(float matrix[3][4]) {
   const float z_translation = matrix[1][3];
 
   Eigen::Matrix3d rotation_matrix{{matrix[2][2], matrix[2][0], matrix[2][1]},
-                                  {matrix[0][1], matrix[0][0], matrix[0][1]},
+                                  {matrix[0][2], matrix[0][0], matrix[0][1]},
                                   {matrix[1][2], matrix[1][0], matrix[1][1]}};
   Eigen::Quaterniond quaternion(rotation_matrix);
   return frc::Transform3d(
@@ -107,14 +107,14 @@ int main() {
     vpiArrayLockData(poses, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
                      &poses_data);
 
-    VPIPose* p = (VPIPose*)poses_data.buffer.aos.data;
-    if ((*detections_data.buffer.aos.sizePointer != 0)) {
-      std::cout << "Got detections"
-                << "\n";
+    for (int i = 0; i < *detections_data.buffer.aos.sizePointer; ++i) {
+      VPIPose* p = static_cast<VPIPose*>(poses_data.buffer.aos.data +
+                                         poses_data.buffer.aos.strideBytes * i);
       frc::Transform3d camera_relitive_position =
           Transform3dFromMatrix(p->transform);
       PrintTransform3d(camera_relitive_position);
     }
+    std::cout << "----------\n";
 
     vpiArrayUnlock(detections);
     vpiArrayUnlock(poses);

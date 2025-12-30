@@ -7,12 +7,11 @@
 #include "src/utils/timer.h"
 
 namespace localization {
-void run_localization(const int frame_width, const int frame_height,
-                      camera::CameraSource& source, std::string intrinsics,
+
+void run_localization(camera::CameraSource& source,
+                      std::unique_ptr<localization::IAprilTagDetector> detector,
                       std::string extrinsics, uint port, bool verbose) {
 
-  localization::GPUAprilTagDetector detector(
-      frame_width, frame_height, utils::read_intrinsics(intrinsics));
   localization::PositionSender position_sender(source.GetName());
 
   camera::CscoreStreamer streamer(source.GetName(), port, 30, 1080, 1080);
@@ -26,7 +25,7 @@ void run_localization(const int frame_width, const int frame_height,
     streamer.WriteFrame(timestamped_frame.frame);
     std::vector<localization::tag_detection_t> estimates =
         localization::GetFeildRelitivePosition(
-            detector.GetTagDetections(timestamped_frame), camera_to_robot);
+            detector->GetTagDetections(timestamped_frame), camera_to_robot);
     position_sender.Send(estimates, timer.Stop());
   }
 }

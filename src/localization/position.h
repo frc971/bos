@@ -16,14 +16,14 @@ typedef struct Point3d {
 } point3d_t;
 
 typedef struct TagDetection {
-  frc::Pose3d transform;
+  frc::Pose3d pose;
   double timestamp;
   double distance;
   int tag_id;
   friend std::ostream& operator<<(std::ostream& os, const TagDetection& t) {
 
-    const auto& tr = t.transform.Translation();
-    const auto& r = t.transform.Rotation();
+    const auto& tr = t.pose.Translation();
+    const auto& r = t.pose.Rotation();
 
     fmt::print(os,
                "Transform3d: "

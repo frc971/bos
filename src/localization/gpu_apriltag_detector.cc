@@ -124,7 +124,7 @@ std::vector<tag_detection_t> GPUAprilTagDetector::GetTagDetections(
       const double rotation_y = rvec.ptr<double>()[0];
       const double rotation_z = rvec.ptr<double>()[1];
 
-      estimate.transform =
+      estimate.pose =
           frc::Pose3d(frc::Translation3d(units::meter_t{translation_x},
                                          units::meter_t{translation_y},
                                          units::meter_t{translation_z}),

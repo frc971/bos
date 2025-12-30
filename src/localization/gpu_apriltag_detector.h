@@ -12,7 +12,7 @@ T camera_matrix_from_json(nlohmann::json intrinsics);
 template <typename T>
 T distortion_coefficients_from_json(nlohmann::json intrinsics);
 
-class GPUAprilTagDetector : IAprilTagDetector {
+class GPUAprilTagDetector : public IAprilTagDetector {
  public:
   GPUAprilTagDetector(
       uint image_width, uint image_height, nlohmann::json intrinsics,

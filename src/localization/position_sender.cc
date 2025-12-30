@@ -42,9 +42,9 @@ void PositionSender::Send(std::vector<localization::tag_detection_t> detections,
     for (size_t i = 0; i < detections.size(); i++) {
       double variance = detections[i].distance;
       double tag_estimation[7] = {
-          detections[i].transform.X().value(),
-          detections[i].transform.Y().value(),
-          detections[i].transform.Rotation().Z().value(),
+          detections[i].pose.X().value(),
+          detections[i].pose.Y().value(),
+          detections[i].pose.Rotation().Z().value(),
           variance,
           detections[i].timestamp +
               instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
@@ -52,9 +52,9 @@ void PositionSender::Send(std::vector<localization::tag_detection_t> detections,
           latency};
 
       pose_publisher_.Set(frc::Pose2d(
-          units::meter_t{detections[i].transform.X().value()},
-          units::meter_t{detections[i].transform.Y().value()},
-          units::radian_t{detections[i].transform.Rotation().Z().value()}));
+          units::meter_t{detections[i].pose.X().value()},
+          units::meter_t{detections[i].pose.Y().value()},
+          units::radian_t{detections[i].pose.Rotation().Z().value()}));
 
       tag_estimation_publisher_.Set(tag_estimation);
       latency_publisher_.Set(latency);

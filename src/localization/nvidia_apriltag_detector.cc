@@ -2,6 +2,7 @@
 #include <vpi/Array.h>
 #include <vpi/Stream.h>
 #include <Eigen/Geometry>
+#include <cmath>
 #include <vpi/OpenCVInterop.hpp>
 #include "src/localization/position.h"
 #include "src/utils/log.h"
@@ -10,7 +11,7 @@ namespace localization {
 
 const int kmax_detections = 16;
 
-frc::Transform3d Transform3dFromMatrix(float matrix[3][4]) {
+frc::Pose3d Transform3dFromMatrix(float matrix[3][4]) {
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 4; j++) {
       std::cout << matrix[i][j] << " ";
@@ -26,7 +27,7 @@ frc::Transform3d Transform3dFromMatrix(float matrix[3][4]) {
                                   {matrix[0][2], matrix[0][0], matrix[0][1]},
                                   {matrix[1][2], matrix[1][0], matrix[1][1]}};
   Eigen::Quaterniond quaternion(rotation_matrix);
-  return frc::Transform3d(
+  return frc::Pose3d(
       frc::Translation3d(units::meter_t{x_translation},
                          units::meter_t{y_translation},
                          units::meter_t{z_translation}),
@@ -61,7 +62,6 @@ std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& frame) {
 
   VPIImage input;
-  std::vector<tag_detection_t> a;
   vpiImageCreateWrapperOpenCVMat(frame.frame, 0, &input);
 
   vpiSubmitAprilTagDetector(stream_, VPI_BACKEND_CPU, payload_, 64, input,
@@ -80,17 +80,21 @@ std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
   vpiArrayLockData(poses_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
                    &poses_data);
 
-  VPIPose* p = (VPIPose*)poses_data.buffer.aos.data;
-  if ((*detections_data.buffer.aos.sizePointer != 0)) {
-    std::cout << "Got detections"
-              << "\n";
-    frc::Transform3d camera_relitive_position =
-        Transform3dFromMatrix(p->transform);
-    PrintTransform3d(camera_relitive_position);
+  VPIPose* p = static_cast<VPIPose*>(poses_data.buffer.aos.data);
+  if (*detections_data.buffer.aos.sizePointer != 0) {
+    frc::Pose3d camera_relitive_position = Transform3dFromMatrix(p->transform);
+    vpiArrayUnlock(detections_);
+    vpiArrayUnlock(poses_);
+    return std::vector<tag_detection_t>(
+        {tag_detection_t{camera_relitive_position, frame.timestamp,
+                         std::hypot(camera_relitive_position.X().value(),
+                                    camera_relitive_position.Y().value())}});
   }
 
   vpiArrayUnlock(detections_);
   vpiArrayUnlock(poses_);
-  return a;
+  return std::vector<tag_detection_t>();
 }
+
+NvidiaAprilTagDetector::~NvidiaAprilTagDetector() {}
 }  // namespace localization

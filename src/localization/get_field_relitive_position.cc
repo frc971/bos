@@ -11,13 +11,13 @@ tag_detection_t GetFeildRelitivePosition(
     frc::AprilTagFieldLayout apriltag_layout, bool verbose) {
 
   frc::Transform3d camera_to_tag(
-      units::meter_t{tag_relative_position.transform.X()},
-      units::meter_t{-tag_relative_position.transform.Y()},
-      units::meter_t{-tag_relative_position.transform.Z()},
+      units::meter_t{tag_relative_position.pose.X()},
+      units::meter_t{-tag_relative_position.pose.Y()},
+      units::meter_t{-tag_relative_position.pose.Z()},
       frc::Rotation3d(
-          units::radian_t{tag_relative_position.transform.Rotation().X()},
-          units::radian_t{-tag_relative_position.transform.Rotation().Y()},
-          units::radian_t{-tag_relative_position.transform.Rotation().Z()} +
+          units::radian_t{tag_relative_position.pose.Rotation().X()},
+          units::radian_t{-tag_relative_position.pose.Rotation().Y()},
+          units::radian_t{-tag_relative_position.pose.Rotation().Z()} +
               180_deg));
 
   frc::Transform3d tag_to_camera = camera_to_tag.Inverse();
@@ -52,7 +52,7 @@ tag_detection_t GetFeildRelitivePosition(
 
   field_relative_pose.tag_id = tag_relative_position.tag_id;
 
-  field_relative_pose.transform = robot_pose;
+  field_relative_pose.pose = robot_pose;
 
   field_relative_pose.distance = tag_relative_position.distance;
 
