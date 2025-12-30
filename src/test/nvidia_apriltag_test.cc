@@ -19,31 +19,9 @@
 #include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/select_camera.h"
+#include "src/localization/nvidia_apriltag_detector.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/log.h"
-
-frc::Transform3d Transform3dFromMatrix(float matrix[3][4]) {
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < 4; j++) {
-      std::cout << matrix[i][j] << " ";
-    }
-    std::cout << std::endl;
-  }
-  const float x_translation = matrix[2][3];
-  const float y_translation = matrix[0][3];
-  const float z_translation = matrix[1][3];
-
-  Eigen::Matrix3d rotation_matrix{{matrix[2][2], matrix[2][0], matrix[2][1]},
-                                  {matrix[0][2], matrix[0][0], matrix[0][1]},
-                                  {matrix[1][2], matrix[1][0], matrix[1][1]}};
-  Eigen::Quaterniond quaternion(rotation_matrix);
-  return frc::Transform3d(
-      frc::Translation3d(units::meter_t{x_translation},
-                         units::meter_t{y_translation},
-                         units::meter_t{z_translation}),
-      frc::Rotation3d(frc::Quaternion(quaternion.w(), quaternion.x(),
-                                      quaternion.y(), quaternion.z())));
-}
 
 int main() {
   // camera::Camera config = camera::SelectCameraConfig();
@@ -72,57 +50,24 @@ int main() {
   VPIAprilTagDecodeParams params = {NULL, 0, maxHamming, family};
   vpiCreateAprilTagDetector(VPI_BACKEND_CPU, w, h, &params, &payload);
 
-  const int maxDetections = 64;
+  localization::NvidiaAprilTagDetector detector(
+      mat.cols, mat.rows,
+      utils::read_intrinsics(camera::camera_constants[config].intrinsics_path),
+      VPIAprilTagDecodeParams{NULL, 0, 1, VPI_APRILTAG_36H11}, 16);
 
-  VPIArray detections;
-  vpiArrayCreate(maxDetections, VPI_ARRAY_TYPE_APRILTAG_DETECTION,
-                 VPI_BACKEND_CPU, &detections);
-  VPIArray poses;
-  vpiArrayCreate(maxDetections, VPI_ARRAY_TYPE_POSE, VPI_BACKEND_CPU, &poses);
-
-  VPIStream stream;
-  vpiStreamCreate(0, &stream);
-
-  const float tagSize = 0.2f;
+  camera::timestamped_frame_t timestamped_frame;
   while (true) {
-    mat = source.GetFrame();
-    cv::cvtColor(mat, mat, cv::COLOR_BGR2GRAY);
-    streamer.WriteFrame(mat);
+    timestamped_frame = source.Get();
+    streamer.WriteFrame(timestamped_frame.frame);
 
-    vpiImageCreateWrapperOpenCVMat(mat, 0, &input);
+    std::vector<localization::tag_detection_t> estimates =
+        detector.GetTagDetections(timestamped_frame);
 
-    vpiSubmitAprilTagDetector(stream, VPI_BACKEND_CPU, payload, maxDetections,
-                              input, detections);
-
-    vpiSubmitAprilTagPoseEstimation(stream, VPI_BACKEND_CPU, detections,
-                                    intrinsics, tagSize, poses);
-
-    vpiStreamSync(stream);
-
-    VPIArrayData detections_data;
-    vpiArrayLockData(detections, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
-                     &detections_data);
-
-    VPIArrayData poses_data;
-    vpiArrayLockData(poses, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
-                     &poses_data);
-
-    for (int i = 0; i < *detections_data.buffer.aos.sizePointer; ++i) {
-      VPIPose* p = static_cast<VPIPose*>(poses_data.buffer.aos.data +
-                                         poses_data.buffer.aos.strideBytes * i);
-      frc::Transform3d camera_relitive_position =
-          Transform3dFromMatrix(p->transform);
-      PrintTransform3d(camera_relitive_position);
+    for (auto& estimate : estimates) {
+      std::cout << estimate;
     }
-    std::cout << "----------\n";
-
-    vpiArrayUnlock(detections);
-    vpiArrayUnlock(poses);
+    if (!estimates.empty()) {
+      std::cout << "----------" << std::endl;
+    }
   }
-
-  vpiStreamDestroy(stream);
-  vpiImageDestroy(input);
-  vpiArrayDestroy(detections);
-  vpiArrayDestroy(poses);
-  vpiPayloadDestroy(payload);
 }

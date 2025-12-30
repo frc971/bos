@@ -3,22 +3,14 @@
 #include <vpi/Stream.h>
 #include <Eigen/Geometry>
 #include <cmath>
+#include <opencv2/imgproc.hpp>
 #include <vpi/OpenCVInterop.hpp>
 #include "src/localization/position.h"
 #include "src/utils/log.h"
 
 namespace localization {
 
-const int kmax_detections = 16;
-
 frc::Pose3d Transform3dFromMatrix(float matrix[3][4]) {
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < 4; j++) {
-      std::cout << matrix[i][j] << " ";
-    }
-    std::cout << std::endl;
-  }
-  // Transform coordinates to wpi
   const float x_translation = matrix[2][3];
   const float y_translation = matrix[0][3];
   const float z_translation = matrix[1][3];
@@ -48,37 +40,48 @@ NvidiaAprilTagDetector::NvidiaAprilTagDetector(
   intrinsics_[1][1] = intrinsics["fy"];
   intrinsics_[1][2] = intrinsics["cy"];
 
-  vpiCreateAprilTagDetector(VPI_BACKEND_CPU, image_width, image_height, &params,
-                            &payload_);
+  // According to nvidia benchmarks, VPI_BACKEND_CPU is better than pva
+  CHECK(!vpiCreateAprilTagDetector(VPI_BACKEND_CPU, image_width, image_height,
+                                   &params_, &payload_));
 
-  vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_APRILTAG_DETECTION,
-                 VPI_BACKEND_CPU, &detections_);
-  vpiArrayCreate(kmax_detections, VPI_ARRAY_TYPE_POSE, VPI_BACKEND_CPU,
-                 &poses_);
-  vpiStreamCreate(0, &stream_);
+  CHECK(!vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_APRILTAG_DETECTION,
+                        VPI_BACKEND_CPU, &detections_));
+  CHECK(!vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_POSE, VPI_BACKEND_CPU,
+                        &poses_));
+  CHECK(!vpiStreamCreate(0, &stream_));
 }
 
 std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
-    camera::timestamped_frame_t& frame) {
+    camera::timestamped_frame_t& timestamped_frame) {
+  cv::Mat gray;
+
+  if (timestamped_frame.frame.channels() == 1) {
+    gray = timestamped_frame.frame;
+  } else if (timestamped_frame.frame.channels() == 3) {
+    cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
+  }
 
   VPIImage input;
-  vpiImageCreateWrapperOpenCVMat(frame.frame, 0, &input);
 
-  vpiSubmitAprilTagDetector(stream_, VPI_BACKEND_CPU, payload_, 64, input,
-                            detections_);
+  CHECK(!vpiImageCreateWrapperOpenCVMat(gray, 0, &input));
 
-  vpiSubmitAprilTagPoseEstimation(stream_, VPI_BACKEND_CPU, detections_,
-                                  intrinsics_, ktag_size, poses_);
+  CHECK(!vpiSubmitAprilTagDetector(stream_, VPI_BACKEND_CPU, payload_,
+                                   max_detections_, input, detections_));
 
-  vpiStreamSync(stream_);
+  CHECK(!vpiSubmitAprilTagPoseEstimation(stream_, VPI_BACKEND_CPU, detections_,
+                                         intrinsics_, ktag_size, poses_));
+
+  CHECK(!vpiStreamSync(stream_));
 
   VPIArrayData detections_data;
-  vpiArrayLockData(detections_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
-                   &detections_data);
+  CHECK(!vpiArrayLockData(detections_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
+                          &detections_data));
 
   VPIArrayData poses_data;
-  vpiArrayLockData(poses_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
-                   &poses_data);
+  CHECK(!vpiArrayLockData(poses_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
+                          &poses_data));
+
+  vpiImageDestroy(input);
 
   VPIPose* p = static_cast<VPIPose*>(poses_data.buffer.aos.data);
   if (*detections_data.buffer.aos.sizePointer != 0) {
@@ -86,7 +89,7 @@ std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
     vpiArrayUnlock(detections_);
     vpiArrayUnlock(poses_);
     return std::vector<tag_detection_t>(
-        {tag_detection_t{camera_relitive_position, frame.timestamp,
+        {tag_detection_t{camera_relitive_position, timestamped_frame.timestamp,
                          std::hypot(camera_relitive_position.X().value(),
                                     camera_relitive_position.Y().value())}});
   }
@@ -96,5 +99,10 @@ std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
   return std::vector<tag_detection_t>();
 }
 
-NvidiaAprilTagDetector::~NvidiaAprilTagDetector() {}
+NvidiaAprilTagDetector::~NvidiaAprilTagDetector() {
+  vpiStreamDestroy(stream_);
+  vpiArrayDestroy(detections_);
+  vpiArrayDestroy(poses_);
+  vpiPayloadDestroy(payload_);
+}
 }  // namespace localization
