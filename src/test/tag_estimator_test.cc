@@ -9,6 +9,7 @@
 #include "src/localization/get_field_relitive_position.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/utils/camera_utils.h"
+#include "src/utils/timer.h"
 
 using json = nlohmann::json;
 
@@ -29,14 +30,14 @@ int main() {
   while (true) {
     timestamped_frame = source.Get();
     streamer.WriteFrame(frame);
+    utils::Timer timer("tag estimator apriltag");
 
     std::vector<localization::tag_detection_t> estimates =
         detector.GetTagDetections(timestamped_frame);
 
+    timer.Stop();
     for (auto& estimate : estimates) {
       std::cout << estimate;
-    }
-    if (!estimates.empty()) {
       std::cout << "----------" << std::endl;
     }
   }

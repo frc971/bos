@@ -12,7 +12,7 @@ class NvidiaAprilTagDetector : IAprilTagDetector {
  public:
   NvidiaAprilTagDetector(
       int image_width, int image_height, nlohmann::json intrinsics,
-      VPIAprilTagDecodeParams params, int max_detections,
+      VPIAprilTagDecodeParams params, int max_detections = 16,
       std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions,
       bool verbose = false);
   ~NvidiaAprilTagDetector();
@@ -23,6 +23,7 @@ class NvidiaAprilTagDetector : IAprilTagDetector {
   VPIAprilTagDecodeParams params_;
   int max_detections_;
   std::vector<cv::Point3f> apriltag_dimensions_;
+  VPIImage input_;
   VPICameraIntrinsic intrinsics_;
   VPIPayload payload_;
   VPIArray detections_;

@@ -1,4 +1,5 @@
 #include "src/localization/nvidia_apriltag_detector.h"
+#include <fmt/chrono.h>
 #include <vpi/Array.h>
 #include <vpi/Stream.h>
 #include <Eigen/Geometry>
@@ -7,6 +8,7 @@
 #include <vpi/OpenCVInterop.hpp>
 #include "src/localization/position.h"
 #include "src/utils/log.h"
+#include "src/utils/timer.h"
 
 namespace localization {
 
@@ -33,22 +35,21 @@ NvidiaAprilTagDetector::NvidiaAprilTagDetector(
     std::vector<cv::Point3f> apriltag_dimensions, bool verbose)
     : params_(params),
       max_detections_(max_detections),
-      apriltag_dimensions_(apriltag_dimensions) {
+      apriltag_dimensions_(apriltag_dimensions),
+      input_(nullptr) {
 
   intrinsics_[0][0] = intrinsics["fx"];
   intrinsics_[0][2] = intrinsics["cx"];
   intrinsics_[1][1] = intrinsics["fy"];
   intrinsics_[1][2] = intrinsics["cy"];
 
-  // According to nvidia benchmarks, VPI_BACKEND_CPU is better than pva
-  CHECK(!vpiCreateAprilTagDetector(VPI_BACKEND_CPU, image_width, image_height,
-                                   &params_, &payload_));
+  (vpiCreateAprilTagDetector(VPI_BACKEND_PVA, image_width, image_height,
+                             &params_, &payload_));
 
-  CHECK(!vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_APRILTAG_DETECTION,
-                        VPI_BACKEND_CPU, &detections_));
-  CHECK(!vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_POSE, VPI_BACKEND_CPU,
-                        &poses_));
-  CHECK(!vpiStreamCreate(0, &stream_));
+  (vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_APRILTAG_DETECTION, 0,
+                  &detections_));
+  (vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_POSE, 0, &poses_));
+  (vpiStreamCreate(0, &stream_));
 }
 
 std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
@@ -61,31 +62,39 @@ std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
     cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
   }
 
-  VPIImage input;
+  if (input_ == nullptr) {
+    std::cout << "input is nullptr" << std::endl;
+    std::cout << gray.size << std::endl;
+    std::cout << gray.channels() << std::endl;
+    std::cout << (vpiImageCreateWrapperOpenCVMat(gray, 0, &input_))
+              << std::endl;
+  } else {
+    std::cout << "input is not nullptr" << std::endl;
+    std::cout << gray.size << std::endl;
+    std::cout << gray.channels() << std::endl;
+    std::cout << (vpiImageSetWrappedOpenCVMat(input_, gray)) << std::endl;
+  }
 
-  CHECK(!vpiImageCreateWrapperOpenCVMat(gray, 0, &input));
+  (vpiSubmitAprilTagDetector(stream_, VPI_BACKEND_PVA, payload_,
+                             max_detections_, input_, detections_));
 
-  CHECK(!vpiSubmitAprilTagDetector(stream_, VPI_BACKEND_CPU, payload_,
-                                   max_detections_, input, detections_));
+  (vpiSubmitAprilTagPoseEstimation(stream_, VPI_BACKEND_CPU, detections_,
+                                   intrinsics_, ktag_size, poses_));
 
-  CHECK(!vpiSubmitAprilTagPoseEstimation(stream_, VPI_BACKEND_CPU, detections_,
-                                         intrinsics_, ktag_size, poses_));
+  vpiStreamSync(stream_);
 
-  CHECK(!vpiStreamSync(stream_));
+  VPIArrayData detections_data{};
+  vpiArrayLockData(detections_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
+                   &detections_data);
 
-  VPIArrayData detections_data;
-  CHECK(!vpiArrayLockData(detections_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
-                          &detections_data));
-
-  VPIArrayData poses_data;
-  CHECK(!vpiArrayLockData(poses_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
-                          &poses_data));
-
-  vpiImageDestroy(input);
+  VPIArrayData poses_data{};
+  vpiArrayLockData(poses_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
+                   &poses_data);
 
   VPIPose* p = static_cast<VPIPose*>(poses_data.buffer.aos.data);
   if (*detections_data.buffer.aos.sizePointer != 0) {
     frc::Pose3d camera_relitive_position = Transform3dFromMatrix(p->transform);
+    PrintPose3d(camera_relitive_position);
     vpiArrayUnlock(detections_);
     vpiArrayUnlock(poses_);
     return std::vector<tag_detection_t>(
