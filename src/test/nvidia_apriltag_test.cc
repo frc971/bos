@@ -25,8 +25,7 @@
 #include "src/utils/timer.h"
 
 int main() {
-  // camera::Camera config = camera::SelectCameraConfig();
-  camera::Camera config = camera::Camera::DEFAULT_USB0;
+  camera::Camera config = camera::SelectCameraConfig();
   camera::CameraSource source("nvidia_apriltag_test",
                               camera::GetCameraStream(config));
   cv::Mat mat = source.GetFrame();

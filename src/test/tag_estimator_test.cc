@@ -28,9 +28,9 @@ int main() {
 
   camera::timestamped_frame_t timestamped_frame;
   while (true) {
+    utils::Timer timer("tag estimator apriltag");
     timestamped_frame = source.Get();
     streamer.WriteFrame(frame);
-    utils::Timer timer("tag estimator apriltag");
 
     std::vector<localization::tag_detection_t> estimates =
         detector.GetTagDetections(timestamped_frame);

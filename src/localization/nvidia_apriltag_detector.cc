@@ -13,6 +13,7 @@
 namespace localization {
 
 frc::Pose3d Transform3dFromMatrix(float matrix[3][4]) {
+  // Need to convert to wpilib coordinates
   const float x_translation = matrix[2][3];
   const float y_translation = matrix[0][3];
   const float z_translation = matrix[1][3];
@@ -20,6 +21,8 @@ frc::Pose3d Transform3dFromMatrix(float matrix[3][4]) {
   Eigen::Matrix3d rotation_matrix{{matrix[2][2], matrix[2][0], matrix[2][1]},
                                   {matrix[0][2], matrix[0][0], matrix[0][1]},
                                   {matrix[1][2], matrix[1][0], matrix[1][1]}};
+
+  // Converting to quaternion because wpilib fails to directly convert from matrix
   Eigen::Quaterniond quaternion(rotation_matrix);
   return frc::Pose3d(
       frc::Translation3d(units::meter_t{x_translation},
@@ -64,16 +67,9 @@ std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
   }
 
   if (input_ == nullptr) {
-    std::cout << "input is nullptr" << std::endl;
-    std::cout << gray.size << std::endl;
-    std::cout << gray.channels() << std::endl;
-    std::cout << (vpiImageCreateWrapperOpenCVMat(gray, 0, &input_))
-              << std::endl;
+    (vpiImageCreateWrapperOpenCVMat(gray, 0, &input_));
   } else {
-    std::cout << "input is not nullptr" << std::endl;
-    std::cout << gray.size << std::endl;
-    std::cout << gray.channels() << std::endl;
-    std::cout << (vpiImageSetWrappedOpenCVMat(input_, gray)) << std::endl;
+    (vpiImageSetWrappedOpenCVMat(input_, gray));
   }
 
   (vpiSubmitAprilTagDetector(stream_, backend_, payload_, max_detections_,
