@@ -31,9 +31,10 @@ frc::Pose3d Transform3dFromMatrix(float matrix[3][4]) {
 
 NvidiaAprilTagDetector::NvidiaAprilTagDetector(
     int image_width, int image_height, nlohmann::json intrinsics,
-    VPIAprilTagDecodeParams params, int max_detections,
+    VPIAprilTagDecodeParams params, VPIBackend backend, int max_detections,
     std::vector<cv::Point3f> apriltag_dimensions, bool verbose)
     : params_(params),
+      backend_(backend),
       max_detections_(max_detections),
       apriltag_dimensions_(apriltag_dimensions),
       input_(nullptr) {
@@ -43,8 +44,8 @@ NvidiaAprilTagDetector::NvidiaAprilTagDetector(
   intrinsics_[1][1] = intrinsics["fy"];
   intrinsics_[1][2] = intrinsics["cy"];
 
-  (vpiCreateAprilTagDetector(VPI_BACKEND_PVA, image_width, image_height,
-                             &params_, &payload_));
+  (vpiCreateAprilTagDetector(backend_, image_width, image_height, &params_,
+                             &payload_));
 
   (vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_APRILTAG_DETECTION, 0,
                   &detections_));
@@ -75,8 +76,8 @@ std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
     std::cout << (vpiImageSetWrappedOpenCVMat(input_, gray)) << std::endl;
   }
 
-  (vpiSubmitAprilTagDetector(stream_, VPI_BACKEND_PVA, payload_,
-                             max_detections_, input_, detections_));
+  (vpiSubmitAprilTagDetector(stream_, backend_, payload_, max_detections_,
+                             input_, detections_));
 
   (vpiSubmitAprilTagPoseEstimation(stream_, VPI_BACKEND_CPU, detections_,
                                    intrinsics_, ktag_size, poses_));

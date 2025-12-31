@@ -39,7 +39,7 @@ int main() {
   localization::NvidiaAprilTagDetector detector(
       mat.cols, mat.rows,
       utils::read_intrinsics(camera::camera_constants[config].intrinsics_path),
-      VPIAprilTagDecodeParams{NULL, 0, 1, VPI_APRILTAG_36H11});
+      VPIAprilTagDecodeParams{NULL, 0, 1, VPI_APRILTAG_36H11}, VPI_BACKEND_PVA);
 
   camera::timestamped_frame_t timestamped_frame;
   while (true) {
