@@ -4,6 +4,9 @@
 #include "cv_camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/realsense_camera.h"
+#include <unordered_map>
+#include <memory>
+#include <string>
 
 ABSL_FLAG(std::string, camera_choice, "usb0", "Camera options\n"
 "Options:\n"
@@ -18,6 +21,17 @@ ABSL_FLAG(std::string, camera_choice, "usb0", "Camera options\n"
 
 namespace camera {
 
+const std::unordered_map<std::string, Camera> name_to_camera{
+    {"mipi0", Camera::IMX296_0}, 
+    {"mipi1", Camera::IMX296_1},
+    {"usb0", Camera::USB0}, 
+    {"usb1", Camera::USB1},
+    {"usb2", Camera::USB2}, 
+    {"usb3", Camera::USB3},
+    {"defaultusb0", Camera::DEFAULT_USB0}, 
+    {"realsense", Camera::REALSENSE}
+};
+
 /*
     Asks Users for input and selects camera based on that.
     If any input is invalid, the function returns a call to itself.
@@ -28,37 +42,37 @@ void PrintCameraConstant(Camera camera) {
   std::cout << "Pipline: " << camera_constants[camera].pipeline << std::endl;
 }
 
-Camera SelectCameraConfig() {
-  const std::string& choice = absl::GetFlag(FLAGS_camera_choice);
+// can be called with  const std::string& choice = absl::GetFlag(FLAGS_camera_choice);
+// to access the absl flag value 
+Camera SelectCameraConfig(const std::string &name) {
+    if (!name_to_camera.count(name)) {
+        std::cout << "Warning: no camera found for name " + name << std::endl;
+        std::cout << "Retrying..." << std::endl;
+        return SelectCameraConfig();
+    }
 
-  if (choice == "mipi0") {
-    PrintCameraConstant(Camera::IMX296_0);
-    return Camera::IMX296_0;
-  } else if (choice == "mipi1") {
-    PrintCameraConstant(Camera::IMX296_1);
-    return Camera::IMX296_1;
-  } else if (choice == "usb0") {
-    PrintCameraConstant(Camera::USB0);
-    return Camera::USB0;
-  } else if (choice == "usb1") {
-    PrintCameraConstant(Camera::USB1);
-    return Camera::USB1;
-  } else if (choice == "usb2") {
-    PrintCameraConstant(Camera::USB2);
-    return Camera::USB2;
-  } else if (choice == "usb3") {
-    PrintCameraConstant(Camera::USB3);
-    return Camera::USB3;
-  } else if (choice == "defaultusb0") {
-    PrintCameraConstant(Camera::DEFAULT_USB0);
-    return Camera::DEFAULT_USB0;
-  } else if (choice == "realsense") {
-    PrintCameraConstant(Camera::REALSENSE);
-    return Camera::REALSENSE;
-  } else {
-    std::cout << "You did not give a valid input. Retrying..." << std::endl;
-    return SelectCameraConfig();
-  }
+    Camera cam = name_to_camera[name];
+    PrintCameraConstant(cam);
+    return cam;
+
+}
+
+Camera SelectCameraConfig() {
+  std::cout << "Please type in what camera you want." << std::endl;
+  std::cout << "Options: " << std::endl;
+  std::cout << "mipi0" << std::endl;
+  std::cout << "mipi1" << std::endl;
+  std::cout << "usb0" << std::endl;
+  std::cout << "usb1" << std::endl;
+  std::cout << "usb2" << std::endl;
+  std::cout << "usb3" << std::endl;
+  std::cout << "defaultusb0" << std::endl;
+  std::cout << "realsense" << std::endl;
+
+  std::string choice;
+  std::cin >> choice;
+
+  return SelectCameraConfig(choice);
 }
 
 std::unique_ptr<ICamera> GetCameraStream(Camera camera) {
