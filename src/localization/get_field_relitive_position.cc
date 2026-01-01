@@ -6,7 +6,7 @@
 #include "src/utils/log.h"
 namespace localization {
 
-tag_detection_t GetFeildRelitivePosition(
+tag_detection_t ToFeildRelitivePosition(
     tag_detection_t tag_relative_position, frc::Transform3d camera_to_robot,
     frc::AprilTagFieldLayout apriltag_layout, bool verbose) {
 
@@ -63,21 +63,21 @@ tag_detection_t GetFeildRelitivePosition(
 
 frc::Transform3d ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json) {
   frc::Transform3d robot_to_camera(
-      units::meter_t{static_cast<double>(extrinsics_json["translation_x"])},
-      units::meter_t{static_cast<double>(extrinsics_json["translation_y"])},
-      units::meter_t{static_cast<double>(extrinsics_json["translation_z"])},
+      units::meter_t{extrinsics_json["translation_x"]},
+      units::meter_t{extrinsics_json["translation_y"]},
+      units::meter_t{extrinsics_json["translation_z"]},
       frc::Rotation3d(units::radian_t{extrinsics_json["rotation_x"]},
                       units::radian_t{extrinsics_json["rotation_y"]},
                       units::radian_t{extrinsics_json["rotation_z"]}));
   return robot_to_camera.Inverse();
 }
 
-std::vector<tag_detection_t> GetFeildRelitivePosition(
+std::vector<tag_detection_t> ToFeildRelitivePosition(
     std::vector<tag_detection_t> detections, frc::Transform3d camera_to_robot,
     frc::AprilTagFieldLayout apriltag_layout, bool verbose) {
   for (size_t i = 0; i < detections.size(); ++i) {
-    detections[i] = GetFeildRelitivePosition(detections[i], camera_to_robot,
-                                             apriltag_layout, verbose);
+    detections[i] = ToFeildRelitivePosition(detections[i], camera_to_robot,
+                                            apriltag_layout, verbose);
   }
   return detections;
 }

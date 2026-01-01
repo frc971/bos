@@ -10,10 +10,6 @@
 namespace localization {
 using json = nlohmann::json;
 
-constexpr double square(double x) {
-  return x * x;
-}
-
 constexpr double RadianToDegree(double radian) {
   return radian * (180 / M_PI);
 }

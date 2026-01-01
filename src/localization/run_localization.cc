@@ -24,7 +24,7 @@ void run_localization(camera::CameraSource& source,
     camera::timestamped_frame_t timestamped_frame = source.Get();
     streamer.WriteFrame(timestamped_frame.frame);
     std::vector<localization::tag_detection_t> estimates =
-        localization::GetFeildRelitivePosition(
+        localization::ToFeildRelitivePosition(
             detector->GetTagDetections(timestamped_frame), camera_to_robot);
     position_sender.Send(estimates, timer.Stop());
   }
