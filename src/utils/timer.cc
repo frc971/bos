@@ -13,8 +13,8 @@ double Timer::Stop() {
   double time =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start_)
           .count();
-  if (print_) {
-    std::cout << name_ << " took  " << time << std::endl;
+  if (print_ && !stopped_) {
+    std::cout << name_ << " took  " << time << "\n";
   }
   stopped_ = true;
   return time;
@@ -28,7 +28,8 @@ Timer::~Timer() {
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start_)
           .count();
   if (print_) {
-    std::cout << name_ << " took  " << time << "s" << std::endl;
+    std::cout << name_ << " took  " << time << "s"
+              << "\n";
   }
 }
 

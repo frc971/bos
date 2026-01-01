@@ -1,5 +1,6 @@
 #pragma once
 
+#include <frc/geometry/Pose2d.h>
 #include <networktables/BooleanTopic.h>
 #include <networktables/DoubleArrayTopic.h>
 #include <networktables/DoubleTopic.h>
@@ -7,7 +8,6 @@
 #include <networktables/NetworkTableInstance.h>
 #include <networktables/StructTopic.h>
 #include "src/localization/position.h"
-#include "tag_estimator.h"
 
 namespace localization {
 class PositionSender {
