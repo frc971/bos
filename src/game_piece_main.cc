@@ -19,7 +19,7 @@
 static constexpr int MAX_DETECTIONS = 6;
 static std::mutex mutex;
 
-std::ostream& operator<<(std::ostream& os, const frc::Pose3d& p) {
+auto operator<<(std::ostream& os, const frc::Pose3d& p) -> std::ostream& {
   os << "Point(" << p.X().value() << ", " << p.Y().value() << ", "
      << p.Z().value() << ")"
      << "\nRotation:\nPitch:\t" << p.Rotation().Y().value() << "\nRoll:\t"
@@ -28,7 +28,7 @@ std::ostream& operator<<(std::ostream& os, const frc::Pose3d& p) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const frc::Transform3d& p) {
+auto operator<<(std::ostream& os, const frc::Transform3d& p) -> std::ostream& {
   os << "Point(" << p.X().value() << ", " << p.Y().value() << ", "
      << p.Z().value() << ")"
      << "\nRotation:\nPitch:\t" << p.Rotation().Y().value() << "\nRoll:\t"
@@ -121,7 +121,7 @@ void run_gamepiece_detect(yolo::Yolo& model,
   }
 }
 
-int main() {
+auto main() -> int {
   std::cout << std::fixed << std::setprecision(2);
   std::cout << "Starting gamepiece main" << std::endl;
   std::cout << "Started networktables" << std::endl;

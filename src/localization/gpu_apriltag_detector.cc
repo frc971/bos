@@ -3,6 +3,7 @@
 #include <cmath>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
+#include <utility>
 #include "apriltag/apriltag.h"
 #include "apriltag/tag36h11.h"
 #include "third_party/971apriltag/971apriltag.h"
@@ -10,13 +11,13 @@
 namespace localization {
 using json = nlohmann::json;
 
-constexpr double RadianToDegree(double radian) {
+constexpr auto RadianToDegree(double radian) -> double {
   return radian * (180 / M_PI);
 }
 
 template <>
-frc971::apriltag::CameraMatrix
-camera_matrix_from_json<frc971::apriltag::CameraMatrix>(json intrinsics) {
+auto camera_matrix_from_json<frc971::apriltag::CameraMatrix>(json intrinsics)
+    -> frc971::apriltag::CameraMatrix {
   frc971::apriltag::CameraMatrix camera_matrix = {.fx = intrinsics["fx"],
                                                   .cx = intrinsics["cx"],
                                                   .fy = intrinsics["fy"],
@@ -25,9 +26,8 @@ camera_matrix_from_json<frc971::apriltag::CameraMatrix>(json intrinsics) {
 }
 
 template <>
-frc971::apriltag::DistCoeffs
-distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
-    json intrinsics) {
+auto distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
+    json intrinsics) -> frc971::apriltag::DistCoeffs {
   frc971::apriltag::DistCoeffs distortion_coefficients = {
       .k1 = intrinsics["k1"],
       .k2 = intrinsics["k2"],
@@ -39,7 +39,7 @@ distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
 }
 
 template <>
-cv::Mat camera_matrix_from_json<cv::Mat>(json intrinsics) {
+auto camera_matrix_from_json<cv::Mat>(json intrinsics) -> cv::Mat {
   cv::Mat camera_matrix =
       (cv::Mat_<double>(3, 3) << intrinsics["fx"], 0, intrinsics["cx"], 0,
        intrinsics["fy"], intrinsics["cy"], 0, 0, 1);
@@ -47,7 +47,7 @@ cv::Mat camera_matrix_from_json<cv::Mat>(json intrinsics) {
 }
 
 template <>
-cv::Mat distortion_coefficients_from_json<cv::Mat>(json intrinsics) {
+auto distortion_coefficients_from_json<cv::Mat>(json intrinsics) -> cv::Mat {
   cv::Mat distortion_coefficients =
       (cv::Mat_<double>(1, 5) << intrinsics["k1"], intrinsics["k2"],
        intrinsics["p1"], intrinsics["p2"], intrinsics["k3"]);
@@ -55,12 +55,12 @@ cv::Mat distortion_coefficients_from_json<cv::Mat>(json intrinsics) {
 }
 
 GPUAprilTagDetector::GPUAprilTagDetector(
-    uint image_width, uint image_height, nlohmann::json intrinsics,
+    uint image_width, uint image_height, const nlohmann::json& intrinsics,
     std::vector<cv::Point3f> apriltag_dimensions, bool verbose)
     : camera_matrix_(camera_matrix_from_json<cv::Mat>(intrinsics)),
       distortion_coefficients_(
           distortion_coefficients_from_json<cv::Mat>(intrinsics)),
-      apriltag_dimensions_(apriltag_dimensions),
+      apriltag_dimensions_(std::move(apriltag_dimensions)),
       verbose_(verbose) {
 
   apriltag_detector_ = apriltag_detector_create();
@@ -78,8 +78,9 @@ GPUAprilTagDetector::GPUAprilTagDetector(
       distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
           intrinsics));
 }
-std::vector<tag_detection_t> GPUAprilTagDetector::GetTagDetections(
-    camera::timestamped_frame_t& timestamped_frame) {
+auto GPUAprilTagDetector::GetTagDetections(
+    camera::timestamped_frame_t& timestamped_frame)
+    -> std::vector<tag_detection_t> {
   if (timestamped_frame.frame.channels() == 1) {
     gpu_detector_->DetectGrayHost(
         (unsigned char*)timestamped_frame.frame.ptr());
@@ -97,11 +98,11 @@ std::vector<tag_detection_t> GPUAprilTagDetector::GetTagDetections(
       zarray_get(detections, i, &gpu_detection);
 
       std::vector<cv::Point2f> imagePoints;
-      for (int i = 0; i < 4; ++i) {
-
-        imagePoints.emplace_back(gpu_detection->p[i][0],
-                                 gpu_detection->p[i][1]);
+      imagePoints.reserve(4);
+      for (auto& i : gpu_detection->p) {
+        imagePoints.emplace_back(i[0], i[1]);
       }
+
       cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
       cv::Mat tvec =
           cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector

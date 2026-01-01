@@ -1,14 +1,15 @@
 #include "timer.h"
 #include <chrono>
 #include <iostream>
+#include <utility>
 namespace utils {
 Timer::Timer(std::string name, bool print)
-    : name_(name),
+    : name_(std::move(name)),
       print_(print),
       stopped_(false),
       start_(std::chrono::high_resolution_clock::now()) {}
 
-double Timer::Stop() {
+auto Timer::Stop() -> double {
   auto end = std::chrono::high_resolution_clock::now();
   double time =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start_)

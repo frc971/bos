@@ -1,7 +1,7 @@
 // https://gist.github.com/SteveRuben/1a15909e384b582c51b5
 #pragma once
 #include <NvInfer.h>
-#include <stdio.h>
+#include <cstdio>
 #include <opencv2/core/mat.hpp>
 #include <string>
 #include <vector>
@@ -9,17 +9,16 @@ namespace yolo {
 
 class Yolo {
  public:
-  Yolo(std::string model_path, bool color, bool verbose = false);
+  Yolo(const std::string& model_path, bool color, bool verbose = false);
   ~Yolo();
-  std::vector<float> RunModel(const cv::Mat& frame);
-  std::vector<float> Postprocess(const int original_height,
-                                 const int original_width,
-                                 const std::vector<float>& results,
-                                 std::vector<cv::Rect>& bboxes,
-                                 std::vector<float>& confidences,
-                                 std::vector<int>& class_ids);
-  static double GetObjectAngle(double object_position, double fov,
-                               int image_width = 640);
+  auto RunModel(const cv::Mat& frame) -> std::vector<float>;
+  auto Postprocess(const int original_height, const int original_width,
+                   const std::vector<float>& results,
+                   std::vector<cv::Rect>& bboxes,
+                   std::vector<float>& confidences, std::vector<int>& class_ids)
+      -> std::vector<float>;
+  static auto GetObjectAngle(double object_position, double fov,
+                             int image_width = 640) -> double;
   static void DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
                              const std::vector<int>& class_ids,
                              const std::vector<float>& confidences,

@@ -2,6 +2,12 @@ cmake_minimum_required(VERSION 3.10)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
+set(CMAKE_CXX_CLANG_TIDY
+    clang-tidy;
+    -checks=modernize-*,performance-*;
+    -warnings-as-errors=*;
+)
+
 add_subdirectory(utils)
 add_subdirectory(camera)
 add_subdirectory(localization)
@@ -17,3 +23,5 @@ target_link_libraries(fiddler_main PRIVATE ${OpenCV_LIBS} apriltag ntcore camera
 
 add_executable(software_bot_main software_bot_main.cc)
 target_link_libraries(software_bot_main PRIVATE ${OpenCV_LIBS} apriltag ntcore camera nlohmann_json::nlohmann_json Eigen3::Eigen localization utils yolo)
+
+set(CMAKE_CXX_CLANG_TIDY "")

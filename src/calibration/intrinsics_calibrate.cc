@@ -20,7 +20,7 @@
 using json = nlohmann::json;
 
 void CaptureFrames(
-    cv::aruco::CharucoDetector detector, camera::ICamera& camera,
+    const cv::aruco::CharucoDetector& detector, camera::ICamera& camera,
     camera::CscoreStreamer streamer,
     std::vector<calibration::detection_result_t>& detection_results,
     std::atomic<bool>& capture_frames_thread, std::atomic<bool>& log_image) {
@@ -35,7 +35,7 @@ void CaptureFrames(
           calibration::DetectCharucoBoard(frame, detector);
 
       cv::Mat annotated_frame = DrawDetectionResult(frame, detection_result);
-      for (calibration::detection_result_t detection_result :
+      for (const calibration::detection_result_t& detection_result :
            detection_results) {
         annotated_frame =
             calibration::DrawDetectionResult(annotated_frame, detection_result);
@@ -53,7 +53,7 @@ void CaptureFrames(
   }
 }
 
-int main() {
+auto main() -> int {
   camera::CscoreStreamer streamer("intrinsics_calibrate", 4971, 30, 1080, 1080,
                                   true);
 
@@ -73,10 +73,10 @@ int main() {
   std::atomic<bool> log_image(false);
 
   std::vector<calibration::detection_result_t> detection_results;
-  std::thread capture_frames_thread(CaptureFrames, detector, std::ref(*camera),
-                                    streamer, std::ref(detection_results),
-                                    std::ref(capture_frames),
-                                    std::ref(log_image));
+  std::thread capture_frames_thread(
+      CaptureFrames, std::ref(detector), std::ref(*camera), streamer,
+      std::ref(detection_results), std::ref(capture_frames),
+      std::ref(log_image));
 
   bool run = true;
   while (run) {

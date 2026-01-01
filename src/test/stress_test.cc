@@ -22,7 +22,7 @@
 
 using json = nlohmann::json;
 
-int main() {
+auto main() -> int {
   utils::StartNetworktables();
 
   camera::Camera config = camera::SelectCameraConfig();

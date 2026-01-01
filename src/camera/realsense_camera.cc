@@ -5,7 +5,8 @@
 namespace camera {
 
 RealSenseCamera::RealSenseCamera()
-    : pipe_(), align_to_color_(RS2_STREAM_COLOR) {
+    : pipe_(), align_to_color_(RS2_STREAM_COLOR) {  // NOLINT
+
   rs2::config cfg;
   cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGB8, 30);
   cfg.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 30);
@@ -14,7 +15,9 @@ RealSenseCamera::RealSenseCamera()
   std::cout << "pipe started" << std::endl;
   rs2::frameset test_frames = pipe_.wait_for_frames(5000);
   std::cout << "testframes acquired" << std::endl;
-  rs2::video_stream_profile profile = pipe_.get_active_profile().get_stream(RS2_STREAM_COLOR).as<rs2::video_stream_profile>();
+  auto profile = pipe_.get_active_profile()
+                     .get_stream(RS2_STREAM_COLOR)
+                     .as<rs2::video_stream_profile>();
 
   rs2_intrinsics intr = profile.get_intrinsics();
 
@@ -23,7 +26,8 @@ RealSenseCamera::RealSenseCamera()
   float cx = intr.ppx;
   float cy = intr.ppy;
 
-  std::cout << "Fx: " << fx << "\tfy: " << fy << "\tcx: " << cx << "\tcy: " << cy << std::endl;
+  std::cout << "Fx: " << fx << "\tfy: " << fy << "\tcx: " << cx
+            << "\tcy: " << cy << std::endl;
 }
 
 RealSenseCamera::~RealSenseCamera() {
@@ -92,9 +96,9 @@ void RealSenseCamera::showDevices() {
 
   // Query available stream profiles
   auto sensors = dev.query_sensors();
-  for (auto sensor : sensors) {
+  for (const auto& sensor : sensors) {
     auto profiles = sensor.get_stream_profiles();
-    for (auto profile : profiles) {
+    for (const auto& profile : profiles) {
       if (auto vp = profile.as<rs2::video_stream_profile>()) {
         std::cout << "Stream: " << vp.stream_type() << " " << vp.width() << "x"
                   << vp.height() << " @ " << vp.fps() << "fps "

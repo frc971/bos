@@ -20,7 +20,7 @@
 
 using json = nlohmann::json;
 
-int main() {
+auto main() -> int {
   utils::StartNetworktables();
 
   camera::CameraSource back_left_camera(

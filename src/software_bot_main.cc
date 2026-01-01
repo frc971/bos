@@ -24,7 +24,7 @@ using json = nlohmann::json;
 
 void run_yolo(const int frame_width, const int frame_height,
               yolo::ModelInfo& model_info, camera::CameraSource& source,
-              std::string extrinsics, uint port) {
+              const std::string& extrinsics, uint port) {
   yolo::Yolo model(model_info.path, model_info.color, true);
 
   camera::CscoreStreamer streamer(source.GetName(), 4971, 30, 1080, 1080);
@@ -47,7 +47,7 @@ void run_yolo(const int frame_width, const int frame_height,
   }
 }
 
-int main() {
+auto main() -> int {
   utils::StartNetworktables();
 
   camera::CameraSource back_left_camera(
