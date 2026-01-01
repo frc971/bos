@@ -1,36 +1,36 @@
 #include "src/camera/select_camera.h"
 #include <iostream>
+#include <memory>
 #include <opencv2/opencv.hpp>
+#include <string>
+#include <unordered_map>
 #include "cv_camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/realsense_camera.h"
-#include <unordered_map>
-#include <memory>
-#include <string>
 
-ABSL_FLAG(std::string, camera_choice, "usb0", "Camera options\n"
-"Options:\n"
-"  mipi0\n"
-"  mipi1\n"
-"  usb0\n"
-"  usb1\n"
-"  usb2\n"
-"  usb3\n"
-"  defaultusb0\n"
-"  realsense");
+ABSL_FLAG(std::string, camera_choice, "usb0",
+          "Camera options\n"
+          "Options:\n"
+          "  mipi0\n"
+          "  mipi1\n"
+          "  usb0\n"
+          "  usb1\n"
+          "  usb2\n"
+          "  usb3\n"
+          "  defaultusb0\n"
+          "  realsense");
 
 namespace camera {
 
 const std::unordered_map<std::string, Camera> name_to_camera{
-    {"mipi0", Camera::IMX296_0}, 
+    {"mipi0", Camera::IMX296_0},
     {"mipi1", Camera::IMX296_1},
-    {"usb0", Camera::USB0}, 
+    {"usb0", Camera::USB0},
     {"usb1", Camera::USB1},
-    {"usb2", Camera::USB2}, 
+    {"usb2", Camera::USB2},
     {"usb3", Camera::USB3},
-    {"defaultusb0", Camera::DEFAULT_USB0}, 
-    {"realsense", Camera::REALSENSE}
-};
+    {"defaultusb0", Camera::DEFAULT_USB0},
+    {"realsense", Camera::REALSENSE}};
 
 /*
     Asks Users for input and selects camera based on that.
@@ -43,18 +43,17 @@ void PrintCameraConstant(Camera camera) {
 }
 
 // can be called with  const std::string& choice = absl::GetFlag(FLAGS_camera_choice);
-// to access the absl flag value 
-Camera SelectCameraConfig(const std::string &name) {
-    if (!name_to_camera.count(name)) {
-        std::cout << "Warning: no camera found for name " + name << std::endl;
-        std::cout << "Retrying..." << std::endl;
-        return SelectCameraConfig();
-    }
+// to access the absl flag value
+Camera SelectCameraConfig(const std::string& name) {
+  if (!name_to_camera.count(name)) {
+    std::cout << "Warning: no camera found for name " + name << std::endl;
+    std::cout << "Retrying..." << std::endl;
+    return SelectCameraConfig();
+  }
 
-    Camera cam = name_to_camera[name];
-    PrintCameraConstant(cam);
-    return cam;
-
+  Camera cam = name_to_camera[name];
+  PrintCameraConstant(cam);
+  return cam;
 }
 
 Camera SelectCameraConfig() {
