@@ -6,7 +6,7 @@
 #include "src/utils/log.h"
 namespace localization {
 
-tag_detection_t ToFeildRelitivePosition(
+tag_detection_t ToFieldRelitivePosition(
     tag_detection_t tag_relative_position, frc::Transform3d camera_to_robot,
     frc::AprilTagFieldLayout apriltag_layout, bool verbose) {
 
@@ -72,11 +72,11 @@ frc::Transform3d ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json) {
   return robot_to_camera.Inverse();
 }
 
-std::vector<tag_detection_t> ToFeildRelitivePosition(
+std::vector<tag_detection_t> ToFieldRelitivePosition(
     std::vector<tag_detection_t> detections, frc::Transform3d camera_to_robot,
     frc::AprilTagFieldLayout apriltag_layout, bool verbose) {
   for (size_t i = 0; i < detections.size(); ++i) {
-    detections[i] = ToFeildRelitivePosition(detections[i], camera_to_robot,
+    detections[i] = ToFieldRelitivePosition(detections[i], camera_to_robot,
                                             apriltag_layout, verbose);
   }
   return detections;
