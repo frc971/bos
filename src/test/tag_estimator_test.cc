@@ -1,33 +1,43 @@
-#include "src/localization/tag_estimator.h"
 #include <fstream>
+#include <nlohmann/json.hpp>
 #include <sstream>
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
+#include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/select_camera.h"
+#include "src/localization/get_field_relitive_position.h"
+#include "src/localization/gpu_apriltag_detector.h"
+#include "src/utils/camera_utils.h"
+#include "src/utils/timer.h"
 
 using json = nlohmann::json;
 
 int main() {
+
   camera::CscoreStreamer streamer("tag_estimator_test", 4971, 30, 1080, 1080);
 
   camera::Camera config = camera::SelectCameraConfig();
-  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
-  cv::Mat frame;
-  camera->GetFrame(frame);
+  camera::CameraSource source("stress_test_camera",
+                              camera::GetCameraStream(config));
+  cv::Mat frame = source.GetFrame();
 
-  localization::TagEstimator tag_estimator(
-      frame.cols, frame.rows, camera::camera_constants[config].intrinsics_path,
-      camera::camera_constants[config].extrinsics_path);
+  localization::GPUAprilTagDetector detector(
+      frame.cols, frame.rows,
+      utils::read_intrinsics(camera::camera_constants[config].intrinsics_path));
+
+  camera::timestamped_frame_t timestamped_frame;
   while (true) {
-    camera->GetFrame(frame);
+    utils::Timer timer("tag estimator apriltag");
+    timestamped_frame = source.Get();
     streamer.WriteFrame(frame);
+
     std::vector<localization::tag_detection_t> estimates =
-        tag_estimator.GetRawPositionEstimates(frame, 0);
+        detector.GetTagDetections(timestamped_frame);
+
+    timer.Stop();
     for (auto& estimate : estimates) {
       std::cout << estimate;
-    }
-    if (!estimates.empty()) {
       std::cout << "----------" << std::endl;
     }
   }
