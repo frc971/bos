@@ -23,18 +23,18 @@ using json = nlohmann::json;
 int main() {
   utils::StartNetworktables();
 
-  camera::CameraSource back_left_camera(
+  std::shared_ptr<camera::CameraSource> back_left_camera = std::make_shared<camera::CameraSource>(
       "back_left",
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::USB0].pipeline)));
 
-  camera::CameraSource back_right_camera(
+  std::shared_ptr<camera::CameraSource> back_right_camera = std::make_shared<camera::CameraSource>(
       "back_right",
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::USB1].pipeline)));
 
   std::thread usb0_thread(
-      localization::run_localization, std::ref(back_left_camera),
+      localization::run_localization, back_left_camera,
       std::make_unique<localization::GPUAprilTagDetector>(
           640, 480,
           utils::read_intrinsics(
@@ -43,7 +43,7 @@ int main() {
       false);
 
   std::thread usb1_thread(
-      localization::run_localization, std::ref(back_right_camera),
+      localization::run_localization, back_right_camera,
       std::make_unique<localization::GPUAprilTagDetector>(
           1280, 720,
           utils::read_intrinsics(
