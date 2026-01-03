@@ -1,5 +1,5 @@
 #include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <queue>
@@ -50,11 +50,11 @@ std::vector<Node*> reconstructPath(Node* target) {
     return path;
 }
 
-void dijkstra(std::vector<std::vector<Node>>& grid, Node* start, Node* target) {
+void BFS(std::vector<std::vector<Node>>& grid, Node* start, Node* target) {
     std::priority_queue<std::pair<float, Node*>, std::vector<std::pair<float, Node*>>, std::greater<std::pair<float, Node*>>> openList;
     start->g = 0.0f;
     start->color = { 0, 255, 0 };
-    target->color = { 0, 0, 255 };
+    target->color = { 255, 0, 0 };
     openList.push(std::make_pair(start->g, start));
 
     std::vector<std::pair<int, int>> dirs = { {0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,-1},{1,1} };
@@ -84,7 +84,20 @@ void dijkstra(std::vector<std::vector<Node>>& grid, Node* start, Node* target) {
     }
 }
 
+void constructLinePath(cv::Mat& canvas, std::vector<Node*> path) {
+    for (size_t i = 0; i < path.size() - 1; ++i) {
+        int x1 = path[i]->x * CELL_SIZE + CELL_SIZE / 2;
+        int y1 = path[i]->y * CELL_SIZE + CELL_SIZE / 2;
+        int x2 = path[i + 1]->x * CELL_SIZE + CELL_SIZE / 2;
+        int y2 = path[i + 1]->y * CELL_SIZE + CELL_SIZE / 2;
+        cv::line(canvas, cv::Point(x1, y1), cv::Point(x2, y2), {0, 0, 0}, 3);
+        
+    }
+}
+
 int main() {
+    std::cout << "hi" << std::endl;
+    
     std::vector<std::vector<Node>> grid(GRID_H, std::vector<Node>(GRID_W));
     for (int y = 0; y < GRID_H; ++y) {
         for (int x = 0; x < GRID_W; ++x) {
@@ -100,16 +113,22 @@ int main() {
     Node* start = &grid[0][0];
     Node* target = &grid[9][9];
 
-    dijkstra(grid, start, target);
+    BFS(grid, start, target);
 
     std::vector<Node*> path = reconstructPath(target);
-    for (Node* n : path)
-        if (n != start && n != target)
+    for (Node* n : path) {
+        if (n != start && n != target) {
             n->color = { 0, 0, 255 };
+        }
+    }
 
+    std::cout << "test" << std::endl;
+    std::cout.flush();
+    
     cv::Mat canvas(GRID_H * CELL_SIZE, GRID_W * CELL_SIZE, CV_8UC3, { 255, 255, 255 });
     drawGrid(canvas, grid);
-    cv::imshow("DFS", canvas);
+    constructLinePath(canvas, path);
+    cv::imshow("BFS", canvas);
     cv::waitKey(0);
     return 0;
 }
