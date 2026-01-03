@@ -24,7 +24,4 @@ target_link_libraries(gamepiece_test PRIVATE gamepiece yolo camera utils)
 
 add_executable(nvidia_apriltag_test nvidia_apriltag_test.cc)
 target_link_libraries(nvidia_apriltag_test PRIVATE ${OpenCV_LIBS} apriltag ntcore camera nlohmann_json::nlohmann_json Eigen3::Eigen localization utils yolo vpi utils)
-target_link_options(nvidia_apriltag_test PRIVATE
-    -Wl,-rpath-link,/bos/docker/lib
-)
 
