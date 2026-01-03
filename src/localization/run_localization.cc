@@ -8,20 +8,20 @@
 
 namespace localization {
 
-void run_localization(camera::CameraSource& source,
+void run_localization(std::shared_ptr<camera::CameraSource> source,
                       std::unique_ptr<localization::IAprilTagDetector> detector,
                       std::string extrinsics, uint port, bool verbose) {
 
-  localization::PositionSender position_sender(source.GetName());
+  localization::PositionSender position_sender(source->GetName());
 
-  camera::CscoreStreamer streamer(source.GetName(), port, 30, 1080, 1080);
+  camera::CscoreStreamer streamer(source->GetName(), port, 30, 1080, 1080);
 
   nlohmann::json extrinsics_json = utils::read_extrinsics(extrinsics);
   frc::Transform3d camera_to_robot =
       localization::ExtrinsicsJsonToCameraToRobot(extrinsics_json);
   while (true) {
-    utils::Timer timer(source.GetName(), verbose);
-    camera::timestamped_frame_t timestamped_frame = source.Get();
+    utils::Timer timer(source->GetName(), verbose);
+    camera::timestamped_frame_t timestamped_frame = source->Get();
     streamer.WriteFrame(timestamped_frame.frame);
     std::vector<localization::tag_detection_t> estimates =
         localization::ToFeildRelitivePosition(
