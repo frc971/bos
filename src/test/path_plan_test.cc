@@ -96,7 +96,6 @@ void constructLinePath(cv::Mat& canvas, std::vector<Node*> path) {
 }
 
 int main() {
-    std::cout << "hi" << std::endl;
     
     std::vector<std::vector<Node>> grid(GRID_H, std::vector<Node>(GRID_W));
     for (int y = 0; y < GRID_H; ++y) {
@@ -106,9 +105,26 @@ int main() {
         }
     }
 
+    makeObstacle(grid, 1, 3);
     makeObstacle(grid, 2, 3);
-    makeObstacle(grid, 5, 6);
+    makeObstacle(grid, 3, 3);
+    makeObstacle(grid, 4, 3);
+    makeObstacle(grid, 5, 3);
     makeObstacle(grid, 7, 1);
+    makeObstacle(grid, 7, 2);
+    makeObstacle(grid, 7, 3);
+    makeObstacle(grid, 7, 4);
+    makeObstacle(grid, 7, 5);
+    makeObstacle(grid, 7, 6);
+    makeObstacle(grid, 3, 6);
+    makeObstacle(grid, 4, 6);
+    makeObstacle(grid, 5, 6);
+    makeObstacle(grid, 6, 6);
+    makeObstacle(grid, 1, 8);
+    makeObstacle(grid, 2, 8);
+    makeObstacle(grid, 3, 8);
+    makeObstacle(grid, 5, 0);
+    makeObstacle(grid, 5, 1);
 
     Node* start = &grid[0][0];
     Node* target = &grid[9][9];
@@ -122,9 +138,6 @@ int main() {
         }
     }
 
-    std::cout << "test" << std::endl;
-    std::cout.flush();
-    
     cv::Mat canvas(GRID_H * CELL_SIZE, GRID_W * CELL_SIZE, CV_8UC3, { 255, 255, 255 });
     drawGrid(canvas, grid);
     constructLinePath(canvas, path);
