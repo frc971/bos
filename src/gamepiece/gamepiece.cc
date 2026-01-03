@@ -1,12 +1,10 @@
-#include <frc/geometry/Pose2d.h>
+#include "gamepiece.h"
 #include <frc/geometry/Pose3d.h>
-#include <networktables/StructTopic.h>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <thread>
-#include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
@@ -14,8 +12,9 @@
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 #include "src/yolo/model_constants.h"
-#include "src/yolo/yolo.h"
 
+
+namespace gamepiece {
 static constexpr int MAX_DETECTIONS = 6;
 static std::mutex mutex;
 
@@ -39,7 +38,7 @@ std::ostream& operator<<(std::ostream& os, const frc::Transform3d& p) {
 
 void run_gamepiece_detect(yolo::Yolo& model,
                           const std::vector<std::string>& class_names,
-                          std::unique_ptr<camera::ICamera> camera,
+                          std::shared_ptr<camera::CameraSource> camera,
                           nt::StructTopic<frc::Pose2d>& coral_topic,
                           nt::StructTopic<frc::Pose2d>& algae_topic,
                           nlohmann::json intrinsics, nlohmann::json extrinsics,
@@ -66,11 +65,11 @@ void run_gamepiece_detect(yolo::Yolo& model,
       frc::Rotation3d{
           units::radian_t{extrinsics["rotation_x"].get<float>()},
           units::radian_t{extrinsics["rotation_y"].get<float>()},
-          units::radian_t{(float)extrinsics["rotation_z"].get<float>()}}};
+          units::radian_t{extrinsics["rotation_z"].get<float>()}}};
   frc::Transform3d target_pose_cam_relative;
   frc::Pose3d target_pose_robot_relative;
   while (true) {
-    camera->GetFrame(color);
+    color = camera->GetFrame();
     mutex.lock();
     model.Postprocess(color.rows, color.cols, model.RunModel(color), bboxes,
                       confidences, class_ids);
@@ -120,31 +119,4 @@ void run_gamepiece_detect(yolo::Yolo& model,
     }
   }
 }
-
-int main() {
-  std::cout << std::fixed << std::setprecision(2);
-  std::cout << "Starting gamepiece main" << std::endl;
-  std::cout << "Started networktables" << std::endl;
-  yolo::ModelInfo model_info = yolo::models[yolo::Model::COLOR];
-  yolo::Yolo color_model(model_info.path, model_info.color);
-  utils::StartNetworktables();
-  nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
-  std::shared_ptr<nt::NetworkTable> coral_table =
-      inst.GetTable("Orin/Gamepiece/coral");
-  std::shared_ptr<nt::NetworkTable> algae_table =
-      inst.GetTable("Orin/Gamepiece/algae");
-  nt::StructTopic<frc::Pose2d> coral_topic =
-      coral_table->GetStructTopic<frc::Pose2d>("Pose");
-  nt::StructTopic<frc::Pose2d> algae_topic =
-      algae_table->GetStructTopic<frc::Pose2d>("Pose");
-
-  std::vector<std::thread> camera_threads;
-  camera_threads.emplace_back(
-      run_gamepiece_detect, std::ref(color_model),
-      std::ref(model_info.class_names),
-      std::make_unique<camera::RealSenseCamera>(), std::ref(coral_topic),
-      std::ref(algae_topic),
-      utils::read_intrinsics("/bos/constants/realsense_intrinsics.json"),
-      utils::read_extrinsics("/bos/constants/realsense_extrinsics.json"), true);
-  camera_threads[0].join();
-}
+} // namespace gamepiece
