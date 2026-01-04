@@ -28,8 +28,8 @@ const int GRID_H = data["grid"].size();
 const int CELL_SIZE = 20;
 std::vector<std::vector<Node>> grid(GRID_H, std::vector<Node>(GRID_W));
 
-cv::Rect nodeRect(const Node& n) {
-    return cv::Rect(n.x * CELL_SIZE, n.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+auto nodeRect(const Node& n) -> cv::Rect {
+    return {n.x * CELL_SIZE, n.y * CELL_SIZE, CELL_SIZE, CELL_SIZE};
 }
 
 void drawGrid(cv::Mat& canvas, const std::vector<std::vector<Node>>& grid) {
@@ -47,7 +47,7 @@ void makeObstacle(std::vector<std::vector<Node>>& grid, int row, int col) {
     grid[row][col].color = { 0, 0, 0 };
 }
 
-std::vector<Node*> reconstructPath(Node* target) {
+auto reconstructPath(Node* target) -> std::vector<Node*> {
     std::vector<Node*> path;
     Node* current = target;
     while (current != nullptr) {
@@ -59,7 +59,7 @@ std::vector<Node*> reconstructPath(Node* target) {
 }
 
 void BFS(std::vector<std::vector<Node>>& grid, Node* start, Node* target) {
-    std::priority_queue<std::pair<double, Node*>, std::vector<std::pair<double, Node*>>, std::greater<std::pair<double, Node*>>> openList;
+    std::priority_queue<std::pair<double, Node*>, std::vector<std::pair<double, Node*>>, std::greater<>> openList;
     start->g = 0.0f;
     start->color = { 0, 255, 0 };
     target->color = { 255, 0, 0 };
@@ -79,8 +79,8 @@ void BFS(std::vector<std::vector<Node>>& grid, Node* start, Node* target) {
             if (nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H) continue;
             Node* neighbor = &grid[ny][nx];
             if (!neighbor->walkable) continue;
-            double dx = static_cast<double>(d.first);
-            double dy = static_cast<double>(d.second);
+            auto dx = static_cast<double>(d.first);
+            auto dy = static_cast<double>(d.second);
             double cost = std::sqrt(dx * dx + dy * dy);
             double tentativeG = current->g + cost;
             if (tentativeG < neighbor->g) {
@@ -92,13 +92,13 @@ void BFS(std::vector<std::vector<Node>>& grid, Node* start, Node* target) {
     }
 }
 
-std::vector<std::pair<int, int>> constructLinePath(cv::Mat& canvas, std::vector<Node*> path) {
+auto constructLinePath(cv::Mat& canvas, std::vector<Node*> path) -> std::vector<std::pair<int, int>> {
     std::vector<std::pair<int, int>> controlPoints;
     for (size_t i = 0; i < path.size(); ++i) {
         int px = path[i]->x * CELL_SIZE + (CELL_SIZE / 2);
         int py = path[i]->y * CELL_SIZE + (CELL_SIZE / 2);
         
-        controlPoints.push_back({px, py});
+        controlPoints.emplace_back(px, py);
 
         if (i > 0) {
             int prevX = path[i-1]->x * CELL_SIZE + (CELL_SIZE / 2);
@@ -110,7 +110,7 @@ std::vector<std::pair<int, int>> constructLinePath(cv::Mat& canvas, std::vector<
 }
 
 
-std::vector<double> clampedUniformKnotVector(double k, double p) {
+auto clampedUniformKnotVector(double k, double p) -> std::vector<double> {
     std::vector<double> knots;
     int n = (int)k; 
     int d = (int)p;
@@ -132,7 +132,7 @@ std::vector<double> clampedUniformKnotVector(double k, double p) {
 }
 
 
-double basisFunction(double i, double p, double t, const std::vector<double>& knots) {
+auto basisFunction(double i, double p, double t, const std::vector<double>& knots) -> double {
     int idx = static_cast<int>(i);
     int deg = static_cast<int>(p);
     
@@ -165,7 +165,7 @@ double basisFunction(double i, double p, double t, const std::vector<double>& kn
     return weight;
 }
 
-std::pair<double, double> getSplinePoint(double t, const std::vector<std::pair<int, int>>& points, const std::vector<double>& knots, int p) {
+auto getSplinePoint(double t, const std::vector<std::pair<int, int>>& points, const std::vector<double>& knots, int p) -> std::pair<double, double> {
     double px = 0.0, py = 0.0;
     for (size_t i = 0; i < points.size(); ++i) {
         double weight = basisFunction((double)i, (double)p, t, knots);
@@ -192,7 +192,7 @@ void drawSpline(cv::Mat& canvas, const std::vector<std::pair<int, int>>& points,
 
 }
 
-int main() {
+auto main() -> int {
     std::vector<std::vector<bool>> navgrid = data["grid"];
 
     for (int y = 0; y < GRID_H; ++y) {
