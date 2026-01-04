@@ -11,7 +11,7 @@
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
 
-int main() {
+auto main() -> int {
   camera::CscoreStreamer streamer("frame_shower", 4971, 30, 1080, 1080);
 
   std::unique_ptr<camera::ICamera> camera =

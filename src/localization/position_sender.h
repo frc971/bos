@@ -12,8 +12,8 @@
 namespace localization {
 class PositionSender {
  public:
-  PositionSender(std::string camera_name, bool verbose = false);
-  void Send(std::vector<localization::tag_detection_t> detections,
+  PositionSender(const std::string& camera_name, bool verbose = false);
+  void Send(const std::vector<localization::tag_detection_t>& detections,
             double latency);
 
  private:

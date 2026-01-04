@@ -17,7 +17,7 @@ void PrintCameraConstant(Camera camera) {
   std::cout << "Pipline: " << camera_constants[camera].pipeline << std::endl;
 }
 
-Camera SelectCameraConfig() {
+auto SelectCameraConfig() -> Camera {
   std::cout << "Please type in what camera you want." << std::endl;
   std::cout << "Options: " << std::endl;
   std::cout << "mipi0" << std::endl;
@@ -62,7 +62,7 @@ Camera SelectCameraConfig() {
   }
 }
 
-std::unique_ptr<ICamera> GetCameraStream(Camera camera) {
+auto GetCameraStream(Camera camera) -> std::unique_ptr<ICamera> {
   switch (camera) {
     case Camera::REALSENSE:
       return std::make_unique<camera::RealSenseCamera>();

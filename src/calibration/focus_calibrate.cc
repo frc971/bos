@@ -6,7 +6,7 @@
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
 
-int main(int argc, char* argv[]) {
+auto main(int argc, char* argv[]) -> int {
   camera::Camera config = camera::SelectCameraConfig();
   std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
 

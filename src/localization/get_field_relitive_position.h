@@ -10,16 +10,17 @@ static frc::AprilTagFieldLayout kapriltag_layout =
     frc::AprilTagFieldLayout::LoadField(
         frc::AprilTagField::k2025ReefscapeAndyMark);
 
-std::vector<tag_detection_t> ToFeildRelitivePosition(
+auto ToFeildRelitivePosition(
     std::vector<tag_detection_t> detections, frc::Transform3d camera_to_robot,
-    frc::AprilTagFieldLayout apriltag_layout = kapriltag_layout,
-    bool verbose = false);
+    const frc::AprilTagFieldLayout& apriltag_layout = kapriltag_layout,
+    bool verbose = false) -> std::vector<tag_detection_t>;
 
-tag_detection_t ToFeildRelitivePosition(
+auto ToFeildRelitivePosition(
     tag_detection_t tag_relative_position, frc::Transform3d camera_to_robot,
-    frc::AprilTagFieldLayout apriltag_layout = kapriltag_layout,
-    bool verbose = false);
+    const frc::AprilTagFieldLayout& apriltag_layout = kapriltag_layout,
+    bool verbose = false) -> tag_detection_t;
 
-frc::Transform3d ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json);
+auto ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json)
+    -> frc::Transform3d;
 
 }  // namespace localization

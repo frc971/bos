@@ -7,18 +7,19 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <thread>
+#include <utility>
 #include "src/camera/camera.h"
 
 class ImageCamera : public camera::ICamera {
  public:
-  ImageCamera(cv::Mat image) : image_(image) {}
+  ImageCamera(cv::Mat image) : image_(std::move(image)) {}
   void GetFrame(cv::Mat& mat) override { mat = image_.clone(); }
 
  private:
   cv::Mat image_;
 };
 
-int main() {
+auto main() -> int {
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   inst.StopClient();
   inst.StopLocal();
