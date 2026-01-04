@@ -13,15 +13,17 @@
 #include "opencv2/cudawarping.hpp"
 
 namespace yolo {
-std::vector<char> loadEngineFile(const std::string& filename) {
+auto loadEngineFile(const std::string& filename) -> std::vector<char> {
   std::ifstream file(filename, std::ios::binary);
-  if (!file)
+  if (!file) {
     throw std::runtime_error("Engine file not found");
-  return std::vector<char>((std::istreambuf_iterator<char>(file)),
-                           std::istreambuf_iterator<char>());
+  }
+
+  return {(std::istreambuf_iterator<char>(file)),
+          std::istreambuf_iterator<char>()};
 }
 
-size_t getOutputSize(nvinfer1::ICudaEngine* engine) {
+auto getOutputSize(nvinfer1::ICudaEngine* engine) -> size_t {
   nvinfer1::Dims output_shape =
       engine->getTensorShape(engine->getIOTensorName(1));
   size_t output_size = 1;
@@ -97,7 +99,7 @@ class Logger : public nvinfer1::ILogger {
   }
 };
 
-Yolo::Yolo(std::string model_path, const bool color, const bool verbose)
+Yolo::Yolo(const std::string& model_path, const bool color, const bool verbose)
     : color_(color), verbose_(verbose) {
   Logger logger;
   std::vector<char> engine_data = loadEngineFile(model_path);
@@ -126,18 +128,11 @@ Yolo::Yolo(std::string model_path, const bool color, const bool verbose)
   cudaStreamCreate(&(inferenceCudaStream_));
 }
 
-std::vector<float> Yolo::RunModel(const cv::Mat& frame) {
-  bool status;
-  (void)status;
+auto Yolo::RunModel(const cv::Mat& frame) -> std::vector<float> {
   PreprocessImage(frame, input_buffer_, input_dims_);
-  status =
-      context_->setTensorAddress(engine_->getIOTensorName(0), input_buffer_);
-  assert(status);
-  status =
-      context_->setTensorAddress(engine_->getIOTensorName(1), output_buffer_);
-  assert(status);
-  status = context_->enqueueV3(inferenceCudaStream_);
-  assert(status);
+  context_->setTensorAddress(engine_->getIOTensorName(0), input_buffer_);
+  context_->setTensorAddress(engine_->getIOTensorName(1), output_buffer_);
+  context_->enqueueV3(inferenceCudaStream_);
 
   cudaStreamSynchronize(inferenceCudaStream_);
   std::vector<float> featureVector;
@@ -187,8 +182,9 @@ Yolo::~Yolo() {
   }
 }
 
-double Yolo::GetObjectAngle(double object_position, double fov,
-                            int image_width) {
+// TODO remove
+auto Yolo::GetObjectAngle(double object_position, double fov, int image_width)
+    -> double {
   double focal_length = image_width / std::tan(fov / 2.0);
   return std::atan2(object_position - (image_width / 2.0), focal_length);
 }
@@ -217,12 +213,11 @@ void Yolo::DrawDetections(cv::Mat& img, const std::vector<cv::Rect>& boxes,
   }
 }
 
-std::vector<float> Yolo::Postprocess(const int original_height,
-                                     const int original_width,
-                                     const std::vector<float>& results,
-                                     std::vector<cv::Rect>& bboxes,
-                                     std::vector<float>& confidences,
-                                     std::vector<int>& class_ids) {
+auto Yolo::Postprocess(const int original_height, const int original_width,
+                       const std::vector<float>& results,
+                       std::vector<cv::Rect>& bboxes,
+                       std::vector<float>& confidences,
+                       std::vector<int>& class_ids) -> std::vector<float> {
   float scale = std::min(TARGET_SIZE / (float)original_height,
                          TARGET_SIZE / (float)original_width);
 

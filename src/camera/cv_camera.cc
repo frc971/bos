@@ -4,7 +4,7 @@
 
 namespace camera {
 
-CVCamera::CVCamera(cv::VideoCapture cap) : cap_(std::move(cap)) {}
+CVCamera::CVCamera(const cv::VideoCapture& cap) : cap_(cap) {}
 
 void CVCamera::GetFrame(cv::Mat& frame) {
   cap_.read(frame);

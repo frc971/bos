@@ -1,9 +1,13 @@
 #pragma once
+#include <fmt/ostream.h>
+#include <frc/geometry/Transform3d.h>
 #include <math.h>
 #include <wpi/struct/Struct.h>
 #include <wpilibc/frc/Timer.h>
 #include <cmath>
+#include <iostream>
 #include <ostream>
+#include "src/utils/log.h"
 namespace localization {
 typedef struct Point3d {
   double x;
@@ -12,29 +16,22 @@ typedef struct Point3d {
 } point3d_t;
 
 typedef struct TagDetection {
-  point3d_t translation;  // Meters
-  point3d_t rotation;     // Radians
+  frc::Pose3d pose;
   double timestamp;
   double distance;
   int tag_id;
   friend std::ostream& operator<<(std::ostream& os, const TagDetection& t) {
-    os << "id: " << t.tag_id << "\n";
-    os << "Translation: "
-       << "\n";
-    os << t.translation.x << "\n";
-    os << t.translation.y << "\n";
-    os << t.translation.z << "\n";
-    os << "Rotation: "
-       << "\n";
-    os << t.rotation.x * 180 / M_PI << "\n";
-    os << t.rotation.y * 180 / M_PI << "\n";
-    os << t.rotation.z * 180 / M_PI << "\n";
-    os << "Distance(xyz): "
-       << "\n";
-    os << sqrt(t.translation.x * t.translation.x +
-               t.translation.y * t.translation.y +
-               t.translation.z * t.translation.z)
-       << "\n";
+
+    const auto& tr = t.pose.Translation();
+    const auto& r = t.pose.Rotation();
+
+    fmt::print(os,
+               "Transform3d: "
+               "translation (x={:.3f} m, y={:.3f} m, z={:.3f} m), "
+               "rotation (roll={:.2f} deg, pitch={:.2f} deg, yaw={:.2f} deg)\n",
+               tr.X().value(), tr.Y().value(), tr.Z().value(),
+               units::degree_t{r.X()}.value(), units::degree_t{r.Y()}.value(),
+               units::degree_t{r.Z()}.value());
     return os;
   }
 } tag_detection_t;
