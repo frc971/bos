@@ -14,11 +14,11 @@
 
 namespace localization {
 
-constexpr double RadianToDegree(double radian) {
+constexpr auto RadianToDegree(double radian) -> double {
   return radian * (180 / M_PI);
 }
 
-PositionSender::PositionSender(std::string camera_name, bool verbose)
+PositionSender::PositionSender(const std::string& camera_name, bool verbose)
     : instance_(nt::NetworkTableInstance::GetDefault()), verbose_(verbose) {
   std::shared_ptr<nt::NetworkTable> table =
       instance_.GetTable("Orin/PoseEstimate/" + camera_name);
@@ -36,25 +36,26 @@ PositionSender::PositionSender(std::string camera_name, bool verbose)
       {.periodic = 0.01, .sendAll = true, .keepDuplicates = true});
 }
 
-void PositionSender::Send(std::vector<localization::tag_detection_t> detections,
-                          double latency) {
+void PositionSender::Send(
+    const std::vector<localization::tag_detection_t>& detections,
+    double latency) {
   if (mutex_.try_lock()) {
-    for (size_t i = 0; i < detections.size(); i++) {
-      double variance = detections[i].distance;
-      double tag_estimation[7] = {
-          detections[i].translation.x,
-          detections[i].translation.y,
-          detections[i].rotation.z,
+    for (auto& detection : detections) {
+      double variance = detection.distance;
+      std::array<double, 7> tag_estimation{
+          detection.pose.X().value(),
+          detection.pose.Y().value(),
+          detection.pose.Rotation().Z().value(),
           variance,
-          detections[i].timestamp +
-              instance_.GetServerTimeOffset().value() / 1000000.0,
-          static_cast<double>(detections[i].tag_id),
+          detection.timestamp +
+              instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
+          static_cast<double>(detection.tag_id),
           latency};
 
       pose_publisher_.Set(
-          frc::Pose2d(units::meter_t{detections[i].translation.x},
-                      units::meter_t{detections[i].translation.y},
-                      units::radian_t{detections[i].rotation.z}));
+          frc::Pose2d(units::meter_t{detection.pose.X().value()},
+                      units::meter_t{detection.pose.Y().value()},
+                      units::radian_t{detection.pose.Rotation().Z().value()}));
 
       tag_estimation_publisher_.Set(tag_estimation);
       latency_publisher_.Set(latency);

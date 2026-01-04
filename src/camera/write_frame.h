@@ -7,6 +7,7 @@
 
 namespace camera {
 
-bool WriteFrame(std::string folder, timestamped_frame_t& timestamped_frame);
+auto WriteFrame(const std::string& folder,
+                timestamped_frame_t& timestamped_frame) -> bool;
 
 }  // namespace camera

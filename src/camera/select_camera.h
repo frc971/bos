@@ -4,6 +4,6 @@
 #include "src/camera/cv_camera.h"
 
 namespace camera {
-Camera SelectCameraConfig();
-std::unique_ptr<ICamera> GetCameraStream(Camera camera);
+auto SelectCameraConfig() -> Camera;
+auto GetCameraStream(Camera camera) -> std::unique_ptr<ICamera>;
 }  // namespace camera

@@ -8,17 +8,17 @@
 #include "src/camera/camera.h"
 namespace camera {
 
-typedef struct TimestampedFrame {
+using timestamped_frame_t = struct TimestampedFrame {
   cv::Mat frame;
   double timestamp;
-} timestamped_frame_t;
+};
 
 class CameraSource {
  public:
   CameraSource(std::string name, std::unique_ptr<ICamera> camera);
-  timestamped_frame_t Get();
-  cv::Mat GetFrame();
-  std::string GetName() const { return name_; }
+  auto Get() -> timestamped_frame_t;
+  auto GetFrame() -> cv::Mat;
+  [[nodiscard]] auto GetName() const -> std::string { return name_; }
 
  private:
   std::string name_;

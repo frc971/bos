@@ -11,7 +11,7 @@
 namespace camera {
 
 DiskCamera::DiskCamera(std::string image_folder_path)
-    : image_folder_path_(image_folder_path), current_frame_(0) {
+    : image_folder_path_(std::move(image_folder_path)), current_frame_(0) {
   for (auto& entry : std::filesystem::directory_iterator(image_folder_path)) {
     std::cout << entry;
     std::string folder_path = entry.path().string();
@@ -31,7 +31,7 @@ void DiskCamera::GetFrame(cv::Mat& frame) {
   }
   frame = cv::imread(image_paths_.top().path);
 
-  double timestamp = frc::Timer::GetFPGATimestamp().to<double>();
+  auto timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   while (timestamp < image_paths_.top().timestamp) {
     std::this_thread::sleep_for(std::chrono::duration<double>(
         image_paths_.top().timestamp - timestamp));
