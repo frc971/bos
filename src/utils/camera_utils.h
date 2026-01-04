@@ -1,7 +1,8 @@
+#pragma once
 #include <string>
 #include "nlohmann/json.hpp"
 
 namespace utils {
-nlohmann::json read_intrinsics(std::string path);
-nlohmann::json read_extrinsics(std::string path);
+auto read_intrinsics(const std::string& path) -> nlohmann::json;
+auto read_extrinsics(const std::string& path) -> nlohmann::json;
 }  // namespace utils

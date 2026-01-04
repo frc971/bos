@@ -4,7 +4,7 @@
 #include <iostream>
 namespace camera {
 
-CscoreStreamer::CscoreStreamer(std::string name, uint port, uint fps,
+CscoreStreamer::CscoreStreamer(const std::string& name, uint port, uint fps,
                                uint width, uint height, bool verbose) {
   if (verbose) {
     std::cout << "Initializing CscoreStreamer with the following parameters:"

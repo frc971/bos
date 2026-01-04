@@ -2,7 +2,7 @@
 #include <fstream>
 #include <iostream>
 namespace utils {
-nlohmann::json read_intrinsics(std::string path) {
+auto read_intrinsics(const std::string& path) -> nlohmann::json {
   nlohmann::json intrinsics;
 
   std::ifstream intrinsics_file(path);
@@ -14,7 +14,7 @@ nlohmann::json read_intrinsics(std::string path) {
   return intrinsics;
 }
 
-nlohmann::json read_extrinsics(std::string path) {
+auto read_extrinsics(const std::string& path) -> nlohmann::json {
   nlohmann::json extrinsics;
   std::ifstream extrinsics_file(path);
   if (!extrinsics_file.is_open()) {
