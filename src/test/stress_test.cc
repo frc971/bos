@@ -26,10 +26,11 @@ auto main() -> int {
   utils::StartNetworktables();
 
   camera::Camera config = camera::SelectCameraConfig();
-  camera::CameraSource source("stress_test_camera",
-                              camera::GetCameraStream(config));
+  camera::CameraSource source = camera::CameraSource(
+      "stress_test_camera", camera::GetCameraStream(config));
   cv::Mat frame = source.GetFrame();
 
+  // std::bind?
   std::thread usb0_thread(
       localization::run_localization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
