@@ -1,14 +1,14 @@
 #include "src/gamepiece/gamepiece.h"
-#include "src/yolo/yolo.h"
-#include "src/yolo/model_constants.h"
-#include "src/camera/select_camera.h"
 #include "src/camera/cscore_streamer.h"
+#include "src/camera/select_camera.h"
 #include "src/utils/camera_utils.h"
+#include "src/yolo/model_constants.h"
+#include "src/yolo/yolo.h"
 
-int main() {
+auto main() -> int {
   camera::Camera config = camera::SelectCameraConfig();
-  std::shared_ptr<camera::CameraSource> camera = std::make_shared<camera::CameraSource>("nvidia_apriltag_test",
-                              camera::GetCameraStream(config));
+  camera::CameraSource source = camera::CameraSource(
+      "nvidia_apriltag_test", camera::GetCameraStream(config));
   camera::CscoreStreamer streamer("yolo_test", 4971, 30, 1080, 1080);
 
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
@@ -23,8 +23,13 @@ int main() {
   yolo::ModelInfo model_info = yolo::models[yolo::Model::COLOR];
   yolo::Yolo color_model(model_info.path, model_info.color);
 
-  std::thread usb0_gamepiece_thread(gamepiece::run_gamepiece_detect, std::ref(color_model), std::ref(model_info.class_names), camera, std::ref(coral_topic), std::ref(algae_topic), utils::read_intrinsics(camera::camera_constants[config].intrinsics_path),
-      utils::read_extrinsics(camera::camera_constants[config].extrinsics_path), true);
+  std::thread usb0_gamepiece_thread(
+      gamepiece::run_gamepiece_detect, std::ref(color_model),
+      std::ref(model_info.class_names), std::ref(source), std::ref(coral_topic),
+      std::ref(algae_topic),
+      utils::read_intrinsics(camera::camera_constants[config].intrinsics_path),
+      utils::read_extrinsics(camera::camera_constants[config].extrinsics_path),
+      true);
 
   usb0_gamepiece_thread.join();
 }

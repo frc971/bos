@@ -13,12 +13,11 @@
 #include "src/utils/nt_utils.h"
 #include "src/yolo/model_constants.h"
 
-
 namespace gamepiece {
 static constexpr int MAX_DETECTIONS = 6;
 static std::mutex mutex;
 
-std::ostream& operator<<(std::ostream& os, const frc::Pose3d& p) {
+auto operator<<(std::ostream& os, const frc::Pose3d& p) -> std::ostream& {
   os << "Point(" << p.X().value() << ", " << p.Y().value() << ", "
      << p.Z().value() << ")"
      << "\nRotation:\nPitch:\t" << p.Rotation().Y().value() << "\nRoll:\t"
@@ -27,7 +26,7 @@ std::ostream& operator<<(std::ostream& os, const frc::Pose3d& p) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const frc::Transform3d& p) {
+auto operator<<(std::ostream& os, const frc::Transform3d& p) -> std::ostream& {
   os << "Point(" << p.X().value() << ", " << p.Y().value() << ", "
      << p.Z().value() << ")"
      << "\nRotation:\nPitch:\t" << p.Rotation().Y().value() << "\nRoll:\t"
@@ -38,7 +37,7 @@ std::ostream& operator<<(std::ostream& os, const frc::Transform3d& p) {
 
 void run_gamepiece_detect(yolo::Yolo& model,
                           const std::vector<std::string>& class_names,
-                          std::shared_ptr<camera::CameraSource> camera,
+                          camera::CameraSource& source,
                           nt::StructTopic<frc::Pose2d>& coral_topic,
                           nt::StructTopic<frc::Pose2d>& algae_topic,
                           nlohmann::json intrinsics, nlohmann::json extrinsics,
@@ -62,14 +61,13 @@ void run_gamepiece_detect(yolo::Yolo& model,
           units::meter_t{extrinsics["translation_x"].get<float>()},
           units::meter_t{extrinsics["translation_y"].get<float>()},
           units::meter_t{extrinsics["translation_z"].get<float>()}},
-      frc::Rotation3d{
-          units::radian_t{extrinsics["rotation_x"].get<float>()},
-          units::radian_t{extrinsics["rotation_y"].get<float>()},
-          units::radian_t{extrinsics["rotation_z"].get<float>()}}};
+      frc::Rotation3d{units::radian_t{extrinsics["rotation_x"].get<float>()},
+                      units::radian_t{extrinsics["rotation_y"].get<float>()},
+                      units::radian_t{extrinsics["rotation_z"].get<float>()}}};
   frc::Transform3d target_pose_cam_relative;
   frc::Pose3d target_pose_robot_relative;
   while (true) {
-    color = camera->GetFrame();
+    color = source.GetFrame();
     mutex.lock();
     model.Postprocess(color.rows, color.cols, model.RunModel(color), bboxes,
                       confidences, class_ids);
@@ -119,4 +117,4 @@ void run_gamepiece_detect(yolo::Yolo& model,
     }
   }
 }
-} // namespace gamepiece
+}  // namespace gamepiece

@@ -3,8 +3,8 @@
 
 namespace calibration {
 
-json intrisincs_to_json(cv::Mat cameraMatrix,
-                        cv::Mat distCoeffs) {  // TODO get index
+auto intrisincs_to_json(cv::Mat cameraMatrix,
+                        cv::Mat distCoeffs) -> json {  // TODO get index
 
   json output;
   output["fx"] = cameraMatrix.ptr<double>()[0];
@@ -21,11 +21,9 @@ json intrisincs_to_json(cv::Mat cameraMatrix,
   return output;
 }
 
-cv::aruco::CharucoDetector CreateDetector(cv::aruco::Dictionary dictionary,
-                                          int squares_x, int squares_y,
-                                          float squares_length,
-                                          float pixel_per_square,
-                                          float marker_length) {
+auto CreateDetector(const cv::aruco::Dictionary& dictionary, int squares_x,
+                    int squares_y, float squares_length, float pixel_per_square,
+                    float marker_length) -> cv::aruco::CharucoDetector {
 
   cv::aruco::CharucoBoard board(cv::Size(squares_x, squares_y), squares_length,
                                 marker_length, dictionary);
@@ -37,9 +35,9 @@ cv::aruco::CharucoDetector CreateDetector(cv::aruco::Dictionary dictionary,
   return detector;
 }
 
-cv::Mat GenerateBoard(cv::aruco::CharucoBoard board, int squares_x,
-                      int squares_y, float pixel_per_square,
-                      int margin_squares) {
+auto GenerateBoard(const cv::aruco::CharucoBoard& board, int squares_x,
+                   int squares_y, float pixel_per_square, int margin_squares)
+    -> cv::Mat {
 
   cv::Mat board_image;
   cv::Size image_size;
@@ -50,8 +48,9 @@ cv::Mat GenerateBoard(cv::aruco::CharucoBoard board, int squares_x,
   return board_image;
 }
 
-detection_result_t DetectCharucoBoard(cv::Mat& frame,
-                                      cv::aruco::CharucoDetector detector) {
+auto DetectCharucoBoard(cv::Mat& frame,
+                        const cv::aruco::CharucoDetector& detector)
+    -> detection_result_t {
 
   detection_result_t detection_result;
 
@@ -66,8 +65,9 @@ detection_result_t DetectCharucoBoard(cv::Mat& frame,
   return detection_result;
 }
 
-cv::Mat DrawDetectionResult(cv::Mat& frame,
-                            detection_result_t detection_result) {
+auto DrawDetectionResult(cv::Mat& frame,
+                         const detection_result_t& detection_result)
+    -> cv::Mat {
   cv::Mat result;
   frame.copyTo(result);
 
@@ -79,15 +79,15 @@ cv::Mat DrawDetectionResult(cv::Mat& frame,
   return result;
 }
 
-double CalibrateCamera(std::vector<detection_result_t> detection_results,
-                       cv::Size image_size, cv::Mat& camera_matrix,
-                       cv::Mat& distortion_coefficiants) {
+auto CalibrateCamera(const std::vector<detection_result_t>& detection_results,
+                     cv::Size image_size, cv::Mat& camera_matrix,
+                     cv::Mat& distortion_coefficiants) -> double {
 
   std::vector<cv::Mat> allCharucoCorners, allCharucoIds;
   std::vector<std::vector<cv::Point2f>> allImagePoints;
   std::vector<std::vector<cv::Point3f>> allObjectPoints;
 
-  for (detection_result_t detection_result : detection_results) {
+  for (const detection_result_t& detection_result : detection_results) {
     if (detection_result.currentCharucoCorners.total() > 3) {
       if (!detection_result.currentImagePoints.empty() &&
           !detection_result.currentObjectPoints.empty()) {

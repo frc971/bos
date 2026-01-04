@@ -6,9 +6,10 @@
 #include "src/utils/log.h"
 namespace localization {
 
-tag_detection_t ToFeildRelitivePosition(
-    tag_detection_t tag_relative_position, frc::Transform3d camera_to_robot,
-    frc::AprilTagFieldLayout apriltag_layout, bool verbose) {
+auto ToFeildRelitivePosition(tag_detection_t tag_relative_position,
+                             frc::Transform3d camera_to_robot,
+                             const frc::AprilTagFieldLayout& apriltag_layout,
+                             bool verbose) -> tag_detection_t {
 
   frc::Transform3d camera_to_tag(
       units::meter_t{tag_relative_position.pose.X()},
@@ -61,7 +62,8 @@ tag_detection_t ToFeildRelitivePosition(
   return field_relative_pose;
 }
 
-frc::Transform3d ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json) {
+auto ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json)
+    -> frc::Transform3d {
   frc::Transform3d robot_to_camera(
       units::meter_t{extrinsics_json["translation_x"]},
       units::meter_t{extrinsics_json["translation_y"]},
@@ -72,12 +74,13 @@ frc::Transform3d ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json) {
   return robot_to_camera.Inverse();
 }
 
-std::vector<tag_detection_t> ToFeildRelitivePosition(
-    std::vector<tag_detection_t> detections, frc::Transform3d camera_to_robot,
-    frc::AprilTagFieldLayout apriltag_layout, bool verbose) {
-  for (size_t i = 0; i < detections.size(); ++i) {
-    detections[i] = ToFeildRelitivePosition(detections[i], camera_to_robot,
-                                            apriltag_layout, verbose);
+auto ToFeildRelitivePosition(std::vector<tag_detection_t> detections,
+                             frc::Transform3d camera_to_robot,
+                             const frc::AprilTagFieldLayout& apriltag_layout,
+                             bool verbose) -> std::vector<tag_detection_t> {
+  for (tag_detection_t& detection : detections) {
+    detection = ToFeildRelitivePosition(detection, camera_to_robot,
+                                        apriltag_layout, verbose);
   }
   return detections;
 }

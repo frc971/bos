@@ -24,16 +24,13 @@
 #include "src/utils/log.h"
 #include "src/utils/timer.h"
 
-int main() {
+auto main() -> int {
   camera::Camera config = camera::SelectCameraConfig();
   camera::CameraSource source("nvidia_apriltag_test",
                               camera::GetCameraStream(config));
   cv::Mat mat = source.GetFrame();
 
   camera::CscoreStreamer streamer(source.GetName(), 4971, 30, 1080, 1080);
-
-  nlohmann::json intrinsics_json =
-      utils::read_intrinsics(camera::camera_constants[config].intrinsics_path);
 
   localization::NvidiaAprilTagDetector detector(
       mat.cols, mat.rows,
