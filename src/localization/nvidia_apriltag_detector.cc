@@ -5,6 +5,7 @@
 #include <Eigen/Geometry>
 #include <cmath>
 #include <opencv2/imgproc.hpp>
+#include <utility>
 #include <vpi/OpenCVInterop.hpp>
 #include "src/localization/position.h"
 #include "src/utils/log.h"
@@ -12,7 +13,7 @@
 
 namespace localization {
 
-frc::Pose3d Transform3dFromMatrix(float matrix[3][4]) {
+auto Transform3dFromMatrix(float matrix[3][4]) -> frc::Pose3d {  // NOLINT
   // Need to convert to wpilib coordinates
   const float x_translation = matrix[2][3];
   const float y_translation = matrix[0][3];
@@ -24,12 +25,11 @@ frc::Pose3d Transform3dFromMatrix(float matrix[3][4]) {
 
   // Converting to quaternion because wpilib fails to directly convert from matrix
   Eigen::Quaterniond quaternion(rotation_matrix);
-  return frc::Pose3d(
-      frc::Translation3d(units::meter_t{x_translation},
-                         units::meter_t{y_translation},
-                         units::meter_t{z_translation}),
-      frc::Rotation3d(frc::Quaternion(quaternion.w(), quaternion.x(),
-                                      quaternion.y(), quaternion.z())));
+  return {frc::Translation3d(units::meter_t{x_translation},
+                             units::meter_t{y_translation},
+                             units::meter_t{z_translation}),
+          frc::Rotation3d(frc::Quaternion(quaternion.w(), quaternion.x(),
+                                          quaternion.y(), quaternion.z()))};
 }
 
 NvidiaAprilTagDetector::NvidiaAprilTagDetector(
@@ -39,7 +39,7 @@ NvidiaAprilTagDetector::NvidiaAprilTagDetector(
     : params_(params),
       backend_(backend),
       max_detections_(max_detections),
-      apriltag_dimensions_(apriltag_dimensions),
+      apriltag_dimensions_(std::move(apriltag_dimensions)),
       input_(nullptr) {
 
   intrinsics_[0][0] = intrinsics["fx"];
@@ -56,8 +56,9 @@ NvidiaAprilTagDetector::NvidiaAprilTagDetector(
   (vpiStreamCreate(0, &stream_));
 }
 
-std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
-    camera::timestamped_frame_t& timestamped_frame) {
+auto NvidiaAprilTagDetector::GetTagDetections(
+    camera::timestamped_frame_t& timestamped_frame)
+    -> std::vector<tag_detection_t> {
   cv::Mat gray;
 
   if (timestamped_frame.frame.channels() == 1) {
@@ -88,7 +89,7 @@ std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
   vpiArrayLockData(poses_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
                    &poses_data);
 
-  VPIPose* p = static_cast<VPIPose*>(poses_data.buffer.aos.data);
+  auto* p = static_cast<VPIPose*>(poses_data.buffer.aos.data);
   if (*detections_data.buffer.aos.sizePointer != 0) {
     frc::Pose3d camera_relitive_position = Transform3dFromMatrix(p->transform);
     PrintPose3d(camera_relitive_position);
@@ -102,7 +103,7 @@ std::vector<tag_detection_t> NvidiaAprilTagDetector::GetTagDetections(
 
   vpiArrayUnlock(detections_);
   vpiArrayUnlock(poses_);
-  return std::vector<tag_detection_t>();
+  return {};
 }
 
 NvidiaAprilTagDetector::~NvidiaAprilTagDetector() {

@@ -9,7 +9,7 @@
 #include "src/camera/select_camera.h"
 #include "src/camera/write_frame.h"
 #include "src/utils/nt_utils.h"
-int main() {
+auto main() -> int {
   utils::StartNetworktables();
 
   camera::CscoreStreamer streamer("frame_shower", 4971, 30, 1080, 1080);

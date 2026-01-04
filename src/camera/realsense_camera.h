@@ -9,8 +9,8 @@ namespace camera {
 class RealSenseCamera : public ICamera {
  public:
   RealSenseCamera();
-  ~RealSenseCamera();
-  void GetFrame(cv::Mat& mat);
+  ~RealSenseCamera() override;
+  void GetFrame(cv::Mat& mat) override;
   void GetFrame(cv::Mat& color_mat, cv::Mat& depth_mat);
   static void showDevices();
 

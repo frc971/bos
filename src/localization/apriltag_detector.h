@@ -15,8 +15,8 @@ const std::vector<cv::Point3f> kapriltag_dimensions = {
 
 class IAprilTagDetector {
  public:
-  virtual std::vector<tag_detection_t> GetTagDetections(
-      camera::timestamped_frame_t& frame) = 0;
+  virtual auto GetTagDetections(camera::timestamped_frame_t& frame)
+      -> std::vector<tag_detection_t> = 0;
   virtual ~IAprilTagDetector() = default;
 };
 }  // namespace localization

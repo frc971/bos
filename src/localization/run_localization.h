@@ -4,7 +4,7 @@
 #include "src/localization/apriltag_detector.h"
 #include "src/localization/gpu_apriltag_detector.h"
 namespace localization {
-void run_localization(std::shared_ptr<camera::CameraSource> source,
+void run_localization(camera::CameraSource& source,
                       std::unique_ptr<localization::IAprilTagDetector> detector,
-                      std::string extrinsics, uint port, bool verbose = false);
+                      const std::string& extrinsics, uint port, bool verbose);
 }

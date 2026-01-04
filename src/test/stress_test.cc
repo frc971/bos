@@ -22,16 +22,17 @@
 
 using json = nlohmann::json;
 
-int main() {
+auto main() -> int {
   utils::StartNetworktables();
 
   camera::Camera config = camera::SelectCameraConfig();
-  std::shared_ptr<camera::CameraSource> source = std::make_shared<camera::CameraSource>("stress_test_camera",
-                              camera::GetCameraStream(config));
-  cv::Mat frame = source->GetFrame();
+  camera::CameraSource source = camera::CameraSource(
+      "stress_test_camera", camera::GetCameraStream(config));
+  cv::Mat frame = source.GetFrame();
 
+  // std::bind?
   std::thread usb0_thread(
-      localization::run_localization, source,
+      localization::run_localization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
           frame.cols, frame.rows,
           utils::read_intrinsics(
@@ -40,7 +41,7 @@ int main() {
       false);
 
   std::thread usb1_thread(
-      localization::run_localization, source,
+      localization::run_localization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
           frame.cols, frame.rows,
           utils::read_intrinsics(
@@ -49,7 +50,7 @@ int main() {
       false);
 
   std::thread usb2_thread(
-      localization::run_localization, source,
+      localization::run_localization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
           frame.cols, frame.rows,
           utils::read_intrinsics(
@@ -58,7 +59,7 @@ int main() {
       false);
 
   std::thread usb3_thread(
-      localization::run_localization, source,
+      localization::run_localization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
           frame.cols, frame.rows,
           utils::read_intrinsics(

@@ -8,14 +8,14 @@
 
 namespace camera {
 
-typedef struct TimestampedFramePath {
+using timestamped_frame_path_t = struct TimestampedFramePath {
   std::string path;
   double timestamp;
-} timestamped_frame_path_t;
+};
 
 struct CompareTimestampedFramePath {
-  bool operator()(const timestamped_frame_path_t& a,
-                  const timestamped_frame_path_t& b) {
+  auto operator()(const timestamped_frame_path_t& a,
+                  const timestamped_frame_path_t& b) -> bool {
     return a.timestamp < b.timestamp;
   }
 };
@@ -23,7 +23,7 @@ struct CompareTimestampedFramePath {
 class DiskCamera : ICamera {
  public:
   DiskCamera(std::string image_folder_path);
-  void GetFrame(cv::Mat& frame);
+  void GetFrame(cv::Mat& frame) override;
 
  private:
   std::string image_folder_path_;
