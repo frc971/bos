@@ -9,8 +9,8 @@ namespace camera {
 
 class CscoreStreamer {
  public:
-  CscoreStreamer(std::string name, uint port, uint fps, uint width, uint height,
-                 bool verbose = false);
+  CscoreStreamer(const std::string& name, uint port, uint fps, uint width,
+                 uint height, bool verbose = false);
   void WriteFrame(cv::Mat& mat);
 
  private:

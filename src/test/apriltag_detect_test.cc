@@ -15,7 +15,8 @@
 
 using json = nlohmann::json;
 
-frc971::apriltag::CameraMatrix camera_matrix_from_json(json intrinsics) {
+auto camera_matrix_from_json(json intrinsics)
+    -> frc971::apriltag::CameraMatrix {
   frc971::apriltag::CameraMatrix camera_matrix = {.fx = intrinsics["fx"],
                                                   .cx = intrinsics["cx"],
                                                   .fy = intrinsics["fy"],
@@ -23,8 +24,8 @@ frc971::apriltag::CameraMatrix camera_matrix_from_json(json intrinsics) {
   return camera_matrix;
 }
 
-frc971::apriltag::DistCoeffs distortion_coefficients_from_json(
-    json intrinsics) {
+auto distortion_coefficients_from_json(json intrinsics)
+    -> frc971::apriltag::DistCoeffs {
   frc971::apriltag::DistCoeffs distortion_coefficients = {
       .k1 = intrinsics["k1"],
       .k2 = intrinsics["k2"],
@@ -35,7 +36,7 @@ frc971::apriltag::DistCoeffs distortion_coefficients_from_json(
   return distortion_coefficients;
 }
 
-int main() {
+auto main() -> int {
   auto apriltag_detector_ = apriltag_detector_create();
 
   apriltag_detector_add_family_bits(apriltag_detector_, tag36h11_create(), 1);
@@ -73,9 +74,8 @@ int main() {
         zarray_get(detections, i, &gpu_detection);
         cv::Point point(gpu_detection->c[0], gpu_detection->c[1]);
 
-        for (int i = 0; i < 4; ++i) {
-          imagePoints.emplace_back(gpu_detection->p[i][0],
-                                   gpu_detection->p[i][1]);
+        for (auto& i : gpu_detection->p) {
+          imagePoints.emplace_back(i[0], i[1]);
         }
       }
     }

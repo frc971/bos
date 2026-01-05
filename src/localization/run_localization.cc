@@ -1,4 +1,6 @@
 #include "src/localization/run_localization.h"
+
+#include <utility>
 #include "src/camera/cscore_streamer.h"
 #include "src/localization/get_field_relitive_position.h"
 #include "src/localization/gpu_apriltag_detector.h"
@@ -10,7 +12,7 @@ namespace localization {
 
 void run_localization(camera::CameraSource& source,
                       std::unique_ptr<localization::IAprilTagDetector> detector,
-                      std::string extrinsics, uint port, bool verbose) {
+                      const std::string& extrinsics, uint port, bool verbose) {
 
   localization::PositionSender position_sender(source.GetName());
 

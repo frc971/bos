@@ -6,5 +6,5 @@
 namespace localization {
 void run_localization(camera::CameraSource& source,
                       std::unique_ptr<localization::IAprilTagDetector> detector,
-                      std::string extrinsics, uint port, bool verbose = false);
+                      const std::string& extrinsics, uint port, bool verbose);
 }

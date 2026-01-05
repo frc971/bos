@@ -20,15 +20,15 @@
 
 using json = nlohmann::json;
 
-int main() {
+auto main() -> int {
   utils::StartNetworktables();
 
-  camera::CameraSource back_left_camera(
+  camera::CameraSource back_left_camera = camera::CameraSource(
       "back_left",
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::USB0].pipeline)));
 
-  camera::CameraSource back_right_camera(
+  camera::CameraSource back_right_camera = camera::CameraSource(
       "back_right",
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::USB1].pipeline)));

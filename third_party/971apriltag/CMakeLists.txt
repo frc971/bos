@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 include_directories(. /usr/local/cuda/include ${OpenCV_INCLUDE_DIRS})
 
 find_package(wpilib REQUIRED)
-add_library(971apriltag SHARED
+add_library(971apriltag STATIC 
 971apriltag.cu
   apriltag_detect.cu
   labeling_allegretti_2019_BKE.cu
@@ -21,4 +21,4 @@ target_sources(971apriltag_dep
 set_target_properties(971apriltag_dep PROPERTIES LINKER_LANGUAGE C)
 
 target_compile_options(971apriltag PRIVATE -w)
-target_link_libraries(971apriltag PRIVATE apriltag 971apriltag_dep)
+target_link_libraries(971apriltag PRIVATE apriltag 971apriltag_dep absl::log absl::check)

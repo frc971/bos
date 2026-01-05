@@ -16,9 +16,9 @@ class NvidiaAprilTagDetector : IAprilTagDetector {
       int max_detections = 16,
       std::vector<cv::Point3f> apriltag_dimensions = kapriltag_dimensions,
       bool verbose = false);
-  ~NvidiaAprilTagDetector();
-  std::vector<tag_detection_t> GetTagDetections(
-      camera::timestamped_frame_t& frame) override;
+  ~NvidiaAprilTagDetector() override;
+  auto GetTagDetections(camera::timestamped_frame_t& frame)
+      -> std::vector<tag_detection_t> override;
 
  private:
   VPIAprilTagDecodeParams params_;
