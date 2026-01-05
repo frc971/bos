@@ -1,2 +1,2 @@
 add_library(camera cscore_streamer.cc disk_camera.cc cv_camera.cc select_camera.cc camera_source.cc write_frame.cc realsense_camera.cc)
-target_link_libraries(camera PUBLIC ${OpenCV_LIBS} 971apriltag ntcore apriltag nlohmann_json::nlohmann_json wpilibc realsense2::realsense2 utils)
+target_link_libraries(camera PUBLIC ${OpenCV_LIBS} 971apriltag ntcore apriltag nlohmann_json::nlohmann_json wpilibc realsense2::realsense2 utils absl::flags)
