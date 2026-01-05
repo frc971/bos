@@ -1211,8 +1211,8 @@ void FitQuads(
   /*VLOG(1) << "Spawning with " << kThreads << " threads, and " << kBlocks
           << " blocks for " << num_extents << " blob_ids";*/
   CHECK_EQ(nmaxima, kNMaxima)
-      //<< ": Kernel is compiled and optimized for a fixed nmaxima, please "
-      //   "recompile if you want to change it.";
+      << ": Kernel is compiled and optimized for a fixed nmaxima, please "
+        "recompile if you want to change it.";
   DoFitQuads<<<kBlocks, kThreads, 0, stream->get()>>>(
       peaks_device, peak_extents, line_fit_points_device,
       selected_extents_device, max_line_fit_mse, cos_critical_rad,

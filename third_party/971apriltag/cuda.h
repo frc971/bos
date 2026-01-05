@@ -1,27 +1,14 @@
 #pragma once
 
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
 #include <cassert>
 #include <chrono>
 #include <iostream>
 #include <span>
 #include <vector>
-
-// ABSL replace
-#define FATAL true
-#define INFO true
-#define LOG(...) std::cout
-#define VLOG(...) std::cout
-#define CHECK_EQ(x, y) \
-  { assert(x == y); }
-#define CHECK(x) \
-  { assert(x); }
-#define CHECK_LE(x, y) \
-  { assert(x <= y); }
-#define CHECK_LT(x, y) \
-  { assert(x < y); }
-
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 // CHECKs that a cuda method returned success.
 // TODO(austin): This will not handle if and else statements quite right, fix if
