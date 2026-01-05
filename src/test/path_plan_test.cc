@@ -1,3 +1,4 @@
+#include <iostream>
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -8,6 +9,12 @@
 #include <ostream>
 #include <queue>
 #include <vector>
+#include <frc/DataLogManager.h>
+#include <networktables/NetworkTableInstance.h>
+#include <networktables/StructArrayTopic.h>
+#include <units/angle.h>
+#include <units/length.h>
+#include <frc/geometry/Pose2d.h>
 
 class Node {
  public:
@@ -19,13 +26,12 @@ class Node {
   cv::Scalar color = {200, 200, 200};
 };
 
-using json = nlohmann::json;
-std::ifstream file("/root/bos/constants/navgrid.json");
-json data = json::parse(file);
+std::ifstream file("/bos/constants/navgrid.json");
+nlohmann::json data = nlohmann::json::parse(file);
 
 const int GRID_W = data["grid"][0].size();
 const int GRID_H = data["grid"].size();
-const int CELL_SIZE = 20;
+const int CELL_SIZE = 20; 
 std::vector<std::vector<Node>> grid(GRID_H, std::vector<Node>(GRID_W));
 
 auto nodeRect(const Node& n) -> cv::Rect {
@@ -205,6 +211,13 @@ void drawSpline(cv::Mat& canvas, const std::vector<std::pair<int, int>>& points,
 }
 
 auto main() -> int {
+  nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
+  inst.StopClient();
+  inst.StopLocal();
+  inst.StartClient4("path_planning");
+  inst.SetServerTeam(971);
+  frc::DataLogManager::Start("/bos/logs/");
+
   std::vector<std::vector<bool>> navgrid = data["grid"];
 
   for (int y = 0; y < GRID_H; ++y) {
@@ -236,7 +249,28 @@ auto main() -> int {
       constructLinePath(canvas, path);
   std::vector<double> knots = clampedUniformKnotVector(controlPoints.size(), 3);
   drawSpline(canvas, controlPoints, knots, 3);
-  cv::imshow("BFS", canvas);
+
+  std::shared_ptr<nt::NetworkTable> table = inst.GetTable("PathPlanning");
+  nt::StructArrayTopic<frc::Pose2d> trajectory_topic =
+      table->GetStructArrayTopic<frc::Pose2d>("Trajectory");
+  nt::StructArrayPublisher<frc::Pose2d> trajectory_publisher =
+      trajectory_topic.Publish();
+
+  std::vector<frc::Pose2d> trajectory;
+  int resolution = 200;
+  for (int i = 0; i < resolution; ++i) {
+    double t = (double)i / resolution;
+    std::pair<double, double> point = getSplinePoint(t, controlPoints, knots, 3);
+    double px = point.first / CELL_SIZE;
+    double py = point.second / CELL_SIZE;
+    trajectory.push_back(
+        frc::Pose2d(units::meter_t{px}, units::meter_t{py}, units::radian_t{0.0}));
+  }
+  trajectory_publisher.Set(trajectory);
+  inst.Flush();
+
+  cv::imshow("Path Planning", canvas);
   cv::waitKey(0);
+
   return 0;
 }
