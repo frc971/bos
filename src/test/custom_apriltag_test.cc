@@ -6,16 +6,17 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
+#include "src/utils/log.h"
 
-typedef struct Edge {
-  int x1;
-  int y1;
-  int x2;
-  int y2;
+using edge_t = struct Edge {
+  int x1 = -1;
+  int y1 = -1;
+  int x2 = -1;
+  int y2 = -1;
   double weight;
-} edge_t;
+};
 
-typedef struct Node {
+using node_t = struct Node {
   cv::Vec3b color;
   double magnitude;
   double magnitude_high;
@@ -26,9 +27,9 @@ typedef struct Node {
   double y_grad1;
   double x_grad2;
   double y_grad2;
-
   double x_start;
   double x_end;
+
   double x;
   double y;
   double x_sum;
@@ -45,11 +46,11 @@ typedef struct Node {
   double bottom = 0;
 
   uint children;
-  Node* parent;
+  Node* parent = nullptr;
   bool is_quad = false;
-} node_t;
+};
 
-bool IsNeighbor(node_t* a, node_t* b) {
+auto IsNeighbor(node_t* a, node_t* b) -> bool {
   const double squared_distance =
       (a->x_end - b->x_start) * (a->x_end - b->x_start) +
       (a->y_end - b->y_start) * (a->y_end - b->y_start);
@@ -59,14 +60,14 @@ bool IsNeighbor(node_t* a, node_t* b) {
   return true;
 }
 
-std::vector<node_t*> FindQuads(node_t* curr, std::vector<node_t*> quad,
-                               const std::vector<node_t*>& segments) {
+auto FindQuads(node_t* curr, std::vector<node_t*> quad,
+               const std::vector<node_t*>& segments) -> std::vector<node_t*> {
   quad.push_back(curr);
   if (quad.size() == 4) {
-    return quad;
+    return IsNeighbor(curr, quad[0]) ? quad : std::vector<node_t*>{};
   }
-  for (int i = 0; i < segments.size(); i++) {
-    if (IsNeighbor(curr, segments[i])) {
+  for (size_t i = 0; i < segments.size(); i++) {
+    if (!segments[i]->is_quad && IsNeighbor(curr, segments[i])) {
       std::vector<node_t*> result = FindQuads(segments[i], quad, segments);
       if (result.size() == 4) {
         return result;
@@ -76,28 +77,29 @@ std::vector<node_t*> FindQuads(node_t* curr, std::vector<node_t*> quad,
   return {};
 }
 
-node_t& GetParent(node_t& curr) {
+auto GetParent(node_t& curr) -> node_t& {
   if (curr.parent == nullptr) {
     return curr;
   }
   return GetParent(*curr.parent);
 }
 
-inline int get_value(unsigned char* buffer, uint x, uint y, uint step) {
+inline auto get_value(unsigned char* buffer, uint x, uint y, uint step) -> int {
   return static_cast<int>(buffer[y * step + x]);
 }
 
-cv::Vec3b GenerateRandomColor() {
+auto GenerateRandomColor() -> cv::Vec3b {
   // Generate random values between 0 and 255 for Blue, Green, and Red channels
   int blue = std::rand() % 256;   // Random value for Blue channel (0 to 255)
   int green = std::rand() % 256;  // Random value for Green channel (0 to 255)
   int red = std::rand() % 256;    // Random value for Red channel (0 to 255)
 
   // Return a Scalar representing a color in BGR format
-  return cv::Vec3b(blue, green, red);
+  return {static_cast<unsigned char>(blue), static_cast<unsigned char>(green),
+          static_cast<unsigned char>(red)};
 }
 
-int main() {
+auto main() -> int {
   cv::Mat image = cv::imread("apriltag3.png");
   cv::GaussianBlur(image, image, cv::Size(0, 0), 0.8);
 
@@ -111,11 +113,11 @@ int main() {
   Sobel(gray, grad_x, CV_64F, 1, 0, 3);
   Sobel(gray, grad_y, CV_64F, 0, 1, 3);
 
-  uint edges_length = (gray.rows - 1) * (gray.cols - 1) * 2;
-  edge_t* edges = static_cast<edge_t*>(malloc(sizeof(edge_t) * edges_length));
+  size_t edges_length = (gray.rows - 1) * (gray.cols - 1) * 2;
+  auto* edges = new edge_t[edges_length];
 
-  uint graph_length = (gray.rows) * (gray.cols);
-  node_t* graph = static_cast<node_t*>(malloc(sizeof(node_t) * graph_length));
+  size_t graph_length = gray.rows * gray.cols;
+  auto* graph = new node_t[graph_length];
 
   for (int i = 0; i < gray.rows; ++i) {
     for (int j = 0; j < gray.cols; ++j) {
@@ -149,27 +151,32 @@ int main() {
     }
   }
 
+  int idx = 0;
   for (int i = 0; i < gray.rows - 1; ++i) {
     for (int j = 0; j < gray.cols - 1; ++j) {
+      assert(static_cast<size_t>(i * gray.cols + j) < graph_length);
       // Dot product
       // higher = more simmilar
       {
         const double weight =
             grad_x.at<double>(i, j) * grad_x.at<double>(i, j + 1) +
             grad_y.at<double>(i, j) * grad_y.at<double>(i, j + 1);
-        edges[2 * (i * gray.cols + j)] =
+        edges[idx] =
             edge_t{.x1 = i, .y1 = j, .x2 = i, .y2 = j + 1, .weight = weight};
+        idx++;
       }
       {
         const double weight =
             grad_x.at<double>(i, j) * grad_x.at<double>(i + 1, j) +
             grad_y.at<double>(i, j) * grad_y.at<double>(i + 1, j);
 
-        edges[2 * (i * gray.cols + j) + 1] =
+        edges[idx] =
             edge_t{.x1 = i, .y1 = j, .x2 = i + 1, .y2 = j, .weight = weight};
+        idx++;
       }
     }
   }
+  assert(static_cast<size_t>(idx) == edges_length);
 
   std::sort(edges, edges + edges_length,
             [](edge_t a, edge_t b) { return a.weight > b.weight; });
@@ -177,6 +184,11 @@ int main() {
   const double kmagnitude = 12000000;
   const double kgradient = 20;
   for (size_t i = 0; i < edges_length; ++i) {
+    CHECK(static_cast<size_t>(edges[i].x1 * gray.cols + edges[i].y1) <
+          graph_length)
+        << edges[i].x1 << " " << edges[i].y1 << " " << i << std::endl;
+    CHECK(static_cast<size_t>(edges[i].x2 * gray.cols + edges[i].y2) <
+          graph_length);
     node_t& node1 = graph[edges[i].x1 * gray.cols + edges[i].y1];
     node_t& node2 = graph[edges[i].x2 * gray.cols + edges[i].y2];
 
@@ -285,8 +297,8 @@ int main() {
   magnitude /= 2;
 
   cv::Mat union_image = image.clone();
-  for (size_t i = 0; i < union_image.rows; ++i) {
-    for (size_t j = 0; j < union_image.cols; ++j) {
+  for (int i = 0; i < union_image.rows; ++i) {
+    for (int j = 0; j < union_image.cols; ++j) {
       node_t& parent = GetParent(graph[i * union_image.cols + j]);
       if (parent.parent == nullptr && parent.children > 100) {
         union_image.at<cv::Vec3b>(i, j) = parent.color;
@@ -319,7 +331,6 @@ int main() {
       std::swap(segment->x_start, segment->x_end);
       std::swap(segment->y_start, segment->y_end);
     }
-    // std::cout << segments[i]->bias << " " << segments[i]->slope;
   }
 
   cv::Mat segment_image = image.clone();
@@ -339,10 +350,12 @@ int main() {
   }
 
   cv::Mat quad_image = image.clone();
-  for (int i = 0; i < segments.size(); i++) {
+  for (size_t i = 0; i < segments.size(); i++) {
     std::vector<node_t*> quad = FindQuads(segments[i], {}, segments);
-    std::cout << i << " " << quad.size() << "\n";
-    if (quad.size() == 4) {
+    if (quad.size() == 4 || segments[i]->is_quad) {
+      for (auto& i : quad) {
+        i->is_quad = true;
+      }
       cv::line(quad_image,
                cv::Point(static_cast<int>(segments[i]->y_start),
                          static_cast<int>(segments[i]->x_start)),
@@ -359,9 +372,6 @@ int main() {
     }
   }
 
-  free(edges);
-  free(graph);
-
   cv::imshow("image", image);
   cv::imshow("gray", gray);
   cv::imshow("grad_x", grad_x);
@@ -373,6 +383,9 @@ int main() {
 
   cv::imwrite("union_image.png", union_image);
   cv::imwrite("segment_image.png", segment_image);
+
+  delete[] edges;
+  delete[] graph;
 
   cv::waitKey(0);
 }

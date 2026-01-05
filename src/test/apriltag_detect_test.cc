@@ -50,7 +50,6 @@ auto main() -> int {
                                   false);
 
   camera::Camera config = camera::SelectCameraConfig();
-  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
   cv::Mat frame = cv::imread("apriltag2.png");
   cv::Mat gray;
 
