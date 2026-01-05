@@ -277,8 +277,6 @@ int main() {
     node2_parent.y_grad_sum += node1_parent.y_grad_sum;
     node2_parent.x_start = std::min(node2_parent.x_start, node1_parent.x_start);
     node2_parent.x_end = std::max(node2_parent.x_end, node1_parent.x_end);
-    // node2_parent.y_start = std::min(node2_parent.y_start, node1_parent.y_start);
-    // node2_parent.y_end = std::max(node2_parent.y_end, node1_parent.y_end);
     node2_parent.children += node1_parent.children;
   }
 
@@ -310,37 +308,34 @@ int main() {
     }
   }
 
-  for (size_t i = 0; i < segments.size(); ++i) {
-    segments[i]->slope = segments[i]->top / segments[i]->bottom;
-    const double x_bar = segments[i]->x_sum / segments[i]->children;
-    const double y_bar = segments[i]->y_sum / segments[i]->children;
-    segments[i]->bias = y_bar - segments[i]->slope * x_bar;
-    segments[i]->y_start =
-        segments[i]->bias + segments[i]->slope * segments[i]->x_start;
-    segments[i]->y_end =
-        segments[i]->bias + segments[i]->slope * segments[i]->x_end;
-    if (segments[i]->x_grad_sum < 0) {
-      std::swap(segments[i]->x_start, segments[i]->x_end);
-      std::swap(segments[i]->y_start, segments[i]->y_end);
+  for (auto& segment : segments) {
+    segment->slope = segment->top / segment->bottom;
+    const double x_bar = segment->x_sum / segment->children;
+    const double y_bar = segment->y_sum / segment->children;
+    segment->bias = y_bar - segment->slope * x_bar;
+    segment->y_start = segment->bias + segment->slope * segment->x_start;
+    segment->y_end = segment->bias + segment->slope * segment->x_end;
+    if (segment->x_grad_sum < 0) {
+      std::swap(segment->x_start, segment->x_end);
+      std::swap(segment->y_start, segment->y_end);
     }
     // std::cout << segments[i]->bias << " " << segments[i]->slope;
   }
 
   cv::Mat segment_image = image.clone();
-  for (size_t i = 0; i < segments.size(); i++) {
+  for (auto& segment : segments) {
     cv::line(segment_image,
-             cv::Point(static_cast<int>(segments[i]->y_start),
-                       static_cast<int>(segments[i]->x_start)),
-             cv::Point(static_cast<int>(segments[i]->y_end),
-                       static_cast<int>(segments[i]->x_end)),
+             cv::Point(static_cast<int>(segment->y_start),
+                       static_cast<int>(segment->x_start)),
+             cv::Point(static_cast<int>(segment->y_end),
+                       static_cast<int>(segment->x_end)),
              cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
 
-    cv::circle(segment_image,
-               cv::Point(segments[i]->y_start, segments[i]->x_start), 3,
+    cv::circle(segment_image, cv::Point(segment->y_start, segment->x_start), 3,
                cv::Scalar(255, 0, 0), -1, cv::LINE_AA);
 
-    cv::circle(segment_image, cv::Point(segments[i]->y_end, segments[i]->x_end),
-               3, cv::Scalar(0, 255, 0), -1, cv::LINE_AA);
+    cv::circle(segment_image, cv::Point(segment->y_end, segment->x_end), 3,
+               cv::Scalar(0, 255, 0), -1, cv::LINE_AA);
   }
 
   cv::Mat quad_image = image.clone();

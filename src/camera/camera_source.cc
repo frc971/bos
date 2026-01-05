@@ -8,7 +8,7 @@
 
 namespace camera {
 CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera)
-    : name_(name), camera_(std::move(camera)) {
+    : name_(std::move(name)), camera_(std::move(camera)) {
   cv::Mat frame;
   camera_->GetFrame(frame);
   frame_ = frame;
@@ -17,7 +17,7 @@ CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera)
     while (true) {
       cv::Mat frame;
       camera_->GetFrame(frame);
-      const double timestamp = frc::Timer::GetFPGATimestamp().to<double>();
+      const auto timestamp = frc::Timer::GetFPGATimestamp().to<double>();
       mutex_.lock();
       frame_ = frame;
       timestamp_ = timestamp;
@@ -26,7 +26,7 @@ CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera)
   });
 }
 
-timestamped_frame_t CameraSource::Get() {
+auto CameraSource::Get() -> timestamped_frame_t {
   mutex_.lock();
   cv::Mat frame = frame_;
   double timestamp = timestamp_;
@@ -34,7 +34,7 @@ timestamped_frame_t CameraSource::Get() {
   return timestamped_frame_t{.frame = frame, .timestamp = timestamp};
 }
 
-cv::Mat CameraSource::GetFrame() {
+auto CameraSource::GetFrame() -> cv::Mat {
   mutex_.lock();
   cv::Mat frame = frame_;
   mutex_.unlock();

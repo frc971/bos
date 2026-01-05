@@ -13,7 +13,7 @@
 
 using json = nlohmann::json;
 
-int main() {
+auto main() -> int {
 
   camera::CscoreStreamer streamer("tag_estimator_test", 4971, 30, 1080, 1080);
 

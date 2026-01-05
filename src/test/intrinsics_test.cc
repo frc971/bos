@@ -12,7 +12,7 @@
 
 using json = nlohmann::json;
 
-cv::Mat camera_matrix_from_json(json intrinsics) {
+auto camera_matrix_from_json(json intrinsics) -> cv::Mat {
   cv::Mat camera_matrix =
       (cv::Mat_<double>(3, 3) << intrinsics["fx"], 0, intrinsics["cx"], 0,
        intrinsics["fy"], intrinsics["cy"], 0, 0, 1);
@@ -20,17 +20,17 @@ cv::Mat camera_matrix_from_json(json intrinsics) {
   return camera_matrix;
 }
 
-cv::Mat distortion_coefficients_from_json(json intrinsics) {
+auto distortion_coefficients_from_json(json intrinsics) -> cv::Mat {
   cv::Mat distortion_coefficients =
       (cv::Mat_<double>(1, 5) << intrinsics["k1"], intrinsics["k2"],
        intrinsics["p1"], intrinsics["p2"], intrinsics["k3"]);
   return distortion_coefficients;
 }
 
-void warmupCamera(std::string pipeline) {
+void warmupCamera(const std::string& pipeline) {
   cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
 }
-int main() {
+auto main() -> int {
   std::ifstream file("/bos/constants/usb_camera0_intrinsics.json");
   json intrinsics;
   file >> intrinsics;

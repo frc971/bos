@@ -6,7 +6,7 @@
 #include <thread>
 #include "src/camera/select_camera.h"
 
-int main() {
+auto main() -> int {
   std::string img_dir = "/bos/logs/collected_imgs/";
   std::filesystem::create_directories(img_dir);
   camera::Camera config = camera::SelectCameraConfig();
