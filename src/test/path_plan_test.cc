@@ -26,8 +26,12 @@ class Node {
   cv::Scalar color = {200, 200, 200};
 };
 
-std::ifstream file("/bos/constants/navgrid.json");
-nlohmann::json data = nlohmann::json::parse(file);
+nlohmann::json data = []() {
+  std::ifstream file("/bos/constants/navgrid.json");  // Open file in a local scope.
+  nlohmann::json j = nlohmann::json::parse(file);     // Parse JSON from the file.
+  file.close();                                       // Explicitly close the file after parsing.
+  return j;
+}();
 
 const int GRID_W = data["grid"][0].size();
 const int GRID_H = data["grid"].size();
