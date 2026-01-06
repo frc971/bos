@@ -154,20 +154,18 @@ auto basisFunction(double i, double p, double t,
   int deg = static_cast<int>(p);
 
   if (deg == 0) {
-    if (p == 0) {
-      if (knots[i] <= t && t < knots[i + 1])
-        return 1.0;
+    if (knots[i] <= t && t < knots[i + 1])
+      return 1.0;
 
-      if (t == 0.0 && knots[i] == 0.0 && knots[i + 1] > 0.0) {
-        return 1.0;
-      }
-
-      if (t == 1.0 && knots[i + 1] == 1.0 && knots[i] < 1.0) {
-        return 1.0;
-      }
-
-      return 0.0;
+    if (t == 0.0 && knots[i] == 0.0 && knots[i + 1] > 0.0) {
+      return 1.0;
     }
+
+    if (t == 1.0 && knots[i + 1] == 1.0 && knots[i] < 1.0) {
+      return 1.0;
+    }
+
+    return 0.0;
   }
 
   double weight = 0.0;
