@@ -24,8 +24,6 @@ auto SelectCameraConfig() -> Camera {
   std::cout << "mipi1" << std::endl;
   std::cout << "usb0" << std::endl;
   std::cout << "usb1" << std::endl;
-  std::cout << "usb2" << std::endl;
-  std::cout << "usb3" << std::endl;
   std::cout << "defaultusb0" << std::endl;
   std::cout << "realsense" << std::endl;
 
@@ -44,12 +42,6 @@ auto SelectCameraConfig() -> Camera {
   } else if (choice == "usb1") {
     PrintCameraConstant(Camera::FIDDLER_USB1);
     return Camera::FIDDLER_USB1;
-  } else if (choice == "usb2") {
-    PrintCameraConstant(Camera::FIDDLER_USB2);
-    return Camera::FIDDLER_USB2;
-  } else if (choice == "usb3") {
-    PrintCameraConstant(Camera::USB3);
-    return Camera::USB3;
   } else if (choice == "defaultusb0") {
     PrintCameraConstant(Camera::DEFAULT_USB0);
     return Camera::DEFAULT_USB0;
