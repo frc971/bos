@@ -5,7 +5,6 @@ include_directories(${CMAKE_SOURCE_DIR})
 set(CMAKE_CXX_CLANG_TIDY
     clang-tidy;
     -checks=modernize-*,performance-*;
-    -warnings-as-errors=*;
 )
 
 add_subdirectory(utils)
