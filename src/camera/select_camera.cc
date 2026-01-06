@@ -39,14 +39,14 @@ auto SelectCameraConfig() -> Camera {
     PrintCameraConstant(Camera::IMX296_1);
     return Camera::IMX296_1;
   } else if (choice == "usb0") {
-    PrintCameraConstant(Camera::USB0);
-    return Camera::USB0;
+    PrintCameraConstant(Camera::FIDDLER_USB0);
+    return Camera::FIDDLER_USB0;
   } else if (choice == "usb1") {
-    PrintCameraConstant(Camera::USB1);
-    return Camera::USB1;
+    PrintCameraConstant(Camera::FIDDLER_USB1);
+    return Camera::FIDDLER_USB1;
   } else if (choice == "usb2") {
-    PrintCameraConstant(Camera::USB2);
-    return Camera::USB2;
+    PrintCameraConstant(Camera::FIDDLER_USB2);
+    return Camera::FIDDLER_USB2;
   } else if (choice == "usb3") {
     PrintCameraConstant(Camera::USB3);
     return Camera::USB3;
