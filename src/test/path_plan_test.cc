@@ -127,21 +127,22 @@ auto constructLinePath(cv::Mat& canvas, std::vector<Node*> path)
   return controlPoints;
 }
 
-auto clampedUniformKnotVector(double k, double p) -> std::vector<double> {
+auto clampedUniformKnotVector(double numControlPoints, double degree)
+    -> std::vector<double> {
   std::vector<double> knots;
-  int n = (int)k;
-  int d = (int)p;
+  int numControlPointsInt = static_cast<int>(numControlPoints);
+  int degreeInt = static_cast<int>(degree);
 
-  for (int i = 0; i <= d; ++i) {
+  for (int i = 0; i <= degreeInt; ++i) {
     knots.push_back(0.0);
   }
 
-  int middle = n - d - 1;
+  int middle = numControlPointsInt - degreeInt - 1;
   for (int i = 1; i <= middle; ++i) {
-    knots.push_back((double)i / (middle + 1));
+    knots.push_back(static_cast<double>(i) / (middle + 1));
   }
 
-  for (int i = 0; i <= d; ++i) {
+  for (int i = 0; i <= degreeInt; ++i) {
     knots.push_back(1.0);
   }
 
