@@ -26,15 +26,12 @@ class Node {
   cv::Scalar color = {200, 200, 200};
 };
 
-nlohmann::json data = []() {
-  std::ifstream file("/bos/constants/navgrid.json");  // Open file in a local scope.
-  nlohmann::json j = nlohmann::json::parse(file);     // Parse JSON from the file.
-  file.close();                                       // Explicitly close the file after parsing.
-  return j;
-}();
+std::ifstream file("/bos/constants/navgrid.json");
+nlohmann::json data = nlohmann::json::parse(file);
 
 const int GRID_W = data["grid"][0].size();
 const int GRID_H = data["grid"].size();
+double nodeSizeMeters = data["nodeSizeMeters"];
 const int CELL_SIZE = 20; 
 std::vector<std::vector<Node>> grid(GRID_H, std::vector<Node>(GRID_W));
 
@@ -127,22 +124,21 @@ auto constructLinePath(cv::Mat& canvas, std::vector<Node*> path)
   return controlPoints;
 }
 
-auto clampedUniformKnotVector(double numControlPoints, double degree)
-    -> std::vector<double> {
+auto clampedUniformKnotVector(double k, double p) -> std::vector<double> {
   std::vector<double> knots;
-  int numControlPointsInt = static_cast<int>(numControlPoints);
-  int degreeInt = static_cast<int>(degree);
+  int n = (int)k;
+  int d = (int)p;
 
-  for (int i = 0; i <= degreeInt; ++i) {
+  for (int i = 0; i <= d; ++i) {
     knots.push_back(0.0);
   }
 
-  int middle = numControlPointsInt - degreeInt - 1;
+  int middle = n - d - 1;
   for (int i = 1; i <= middle; ++i) {
-    knots.push_back(static_cast<double>(i) / (middle + 1));
+    knots.push_back((double)i / (middle + 1));
   }
 
-  for (int i = 0; i <= degreeInt; ++i) {
+  for (int i = 0; i <= d; ++i) {
     knots.push_back(1.0);
   }
 
@@ -155,18 +151,20 @@ auto basisFunction(double i, double p, double t,
   int deg = static_cast<int>(p);
 
   if (deg == 0) {
-    if (knots[i] <= t && t < knots[i + 1])
-      return 1.0;
+    if (p == 0) {
+      if (knots[i] <= t && t < knots[i + 1])
+        return 1.0;
 
-    if (t == 0.0 && knots[i] == 0.0 && knots[i + 1] > 0.0) {
-      return 1.0;
+      if (t == 0.0 && knots[i] == 0.0 && knots[i + 1] > 0.0) {
+        return 1.0;
+      }
+
+      if (t == 1.0 && knots[i + 1] == 1.0 && knots[i] < 1.0) {
+        return 1.0;
+      }
+
+      return 0.0;
     }
-
-    if (t == 1.0 && knots[i + 1] == 1.0 && knots[i] < 1.0) {
-      return 1.0;
-    }
-
-    return 0.0;
   }
 
   double weight = 0.0;
@@ -238,45 +236,39 @@ auto main() -> int {
 
   BFS(grid, start, target);
 
+  std::vector<Node*> path = reconstructPath(target);
+  for (Node* n : path) {
+    if (n != start && n != target) {
+      n->color = {0, 0, 255};
+    }
+  }
+
   cv::Mat canvas(GRID_H * CELL_SIZE, GRID_W * CELL_SIZE, CV_8UC3,
                  {255, 255, 255});
   drawGrid(canvas, grid);
+  std::vector<std::pair<int, int>> controlPoints =
+      constructLinePath(canvas, path);
+  std::vector<double> knots = clampedUniformKnotVector(controlPoints.size(), 3);
+  drawSpline(canvas, controlPoints, knots, 3);
 
-  if (!std::isinf(target->g)) {  // Only reconstruct and visualize a path if BFS found one
-    std::vector<Node*> path = reconstructPath(target);
-    for (Node* n : path) {
-      if (n != start && n != target) {
-        n->color = {0, 0, 255};
-      }
-    }
+  std::shared_ptr<nt::NetworkTable> table = inst.GetTable("PathPlanning");
+  nt::StructArrayTopic<frc::Pose2d> trajectory_topic =
+      table->GetStructArrayTopic<frc::Pose2d>("Trajectory");
+  nt::StructArrayPublisher<frc::Pose2d> trajectory_publisher =
+      trajectory_topic.Publish();
 
-    std::vector<std::pair<int, int>> controlPoints =
-        constructLinePath(canvas, path);
-    std::vector<double> knots =
-        clampedUniformKnotVector(controlPoints.size(), 3);
-    drawSpline(canvas, controlPoints, knots, 3);
-
-    std::shared_ptr<nt::NetworkTable> table = inst.GetTable("PathPlanning");
-    nt::StructArrayTopic<frc::Pose2d> trajectory_topic =
-        table->GetStructArrayTopic<frc::Pose2d>("Trajectory");
-    nt::StructArrayPublisher<frc::Pose2d> trajectory_publisher =
-        trajectory_topic.Publish();
-
-    std::vector<frc::Pose2d> trajectory;
-    int resolution = 200;
-    for (int i = 0; i < resolution; ++i) {
-      double t = (double)i / resolution;
-      std::pair<double, double> point =
-          getSplinePoint(t, controlPoints, knots, 3);
-      double px = point.first / CELL_SIZE;
-      double py = point.second / CELL_SIZE;
-      trajectory.push_back(frc::Pose2d(units::meter_t{px},
-                                       units::meter_t{py},
-                                       units::radian_t{0.0}));
-    }
-    trajectory_publisher.Set(trajectory);
-    inst.Flush();
+  std::vector<frc::Pose2d> trajectory;
+  int resolution = 200;
+  for (int i = 0; i < resolution; ++i) {
+    double t = (double)i / resolution;
+    std::pair<double, double> point = getSplinePoint(t, controlPoints, knots, 3);
+    double px = point.first / CELL_SIZE;
+    double py = point.second / CELL_SIZE;
+    trajectory.push_back(
+    frc::Pose2d(units::meter_t{px * nodeSizeMeters}, units::meter_t{py * nodeSizeMeters}, units::radian_t{0.0}));
   }
+  trajectory_publisher.Set(trajectory);
+  inst.Flush();
 
   cv::imshow("Path Planning", canvas);
   cv::waitKey(0);
