@@ -238,39 +238,45 @@ auto main() -> int {
 
   BFS(grid, start, target);
 
-  std::vector<Node*> path = reconstructPath(target);
-  for (Node* n : path) {
-    if (n != start && n != target) {
-      n->color = {0, 0, 255};
-    }
-  }
-
   cv::Mat canvas(GRID_H * CELL_SIZE, GRID_W * CELL_SIZE, CV_8UC3,
                  {255, 255, 255});
   drawGrid(canvas, grid);
-  std::vector<std::pair<int, int>> controlPoints =
-      constructLinePath(canvas, path);
-  std::vector<double> knots = clampedUniformKnotVector(controlPoints.size(), 3);
-  drawSpline(canvas, controlPoints, knots, 3);
 
-  std::shared_ptr<nt::NetworkTable> table = inst.GetTable("PathPlanning");
-  nt::StructArrayTopic<frc::Pose2d> trajectory_topic =
-      table->GetStructArrayTopic<frc::Pose2d>("Trajectory");
-  nt::StructArrayPublisher<frc::Pose2d> trajectory_publisher =
-      trajectory_topic.Publish();
+  if (!std::isinf(target->g)) {  // Only reconstruct and visualize a path if BFS found one
+    std::vector<Node*> path = reconstructPath(target);
+    for (Node* n : path) {
+      if (n != start && n != target) {
+        n->color = {0, 0, 255};
+      }
+    }
 
-  std::vector<frc::Pose2d> trajectory;
-  int resolution = 200;
-  for (int i = 0; i < resolution; ++i) {
-    double t = (double)i / resolution;
-    std::pair<double, double> point = getSplinePoint(t, controlPoints, knots, 3);
-    double px = point.first / CELL_SIZE;
-    double py = point.second / CELL_SIZE;
-    trajectory.push_back(
-        frc::Pose2d(units::meter_t{px}, units::meter_t{py}, units::radian_t{0.0}));
+    std::vector<std::pair<int, int>> controlPoints =
+        constructLinePath(canvas, path);
+    std::vector<double> knots =
+        clampedUniformKnotVector(controlPoints.size(), 3);
+    drawSpline(canvas, controlPoints, knots, 3);
+
+    std::shared_ptr<nt::NetworkTable> table = inst.GetTable("PathPlanning");
+    nt::StructArrayTopic<frc::Pose2d> trajectory_topic =
+        table->GetStructArrayTopic<frc::Pose2d>("Trajectory");
+    nt::StructArrayPublisher<frc::Pose2d> trajectory_publisher =
+        trajectory_topic.Publish();
+
+    std::vector<frc::Pose2d> trajectory;
+    int resolution = 200;
+    for (int i = 0; i < resolution; ++i) {
+      double t = (double)i / resolution;
+      std::pair<double, double> point =
+          getSplinePoint(t, controlPoints, knots, 3);
+      double px = point.first / CELL_SIZE;
+      double py = point.second / CELL_SIZE;
+      trajectory.push_back(frc::Pose2d(units::meter_t{px},
+                                       units::meter_t{py},
+                                       units::radian_t{0.0}));
+    }
+    trajectory_publisher.Set(trajectory);
+    inst.Flush();
   }
-  trajectory_publisher.Set(trajectory);
-  inst.Flush();
 
   cv::imshow("Path Planning", canvas);
   cv::waitKey(0);
