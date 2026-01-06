@@ -14,6 +14,8 @@ enum Camera {
   IMX296_1,
   FIDDLER_USB0,
   FIDDLER_USB1,
+  SOFTWARE_BOT_USB0,
+  SOFTWARE_BOT_USB1,
   DEFAULT_USB0,
   REALSENSE,
   CAMERA_LENGTH,
@@ -54,14 +56,26 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
                         "platform-3610000.usb-usb-0:2.1:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/usb_camera0_intrinsics.json",
-            .extrinsics_path = "/bos/constants/usb_camera0_extrinsics.json"},
+            .intrinsics_path = "/bos/constants/fiddler_usb_camera0_intrinsics.json",
+            .extrinsics_path = "/bos/constants/fiddler_usb_camera0_extrinsics.json"},
     [Camera::FIDDLER_USB1] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
                         "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
             .intrinsics_path = "/bos/constants/fiddler_usb_camera1_intrinsics.json",
             .extrinsics_path = "/bos/constants/fiddler_usb_camera1_extrinsics.json"},
+    [Camera::SOFTWARE_BOT_USB0] =
+        camera_constant_t{
+            .pipeline = "/dev/v4l/by-path/"
+                        "platform-3610000.usb-usb-0:2.1:1.0-video-index0",
+            .intrinsics_path = "/bos/constants/software_bot_usb_camera0_intrinsics.json",
+            .extrinsics_path = "/bos/constants/software_bot_usb_camera0_extrinsics.json"},
+    [Camera::SOFTWARE_BOT_USB1] =
+        camera_constant_t{
+            .pipeline = "/dev/v4l/by-path/"
+                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
+            .intrinsics_path = "/bos/constants/software_bot_usb_camera1_intrinsics.json",
+            .extrinsics_path = "/bos/constants/software_bot_usb_camera1_extrinsics.json"},
     [Camera::DEFAULT_USB0] =
         camera_constant_t{
             .pipeline = "/dev/video0",
