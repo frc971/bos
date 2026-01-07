@@ -10,7 +10,7 @@ namespace camera {
 class CVCamera : public ICamera {
  public:
   CVCamera(const cv::VideoCapture& cap);
-  void GetFrame(cv::Mat& frame) override;
+  auto GetFrame() -> timestamped_frame_t override;
 
  private:
   cv::VideoCapture cap_;
