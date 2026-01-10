@@ -12,10 +12,18 @@ using camera_constant_t = struct CameraConstant {
 enum Camera {
   IMX296_0,
   IMX296_1,
+
   FIDDLER_USB0,
   FIDDLER_USB1,
+
   SOFTWARE_BOT_USB0,
   SOFTWARE_BOT_USB1,
+
+  VISION_BOT_FRONT_RIGHT,
+  VISION_BOT_FRONT_LEFT,
+  VISION_BOT_BACK_RIGHT,
+  VISION_BOT_BACK_LEFT,
+
   DEFAULT_USB0,
   REALSENSE,
   CAMERA_LENGTH,
@@ -76,6 +84,30 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
                         "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
             .intrinsics_path = "/bos/constants/software_bot_usb_camera1_intrinsics.json",
             .extrinsics_path = "/bos/constants/software_bot_usb_camera1_extrinsics.json"},
+    [Camera::VISION_BOT_FRONT_RIGHT] =
+        camera_constant_t{
+            .pipeline = "/dev/v4l/by-path/"
+                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
+            .intrinsics_path = "/bos/constants/vision_bot_front_right_intrinsics.json",
+            .extrinsics_path = "/bos/constants/vision_bot_front_right_extrinsics.json"},
+    [Camera::VISION_BOT_FRONT_LEFT] =
+        camera_constant_t{
+            .pipeline = "/dev/v4l/by-path/"
+                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
+            .intrinsics_path = "/bos/constants/vision_bot_front_left_intrinsics.json",
+            .extrinsics_path = "/bos/constants/vision_bot_front_left_extrinsics.json"},
+    [Camera::VISION_BOT_BACK_RIGHT] =
+        camera_constant_t{
+            .pipeline = "/dev/v4l/by-path/"
+                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
+            .intrinsics_path = "/bos/constants/vision_bot_back_right_intrinsics.json",
+            .extrinsics_path = "/bos/constants/vision_bot_back_right_extrinsics.json"},
+    [Camera::VISION_BOT_BACK_LEFT] =
+        camera_constant_t{
+            .pipeline = "/dev/v4l/by-path/"
+                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
+            .intrinsics_path = "/bos/constants/vision_bot_back_left_intrinsics.json",
+            .extrinsics_path = "/bos/constants/vision_bot_back_left_extrinsics.json"},
     [Camera::DEFAULT_USB0] =
         camera_constant_t{
             .pipeline = "/dev/video0",
