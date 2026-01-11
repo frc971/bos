@@ -117,4 +117,24 @@ void run_gamepiece_detect(yolo::Yolo& model,
     }
   }
 }
+
+void run_gamepiece_detect_no_img(yolo::Yolo& model, const std::vector<std::string>& class_names) {
+  std::vector<cv::Rect> bboxes(MAX_DETECTIONS);
+  std::vector<float> confidences(MAX_DETECTIONS);
+  std::vector<int> class_ids(MAX_DETECTIONS);
+  cv::Mat color(640, 640, CV_8UC3);
+  mutex.lock();
+  model.Postprocess(color.rows, color.cols, model.RunModel(color), bboxes,
+                    confidences, class_ids);
+  mutex.unlock();
+    
+  for (size_t i = 0; i < MAX_DETECTIONS; i++) {
+    if (bboxes[i].empty()) {
+      if (i == 0) {
+        std::cout << "No detections" << std::endl;
+      }
+      break;
+    }
+  }
+}
 }  // namespace gamepiece
