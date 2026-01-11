@@ -23,6 +23,13 @@ class GPUAprilTagDetector : public IAprilTagDetector {
       -> std::vector<tag_detection_t> override;
 
  private:
+  auto DetectTags(cv::Mat& frame) -> std::vector<std::vector<cv::Point2f>>;
+  auto JointSolve(std::vector<std::vector<cv::Point2f>>& tag_detections)
+      -> std::vector<tag_detection_t>;
+  auto SquareSolve(std::vector<std::vector<cv::Point2f>>& tag_detections)
+      -> std::vector<tag_detection_t>;
+
+ private:
   cv::Mat camera_matrix_;
   cv::Mat distortion_coefficients_;
   std::vector<cv::Point3f> apriltag_dimensions_;

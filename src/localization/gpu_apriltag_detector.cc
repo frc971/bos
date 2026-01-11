@@ -140,6 +140,35 @@ auto GPUAprilTagDetector::GetTagDetections(
   return estimates;
 }
 
+auto GPUAprilTagDetector::DetectTags(cv::Mat& frame)
+    -> std::vector<std::vector<cv::Point2f>> {
+
+  if (frame.channels() == 1) {
+    gpu_detector_->DetectGrayHost((unsigned char*)frame.ptr());
+  } else if (frame.channels() == 3) {
+    cv::Mat gray;
+    cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
+    gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
+  }
+  const zarray_t* detections = gpu_detector_->Detections();
+  std::vector<std::vector<cv::Point2f>> tag_corners;
+
+  if (zarray_size(detections)) {
+    for (int i = 0; i < zarray_size(detections); ++i) {
+      apriltag_detection_t* gpu_detection;
+      zarray_get(detections, i, &gpu_detection);
+
+      std::vector<cv::Point2f> imagePoints;
+      imagePoints.reserve(4);
+      for (auto& i : gpu_detection->p) {
+        imagePoints.emplace_back(i[0], i[1]);
+      }
+      tag_corners.push_back(imagePoints);
+    }
+  }
+  return tag_corners;
+}
+
 GPUAprilTagDetector::~GPUAprilTagDetector() {
   if (apriltag_detector_ != nullptr) {
     apriltag_detector_destroy(apriltag_detector_);
