@@ -48,7 +48,7 @@ auto main() -> int {
   cv::Mat frame;
 
   while (true) {
-    camera->GetFrame(frame);
+    frame = camera->GetFrame().frame;
     raw_streamer.WriteFrame(frame);
 
     cv::Mat undistorted;

@@ -13,7 +13,7 @@ auto main() -> int {
   std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
   while (true) {
     cv::Mat frame;
-    camera->GetFrame(frame);
+    frame = camera->GetFrame().frame;
     cv::imwrite(img_dir +
                     std::to_string(frc::Timer::GetFPGATimestamp().value()) +
                     ".png",

@@ -27,7 +27,7 @@ void CaptureFrames(
   cv::Mat frame;
   int frame_count = 0;
   while (true) {
-    camera.GetFrame(frame);
+    frame = camera.GetFrame().frame;
     frame_count++;
     if (frame_count % 3 == 0) {
       cv::cvtColor(frame, frame, cv::COLOR_BGRA2RGB);
@@ -61,7 +61,7 @@ auto main() -> int {
   std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
 
   cv::Mat frame;
-  camera->GetFrame(frame);
+  frame = camera->GetFrame().frame;
   cv::Size frame_size = frame.size();
 
   cv::aruco::CharucoDetector detector = calibration::CreateDetector(
