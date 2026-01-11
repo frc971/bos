@@ -60,7 +60,7 @@ auto main() -> int {
   cv::Mat gray;
 
   while (true) {
-    camera->GetFrame(frame);
+    frame = camera->GetFrame().frame;
     cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
     gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
     const zarray_t* detections = gpu_detector_->Detections();

@@ -13,7 +13,9 @@
 class ImageCamera : public camera::ICamera {
  public:
   ImageCamera(cv::Mat image) : image_(std::move(image)) {}
-  void GetFrame(cv::Mat& mat) override { mat = image_.clone(); }
+  auto GetFrame() -> camera::timestamped_frame_t override {
+    return {image_.clone(), 0};
+  }
 
  private:
   cv::Mat image_;

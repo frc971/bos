@@ -28,7 +28,7 @@ auto main() -> int {
 
   cv::Mat frame;
   while (true) {
-    camera->GetFrame(frame);
+    frame = camera->GetFrame().frame;
     camera::timestamped_frame_t timestamped_frame{
         .frame = frame,
         .timestamp = frc::Timer::GetFPGATimestamp().to<double>()};
