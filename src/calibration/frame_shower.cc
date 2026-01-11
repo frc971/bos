@@ -26,7 +26,7 @@ auto main() -> int {
     cv::Mat frame;
     while (true) {
       std::cout << "Getting frame" << std::endl;
-      camera->GetFrame(frame);
+      frame = camera->GetFrame().frame;
       streamer.WriteFrame(frame);
       std::cout << frame.size << std::endl;
       std::cout << "Got frame" << std::endl;

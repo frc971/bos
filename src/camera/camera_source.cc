@@ -1,5 +1,4 @@
 #include "camera_source.h"
-#include <wpilibc/frc/Timer.h>
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
@@ -9,18 +8,13 @@
 namespace camera {
 CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera)
     : name_(std::move(name)), camera_(std::move(camera)) {
-  cv::Mat frame;
-  camera_->GetFrame(frame);
-  frame_ = frame;
-  timestamp_ = frc::Timer::GetFPGATimestamp().to<double>();
+  timestamped_frame_ = camera_->GetFrame();
   thread_ = std::thread([this] {
     while (true) {
-      cv::Mat frame;
-      camera_->GetFrame(frame);
-      const auto timestamp = frc::Timer::GetFPGATimestamp().to<double>();
+      timestamped_frame_t timestamped_frame;
+      timestamped_frame = camera_->GetFrame();
       mutex_.lock();
-      frame_ = frame;
-      timestamp_ = timestamp;
+      timestamped_frame_ = timestamped_frame;
       mutex_.unlock();
     }
   });
@@ -28,15 +22,14 @@ CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera)
 
 auto CameraSource::Get() -> timestamped_frame_t {
   mutex_.lock();
-  cv::Mat frame = frame_;
-  double timestamp = timestamp_;
+  timestamped_frame_t timestamped_frame = timestamped_frame_;
   mutex_.unlock();
-  return timestamped_frame_t{.frame = frame, .timestamp = timestamp};
+  return timestamped_frame;
 }
 
 auto CameraSource::GetFrame() -> cv::Mat {
   mutex_.lock();
-  cv::Mat frame = frame_;
+  cv::Mat frame = timestamped_frame_.frame;
   mutex_.unlock();
   return frame;
 }

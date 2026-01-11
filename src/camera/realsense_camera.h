@@ -10,7 +10,7 @@ class RealSenseCamera : public ICamera {
  public:
   RealSenseCamera();
   ~RealSenseCamera() override;
-  void GetFrame(cv::Mat& mat) override;
+  auto GetFrame() -> timestamped_frame_t override;
   void GetFrame(cv::Mat& color_mat, cv::Mat& depth_mat);
   static void showDevices();
 

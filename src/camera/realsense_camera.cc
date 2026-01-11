@@ -1,7 +1,9 @@
 #include "realsense_camera.h"
+#include <wpilibc/frc/Timer.h>
 #include <iostream>
 #include <thread>
 #include "opencv2/opencv.hpp"
+#include "src/utils/log.h"
 namespace camera {
 
 RealSenseCamera::RealSenseCamera()
@@ -34,7 +36,8 @@ RealSenseCamera::~RealSenseCamera() {
   pipe_.stop();
 }
 
-void RealSenseCamera::GetFrame(cv::Mat& mat) {
+auto RealSenseCamera::GetFrame() -> timestamped_frame_t {
+  timestamped_frame_t timestamped_frame;
   if (!warmed_up_) {
     for (int i = 0; i < 14; i++) {
       rs2::frameset frames = pipe_.wait_for_frames(5000);
@@ -44,14 +47,18 @@ void RealSenseCamera::GetFrame(cv::Mat& mat) {
   rs2::frameset frames = pipe_.wait_for_frames(5000);
   rs2::video_frame color_frame = frames.get_color_frame();
   if (!color_frame) {
-    std::cerr << "Invalid color frame!" << std::endl;
-    return;
+    LOG(ERROR) << "Invalid color frame!";
+    exit(0);
   }
 
   cv::Mat frameRGB(cv::Size(color_frame.get_width(), color_frame.get_height()),
                    CV_8UC3, (void*)color_frame.get_data(), cv::Mat::AUTO_STEP);
+  cv::Mat frameBGR;
 
-  cv::cvtColor(frameRGB, mat, cv::COLOR_RGB2BGR);
+  cv::cvtColor(frameRGB, frameBGR, cv::COLOR_RGB2BGR);
+  return timestamped_frame_t{
+      .frame = frameBGR,
+      .timestamp = frc::Timer::GetFPGATimestamp().to<double>()};
 }
 
 void RealSenseCamera::GetFrame(cv::Mat& color_mat, cv::Mat& depth_mat) {

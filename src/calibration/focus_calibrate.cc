@@ -14,7 +14,7 @@ auto main(int argc, char* argv[]) -> int {
 
   cv::Mat frame, gray, laplace;
   while (true) {
-    camera->GetFrame(frame);
+    frame = camera->GetFrame().frame;
     streamer.WriteFrame(frame);
 
     cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
