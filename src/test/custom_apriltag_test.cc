@@ -50,6 +50,36 @@ using node_t = struct Node {
   bool is_quad = false;
 };
 
+using box_t = struct Box {
+  Node* segment1;
+  Node* segment2;
+  Node* segment3;
+  Node* segment4;
+};
+
+using point_t = struct Point {
+  double x;
+  double y;
+};
+
+using vector_t = struct Vector {
+  double x;
+  double y;
+};
+
+auto GetPoint(const node_t& segment1, const node_t& segment2) -> point_t {
+  const double x =
+      (segment2.bias - segment1.bias) / (segment1.slope - segment2.slope);
+  const double y = segment1.slope * x + segment1.bias;
+  return {x, y};
+}
+
+auto DrawPoint(const point_t& point, const cv::Mat& image) -> void {
+  cv::circle(image,
+             cv::Point(static_cast<uint>(point.y), static_cast<uint>(point.x)),
+             1, cv::Scalar(0, 0, 255), -1, cv::LINE_AA);
+}
+
 auto IsNeighbor(node_t* a, node_t* b) -> bool {
   const double squared_distance =
       (a->x_end - b->x_start) * (a->x_end - b->x_start) +
@@ -99,8 +129,22 @@ auto GenerateRandomColor() -> cv::Vec3b {
           static_cast<unsigned char>(red)};
 }
 
+auto DrawLine(node_t& node, cv::Mat& mat) -> void {
+  cv::line(
+      mat,
+      cv::Point(static_cast<int>(node.y_start), static_cast<int>(node.x_start)),
+      cv::Point(static_cast<int>(node.y_end), static_cast<int>(node.x_end)),
+      cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+
+  cv::circle(mat, cv::Point(node.y_start, node.x_start), 3,
+             cv::Scalar(255, 0, 0), -1, cv::LINE_AA);
+
+  cv::circle(mat, cv::Point(node.y_end, node.x_end), 3, cv::Scalar(0, 255, 0),
+             -1, cv::LINE_AA);
+}
+
 auto main() -> int {
-  cv::Mat image = cv::imread("apriltag3.png");
+  cv::Mat image = cv::imread("apriltag2.png");
   cv::GaussianBlur(image, image, cv::Size(0, 0), 0.8);
 
   cv::Mat gray;
@@ -321,7 +365,8 @@ auto main() -> int {
   }
 
   for (auto& segment : segments) {
-    segment->slope = segment->top / segment->bottom;
+    segment->slope = segment->bottom == 0 ? 0 : segment->top / segment->bottom;
+    // segment->slope = segment->top / segment->bottom;
     const double x_bar = segment->x_sum / segment->children;
     const double y_bar = segment->y_sum / segment->children;
     segment->bias = y_bar - segment->slope * x_bar;
@@ -350,36 +395,63 @@ auto main() -> int {
   }
 
   cv::Mat quad_image = image.clone();
+  std::vector<box_t> boxes;
   for (size_t i = 0; i < segments.size(); i++) {
+    if (segments[i]->is_quad) {
+      continue;
+    }
     std::vector<node_t*> quad = FindQuads(segments[i], {}, segments);
-    if (quad.size() == 4 || segments[i]->is_quad) {
+    if (quad.size() == 4) {
+      boxes.push_back(box_t{quad[0], quad[1], quad[2], quad[3]});
       for (auto& i : quad) {
         i->is_quad = true;
       }
-      cv::line(quad_image,
-               cv::Point(static_cast<int>(segments[i]->y_start),
-                         static_cast<int>(segments[i]->x_start)),
-               cv::Point(static_cast<int>(segments[i]->y_end),
-                         static_cast<int>(segments[i]->x_end)),
-               cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-
-      cv::circle(quad_image,
-                 cv::Point(segments[i]->y_start, segments[i]->x_start), 3,
-                 cv::Scalar(255, 0, 0), -1, cv::LINE_AA);
-
-      cv::circle(quad_image, cv::Point(segments[i]->y_end, segments[i]->x_end),
-                 3, cv::Scalar(0, 255, 0), -1, cv::LINE_AA);
     }
   }
 
-  cv::imshow("image", image);
-  cv::imshow("gray", gray);
-  cv::imshow("grad_x", grad_x);
+  LOG(INFO) << boxes.size();
+
+  for (auto& box : boxes) {
+    DrawLine(*box.segment1, quad_image);
+    DrawLine(*box.segment2, quad_image);
+    DrawLine(*box.segment3, quad_image);
+    DrawLine(*box.segment4, quad_image);
+  }
+
+  cv::Mat decode_image = image.clone();
+  const uint ktag_pixels = 8;
+  for (auto& box : boxes) {
+    point_t p0 = GetPoint(*box.segment1, *box.segment2);
+    point_t p1 = GetPoint(*box.segment2, *box.segment3);
+    point_t p2 = GetPoint(*box.segment3, *box.segment4);
+    point_t p3 = GetPoint(*box.segment3, *box.segment4);
+    DrawPoint(p0, decode_image);
+    DrawPoint(p1, decode_image);
+    DrawPoint(p2, decode_image);
+    DrawPoint(p3, decode_image);
+    vector_t i_vector{.x = (p2.x - p1.x) / ktag_pixels,
+                      .y = (p2.y - p1.y) / ktag_pixels};
+    vector_t j_vector{
+        .x = (p1.x - p0.x) / ktag_pixels,
+        .y = (p1.y - p0.y) / ktag_pixels,
+    };
+    for (int i = 0; i < ktag_pixels; ++i) {
+      for (int j = 0; j < ktag_pixels; ++j) {
+        double x = p1.x + ((i + 0.5) * i_vector.x - (j + 0.5) * j_vector.x);
+        double y = p1.y + ((i + 0.5) * i_vector.y - (j + 0.5) * j_vector.y);
+        cv::circle(decode_image,
+                   cv::Point(static_cast<uint>(y), static_cast<uint>(x)), 1,
+                   cv::Scalar(255, 0, 0), -1, cv::LINE_AA);
+      }
+    }
+    break;
+  }
   cv::imshow("grad_y", grad_y);
   cv::imshow("magnitude", magnitude);
   cv::imshow("union_image", union_image);
   cv::imshow("segment_image", segment_image);
   cv::imshow("quad_image", quad_image);
+  cv::imshow("decode_image", decode_image);
 
   cv::imwrite("union_image.png", union_image);
   cv::imwrite("segment_image.png", segment_image);
