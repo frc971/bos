@@ -25,6 +25,9 @@ target_link_libraries(path_plan_test PRIVATE ${OpenCV_LIBS} nlohmann_json::nlohm
 add_executable(gamepiece_test gamepiece_test.cc)
 target_link_libraries(gamepiece_test PRIVATE gamepiece yolo camera utils localization)
 
+add_executable(gamepiece_test_no_img gamepiece_test_no_img.cc)
+target_link_libraries(gamepiece_test_no_img PRIVATE gamepiece yolo camera utils localization)
+
 add_executable(nvidia_apriltag_test nvidia_apriltag_test.cc)
 target_link_libraries(nvidia_apriltag_test PRIVATE ${OpenCV_LIBS} apriltag ntcore camera nlohmann_json::nlohmann_json Eigen3::Eigen localization utils yolo vpi utils)
 
