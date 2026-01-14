@@ -80,7 +80,7 @@ GPUAprilTagDetector::GPUAprilTagDetector(
 }
 auto GPUAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame)
-    -> std::vector<tag_detection_t> {
+    -> std::vector<position_estimate_t> {
   if (timestamped_frame.frame.channels() == 1) {
     gpu_detector_->DetectGrayHost(
         (unsigned char*)timestamped_frame.frame.ptr());
@@ -90,7 +90,7 @@ auto GPUAprilTagDetector::GetTagDetections(
     gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
   }
   const zarray_t* detections = gpu_detector_->Detections();
-  std::vector<tag_detection_t> estimates;
+  std::vector<position_estimate_t> estimates;
 
   if (zarray_size(detections)) {
     for (int i = 0; i < zarray_size(detections); ++i) {
@@ -110,7 +110,7 @@ auto GPUAprilTagDetector::GetTagDetections(
                    distortion_coefficients_, rvec, tvec, false,
                    cv::SOLVEPNP_IPPE_SQUARE);
 
-      tag_detection_t estimate;
+      position_estimate_t estimate;
       // Currently we do not use transation z, rotation x and rotation y
       // Converting to wpi coordinates
       const double translation_x = tvec.ptr<double>()[2];

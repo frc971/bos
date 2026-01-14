@@ -14,12 +14,12 @@ using point3d_t = struct Point3d {
   double z;
 };
 
-using tag_detection_t = struct TagDetection {
+using position_estimate_t = struct PositionEstimate {
   frc::Pose3d pose;
   double timestamp;
   double distance;
   int tag_id;
-  friend auto operator<<(std::ostream& os, const TagDetection& t)
+  friend auto operator<<(std::ostream& os, const PositionEstimate& t)
       -> std::ostream& {
 
     const auto& tr = t.pose.Translation();

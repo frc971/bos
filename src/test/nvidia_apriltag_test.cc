@@ -43,7 +43,7 @@ auto main() -> int {
     timestamped_frame = source.Get();
     streamer.WriteFrame(timestamped_frame.frame);
 
-    std::vector<localization::tag_detection_t> estimates =
+    std::vector<localization::position_estimate_t> estimates =
         detector.GetTagDetections(timestamped_frame);
 
     timer.Stop();

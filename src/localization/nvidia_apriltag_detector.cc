@@ -58,7 +58,7 @@ NvidiaAprilTagDetector::NvidiaAprilTagDetector(
 
 auto NvidiaAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame)
-    -> std::vector<tag_detection_t> {
+    -> std::vector<position_estimate_t> {
   cv::Mat gray;
 
   if (timestamped_frame.frame.channels() == 1) {
@@ -95,10 +95,10 @@ auto NvidiaAprilTagDetector::GetTagDetections(
     PrintPose3d(camera_relitive_position);
     vpiArrayUnlock(detections_);
     vpiArrayUnlock(poses_);
-    return std::vector<tag_detection_t>(
-        {tag_detection_t{camera_relitive_position, timestamped_frame.timestamp,
-                         std::hypot(camera_relitive_position.X().value(),
-                                    camera_relitive_position.Y().value())}});
+    return std::vector<position_estimate_t>({position_estimate_t{
+        camera_relitive_position, timestamped_frame.timestamp,
+        std::hypot(camera_relitive_position.X().value(),
+                   camera_relitive_position.Y().value())}});
   }
 
   vpiArrayUnlock(detections_);

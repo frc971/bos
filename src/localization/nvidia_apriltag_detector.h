@@ -18,7 +18,7 @@ class NvidiaAprilTagDetector : IAprilTagDetector {
       bool verbose = false);
   ~NvidiaAprilTagDetector() override;
   auto GetTagDetections(camera::timestamped_frame_t& frame)
-      -> std::vector<tag_detection_t> override;
+      -> std::vector<position_estimate_t> override;
 
  private:
   VPIAprilTagDecodeParams params_;

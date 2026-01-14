@@ -20,14 +20,14 @@ class GPUAprilTagDetector : public IAprilTagDetector {
       bool verbose = false);
   ~GPUAprilTagDetector() override;
   auto GetTagDetections(camera::timestamped_frame_t& frame)
-      -> std::vector<tag_detection_t> override;
+      -> std::vector<position_estimate_t> override;
 
  private:
   auto DetectTags(cv::Mat& frame) -> std::vector<std::vector<cv::Point2f>>;
   auto JointSolve(std::vector<std::vector<cv::Point2f>>& tag_detections)
-      -> std::vector<tag_detection_t>;
+      -> std::vector<position_estimate_t>;
   auto SquareSolve(std::vector<std::vector<cv::Point2f>>& tag_detections)
-      -> std::vector<tag_detection_t>;
+      -> std::vector<position_estimate_t>;
 
  private:
   cv::Mat camera_matrix_;
