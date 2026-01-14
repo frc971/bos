@@ -1,6 +1,6 @@
 #pragma once
-#include <string>
 
+#include <string>
 namespace camera {
 
 using camera_constant_t = struct CameraConstant {
@@ -77,13 +77,13 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
     [Camera::TURRET_BOT_FRONT_RIGHT] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
+                        "platform-3610000.usb-usb-0:2.1:1.0-video-index0",
             .intrinsics_path = "/bos/constants/turret_bot_front_right_intrinsics.json",
             .extrinsics_path = "/bos/constants/turret_bot_front_right_extrinsics.json"},
     [Camera::TURRET_BOT_FRONT_LEFT] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
+                        "platform-3610000.usb-usb-0:2.3:1.0-video-index0",
             .intrinsics_path = "/bos/constants/turret_bot_front_left_intrinsics.json",
             .extrinsics_path = "/bos/constants/turret_bot_front_left_extrinsics.json"},
     [Camera::TURRET_BOT_BACK_RIGHT] =
@@ -124,7 +124,7 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .extrinsics_path = "/bos/constants/vision_bot_back_left_extrinsics.json"},
     [Camera::DEFAULT_USB0] =
         camera_constant_t{
-            .pipeline = "/dev/video0",
+            .pipeline = "platform-3610000.usb-usb-0:2.2:1.0-video-index0",
             .intrinsics_path =
                 "/bos/constants/default_usb_camera0_intrinsics.json",
             .extrinsics_path =

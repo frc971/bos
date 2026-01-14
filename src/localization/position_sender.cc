@@ -59,6 +59,9 @@ void PositionSender::Send(
 
       tag_estimation_publisher_.Set(tag_estimation);
       latency_publisher_.Set(latency);
+      if (verbose_) {
+        LOG(INFO) << detection;
+      }
     }
 
     mutex_.unlock();
