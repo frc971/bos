@@ -3,18 +3,26 @@
 #include <iostream>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <optional>
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/select_camera.h"
 #include "src/camera/write_frame.h"
 #include "src/utils/nt_utils.h"
-auto main() -> int {
+
+ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
+
+auto main(int argc, char* argv[]) -> int {
+  absl::ParseCommandLine(argc, argv);
   utils::StartNetworktables();
 
   camera::CscoreStreamer streamer("frame_shower", 4971, 30, 1080, 1080);
 
-  camera::Camera config = camera::SelectCameraConfig();
+  camera::Camera config =
+      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
   std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
 
   std::string log_name;
