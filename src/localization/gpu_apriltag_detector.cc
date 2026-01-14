@@ -137,6 +137,7 @@ auto GPUAprilTagDetector::GetTagDetections(
       estimates.push_back(estimate);
     }
   }
+  LOG(INFO) << estimates.size();
   return estimates;
 }
 
