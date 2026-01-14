@@ -14,7 +14,7 @@ void run_localization(camera::CameraSource& source,
                       std::unique_ptr<localization::IAprilTagDetector> detector,
                       const std::string& extrinsics, uint port, bool verbose) {
 
-  localization::PositionSender position_sender(source.GetName());
+  localization::PositionSender position_sender(source.GetName(), verbose);
 
   camera::CscoreStreamer streamer(source.GetName(), port, 30, 1080, 1080);
 
