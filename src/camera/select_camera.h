@@ -5,5 +5,6 @@
 
 namespace camera {
 auto SelectCameraConfig() -> Camera;
+auto SelectCameraConfig(const std::string& choice) -> Camera;
 auto GetCameraStream(Camera camera) -> std::unique_ptr<ICamera>;
 }  // namespace camera
