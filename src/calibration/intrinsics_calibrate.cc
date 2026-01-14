@@ -10,12 +10,16 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 #include <opencv2/objdetect/charuco_detector.hpp>
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
 #include "src/calibration/intrinsics_calibrate_lib.h"
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
+
+ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
 
 using json = nlohmann::json;
 
@@ -30,7 +34,7 @@ void CaptureFrames(
   while (true) {
     frame = camera.GetFrame().frame;
     frame_count++;
-    if (frame_count % 3 == 0) {
+    if (frame_count % 1 == 0) {
       cv::cvtColor(frame, rgb_frame, cv::COLOR_BGRA2RGB);
       calibration::detection_result_t detection_result =
           calibration::DetectCharucoBoard(rgb_frame, detector);
@@ -54,11 +58,14 @@ void CaptureFrames(
   }
 }
 
-auto main() -> int {
+auto main(int argc, char* argv[]) -> int {
+  absl::ParseCommandLine(argc, argv);
+
   camera::CscoreStreamer streamer("intrinsics_calibrate", 4971, 30, 1080, 1080,
                                   true);
 
-  camera::Camera config = camera::SelectCameraConfig();
+  camera::Camera config =
+      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
   std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
 
   cv::Mat frame;

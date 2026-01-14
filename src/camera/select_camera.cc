@@ -38,6 +38,11 @@ auto SelectCameraConfig(const std::string& choice) -> Camera {
   return SelectCameraConfig();
 }
 
+auto SelectCameraConfig(std::optional<std::string> choice) -> Camera {
+  return choice.has_value() ? SelectCameraConfig(choice.value())
+                            : SelectCameraConfig();
+}
+
 auto GetCameraStream(Camera camera) -> std::unique_ptr<ICamera> {
   switch (camera) {
     case Camera::REALSENSE:
