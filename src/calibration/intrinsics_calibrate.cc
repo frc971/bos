@@ -15,6 +15,7 @@
 #include "src/calibration/intrinsics_calibrate_lib.h"
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
+#include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
@@ -24,7 +25,7 @@ ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
 using json = nlohmann::json;
 
 void CaptureFrames(
-    const cv::aruco::CharucoDetector& detector, camera::ICamera& camera,
+    const cv::aruco::CharucoDetector& detector, camera::CameraSource& source,
     camera::CscoreStreamer streamer,
     std::vector<calibration::detection_result_t>& detection_results,
     std::atomic<bool>& capture_frames_thread, std::atomic<bool>& log_image) {
@@ -32,7 +33,7 @@ void CaptureFrames(
   cv::Mat rgb_frame;
   int frame_count = 0;
   while (true) {
-    frame = camera.GetFrame().frame;
+    frame = source.GetFrame();
     frame_count++;
     if (frame_count % 1 == 0) {
       cv::cvtColor(frame, rgb_frame, cv::COLOR_BGRA2RGB);
@@ -66,10 +67,10 @@ auto main(int argc, char* argv[]) -> int {
 
   camera::Camera config =
       camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
-  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
+  std::unique_ptr<camera::ICamera> camera_ = camera::GetCameraStream(config);
+  camera::CameraSource source("camera", std::move(camera_));
 
-  cv::Mat frame;
-  frame = camera->GetFrame().frame;
+  cv::Mat frame = source.GetFrame();
   cv::Size frame_size = frame.size();
 
   cv::aruco::CharucoDetector detector = calibration::CreateDetector(
@@ -82,7 +83,7 @@ auto main(int argc, char* argv[]) -> int {
 
   std::vector<calibration::detection_result_t> detection_results;
   std::thread capture_frames_thread(
-      CaptureFrames, std::ref(detector), std::ref(*camera), streamer,
+      CaptureFrames, std::ref(detector), std::ref(source), streamer,
       std::ref(detection_results), std::ref(capture_frames),
       std::ref(log_image));
 
