@@ -23,13 +23,16 @@ DiskCamera::DiskCamera(std::string image_folder_path)
             folder_path.size() - 4, 4))});
   }
 }
-void DiskCamera::GetFrame(cv::Mat& frame) {
+auto DiskCamera::GetFrame() -> timestamped_frame_t {
   if (image_paths_.empty()) {
     std::cout << "Finished reading all frames from DiskCamera. Folder path: "
               << image_folder_path_ << std::endl;
     exit(0);
   }
-  frame = cv::imread(image_paths_.top().path);
+  timestamped_frame_t timestamped_frame{
+      .frame = cv::imread(image_paths_.top().path),
+      .timestamp = image_paths_.top().timestamp};
+  image_paths_.pop();
 
   auto timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   while (timestamp < image_paths_.top().timestamp) {
@@ -37,6 +40,6 @@ void DiskCamera::GetFrame(cv::Mat& frame) {
         image_paths_.top().timestamp - timestamp));
     timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   }
-  image_paths_.pop();
+  return timestamped_frame;
 }
 }  // namespace camera

@@ -4,6 +4,7 @@
 #include "cv_camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/realsense_camera.h"
+#include "src/utils/log.h"
 
 namespace camera {
 
@@ -18,48 +19,28 @@ void PrintCameraConstant(Camera camera) {
 }
 
 auto SelectCameraConfig() -> Camera {
-  std::cout << "Please type in what camera you want." << std::endl;
-  std::cout << "Options: " << std::endl;
-  std::cout << "mipi0" << std::endl;
-  std::cout << "mipi1" << std::endl;
-  std::cout << "usb0" << std::endl;
-  std::cout << "usb1" << std::endl;
-  std::cout << "usb2" << std::endl;
-  std::cout << "usb3" << std::endl;
-  std::cout << "defaultusb0" << std::endl;
-  std::cout << "realsense" << std::endl;
-
+  std::cout << "Please select a camera" << std::endl;
+  for (const auto& camera_constant : camera_constants) {
+    std::cout << camera_constant.name << std::endl;
+  }
   std::string choice;
   std::cin >> choice;
+  return SelectCameraConfig(choice);
+}
 
-  if (choice == "mipi0") {
-    PrintCameraConstant(Camera::IMX296_0);
-    return Camera::IMX296_0;
-  } else if (choice == "mipi1") {
-    PrintCameraConstant(Camera::IMX296_1);
-    return Camera::IMX296_1;
-  } else if (choice == "usb0") {
-    PrintCameraConstant(Camera::USB0);
-    return Camera::USB0;
-  } else if (choice == "usb1") {
-    PrintCameraConstant(Camera::USB1);
-    return Camera::USB1;
-  } else if (choice == "usb2") {
-    PrintCameraConstant(Camera::USB2);
-    return Camera::USB2;
-  } else if (choice == "usb3") {
-    PrintCameraConstant(Camera::USB3);
-    return Camera::USB3;
-  } else if (choice == "defaultusb0") {
-    PrintCameraConstant(Camera::DEFAULT_USB0);
-    return Camera::DEFAULT_USB0;
-  } else if (choice == "realsense") {
-    PrintCameraConstant(Camera::REALSENSE);
-    return Camera::REALSENSE;
-  } else {
-    std::cout << "You did not give a valid input. Retrying..." << std::endl;
-    return SelectCameraConfig();
+auto SelectCameraConfig(const std::string& choice) -> Camera {
+  for (int i = 0; i < Camera::CAMERA_LENGTH; i++) {
+    if (choice == camera_constants[i].name) {
+      return static_cast<Camera>(i);
+    }
   }
+  std::cout << "Did not find camera that match fallback to manual select";
+  return SelectCameraConfig();
+}
+
+auto SelectCameraConfig(std::optional<std::string> choice) -> Camera {
+  return choice.has_value() ? SelectCameraConfig(choice.value())
+                            : SelectCameraConfig();
 }
 
 auto GetCameraStream(Camera camera) -> std::unique_ptr<ICamera> {

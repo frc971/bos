@@ -29,7 +29,7 @@ auto main() -> int {
   while (true) {
     cv::Mat frame;
     utils::Timer timer("yolo");
-    camera->GetFrame(frame);
+    frame = camera->GetFrame().frame;
     if (frame.empty()) {
       std::cout << "Couldn't fetch frame properly" << std::endl;
       return 1;
