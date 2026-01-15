@@ -1,7 +1,6 @@
 #pragma once
 #include <fmt/ostream.h>
 #include <frc/geometry/Transform3d.h>
-#include <math.h>
 #include <wpi/struct/Struct.h>
 #include <wpilibc/frc/Timer.h>
 #include <cmath>
@@ -9,18 +8,19 @@
 #include <ostream>
 #include "src/utils/log.h"
 namespace localization {
-typedef struct Point3d {
+using point3d_t = struct Point3d {
   double x;
   double y;
   double z;
-} point3d_t;
+};
 
-typedef struct TagDetection {
+using tag_detection_t = struct TagDetection {
   frc::Pose3d pose;
   double timestamp;
   double distance;
   int tag_id;
-  friend std::ostream& operator<<(std::ostream& os, const TagDetection& t) {
+  friend auto operator<<(std::ostream& os, const TagDetection& t)
+      -> std::ostream& {
 
     const auto& tr = t.pose.Translation();
     const auto& r = t.pose.Rotation();
@@ -34,16 +34,16 @@ typedef struct TagDetection {
                units::degree_t{r.Z()}.value());
     return os;
   }
-} tag_detection_t;
+};
 
-typedef struct Pose2d {
+using pose2d_t = struct Pose2d {
   double x;
   double y;
   double rotation;
-} pose2d_t;
+};
 
-typedef struct Pose3d {
+using pose3d_t = struct Pose3d {
   point3d_t translation;
   point3d_t rotation;
-} pose3d_t;
+};
 }  // namespace localization
