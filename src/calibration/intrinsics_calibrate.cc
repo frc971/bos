@@ -30,17 +30,18 @@ void CaptureFrames(
     std::vector<calibration::detection_result_t>& detection_results,
     std::atomic<bool>& capture_frames_thread, std::atomic<bool>& log_image) {
   cv::Mat frame;
-  cv::Mat rgb_frame;
+  cv::Mat bgr_frame;
   int frame_count = 0;
   while (true) {
     frame = source.GetFrame();
     frame_count++;
     if (frame_count % 1 == 0) {
-      cv::cvtColor(frame, rgb_frame, cv::COLOR_BGRA2RGB);
+      cv::cvtColor(frame, bgr_frame, cv::COLOR_BGRA2BGR);
       calibration::detection_result_t detection_result =
-          calibration::DetectCharucoBoard(rgb_frame, detector);
+          calibration::DetectCharucoBoard(bgr_frame, detector);
 
-      cv::Mat annotated_frame = DrawDetectionResult(frame, detection_result);
+      cv::Mat annotated_frame =
+          DrawDetectionResult(bgr_frame, detection_result);
       for (const calibration::detection_result_t& detection_result :
            detection_results) {
         annotated_frame =
