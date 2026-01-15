@@ -1,11 +1,14 @@
 #include <fstream>
+#include <memory>
 #include <nlohmann/json.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include "apriltag/apriltag.h"
 #include "apriltag/tag36h11.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
+#include "src/camera/disk_camera.h"
 #include "src/camera/select_camera.h"
 #include "src/utils/camera_utils.h"
 #include "third_party/971apriltag/971apriltag.h"
@@ -34,6 +37,7 @@ auto distortion_coefficients_from_json(json intrinsics)
 }
 
 auto main() -> int {
+  // TODO revert
   auto apriltag_detector_ = apriltag_detector_create();
 
   apriltag_detector_add_family_bits(apriltag_detector_, tag36h11_create(), 1);
@@ -46,21 +50,19 @@ auto main() -> int {
   camera::CscoreStreamer streamer("apriltag_detect_test", 4971, 30, 640, 480,
                                   false);
 
-  camera::Camera camera_config = camera::SelectCameraConfig();
-
-  auto intrinsics = utils::read_intrinsics(
-      camera::camera_constants[camera_config].intrinsics_path);
-
-  auto gpu_detector_ = new frc971::apriltag::GpuDetector(
-      640, 480, apriltag_detector_, camera_matrix_from_json(intrinsics),
-      distortion_coefficients_from_json(intrinsics));
   camera::Camera config = camera::SelectCameraConfig();
-  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
-  cv::Mat frame;
+  cv::Mat frame = cv::imread("apriltag2.png");
   cv::Mat gray;
 
+  auto intrinsics =
+      utils::read_intrinsics(camera::camera_constants[config].intrinsics_path);
+
+  auto gpu_detector_ = new frc971::apriltag::GpuDetector(
+      frame.cols, frame.rows, apriltag_detector_,
+      camera_matrix_from_json(intrinsics),
+      distortion_coefficients_from_json(intrinsics));
+
   while (true) {
-    frame = camera->GetFrame().frame;
     cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
     gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
     const zarray_t* detections = gpu_detector_->Detections();
