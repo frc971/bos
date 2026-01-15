@@ -6,31 +6,29 @@
 #include <opencv2/opencv.hpp>
 #include <sstream>
 #include <thread>
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
 
-auto main() -> int {
+ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
+
+auto main(int argc, char* argv[]) -> int {
+  absl::ParseCommandLine(argc, argv);
+
+  camera::Camera config =
+      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
+  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
+
   camera::CscoreStreamer streamer("frame_shower", 4971, 30, 1080, 1080);
-
-  std::unique_ptr<camera::ICamera> camera =
-      camera::GetCameraStream(camera::SelectCameraConfig());
-
-  cv::Mat frame;
 
   std::cout << "Camera opened successfully" << std::endl;
 
   while (true) {
-
-    cv::Mat frame;
-    while (true) {
-      std::cout << "Getting frame" << std::endl;
-      camera->GetFrame(frame);
-      streamer.WriteFrame(frame);
-      std::cout << frame.size << std::endl;
-      std::cout << "Got frame" << std::endl;
-    }
+    cv::Mat frame = camera->GetFrame().frame;
+    streamer.WriteFrame(frame);
   }
   cv::destroyAllWindows();
   return 0;

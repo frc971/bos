@@ -11,4 +11,3 @@ for binary in "${binaries[@]}"; do
 done
 
 find . -type f \( -name "*.so" -o -name "*.a" \) -exec cp {} bin/ \;
-

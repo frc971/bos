@@ -37,6 +37,7 @@ auto distortion_coefficients_from_json(json intrinsics)
 }
 
 auto main() -> int {
+  // TODO revert
   auto apriltag_detector_ = apriltag_detector_create();
 
   apriltag_detector_add_family_bits(apriltag_detector_, tag36h11_create(), 1);

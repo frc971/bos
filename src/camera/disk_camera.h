@@ -23,7 +23,7 @@ struct CompareTimestampedFramePath {
 class DiskCamera : public ICamera {
  public:
   DiskCamera(std::string image_folder_path);
-  void GetFrame(cv::Mat& frame) override;
+  auto GetFrame() -> timestamped_frame_t override;
 
  private:
   std::string image_folder_path_;
