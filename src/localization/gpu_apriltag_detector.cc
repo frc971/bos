@@ -80,7 +80,7 @@ GPUAprilTagDetector::GPUAprilTagDetector(
 }
 auto GPUAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame)
-    -> std::vector<position_estimate_t> {
+    -> std::vector<tag_detection_t> {
   if (timestamped_frame.frame.channels() == 1) {
     gpu_detector_->DetectGrayHost(
         (unsigned char*)timestamped_frame.frame.ptr());
@@ -89,84 +89,28 @@ auto GPUAprilTagDetector::GetTagDetections(
     cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
     gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
   }
-  const zarray_t* detections = gpu_detector_->Detections();
-  std::vector<position_estimate_t> estimates;
+  const zarray_t* raw_detections = gpu_detector_->Detections();
+  std::vector<tag_detection_t> tag_detections;
 
-  if (zarray_size(detections)) {
-    for (int i = 0; i < zarray_size(detections); ++i) {
+  if (zarray_size(raw_detections)) {
+    for (int i = 0; i < zarray_size(raw_detections); ++i) {
       apriltag_detection_t* gpu_detection;
-      zarray_get(detections, i, &gpu_detection);
+      zarray_get(raw_detections, i, &gpu_detection);
 
-      std::vector<cv::Point2f> imagePoints;
-      imagePoints.reserve(4);
-      for (auto& i : gpu_detection->p) {
-        imagePoints.emplace_back(i[0], i[1]);
+      tag_detection_t detection;
+      detection.tag_id = gpu_detection->id;
+      detection.timestamp = timestamped_frame.timestamp;
+      detection.confidence = gpu_detection->decision_margin;
+
+      for (int j = 0; j < 4; ++j) {
+        detection.corners[j] =
+            cv::Point2f(gpu_detection->p[j][0], gpu_detection->p[j][1]);
       }
 
-      cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
-      cv::Mat tvec =
-          cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
-      cv::solvePnP(apriltag_dimensions_, imagePoints, camera_matrix_,
-                   distortion_coefficients_, rvec, tvec, false,
-                   cv::SOLVEPNP_IPPE_SQUARE);
-
-      position_estimate_t estimate;
-      // Currently we do not use transation z, rotation x and rotation y
-      // Converting to wpi coordinates
-      const double translation_x = tvec.ptr<double>()[2];
-      const double translation_y = tvec.ptr<double>()[0];
-      const double translation_z = tvec.ptr<double>()[1];
-
-      const double rotation_x = rvec.ptr<double>()[2];
-      const double rotation_y = rvec.ptr<double>()[0];
-      const double rotation_z = rvec.ptr<double>()[1];
-
-      estimate.pose =
-          frc::Pose3d(frc::Translation3d(units::meter_t{translation_x},
-                                         units::meter_t{translation_y},
-                                         units::meter_t{translation_z}),
-                      frc::Rotation3d(units::radian_t{rotation_x},
-                                      units::radian_t{rotation_y},
-                                      units::radian_t{rotation_z}));
-
-      estimate.distance = std::hypot(translation_x, translation_y);
-      estimate.tag_id = gpu_detection->id;
-
-      estimate.timestamp = timestamped_frame.timestamp;
-
-      estimates.push_back(estimate);
+      tag_detections.push_back(detection);
     }
   }
-  return estimates;
-}
-
-auto GPUAprilTagDetector::DetectTags(cv::Mat& frame)
-    -> std::vector<std::vector<cv::Point2f>> {
-
-  if (frame.channels() == 1) {
-    gpu_detector_->DetectGrayHost((unsigned char*)frame.ptr());
-  } else if (frame.channels() == 3) {
-    cv::Mat gray;
-    cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
-    gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
-  }
-  const zarray_t* detections = gpu_detector_->Detections();
-  std::vector<std::vector<cv::Point2f>> tag_corners;
-
-  if (zarray_size(detections)) {
-    for (int i = 0; i < zarray_size(detections); ++i) {
-      apriltag_detection_t* gpu_detection;
-      zarray_get(detections, i, &gpu_detection);
-
-      std::vector<cv::Point2f> imagePoints;
-      imagePoints.reserve(4);
-      for (auto& i : gpu_detection->p) {
-        imagePoints.emplace_back(i[0], i[1]);
-      }
-      tag_corners.push_back(imagePoints);
-    }
-  }
-  return tag_corners;
+  return tag_detections;
 }
 
 GPUAprilTagDetector::~GPUAprilTagDetector() {

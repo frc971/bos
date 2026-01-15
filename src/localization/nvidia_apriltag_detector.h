@@ -8,6 +8,7 @@
 
 namespace localization {
 
+// NEEDS TO BE TESTED
 class NvidiaAprilTagDetector : IAprilTagDetector {
  public:
   NvidiaAprilTagDetector(
@@ -18,7 +19,7 @@ class NvidiaAprilTagDetector : IAprilTagDetector {
       bool verbose = false);
   ~NvidiaAprilTagDetector() override;
   auto GetTagDetections(camera::timestamped_frame_t& frame)
-      -> std::vector<position_estimate_t> override;
+      -> std::vector<tag_detection_t> override;
 
  private:
   VPIAprilTagDecodeParams params_;

@@ -49,7 +49,6 @@ void PositionSender::Send(
           variance,
           detection.timestamp +
               instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
-          static_cast<double>(detection.tag_id),
           latency};
 
       pose_publisher_.Set(

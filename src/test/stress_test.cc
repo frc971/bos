@@ -16,6 +16,7 @@
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/position_sender.h"
 #include "src/localization/run_localization.h"
+#include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 #include "src/utils/timer.h"
@@ -38,6 +39,9 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+
+          ),
       camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
       4971, false);
 
