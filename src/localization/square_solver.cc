@@ -2,6 +2,7 @@
 #include <opencv2/calib3d.hpp>
 #include <utility>
 #include "src/utils/camera_utils.h"
+
 namespace localization {
 
 inline auto camera_matrix_from_json(json intrinsics) -> cv::Mat {

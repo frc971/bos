@@ -14,8 +14,9 @@ const std::vector<cv::Point3f> kapriltag_corners = {
     {ktag_size / 2, -ktag_size / 2, 0},
     {-ktag_size / 2, -ktag_size / 2, 0}};
 
-frc::AprilTagFieldLayout kapriltag_layout = frc::AprilTagFieldLayout::LoadField(
-    frc::AprilTagField::k2025ReefscapeAndyMark);
+const frc::AprilTagFieldLayout kapriltag_layout =
+    frc::AprilTagFieldLayout::LoadField(
+        frc::AprilTagField::k2025ReefscapeAndyMark);
 
 class IPositionSolver {
  public:

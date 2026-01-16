@@ -49,9 +49,10 @@ AbsoluteAprilTagLayout::AbsoluteAprilTagLayout(
 }
 
 auto AbsoluteAprilTagLayout::GetTagPoints(int tag_id)
-    -> std::vector<cv::Point3f>* {
+    -> std::optional<std::vector<cv::Point3f>> {
   return absolute_apriltag_layout_.contains(tag_id)
-             ? &absolute_apriltag_layout_[tag_id]
-             : nullptr;
+             ? std::make_optional<std::vector<cv::Point3f>>(
+                   absolute_apriltag_layout_[tag_id])
+             : std::nullopt;
 }
 }  // namespace localization
