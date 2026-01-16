@@ -29,7 +29,6 @@ using position_estimate_t = struct PositionEstimate {
   double timestamp;
   friend auto operator<<(std::ostream& os, const PositionEstimate& t)
       -> std::ostream& {
-
     const auto& tr = t.pose.Translation();
     const auto& r = t.pose.Rotation();
 
