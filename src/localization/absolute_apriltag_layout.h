@@ -1,3 +1,4 @@
+#pragma once
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include <array>
 #include "src/localization/apriltag_detector.h"

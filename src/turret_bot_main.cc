@@ -2,6 +2,7 @@
 #include "src/camera/camera_source.h"
 #include "src/camera/cv_camera.h"
 #include "src/localization/run_localization.h"
+#include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 auto main() -> int {
@@ -39,6 +40,8 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
                   .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::TURRET_BOT_FRONT_RIGHT),
       camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
           .extrinsics_path,
       4971, false);
@@ -50,6 +53,8 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]
                   .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::TURRET_BOT_FRONT_LEFT),
       camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]
           .extrinsics_path,
       4972, false);
@@ -61,6 +66,8 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[camera::Camera::TURRET_BOT_BACK_RIGHT]
                   .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::TURRET_BOT_BACK_RIGHT),
       camera::camera_constants[camera::Camera::TURRET_BOT_BACK_RIGHT]
           .extrinsics_path,
       4973, false);
@@ -72,6 +79,8 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[camera::Camera::TURRET_BOT_BACK_LEFT]
                   .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::TURRET_BOT_BACK_LEFT),
       camera::camera_constants[camera::Camera::TURRET_BOT_BACK_LEFT]
           .extrinsics_path,
       4974, false);

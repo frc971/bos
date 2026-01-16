@@ -32,14 +32,15 @@ auto Transform3dFromMatrix(float matrix[3][4]) -> frc::Pose3d {  // NOLINT
                                           quaternion.y(), quaternion.z()))};
 }
 
-NvidiaAprilTagDetector::NvidiaAprilTagDetector(
-    int image_width, int image_height, nlohmann::json intrinsics,
-    VPIAprilTagDecodeParams params, VPIBackend backend, int max_detections,
-    std::vector<cv::Point3f> apriltag_dimensions, bool verbose)
+NvidiaAprilTagDetector::NvidiaAprilTagDetector(int image_width,
+                                               int image_height,
+                                               nlohmann::json intrinsics,
+                                               VPIAprilTagDecodeParams params,
+                                               VPIBackend backend,
+                                               int max_detections, bool verbose)
     : params_(params),
       backend_(backend),
       max_detections_(max_detections),
-      apriltag_dimensions_(std::move(apriltag_dimensions)),
       input_(nullptr) {
 
   intrinsics_[0][0] = intrinsics["fx"];

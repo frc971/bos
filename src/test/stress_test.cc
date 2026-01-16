@@ -40,8 +40,7 @@ auto main() -> int {
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
-
-          ),
+          camera::Camera::FIDDLER_USB0),
       camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
       4971, false);
 
@@ -52,6 +51,8 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::FIDDLER_USB0),
       camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
       4972, false);
 
@@ -62,6 +63,8 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::FIDDLER_USB0),
       camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
       4973, false);
 
@@ -72,6 +75,8 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::FIDDLER_USB0),
       camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
       4974, false);
 

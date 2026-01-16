@@ -54,13 +54,12 @@ auto distortion_coefficients_from_json<cv::Mat>(json intrinsics) -> cv::Mat {
   return distortion_coefficients;
 }
 
-GPUAprilTagDetector::GPUAprilTagDetector(
-    uint image_width, uint image_height, const nlohmann::json& intrinsics,
-    std::vector<cv::Point3f> apriltag_dimensions, bool verbose)
+GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
+                                         const nlohmann::json& intrinsics,
+                                         bool verbose)
     : camera_matrix_(camera_matrix_from_json<cv::Mat>(intrinsics)),
       distortion_coefficients_(
           distortion_coefficients_from_json<cv::Mat>(intrinsics)),
-      apriltag_dimensions_(std::move(apriltag_dimensions)),
       verbose_(verbose) {
 
   apriltag_detector_ = apriltag_detector_create();

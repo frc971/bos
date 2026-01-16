@@ -1,5 +1,6 @@
 #include "src/localization/square_solver.h"
 #include <opencv2/calib3d.hpp>
+#include <utility>
 #include "src/utils/camera_utils.h"
 namespace localization {
 
@@ -26,6 +27,13 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
           camera_matrix_from_json(utils::read_intrinsics(intrinsics_path))),
       distortion_coefficients_(distortion_coefficients_from_json(
           utils::read_extrinsics(extrinsics_path))) {}
+
+SquareSolver::SquareSolver(camera::Camera camera_config,
+                           frc::AprilTagFieldLayout layout,
+                           std::vector<cv::Point3f> tag_corners)
+    : SquareSolver(camera::camera_constants[camera_config].intrinsics_path,
+                   camera::camera_constants[camera_config].extrinsics_path,
+                   std::move(layout), std::move(tag_corners)) {}
 
 auto SquareSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections)
