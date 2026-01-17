@@ -1,85 +1,57 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <opencv2/imgproc.hpp>
-#include "apriltag/apriltag.h"
-#include "apriltag/tag36h11.h"
+#include <sstream>
+#include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
+#include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
-#include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
+#include "src/localization/get_field_relitive_position.h"
+#include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
-#include "third_party/971apriltag/971apriltag.h"
+#include "src/utils/timer.h"
 
 using json = nlohmann::json;
 
-auto camera_matrix_from_json(json intrinsics)
-    -> frc971::apriltag::CameraMatrix {
-  frc971::apriltag::CameraMatrix camera_matrix = {.fx = intrinsics["fx"],
-                                                  .cx = intrinsics["cx"],
-                                                  .fy = intrinsics["fy"],
-                                                  .cy = intrinsics["cy"]};
-  return camera_matrix;
-}
-
-auto distortion_coefficients_from_json(json intrinsics)
-    -> frc971::apriltag::DistCoeffs {
-  frc971::apriltag::DistCoeffs distortion_coefficients = {
-      .k1 = intrinsics["k1"],
-      .k2 = intrinsics["k2"],
-      .p1 = intrinsics["p1"],
-      .p2 = intrinsics["p2"],
-      .k3 = intrinsics["k3"]};
-
-  return distortion_coefficients;
-}
-
 auto main() -> int {
-  auto apriltag_detector_ = apriltag_detector_create();
 
-  apriltag_detector_add_family_bits(apriltag_detector_, tag36h11_create(), 1);
+  camera::CscoreStreamer streamer("tag_estimator_test", 4971, 30, 1080, 1080);
 
-  apriltag_detector_->nthreads = 6;
-  apriltag_detector_->wp = workerpool_create(apriltag_detector_->nthreads);
-  apriltag_detector_->qtp.min_white_black_diff = 4;
-  apriltag_detector_->debug = false;
-
-  camera::CscoreStreamer streamer("apriltag_detect_test", 4971, 30, 640, 480,
-                                  false);
-
-  camera::Camera camera_config = camera::SelectCameraConfig();
-
-  auto intrinsics = utils::read_intrinsics(
-      camera::camera_constants[camera_config].intrinsics_path);
-
-  auto gpu_detector_ = new frc971::apriltag::GpuDetector(
-      640, 480, apriltag_detector_, camera_matrix_from_json(intrinsics),
-      distortion_coefficients_from_json(intrinsics));
   camera::Camera config = camera::SelectCameraConfig();
-  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
-  cv::Mat frame;
-  cv::Mat gray;
+  camera::CameraSource source("stress_test_camera",
+                              camera::GetCameraStream(config));
+  cv::Mat frame = source.GetFrame();
 
+  localization::GPUAprilTagDetector detector(
+      frame.cols, frame.rows,
+      utils::read_intrinsics(camera::camera_constants[config].intrinsics_path));
+
+  localization::SquareSolver solver(
+      camera::camera_constants[config].intrinsics_path,
+      camera::camera_constants[config].extrinsics_path);
+
+  camera::timestamped_frame_t timestamped_frame;
   while (true) {
-    frame = camera->GetFrame().frame;
-    cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
-    gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
-    const zarray_t* detections = gpu_detector_->Detections();
+    utils::Timer timer("tag estimator apriltag");
+    timestamped_frame = source.Get();
 
-    std::vector<cv::Point2f> imagePoints;
-    if (zarray_size(detections)) {
-      for (int i = 0; i < zarray_size(detections); ++i) {
-        apriltag_detection_t* gpu_detection;
-        zarray_get(detections, i, &gpu_detection);
-        cv::Point point(gpu_detection->c[0], gpu_detection->c[1]);
+    std::vector<localization::tag_detection_t> tag_detections =
+        detector.GetTagDetections(timestamped_frame);
+    std::vector<localization::position_estimate_t> position_estimates =
+        solver.EstimatePosition(tag_detections);
+    for (auto& position_estimate : position_estimates) {
+      LOG(INFO) << position_estimate;
+    }
 
-        for (auto& i : gpu_detection->p) {
-          imagePoints.emplace_back(i[0], i[1]);
-        }
+    for (auto& tag_detection : tag_detections) {
+      for (auto& corner : tag_detection.corners) {
+        cv::circle(frame, corner, 10, cv::Scalar(0, 0, 255));
       }
     }
-    for (auto image_point : imagePoints) {
-      cv::circle(frame, image_point, 10, cv::Scalar(0, 0, 255));
-    }
+
     streamer.WriteFrame(frame);
+    timer.Stop();
   }
 }

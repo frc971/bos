@@ -3,8 +3,10 @@
 #include <frc/geometry/Transform3d.h>
 #include <wpi/struct/Struct.h>
 #include <wpilibc/frc/Timer.h>
+#include <array>
 #include <cmath>
 #include <iostream>
+#include <opencv2/core/mat.hpp>
 #include <ostream>
 #include "src/utils/log.h"
 namespace localization {
@@ -15,13 +17,18 @@ using point3d_t = struct Point3d {
 };
 
 using tag_detection_t = struct TagDetection {
-  frc::Pose3d pose;
-  double timestamp;
-  double distance;
   int tag_id;
-  friend auto operator<<(std::ostream& os, const TagDetection& t)
-      -> std::ostream& {
+  std::array<cv::Point2f, 4> corners;  // Image coordinates of tag corners
+  double timestamp;
+  double confidence;
+};
 
+using position_estimate_t = struct PositionEstimate {
+  frc::Pose3d pose;
+  double distance;
+  double timestamp;
+  friend auto operator<<(std::ostream& os, const PositionEstimate& t)
+      -> std::ostream& {
     const auto& tr = t.pose.Translation();
     const auto& r = t.pose.Rotation();
 

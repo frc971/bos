@@ -37,7 +37,7 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
 }
 
 void PositionSender::Send(
-    const std::vector<localization::tag_detection_t>& detections,
+    const std::vector<localization::position_estimate_t>& detections,
     double latency) {
   if (mutex_.try_lock()) {
     for (auto& detection : detections) {
@@ -49,7 +49,6 @@ void PositionSender::Send(
           variance,
           detection.timestamp +
               instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
-          static_cast<double>(detection.tag_id),
           latency};
 
       pose_publisher_.Set(
