@@ -62,13 +62,14 @@ auto JointSolver::EstimatePosition(
                distortion_coefficients_, rvec, tvec, false,
                cv::SOLVEPNP_IPPE_SQUARE);
 
-  const double translation_x = tvec.ptr<double>()[2];
-  const double translation_y = tvec.ptr<double>()[0];
-  const double translation_z = tvec.ptr<double>()[1];
+  // Absolute apriltag feild layout already gives in wpilib coordinates
+  const double translation_x = tvec.ptr<double>()[0];
+  const double translation_y = tvec.ptr<double>()[1];
+  const double translation_z = tvec.ptr<double>()[2];
 
-  const double rotation_x = rvec.ptr<double>()[2];
-  const double rotation_y = rvec.ptr<double>()[0];
-  const double rotation_z = rvec.ptr<double>()[1];
+  const double rotation_x = rvec.ptr<double>()[0];
+  const double rotation_y = rvec.ptr<double>()[1];
+  const double rotation_z = rvec.ptr<double>()[2];
 
   position_estimate_t position_estimate{
       .pose = frc::Pose3d(frc::Translation3d(units::meter_t{translation_x},
