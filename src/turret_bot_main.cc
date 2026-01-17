@@ -21,15 +21,15 @@ auto main() -> int {
           camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]
               .pipeline)));
 
-  camera::CameraSource back_right_camera = camera::CameraSource(
-      "back_right",
-      std::make_unique<camera::CVCamera>(cv::VideoCapture(
-          camera::camera_constants[camera::Camera::IMX296_0].pipeline)));
-
-  camera::CameraSource back_left_camera = camera::CameraSource(
-      "back_left",
-      std::make_unique<camera::CVCamera>(cv::VideoCapture(
-          camera::camera_constants[camera::Camera::IMX296_1].pipeline)));
+  // camera::CameraSource back_right_camera = camera::CameraSource(
+  //     "back_right",
+  //     std::make_unique<camera::CVCamera>(cv::VideoCapture(
+  //         camera::camera_constants[camera::Camera::IMX296_0].pipeline)));
+  //
+  // camera::CameraSource back_left_camera = camera::CameraSource(
+  //     "back_left",
+  //     std::make_unique<camera::CVCamera>(cv::VideoCapture(
+  //         camera::camera_constants[camera::Camera::IMX296_1].pipeline)));
 
   std::thread front_right_thread(
       localization::run_localization, std::ref(front_right_camera),
@@ -54,27 +54,27 @@ auto main() -> int {
           .extrinsics_path,
       4972, false);
 
-  std::thread back_right_thread(
-      localization::run_localization, std::ref(back_right_camera),
-      std::make_unique<localization::GPUAprilTagDetector>(
-          back_right_camera.GetFrame().cols, back_right_camera.GetFrame().rows,
-          utils::read_intrinsics(
-              camera::camera_constants[camera::Camera::TURRET_BOT_BACK_RIGHT]
-                  .intrinsics_path)),
-      camera::camera_constants[camera::Camera::TURRET_BOT_BACK_RIGHT]
-          .extrinsics_path,
-      4973, false);
-
-  std::thread back_left_thread(
-      localization::run_localization, std::ref(back_left_camera),
-      std::make_unique<localization::GPUAprilTagDetector>(
-          back_left_camera.GetFrame().cols, back_left_camera.GetFrame().rows,
-          utils::read_intrinsics(
-              camera::camera_constants[camera::Camera::TURRET_BOT_BACK_LEFT]
-                  .intrinsics_path)),
-      camera::camera_constants[camera::Camera::TURRET_BOT_BACK_LEFT]
-          .extrinsics_path,
-      4974, false);
+  // std::thread back_right_thread(
+  //     localization::run_localization, std::ref(back_right_camera),
+  //     std::make_unique<localization::GPUAprilTagDetector>(
+  //         back_right_camera.GetFrame().cols, back_right_camera.GetFrame().rows,
+  //         utils::read_intrinsics(
+  //             camera::camera_constants[camera::Camera::TURRET_BOT_BACK_RIGHT]
+  //                 .intrinsics_path)),
+  //     camera::camera_constants[camera::Camera::TURRET_BOT_BACK_RIGHT]
+  //         .extrinsics_path,
+  //     4973, false);
+  //
+  // std::thread back_left_thread(
+  //     localization::run_localization, std::ref(back_left_camera),
+  //     std::make_unique<localization::GPUAprilTagDetector>(
+  //         back_left_camera.GetFrame().cols, back_left_camera.GetFrame().rows,
+  //         utils::read_intrinsics(
+  //             camera::camera_constants[camera::Camera::TURRET_BOT_BACK_LEFT]
+  //                 .intrinsics_path)),
+  //     camera::camera_constants[camera::Camera::TURRET_BOT_BACK_LEFT]
+  //         .extrinsics_path,
+  //     4974, false);
 
   // camera::CscoreStreamer front_right_streamer("front_right", 4971, 30, 1080,
   //                                             1080);
