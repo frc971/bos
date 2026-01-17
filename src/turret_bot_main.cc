@@ -6,7 +6,7 @@
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 auto main() -> int {
-  utils::StartNetworktables();
+  utils::StartNetworktables(9972);
   // TODO configure vision bot camera paths
 
   camera::CameraSource front_right_camera = camera::CameraSource(
