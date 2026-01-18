@@ -12,8 +12,6 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
   cap_.grab();
   timestamped_frame.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   cap_.retrieve(timestamped_frame.frame);
-  // TODO remove
-  cv::rotate(timestamped_frame.frame, timestamped_frame.frame, cv::ROTATE_180);
   return timestamped_frame;
 }
 

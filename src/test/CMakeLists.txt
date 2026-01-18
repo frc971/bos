@@ -1,8 +1,8 @@
 add_executable(apriltag_detect_test apriltag_detect_test.cc)
-target_link_libraries(apriltag_detect_test PRIVATE ${OpenCV_LIBS} 971apriltag apriltag cameraserver ntcore cscore wpiutil camera nlohmann_json::nlohmann_json Eigen3::Eigen localization utils)
+target_link_libraries(apriltag_detect_test PRIVATE ${OpenCV_LIBS} 971apriltag apriltag cameraserver ntcore cscore wpiutil camera nlohmann_json::nlohmann_json Eigen3::Eigen localization utils absl::flags absl::flags_parse)
 
 add_executable(tag_estimator_test tag_estimator_test.cc)
-target_link_libraries(tag_estimator_test PRIVATE ${OpenCV_LIBS} 971apriltag apriltag cameraserver ntcore cscore wpiutil camera nlohmann_json::nlohmann_json Eigen3::Eigen localization)
+target_link_libraries(tag_estimator_test PRIVATE ${OpenCV_LIBS} 971apriltag apriltag cameraserver ntcore cscore wpiutil camera nlohmann_json::nlohmann_json Eigen3::Eigen localization absl::flags absl::flags_parse)
 
 add_executable(intrinsics_test intrinsics_test.cc)
 target_link_libraries(intrinsics_test PRIVATE ${OpenCV_LIBS} camera nlohmann_json::nlohmann_json)
