@@ -28,6 +28,8 @@ auto main(int argc, char* argv[]) -> int {
 
   while (true) {
     cv::Mat frame = camera->GetFrame().frame;
+    cv::resize(frame, frame, cv::Size(1080, 1080));
+    cv::cvtColor(frame, frame, cv::COLOR_BGRA2BGR);
     streamer.WriteFrame(frame);
   }
   cv::destroyAllWindows();
