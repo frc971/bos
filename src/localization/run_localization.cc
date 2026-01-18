@@ -28,6 +28,7 @@ void run_localization(camera::CameraSource& source,
     std::vector<localization::tag_detection_t> estimates =
         localization::ToFeildRelitivePosition(
             detector->GetTagDetections(timestamped_frame), camera_to_robot);
+    LOG(INFO) << estimates.size() << "estimate size";
     position_sender.Send(estimates, timer.Stop());
   }
 }

@@ -71,7 +71,6 @@ auto DrawDetectionResult(cv::Mat& frame,
   // TODO
   cv::Mat result;
   frame.copyTo(result);
-  std::cout << frame.empty() << " " << frame.channels() << std::endl;
 
   if (detection_result.currentCharucoCorners.total() > 3) {
     cv::aruco::drawDetectedCornersCharuco(
