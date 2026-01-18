@@ -111,9 +111,10 @@ auto main(int argc, char* argv[]) -> int {
   calibration::CalibrateCamera(detection_results, frame_size, cameraMatrix,
                                distCoeffs);
 
-  std::ofstream file("intrinsics.json");
+  std::ofstream intrinsics_file(
+      camera::camera_constants[config].intrinsics_path);
   json intrinsics = calibration::intrisincs_to_json(cameraMatrix, distCoeffs);
-  file << intrinsics.dump(4);
+  intrinsics_file << intrinsics.dump(4);
   std::cout << "Intrinsics: \n" << std::endl << intrinsics.dump(4) << std::endl;
-  file.close();
+  intrinsics_file.close();
 }
