@@ -6,6 +6,8 @@
 #include <opencv2/videoio.hpp>
 #include <sstream>
 #include <thread>
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
 #include "apriltag/apriltag.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
@@ -20,14 +22,17 @@
 #include "src/utils/nt_utils.h"
 #include "src/utils/timer.h"
 
+ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
+
 using json = nlohmann::json;
 
-auto main() -> int {
+auto main(int argc, char* argv[]) -> int {
+  absl::ParseCommandLine(argc, argv);
   utils::StartNetworktables();
 
   camera::Camera config = camera::SelectCameraConfig();
-  camera::CameraSource source = camera::CameraSource(
-      "stress_test_camera", camera::GetCameraStream(config));
+  camera::CameraSource source("stress_test_camera",
+                              camera::GetCameraStream(config));
   cv::Mat frame = source.GetFrame();
 
   // std::bind?

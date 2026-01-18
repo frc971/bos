@@ -23,7 +23,7 @@ auto main(int argc, char* argv[]) -> int {
   camera::CscoreStreamer streamer("tag_estimator_test", 4971, 30, 1080, 1080);
 
   camera::Camera config = camera::SelectCameraConfig();
-  camera::CameraSource source("stress_test_camera",
+  camera::CameraSource source("tag_estimator_test",
                               camera::GetCameraStream(config));
   cv::Mat frame = source.GetFrame();
 
