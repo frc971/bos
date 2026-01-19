@@ -4,8 +4,9 @@ namespace localization {
 
 auto Pose3dToPoint3f(const frc::Pose3d& pose) -> cv::Point3f {
   // We ignore rotation
-  return {static_cast<float>(pose.X()), static_cast<float>(pose.Y()),
-          static_cast<float>(pose.Z())};
+  // Returns in opencv coordinates space
+  return {static_cast<float>(pose.Y()), static_cast<float>(pose.Z()),
+          static_cast<float>(pose.X())};
 }
 
 // Gives tag corners in wpilib coordinates
@@ -13,7 +14,7 @@ AbsoluteAprilTagLayout::AbsoluteAprilTagLayout(
     const frc::AprilTagFieldLayout& layout, float tag_size) {
   // top left corner from the camera's perspective, so it is the top right corner of the tag
   frc::Transform3d top_left_corner_transform{units::meter_t{0},
-                                             units::meter_t{-(tag_size / 2)},
+                                             units::meter_t{-tag_size / 2},
                                              units::meter_t{tag_size / 2},
                                              {}};
 
@@ -29,8 +30,8 @@ AbsoluteAprilTagLayout::AbsoluteAprilTagLayout(
       {}};
 
   frc::Transform3d bottom_left_corner_transform{units::meter_t{0},
-                                                units::meter_t{-(tag_size / 2)},
-                                                units::meter_t{-(tag_size / 2)},
+                                                units::meter_t{-tag_size / 2},
+                                                units::meter_t{-tag_size / 2},
                                                 {}};
 
   for (frc::AprilTag apriltag : layout.GetTags()) {

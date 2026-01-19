@@ -59,8 +59,7 @@ auto JointSolver::EstimatePosition(
   cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
   cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
   cv::solvePnP(tag_corners, image_points, camera_matrix_,
-               distortion_coefficients_, rvec, tvec, false,
-               cv::SOLVEPNP_IPPE_SQUARE);
+               distortion_coefficients_, rvec, tvec, false, cv::SOLVEPNP_EPNP);
 
   // Absolute apriltag feild layout already gives in wpilib coordinates
   const double translation_x = tvec.ptr<double>()[0];
