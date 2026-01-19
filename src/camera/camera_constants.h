@@ -82,7 +82,7 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
     [Camera::TURRET_BOT_FRONT_RIGHT] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.2:1.0-video-index0",
+                        "platform-3610000.usb-usb-0:2.1:1.0-video-index0",
             .intrinsics_path = "/bos/constants/turret_bot/front_right_intrinsics.json",
             .extrinsics_path = "/bos/constants/turret_bot/front_right_extrinsics.json", 
             .name = "turret_bot_front_right"},
