@@ -17,5 +17,5 @@ jobs:
     - name: test
       run: ls -a
 
-    - name: test
-      run: ls -a
+    - name: build
+      run: ./scripts/build.sh
