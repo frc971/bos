@@ -2,6 +2,8 @@
 #include <nlohmann/json.hpp>
 #include <opencv2/imgproc.hpp>
 #include <sstream>
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
@@ -12,6 +14,8 @@
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/timer.h"
+
+ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
 
 using json = nlohmann::json;
 

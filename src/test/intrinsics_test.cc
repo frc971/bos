@@ -6,9 +6,14 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 #include <sstream>
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
 #include "src/camera/camera_constants.h"
+#include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/select_camera.h"
+
+ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
 
 using json = nlohmann::json;
 
@@ -30,10 +35,19 @@ auto distortion_coefficients_from_json(json intrinsics) -> cv::Mat {
 void warmupCamera(const std::string& pipeline) {
   cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
 }
-auto main() -> int {
-  std::ifstream file("/bos/constants/usb_camera0_intrinsics.json");
+
+auto main(int argc, char* argv[]) -> int {
+  absl::ParseCommandLine(argc, argv);
+
+  camera::Camera config = camera::SelectCameraConfig();
+  camera::CameraSource source("stress_test_camera",
+                              camera::GetCameraStream(config));
+  cv::Mat frame = source.GetFrame();
+
+  std::ifstream intrinsics_file(
+      camera::camera_constants[config].intrinsics_path);
   json intrinsics;
-  file >> intrinsics;
+  intrinsics_file >> intrinsics;
 
   cv::Mat camera_matrix = camera_matrix_from_json(intrinsics);
   cv::Mat distortion_coefficients =
@@ -43,12 +57,8 @@ auto main() -> int {
   camera::CscoreStreamer undistorted_streamer("undistorted_stream", 4971, 30,
                                               1080, 1080);
 
-  camera::Camera config = camera::SelectCameraConfig();
-  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
-  cv::Mat frame;
-
   while (true) {
-    frame = camera->GetFrame().frame;
+    frame = source.GetFrame();
     raw_streamer.WriteFrame(frame);
 
     cv::Mat undistorted;

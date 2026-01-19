@@ -31,10 +31,7 @@ void run_localization(camera::CameraSource& source,
         detector->GetTagDetections(timestamped_frame);
     std::vector<position_estimate_t> position_estimates =
         solver->EstimatePosition(tag_detections);
-    // std::vector<localization::position_estimate_t> estimates =
-    //     localization::ToFeildRelitivePosition(
-    //         detector->GetTagDetections(timestamped_frame), camera_to_robot);
-    // position_sender.Send(estimates, timer.Stop());
+    position_sender.Send(position_estimates, timer.Stop());
   }
 }
 }  // namespace localization

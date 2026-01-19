@@ -89,23 +89,41 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
     [Camera::TURRET_BOT_FRONT_LEFT] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.3:1.0-video-index0",
+                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
             .intrinsics_path = "/bos/constants/turret_bot/front_left_intrinsics.json",
             .extrinsics_path = "/bos/constants/turret_bot/front_left_extrinsics.json", 
-            .name = "turret_bot_fron_left"},
+            .name = "turret_bot_front_left"},
     [Camera::TURRET_BOT_BACK_RIGHT] =
         camera_constant_t{
-            .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/turret_bot_back_right_intrinsics.json",
-            .extrinsics_path = "/bos/constants/turret_bot_back_right_extrinsics.json", 
+            .pipeline =
+                "nvarguscamerasrc sensor-id=0 "
+                "aelock=true exposuretimerange=\"100000 "
+                "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
+                "video/x-raw(memory:NVMM), width=1456, height=1088, "
+                "framerate=30/1, "
+                "format=NV12 ! "
+                "nvvidconv ! "
+                "video/x-raw, format=BGRx ! "
+                "queue ! "
+                "appsink",
+            .intrinsics_path = "/bos/constants/turret_bot/back_right_intrinsics.json",
+            .extrinsics_path = "/bos/constants/turret_bot/back_right_extrinsics.json", 
             .name = "turret_bot_back_right"},
   [Camera::TURRET_BOT_BACK_LEFT] =
         camera_constant_t{
-            .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/turret_bot_back_left_intrinsics.json",
-            .extrinsics_path = "/bos/constants/turret_bot_back_left_extrinsics.json", 
+            .pipeline =
+                "nvarguscamerasrc sensor-id=1 "
+                "aelock=true exposuretimerange=\"100000 "
+                "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
+                "video/x-raw(memory:NVMM), width=1456, height=1088, "
+                "framerate=30/1, "
+                "format=NV12 ! "
+                "nvvidconv ! "
+                "video/x-raw, format=BGRx ! "
+                "queue ! "
+                "appsink",
+            .intrinsics_path = "/bos/constants/turret_bot/back_left_intrinsics.json",
+            .extrinsics_path = "/bos/constants/turret_bot/back_left_extrinsics.json", 
           .name = "turret_bot_back_left"},
     [Camera::VISION_BOT_FRONT_RIGHT] =
         camera_constant_t{
