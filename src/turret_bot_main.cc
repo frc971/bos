@@ -10,13 +10,13 @@ auto main() -> int {
   // TODO configure vision bot camera paths
 
   camera::CameraSource front_right_camera = camera::CameraSource(
-      "front_right",
+      "FrontRight",
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
               .pipeline)));
 
   camera::CameraSource front_left_camera = camera::CameraSource(
-      "front_left",
+      "FrontLeft",
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]
               .pipeline)));
@@ -42,7 +42,7 @@ auto main() -> int {
       camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
           .extrinsics_path,
       4971, false);
-  
+
   std::thread front_left_thread(
       localization::run_localization, std::ref(front_left_camera),
       std::make_unique<localization::GPUAprilTagDetector>(
