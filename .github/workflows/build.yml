@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest-arm64
+    runs-on: ubuntu-latest
 
     container:
       image: ghcr.io/frc971/bos/orin:latest
