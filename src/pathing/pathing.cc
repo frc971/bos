@@ -23,7 +23,7 @@ auto initializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat {
   cv::Mat grid(GRID_H, GRID_W, CV_8UC1);
   for (int y = 0; y < GRID_H; ++y) {
     for (int x = 0; x < GRID_W; ++x) {
-      grid.at<uchar>(y, x) = gridData[y][x] ? 255 : 0;
+      grid.at<uchar>(y, x) = gridData[y][x] ? 0 : 255;
     }
   }
   return grid;
@@ -31,6 +31,21 @@ auto initializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat {
 
 auto BFS(const cv::Mat& grid, std::pair<int, int> start,
          std::pair<int, int> target) -> std::vector<std::pair<int, int>> {
+  std::cout << "BFS: Grid size: " << grid.cols << "x" << grid.rows << std::endl;
+  std::cout << "BFS: Start (" << start.first << ", " << start.second 
+            << ") value: " << (int)grid.at<uchar>(start.second, start.first) << std::endl;
+  std::cout << "BFS: Target (" << target.first << ", " << target.second 
+            << ") value: " << (int)grid.at<uchar>(target.second, target.first) << std::endl;
+
+  if (grid.at<uchar>(start.second, start.first) == 0) {
+    std::cerr << "BFS: Start position is blocked!" << std::endl;
+    return {};
+  }
+  if (grid.at<uchar>(target.second, target.first) == 0) {
+    std::cerr << "BFS: Target position is blocked!" << std::endl;
+    return {};
+  }
+
   cv::Mat visited(grid.rows, grid.cols, CV_8UC1, cv::Scalar(0));
   cv::Mat parent(grid.rows, grid.cols, CV_32SC2, cv::Scalar(-1, -1));
 
