@@ -1,3 +1,4 @@
+#include "src/pathing/pathing.h"
 #include <frc/DataLogManager.h>
 #include <frc/geometry/Pose2d.h>
 #include <networktables/NetworkTableInstance.h>
@@ -6,9 +7,7 @@
 #include <units/length.h>
 #include <algorithm>
 #include <cmath>
-#include <fstream>
 #include <iostream>
-#include <nlohmann/json.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
@@ -16,30 +15,24 @@
 #include <queue>
 #include <vector>
 
-std::ifstream file("/bos/constants/navgrid.json");
-nlohmann::json data = nlohmann::json::parse(file);
-
-const int GRID_W = data["grid"][0].size();
-const int GRID_H = data["grid"].size();
-double nodeSizeMeters = data["nodeSizeMeters"];
 const int CELL_SIZE = 20;
-cv::Mat grid(GRID_H, GRID_W, CV_8UC1);
-cv::Mat visited(GRID_H, GRID_W, CV_8UC1, cv::Scalar(0));
-cv::Mat parent(GRID_H, GRID_W, CV_32SC2, cv::Scalar(-1, -1));
 
-void initializeGrid() {
+auto initializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat {
+  int GRID_H = gridData.size();
+  int GRID_W = gridData[0].size();
+  cv::Mat grid(GRID_H, GRID_W, CV_8UC1);
   for (int y = 0; y < GRID_H; ++y) {
     for (int x = 0; x < GRID_W; ++x) {
-      grid.at<uchar>(y, x) = data["grid"][y][x] ? 255 : 0;
+      grid.at<uchar>(y, x) = gridData[y][x] ? 255 : 0;
     }
   }
+  return grid;
 }
 
-auto BFS(cv::Mat& grid, cv::Mat& visited, cv::Mat& parent,
-         std::pair<int, int> start, std::pair<int, int> target)
-    -> std::vector<std::pair<int, int>> {
-  visited.setTo(cv::Scalar(0));
-  parent.setTo(cv::Scalar(-1, -1));
+auto BFS(const cv::Mat& grid, std::pair<int, int> start,
+         std::pair<int, int> target) -> std::vector<std::pair<int, int>> {
+  cv::Mat visited(grid.rows, grid.cols, CV_8UC1, cv::Scalar(0));
+  cv::Mat parent(grid.rows, grid.cols, CV_32SC2, cv::Scalar(-1, -1));
 
   std::queue<std::pair<int, int>> queue;
 
@@ -72,7 +65,7 @@ auto BFS(cv::Mat& grid, cv::Mat& visited, cv::Mat& parent,
       int nx = current.first + d.first;
       int ny = current.second + d.second;
 
-      if (nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H) {
+      if (nx < 0 || nx >= grid.cols || ny < 0 || ny >= grid.rows) {
         continue;
       }
 
@@ -178,10 +171,10 @@ auto getSplinePoint(double t, const std::vector<std::pair<int, int>>& points,
   return {px, py};
 }
 
-auto createSpline(int start_x, int start_y, int target_x, int target_y)
+auto createSpline(cv::Mat& grid, int start_x, int start_y, int target_x,
+                  int target_y, double nodeSizeMeters)
     -> std::vector<frc::Pose2d> {
-  auto path =
-      BFS(grid, visited, parent, {start_x, start_y}, {target_x, target_y});
+  auto path = BFS(grid, {start_x, start_y}, {target_x, target_y});
   if (path.empty()) {
     return {};
   }

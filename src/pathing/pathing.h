@@ -4,18 +4,12 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
-struct Node {
-  int x;
-  int y;
-  bool walkable;
-  Node* parent;
-  bool visited;
-};
+auto initializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat;
 
-auto BFS(std::vector<std::vector<Node>>& grid, Node* start, Node* target)
-    -> std::vector<Node*>;
+auto BFS(const cv::Mat& grid, std::pair<int, int> start,
+         std::pair<int, int> target) -> std::vector<std::pair<int, int>>;
 
-auto constuctLinePath(cv::Mat& canvas, std::vector<Node*> path)
+auto constructLinePath(cv::Mat& canvas, std::vector<std::pair<int, int>> path)
     -> std::vector<std::pair<int, int>>;
 
 auto clampedUniformKnotVector(double k, double p) -> std::vector<double>;
@@ -27,4 +21,6 @@ auto getSplinePoint(double t, const std::vector<std::pair<int, int>>& points,
                     const std::vector<double>& knots, int p)
     -> std::pair<double, double>;
 
-auto createSpline(Node* start, Node* target) -> std::vector<frc::Pose2d>;
+auto createSpline(cv::Mat& grid, int start_x, int start_y, int target_x,
+                  int target_y, double nodeSizeMeters)
+    -> std::vector<frc::Pose2d>;
