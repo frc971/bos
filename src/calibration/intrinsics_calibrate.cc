@@ -10,31 +10,38 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 #include <opencv2/objdetect/charuco_detector.hpp>
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
 #include "src/calibration/intrinsics_calibrate_lib.h"
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
+#include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
 
+ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
+
 using json = nlohmann::json;
 
 void CaptureFrames(
-    const cv::aruco::CharucoDetector& detector, camera::ICamera& camera,
+    const cv::aruco::CharucoDetector& detector, camera::CameraSource& source,
     camera::CscoreStreamer streamer,
     std::vector<calibration::detection_result_t>& detection_results,
     std::atomic<bool>& capture_frames_thread, std::atomic<bool>& log_image) {
   cv::Mat frame;
+  cv::Mat bgr_frame;
   int frame_count = 0;
   while (true) {
-    camera.GetFrame(frame);
+    frame = source.GetFrame();
     frame_count++;
-    if (frame_count % 3 == 0) {
-      cv::cvtColor(frame, frame, cv::COLOR_BGRA2RGB);
+    if (frame_count % 1 == 0) {
+      cv::cvtColor(frame, bgr_frame, cv::COLOR_BGRA2BGR);
       calibration::detection_result_t detection_result =
-          calibration::DetectCharucoBoard(frame, detector);
+          calibration::DetectCharucoBoard(bgr_frame, detector);
 
-      cv::Mat annotated_frame = DrawDetectionResult(frame, detection_result);
+      cv::Mat annotated_frame =
+          DrawDetectionResult(bgr_frame, detection_result);
       for (const calibration::detection_result_t& detection_result :
            detection_results) {
         annotated_frame =
@@ -53,15 +60,18 @@ void CaptureFrames(
   }
 }
 
-auto main() -> int {
+auto main(int argc, char* argv[]) -> int {
+  absl::ParseCommandLine(argc, argv);
+
   camera::CscoreStreamer streamer("intrinsics_calibrate", 4971, 30, 1080, 1080,
                                   true);
 
-  camera::Camera config = camera::SelectCameraConfig();
-  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
+  camera::Camera config =
+      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
+  std::unique_ptr<camera::ICamera> camera_ = camera::GetCameraStream(config);
+  camera::CameraSource source("camera", std::move(camera_));
 
-  cv::Mat frame;
-  camera->GetFrame(frame);
+  cv::Mat frame = source.GetFrame();
   cv::Size frame_size = frame.size();
 
   cv::aruco::CharucoDetector detector = calibration::CreateDetector(
@@ -74,7 +84,7 @@ auto main() -> int {
 
   std::vector<calibration::detection_result_t> detection_results;
   std::thread capture_frames_thread(
-      CaptureFrames, std::ref(detector), std::ref(*camera), streamer,
+      CaptureFrames, std::ref(detector), std::ref(source), streamer,
       std::ref(detection_results), std::ref(capture_frames),
       std::ref(log_image));
 
@@ -101,9 +111,10 @@ auto main() -> int {
   calibration::CalibrateCamera(detection_results, frame_size, cameraMatrix,
                                distCoeffs);
 
-  std::ofstream file("intrinsics.json");
+  std::ofstream intrinsics_file(
+      camera::camera_constants[config].intrinsics_path);
   json intrinsics = calibration::intrisincs_to_json(cameraMatrix, distCoeffs);
-  file << intrinsics.dump(4);
+  intrinsics_file << intrinsics.dump(4);
   std::cout << "Intrinsics: \n" << std::endl << intrinsics.dump(4) << std::endl;
-  file.close();
+  intrinsics_file.close();
 }

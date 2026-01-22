@@ -13,4 +13,6 @@ void run_gamepiece_detect(yolo::Yolo& model,
                           nt::StructTopic<frc::Pose2d>& algae_topic,
                           nlohmann::json intrinsics, nlohmann::json extrinsics,
                           bool debug);
+
+void run_gamepiece_detect_no_img(yolo::Yolo& model, const std::vector<std::string>& class_names);
 }  // namespace gamepiece

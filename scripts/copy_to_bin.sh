@@ -10,5 +10,4 @@ for binary in "${binaries[@]}"; do
   fi
 done
 
-find . -type f \( -name "*.so" -o -name "*.a" \) -exec cp {} bin/ \;
-
+find build -type f \( -name "*.so" -o -name "*.a" \) -exec cp {} bin/ \;

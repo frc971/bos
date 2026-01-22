@@ -6,9 +6,12 @@
 #include "src/localization/position.h"
 namespace localization {
 
+// static frc::AprilTagFieldLayout kapriltag_layout =
+//     frc::AprilTagFieldLayout::LoadField(
+//         frc::AprilTagField::k2025ReefscapeAndyMark);
+//
 static frc::AprilTagFieldLayout kapriltag_layout =
-    frc::AprilTagFieldLayout::LoadField(
-        frc::AprilTagField::k2025ReefscapeAndyMark);
+    frc::AprilTagFieldLayout("/bos/constants/2026-rebuilt-welded.json");
 
 auto ToFeildRelitivePosition(
     std::vector<tag_detection_t> detections, frc::Transform3d camera_to_robot,

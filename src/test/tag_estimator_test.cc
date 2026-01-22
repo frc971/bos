@@ -1,6 +1,8 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <sstream>
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
@@ -11,14 +13,17 @@
 #include "src/utils/camera_utils.h"
 #include "src/utils/timer.h"
 
+ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
+
 using json = nlohmann::json;
 
-auto main() -> int {
+auto main(int argc, char* argv[]) -> int {
+  absl::ParseCommandLine(argc, argv);
 
   camera::CscoreStreamer streamer("tag_estimator_test", 4971, 30, 1080, 1080);
 
   camera::Camera config = camera::SelectCameraConfig();
-  camera::CameraSource source("stress_test_camera",
+  camera::CameraSource source("tag_estimator_test",
                               camera::GetCameraStream(config));
   cv::Mat frame = source.GetFrame();
 

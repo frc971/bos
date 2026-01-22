@@ -68,6 +68,7 @@ auto DetectCharucoBoard(cv::Mat& frame,
 auto DrawDetectionResult(cv::Mat& frame,
                          const detection_result_t& detection_result)
     -> cv::Mat {
+  // TODO
   cv::Mat result;
   frame.copyTo(result);
 
