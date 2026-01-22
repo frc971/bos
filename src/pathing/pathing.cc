@@ -32,10 +32,12 @@ auto initializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat {
 auto BFS(const cv::Mat& grid, std::pair<int, int> start,
          std::pair<int, int> target) -> std::vector<std::pair<int, int>> {
   std::cout << "BFS: Grid size: " << grid.cols << "x" << grid.rows << std::endl;
-  std::cout << "BFS: Start (" << start.first << ", " << start.second 
-            << ") value: " << (int)grid.at<uchar>(start.second, start.first) << std::endl;
-  std::cout << "BFS: Target (" << target.first << ", " << target.second 
-            << ") value: " << (int)grid.at<uchar>(target.second, target.first) << std::endl;
+  std::cout << "BFS: Start (" << start.first << ", " << start.second
+            << ") value: " << (int)grid.at<uchar>(start.second, start.first)
+            << std::endl;
+  std::cout << "BFS: Target (" << target.first << ", " << target.second
+            << ") value: " << (int)grid.at<uchar>(target.second, target.first)
+            << std::endl;
 
   if (grid.at<uchar>(start.second, start.first) == 0) {
     std::cerr << "BFS: Start position is blocked!" << std::endl;
