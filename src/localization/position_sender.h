@@ -8,6 +8,7 @@
 #include <networktables/NetworkTableInstance.h>
 #include <networktables/StructTopic.h>
 #include "src/localization/position.h"
+#include "src/utils/pch.h"
 
 namespace localization {
 class PositionSender {

@@ -1,5 +1,4 @@
 #include <src/camera/cv_camera.h>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <nlohmann/json.hpp>

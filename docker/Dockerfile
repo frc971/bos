@@ -2,7 +2,7 @@ FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS builder
 
 WORKDIR /
 RUN apt-get update
-RUN apt-get install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev python3.10-dev python3-numpy build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libv4l-dev v4l-utils qv4l2 clangd ninja-build clang-format ripgrep gh libblas-dev liblapack-dev rsync vim stow curl unzip zip clang-tidy 
+RUN apt-get install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev python3.10-dev python3-numpy build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libv4l-dev v4l-utils qv4l2 clangd ninja-build clang-format ripgrep gh libblas-dev liblapack-dev rsync vim stow curl unzip zip clang-tidy clang
 
 RUN mkdir opencv
 

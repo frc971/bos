@@ -1,9 +1,7 @@
 #pragma once
 #include <librealsense2/rs.hpp>
-#include <opencv2/core/mat.hpp>
-#include <opencv2/videoio.hpp>
-#include <string>
 #include "src/camera/camera.h"
+#include "src/utils/pch.h"
 namespace camera {
 
 class RealSenseCamera : public ICamera {

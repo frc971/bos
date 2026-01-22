@@ -1,15 +1,3 @@
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <nlohmann/json.hpp>
-#include <opencv2/aruco.hpp>
-#include <opencv2/aruco/charuco.hpp>
-#include <opencv2/calib3d.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/objdetect/aruco_dictionary.hpp>
-#include <opencv2/objdetect/charuco_detector.hpp>
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "src/calibration/intrinsics_calibrate_lib.h"

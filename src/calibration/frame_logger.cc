@@ -1,9 +1,3 @@
-#include <wpilibc/frc/Timer.h>
-#include <filesystem>
-#include <iostream>
-#include <opencv2/core/mat.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <optional>
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "src/camera/camera_constants.h"

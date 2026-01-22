@@ -2,9 +2,7 @@
 
 #include <arpa/inet.h>
 #include <cscore_cv.h>
-#include <opencv2/core/mat.hpp>
-#include <string>
-#include <thread>
+#include "src/utils/pch.h"
 namespace camera {
 
 class CscoreStreamer {

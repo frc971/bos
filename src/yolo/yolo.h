@@ -3,7 +3,6 @@
 #include <NvInfer.h>
 #include <cstdio>
 #include <opencv2/core/mat.hpp>
-#include <string>
 #include <vector>
 namespace yolo {
 

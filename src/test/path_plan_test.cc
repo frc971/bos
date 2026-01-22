@@ -4,9 +4,7 @@
 #include <networktables/StructArrayTopic.h>
 #include <units/angle.h>
 #include <units/length.h>
-#include <algorithm>
 #include <cmath>
-#include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <opencv2/core.hpp>
@@ -16,6 +14,7 @@
 #include <random>
 #include <utility>
 #include <vector>
+#include "src/utils/pch.h"
 
 class Node {
  public:
