@@ -2,10 +2,12 @@ cmake_minimum_required(VERSION 3.10)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
-set(CMAKE_CXX_CLANG_TIDY
-    clang-tidy;
-    -checks=modernize-*,performance-*;
-)
+if(ENABLE_CLANG_TIDY)
+    set(CMAKE_CXX_CLANG_TIDY
+        clang-tidy;
+        -checks=modernize-*,performance-*;
+    )
+endif()
 
 add_compile_options(-Wno-c99-designator)
 
