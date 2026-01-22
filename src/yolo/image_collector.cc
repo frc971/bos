@@ -2,9 +2,9 @@
 #include <chrono>
 #include <filesystem>
 #include <opencv2/opencv.hpp>
-#include <string>
 #include <thread>
 #include "src/camera/select_camera.h"
+#include "src/utils/pch.h"
 
 auto main() -> int {
   std::string img_dir = "/bos/logs/collected_imgs/";

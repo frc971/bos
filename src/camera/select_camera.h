@@ -1,8 +1,8 @@
 #pragma once
-#include <optional>
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cv_camera.h"
+#include "src/utils/pch.h"
 
 namespace camera {
 auto SelectCameraConfig() -> Camera;

@@ -3,12 +3,10 @@
 #include <vpi/Array.h>
 #include <vpi/Stream.h>
 #include <Eigen/Geometry>
-#include <cmath>
-#include <opencv2/imgproc.hpp>
-#include <utility>
 #include <vpi/OpenCVInterop.hpp>
 #include "src/localization/position.h"
 #include "src/utils/log.h"
+#include "src/utils/pch.h"
 #include "src/utils/timer.h"
 
 namespace localization {

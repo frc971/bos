@@ -1,11 +1,3 @@
-#include <atomic>
-#include <filesystem>
-#include <functional>
-#include <iomanip>
-#include <iostream>
-#include <opencv2/opencv.hpp>
-#include <sstream>
-#include <thread>
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "src/camera/camera_constants.h"

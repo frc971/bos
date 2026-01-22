@@ -16,6 +16,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
+option(ENABLE_CLANG_TIDY "Enable clang-tidy for static analysis" ON)
+
 include_directories(/usr/local/cuda/include)
 link_directories(/usr/local/cuda/lib64)
 
