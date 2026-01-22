@@ -1,4 +1,3 @@
-#include <fstream>
 #include <nlohmann/json.hpp>
 #include <opencv2/imgproc.hpp>
 #include "absl/flags/flag.h"

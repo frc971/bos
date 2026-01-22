@@ -1,7 +1,4 @@
 #include "cv_camera.h"
-#include <wpilibc/frc/Timer.h>
-#include <opencv2/opencv.hpp>
-#include <opencv2/videoio.hpp>
 
 namespace camera {
 
