@@ -1,9 +1,5 @@
 #include "src/localization/gpu_apriltag_detector.h"
-#include <frc/geometry/Transform3d.h>
-#include <cmath>
 #include <opencv2/calib3d.hpp>
-#include <opencv2/imgproc.hpp>
-#include <utility>
 #include "apriltag/apriltag.h"
 #include "apriltag/tag36h11.h"
 #include "third_party/971apriltag/971apriltag.h"

@@ -1,6 +1,5 @@
 #include <frc/DataLogManager.h>
 #include <networktables/NetworkTableInstance.h>
-#include <fstream>
 #include <iostream>
 #include <memory>
 #include <sstream>

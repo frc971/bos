@@ -1,11 +1,4 @@
 #include "disk_camera.h"
-#include <wpilibc/frc/Timer.h>
-#include <cstdlib>
-#include <filesystem>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/opencv.hpp>
-#include <string>
-#include <thread>
 #include "src/camera/camera_source.h"
 
 namespace camera {

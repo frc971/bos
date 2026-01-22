@@ -1,5 +1,6 @@
 #include "intrinsics_calibrate_lib.h"
-#include <opencv2/objdetect/charuco_detector.hpp>
+#include <opencv2/calib3d.hpp>
+#include "src/utils/pch.h"
 
 namespace calibration {
 

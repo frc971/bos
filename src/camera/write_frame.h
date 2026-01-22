@@ -1,9 +1,7 @@
 #pragma once
-#include <filesystem>
-#include <opencv2/core/mat.hpp>
-#include <string>
 #include "src/camera/camera.h"
 #include "src/camera/camera_source.h"
+#include "src/utils/pch.h"
 
 namespace camera {
 

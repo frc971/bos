@@ -1,10 +1,6 @@
 #pragma once
-#include <opencv2/core/hal/interface.h>
-#include <opencv2/core/mat.hpp>
-#include <queue>
-#include <string>
-#include <thread>
 #include "src/camera/camera.h"
+#include "src/utils/pch.h"
 namespace camera {
 
 class CameraSource {

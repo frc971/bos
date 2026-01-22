@@ -1,8 +1,4 @@
 #include "src/localization/get_field_relitive_position.h"
-#include <frc/apriltag/AprilTagFieldLayout.h>
-#include <iomanip>
-#include <iostream>
-#include <nlohmann/json.hpp>
 #include "src/utils/log.h"
 namespace localization {
 

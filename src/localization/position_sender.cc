@@ -1,14 +1,4 @@
 #include "position_sender.h"
-#include <frc/Timer.h>
-#include <frc/geometry/Pose2d.h>
-#include <frc/geometry/Translation2d.h>
-#include <networktables/DoubleTopic.h>
-#include <networktables/NetworkTable.h>
-#include <networktables/NetworkTableInstance.h>
-#include <units/angle.h>
-#include <wpilibc/frc/Timer.h>
-#include <cmath>
-#include <string>
 #include "frc/DataLogManager.h"
 #include "src/localization/position.h"
 
