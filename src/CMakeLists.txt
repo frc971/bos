@@ -7,6 +7,8 @@ include_directories(${CMAKE_SOURCE_DIR})
 #     -checks=modernize-*,performance-*;
 # )
 
+add_compile_options(-Wno-c99-designator)
+
 add_subdirectory(utils)
 add_subdirectory(camera)
 add_subdirectory(gamepiece)

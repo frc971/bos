@@ -30,6 +30,5 @@ class NvidiaAprilTagDetector : IAprilTagDetector {
   VPIArray detections_;
   VPIArray poses_;
   VPIStream stream_;
-  bool verbose_;
 };
 }  // namespace localization

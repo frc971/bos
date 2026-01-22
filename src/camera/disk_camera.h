@@ -28,7 +28,6 @@ class DiskCamera : ICamera {
   std::priority_queue<TimestampedFramePath, std::vector<TimestampedFramePath>,
                       CompareTimestampedFramePath>
       image_paths_;
-  int current_frame_;
 };
 
 }  // namespace camera

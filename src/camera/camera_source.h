@@ -14,7 +14,6 @@ class CameraSource {
   std::string name_;
   std::unique_ptr<ICamera> camera_;
   timestamped_frame_t timestamped_frame_;
-  size_t length_;
   std::thread thread_;
   std::mutex mutex_;
 };

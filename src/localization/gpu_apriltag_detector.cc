@@ -56,8 +56,7 @@ GPUAprilTagDetector::GPUAprilTagDetector(
     : camera_matrix_(camera_matrix_from_json<cv::Mat>(intrinsics)),
       distortion_coefficients_(
           distortion_coefficients_from_json<cv::Mat>(intrinsics)),
-      apriltag_dimensions_(std::move(apriltag_dimensions)),
-      verbose_(verbose) {
+      apriltag_dimensions_(std::move(apriltag_dimensions)) {
 
   apriltag_detector_ = apriltag_detector_create();
 

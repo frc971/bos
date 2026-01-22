@@ -12,7 +12,6 @@ class CVCamera : public ICamera {
 
  private:
   cv::VideoCapture cap_;
-  int current_frame_;
 };
 
 }  // namespace camera
