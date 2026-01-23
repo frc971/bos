@@ -11,7 +11,7 @@ auto Pose3dToPoint3f(const frc::Pose3d& pose) -> cv::Point3f {
 
 // Gives tag corners in wpilib coordinates
 AbsoluteAprilTagLayout::AbsoluteAprilTagLayout(
-    const frc::AprilTagFieldLayout& layout, float tag_size) {
+    const frc::AprilTagFieldLayout& layout, double tag_size) {
   // top left corner from the camera's perspective, so it is the top right corner of the tag
   frc::Transform3d top_left_corner_transform{units::meter_t{0},
                                              units::meter_t{-tag_size / 2},

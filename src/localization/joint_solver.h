@@ -14,10 +14,10 @@ class JointSolver : public IPositionSolver {
   JointSolver(const std::string& intrinsics_path,
               const std::string& extrinsics_path,
               const frc::AprilTagFieldLayout& layout = kapriltag_layout,
-              int tag_size = ktag_size);
+              double tag_size = ktag_size);
   JointSolver(camera::Camera camera_config,
               const frc::AprilTagFieldLayout& layout = kapriltag_layout,
-              int tag_size = ktag_size);
+              double tag_size = ktag_size);
   auto EstimatePosition(const std::vector<tag_detection_t>& detections)
       -> std::vector<position_estimate_t> override;
 

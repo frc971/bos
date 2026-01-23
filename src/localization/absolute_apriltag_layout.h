@@ -9,7 +9,7 @@ class AbsoluteAprilTagLayout {
 
  public:
   AbsoluteAprilTagLayout(const frc::AprilTagFieldLayout& layout,
-                         float tag_size);
+                         double tag_size);
   // The points are in wpilib coordinates
   // 0 = x
   // 1 = y
