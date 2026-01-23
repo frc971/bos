@@ -25,7 +25,7 @@ JointSolver::JointSolver(const std::string& intrinsics_path,
       camera_matrix_(
           camera_matrix_from_json(utils::read_intrinsics(intrinsics_path))),
       distortion_coefficients_(distortion_coefficients_from_json(
-          utils::read_extrinsics(extrinsics_path))) {}
+          utils::read_intrinsics(intrinsics_path))) {}
 
 JointSolver::JointSolver(camera::Camera camera_config,
                          const frc::AprilTagFieldLayout& layout, int tag_size)
