@@ -20,7 +20,8 @@ inline auto distortion_coefficients_from_json(json intrinsics) -> cv::Mat {
 
 JointSolver::JointSolver(const std::string& intrinsics_path,
                          const std::string& extrinsics_path,
-                         const frc::AprilTagFieldLayout& layout, int tag_size)
+                         const frc::AprilTagFieldLayout& layout,
+                         double tag_size)
     : layout_(layout, tag_size),
       camera_matrix_(
           camera_matrix_from_json(utils::read_intrinsics(intrinsics_path))),
@@ -28,7 +29,8 @@ JointSolver::JointSolver(const std::string& intrinsics_path,
           utils::read_intrinsics(intrinsics_path))) {}
 
 JointSolver::JointSolver(camera::Camera camera_config,
-                         const frc::AprilTagFieldLayout& layout, int tag_size)
+                         const frc::AprilTagFieldLayout& layout,
+                         double tag_size)
     : JointSolver(camera::camera_constants[camera_config].intrinsics_path,
                   camera::camera_constants[camera_config].extrinsics_path,
                   layout, tag_size) {}
