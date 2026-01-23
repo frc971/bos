@@ -1,10 +1,8 @@
 #pragma once
-#include <filesystem>
-#include <opencv2/core/mat.hpp>
 #include <queue>
-#include <string>
 #include "src/camera/camera.h"
 #include "src/camera/camera_source.h"
+#include "src/utils/pch.h"
 
 namespace camera {
 
@@ -30,7 +28,6 @@ class DiskCamera : ICamera {
   std::priority_queue<TimestampedFramePath, std::vector<TimestampedFramePath>,
                       CompareTimestampedFramePath>
       image_paths_;
-  int current_frame_;
 };
 
 }  // namespace camera

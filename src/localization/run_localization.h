@@ -1,9 +1,9 @@
 #pragma once
-#include <string>
 #include "src/camera/camera_source.h"
 #include "src/localization/apriltag_detector.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/position_solver.h"
+#include "src/utils/pch.h"
 
 namespace localization {
 void run_localization(camera::CameraSource& source,

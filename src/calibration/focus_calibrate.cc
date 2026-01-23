@@ -1,5 +1,3 @@
-#include <iostream>
-#include <opencv2/videoio.hpp>
 #include "opencv2/imgproc/imgproc.hpp"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"

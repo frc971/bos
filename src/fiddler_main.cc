@@ -1,6 +1,5 @@
 #include <frc/DataLogManager.h>
 #include <networktables/NetworkTableInstance.h>
-#include <fstream>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -11,7 +10,6 @@
 #include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
-#include "src/localization/get_field_relitive_position.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"

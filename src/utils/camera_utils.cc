@@ -1,5 +1,4 @@
 #include "src/utils/camera_utils.h"
-#include <fstream>
 #include <iostream>
 #include "src/utils/log.h"
 namespace utils {

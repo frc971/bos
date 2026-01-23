@@ -1,9 +1,4 @@
 #include "camera_source.h"
-#include <algorithm>
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <opencv2/imgcodecs.hpp>
 
 namespace camera {
 CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera)

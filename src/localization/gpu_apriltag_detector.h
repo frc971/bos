@@ -1,7 +1,7 @@
 #pragma once
 #include <frc/apriltag/AprilTagFieldLayout.h>
-#include <nlohmann/json.hpp>
 #include "src/localization/apriltag_detector.h"
+#include "src/utils/pch.h"
 #include "third_party/971apriltag/971apriltag.h"
 
 namespace localization {
@@ -25,6 +25,5 @@ class GPUAprilTagDetector : public IAprilTagDetector {
   cv::Mat distortion_coefficients_;
   apriltag_detector_t* apriltag_detector_;
   std::unique_ptr<frc971::apriltag::GpuDetector> gpu_detector_;
-  bool verbose_;
 };
 }  // namespace localization

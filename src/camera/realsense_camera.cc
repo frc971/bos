@@ -1,7 +1,4 @@
 #include "realsense_camera.h"
-#include <wpilibc/frc/Timer.h>
-#include <iostream>
-#include <thread>
 #include "opencv2/opencv.hpp"
 #include "src/utils/log.h"
 namespace camera {

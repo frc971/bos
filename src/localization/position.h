@@ -1,14 +1,8 @@
 #pragma once
 #include <fmt/ostream.h>
 #include <frc/geometry/Transform3d.h>
-#include <wpi/struct/Struct.h>
-#include <wpilibc/frc/Timer.h>
-#include <array>
-#include <cmath>
-#include <iostream>
-#include <opencv2/core/mat.hpp>
-#include <ostream>
 #include "src/utils/log.h"
+#include "src/utils/pch.h"
 namespace localization {
 using point3d_t = struct Point3d {
   double x;

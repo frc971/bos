@@ -1,4 +1,3 @@
-#include <fstream>
 #include <nlohmann/json.hpp>
 #include <opencv2/imgproc.hpp>
 #include <sstream>
@@ -9,7 +8,6 @@
 #include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/select_camera.h"
-#include "src/localization/get_field_relitive_position.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"

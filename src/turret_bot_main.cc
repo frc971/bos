@@ -10,13 +10,13 @@ auto main() -> int {
   utils::StartNetworktables(9972);
 
   camera::CameraSource front_right_camera = camera::CameraSource(
-      "front_right",
+      "FrontRight",
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
               .pipeline)));
 
   camera::CameraSource front_left_camera = camera::CameraSource(
-      "front_left",
+      "FrontLeft",
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
           camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]
               .pipeline)));
