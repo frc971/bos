@@ -21,7 +21,7 @@ namespace localization {
 //     const frc::AprilTagFieldLayout& apriltag_layout = kapriltag_layout,
 //     bool verbose = false) -> position_estimate_t;
 
-auto ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json)
-    -> frc::Transform3d;
+// auto ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json)
+//     -> frc::Transform3d;
 
 }  // namespace localization

@@ -19,10 +19,6 @@ void run_localization(camera::CameraSource& source,
 
   camera::CscoreStreamer streamer(source.GetName(), port, 30, 1080, 1080);
 
-  nlohmann::json extrinsics_json = utils::read_extrinsics(extrinsics);
-  frc::Transform3d camera_to_robot =
-      localization::ExtrinsicsJsonToCameraToRobot(extrinsics_json);
-  (void)camera_to_robot;  // TODO
   while (true) {
     utils::Timer timer(source.GetName(), verbose);
     camera::timestamped_frame_t timestamped_frame = source.Get();
