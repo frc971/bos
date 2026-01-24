@@ -40,7 +40,7 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
                   .intrinsics_path)),
-      std::make_unique<localization::SquareSolver>(
+      std::make_unique<localization::JointSolver>(
           camera::Camera::TURRET_BOT_FRONT_RIGHT),
       camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
           .extrinsics_path,
