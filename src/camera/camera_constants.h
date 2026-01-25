@@ -69,15 +69,15 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
                         "platform-3610000.usb-usb-0:2.1:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/fiddler_usb_camera0_intrinsics.json",
-            .extrinsics_path = "/bos/constants/fiddler_usb_camera0_extrinsics.json", 
+            .intrinsics_path = "/bos/constants/fiddler/usb_camera0_intrinsics.json",
+            .extrinsics_path = "/bos/constants/fiddler/usb_camera0_extrinsics.json", 
             .name = "fiddler_usb0"},
     [Camera::FIDDLER_USB1] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
                         "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/fiddler_usb_camera1_intrinsics.json",
-            .extrinsics_path = "/bos/constants/fiddler_usb_camera1_extrinsics.json", 
+            .intrinsics_path = "/bos/constants/fiddler/usb_camera1_intrinsics.json",
+            .extrinsics_path = "/bos/constants/fiddler/usb_camera1_extrinsics.json", 
             .name = "fiddler_usb1"},
     [Camera::TURRET_BOT_FRONT_RIGHT] =
         camera_constant_t{
