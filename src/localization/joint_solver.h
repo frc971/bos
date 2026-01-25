@@ -2,8 +2,8 @@
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include "nlohmann/json.hpp"
 #include "src/camera/camera_constants.h"
-#include "src/localization/absolute_apriltag_layout.h"
 #include "src/localization/position_solver.h"
+#include "src/localization/square_solver.h"
 
 using json = nlohmann::json;
 
@@ -13,7 +13,7 @@ class JointSolver : public IPositionSolver {
  public:
   JointSolver(const std::string& intrinsics_path,
               const std::string& extrinsics_path,
-              const frc::AprilTagFieldLayout& layout = kapriltag_layout,
+              frc::AprilTagFieldLayout layout = kapriltag_layout,
               double tag_size = ktag_size);
   JointSolver(camera::Camera camera_config,
               const frc::AprilTagFieldLayout& layout = kapriltag_layout,
@@ -22,8 +22,8 @@ class JointSolver : public IPositionSolver {
       -> std::vector<position_estimate_t> override;
 
  private:
-  AbsoluteAprilTagLayout layout_;
-  cv::Mat camera_matrix_;
-  cv::Mat distortion_coefficients_;
+  frc::AprilTagFieldLayout layout_;
+  Eigen::MatrixXd camera_matrix_;
+  SquareSolver initial_solver_;
 };
 }  // namespace localization

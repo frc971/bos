@@ -6,12 +6,6 @@
 
 namespace localization {
 
-template <typename T>
-auto camera_matrix_from_json(nlohmann::json intrinsics) -> T;
-
-template <typename T>
-auto distortion_coefficients_from_json(nlohmann::json intrinsics) -> T;
-
 class GPUAprilTagDetector : public IAprilTagDetector {
  public:
   GPUAprilTagDetector(uint image_width, uint image_height,
