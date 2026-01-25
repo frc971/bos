@@ -10,9 +10,9 @@
 #include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
-#include "src/localization/get_field_relitive_position.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/run_localization.h"
+#include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 #include "src/utils/timer.h"
@@ -34,6 +34,8 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[camera::Camera::FIDDLER_USB1]
                   .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::FIDDLER_USB1),
       camera::camera_constants[camera::Camera::FIDDLER_USB1].extrinsics_path,
       4972, false);
 

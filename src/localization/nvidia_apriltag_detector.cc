@@ -30,14 +30,15 @@ auto Transform3dFromMatrix(float matrix[3][4]) -> frc::Pose3d {  // NOLINT
                                           quaternion.y(), quaternion.z()))};
 }
 
-NvidiaAprilTagDetector::NvidiaAprilTagDetector(
-    int image_width, int image_height, nlohmann::json intrinsics,
-    VPIAprilTagDecodeParams params, VPIBackend backend, int max_detections,
-    std::vector<cv::Point3f> apriltag_dimensions, bool verbose)
+NvidiaAprilTagDetector::NvidiaAprilTagDetector(int image_width,
+                                               int image_height,
+                                               nlohmann::json intrinsics,
+                                               VPIAprilTagDecodeParams params,
+                                               VPIBackend backend,
+                                               int max_detections, bool verbose)
     : params_(params),
       backend_(backend),
       max_detections_(max_detections),
-      apriltag_dimensions_(std::move(apriltag_dimensions)),
       input_(nullptr) {
 
   intrinsics_[0][0] = intrinsics["fx"];
@@ -74,34 +75,34 @@ auto NvidiaAprilTagDetector::GetTagDetections(
   (vpiSubmitAprilTagDetector(stream_, backend_, payload_, max_detections_,
                              input_, detections_));
 
-  (vpiSubmitAprilTagPoseEstimation(stream_, VPI_BACKEND_CPU, detections_,
-                                   intrinsics_, ktag_size, poses_));
-
   vpiStreamSync(stream_);
 
   VPIArrayData detections_data{};
   vpiArrayLockData(detections_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
                    &detections_data);
 
-  VPIArrayData poses_data{};
-  vpiArrayLockData(poses_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
-                   &poses_data);
+  std::vector<tag_detection_t> tag_detections;
+  auto* detections =
+      static_cast<VPIAprilTagDetection*>(detections_data.buffer.aos.data);
+  int num_detections = *detections_data.buffer.aos.sizePointer;
 
-  auto* p = static_cast<VPIPose*>(poses_data.buffer.aos.data);
-  if (*detections_data.buffer.aos.sizePointer != 0) {
-    frc::Pose3d camera_relitive_position = Transform3dFromMatrix(p->transform);
-    PrintPose3d(camera_relitive_position);
-    vpiArrayUnlock(detections_);
-    vpiArrayUnlock(poses_);
-    return std::vector<tag_detection_t>(
-        {tag_detection_t{camera_relitive_position, timestamped_frame.timestamp,
-                         std::hypot(camera_relitive_position.X().value(),
-                                    camera_relitive_position.Y().value())}});
+  for (int i = 0; i < num_detections; ++i) {
+    tag_detection_t detection;
+    detection.tag_id = detections[i].id;
+    detection.timestamp = timestamped_frame.timestamp;
+    detection.confidence = detections[i].decisionMargin;
+
+    // Extract corners from VPI detection
+    for (int j = 0; j < 4; ++j) {
+      detection.corners[j] =
+          cv::Point2f(detections[i].corners[j].x, detections[i].corners[j].y);
+    }
+
+    tag_detections.push_back(detection);
   }
 
   vpiArrayUnlock(detections_);
-  vpiArrayUnlock(poses_);
-  return {};
+  return tag_detections;
 }
 
 NvidiaAprilTagDetector::~NvidiaAprilTagDetector() {
