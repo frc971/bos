@@ -47,7 +47,7 @@ auto JointSolver::EstimatePosition(
     w.emplace_back(camera_matrix_ * PI * feild_to_tag);
   }
   Eigen::Matrix4d A = initial_position_estimate.pose.ToMatrix();
-  for (int i = 0; i < detections.size(); i++) {
+  for (size_t i = 0; i < detections.size(); i++) {
     for (int j = 0; j < 4; j++) {
       Eigen::Vector3d projected_points = w[i] * A * tag_corners[j];
 
