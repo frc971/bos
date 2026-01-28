@@ -22,10 +22,10 @@ enum Camera {
   TURRET_BOT_BACK_RIGHT,
   TURRET_BOT_BACK_LEFT,
 
-  VISION_BOT_FRONT_RIGHT,
-  VISION_BOT_FRONT_LEFT,
-  VISION_BOT_BACK_RIGHT,
-  VISION_BOT_BACK_LEFT,
+  STOVETOP_BOT_FRONT_RIGHT,
+  STOVETOP_BOT_FRONT_LEFT,
+  STOVETOP_BOT_BACK_RIGHT,
+  STOVETOP_BOT_BACK_LEFT,
 
   DEFAULT_USB0,
   REALSENSE,
@@ -125,28 +125,28 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .intrinsics_path = "/bos/constants/turret_bot/back_left_intrinsics.json",
             .extrinsics_path = "/bos/constants/turret_bot/back_left_extrinsics.json", 
           .name = "turret_bot_back_left"},
-    [Camera::VISION_BOT_FRONT_RIGHT] =
+    [Camera::STOVETOP_BOT_FRONT_RIGHT] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/vision_bot_front_right_intrinsics.json",
-            .extrinsics_path = "/bos/constants/vision_bot_front_right_extrinsics.json", 
-            .name = "vision_bot_front_right"},
-    [Camera::VISION_BOT_FRONT_LEFT] =
+                        "platform-3610000.usb-usb-0:1.1:1.0-video-index0",
+            .intrinsics_path = "/bos/constants/stovetop_bot/front_right_intrinsics.json",
+            .extrinsics_path = "/bos/constants/stovetop_bot/front_right_extrinsics.json", 
+            .name = "stovetop_bot_front_right"},
+    [Camera::STOVETOP_BOT_FRONT_LEFT] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/vision_bot_front_left_intrinsics.json",
-            .extrinsics_path = "/bos/constants/vision_bot_front_left_extrinsics.json", 
-            .name = "vision_bot_front_leftb"},
-    [Camera::VISION_BOT_BACK_RIGHT] =
+                        "platform-3610000.usb-usb-0:2.3:1.0-video-index0",
+            .intrinsics_path = "/bos/constants/stovetop_bot/front_left_intrinsics.json",
+            .extrinsics_path = "/bos/constants/stovetop_bot/front_left_extrinsics.json", 
+            .name = "stovetop_bot_front_left"},
+    [Camera::STOVETOP_BOT_BACK_RIGHT] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
                         "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
             .intrinsics_path = "/bos/constants/vision_bot_back_right_intrinsics.json",
             .extrinsics_path = "/bos/constants/vision_bot_back_right_extrinsics.json",
             .name = "turret_bot_back_right"},
-    [Camera::VISION_BOT_BACK_LEFT] =
+    [Camera::STOVETOP_BOT_BACK_LEFT] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
                         "platform-3610000.usb-usb-0:2.4:1.0-video-index0",

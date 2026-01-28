@@ -12,25 +12,25 @@ auto main() -> int {
   camera::CameraSource front_right_camera = camera::CameraSource(
       "front_right",
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
-          camera::camera_constants[camera::Camera::VISION_BOT_FRONT_RIGHT]
+          camera::camera_constants[camera::Camera::STOVETOP_BOT_FRONT_RIGHT]
               .pipeline)));
 
   camera::CameraSource front_left_camera = camera::CameraSource(
       "front_left",
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
-          camera::camera_constants[camera::Camera::VISION_BOT_FRONT_LEFT]
+          camera::camera_constants[camera::Camera::STOVETOP_BOT_FRONT_LEFT]
               .pipeline)));
 
   camera::CameraSource back_right_camera = camera::CameraSource(
       "back_right",
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
-          camera::camera_constants[camera::Camera::VISION_BOT_BACK_RIGHT]
+          camera::camera_constants[camera::Camera::STOVETOP_BOT_BACK_RIGHT]
               .pipeline)));
 
   camera::CameraSource back_left_camera = camera::CameraSource(
       "back_left",
       std::make_unique<camera::CVCamera>(cv::VideoCapture(
-          camera::camera_constants[camera::Camera::VISION_BOT_BACK_LEFT]
+          camera::camera_constants[camera::Camera::STOVETOP_BOT_BACK_LEFT]
               .pipeline)));
 
   std::thread front_right_thread(
@@ -38,11 +38,11 @@ auto main() -> int {
       std::make_unique<localization::GPUAprilTagDetector>(
           1280, 720,
           utils::read_intrinsics(
-              camera::camera_constants[camera::Camera::VISION_BOT_FRONT_RIGHT]
+              camera::camera_constants[camera::Camera::STOVETOP_BOT_FRONT_RIGHT]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
-          camera::Camera::VISION_BOT_FRONT_RIGHT),
-      camera::camera_constants[camera::Camera::VISION_BOT_FRONT_RIGHT]
+          camera::Camera::STOVETOP_BOT_FRONT_RIGHT),
+      camera::camera_constants[camera::Camera::STOVETOP_BOT_FRONT_RIGHT]
           .extrinsics_path,
       4971, false);
 
@@ -51,11 +51,11 @@ auto main() -> int {
       std::make_unique<localization::GPUAprilTagDetector>(
           1280, 720,
           utils::read_intrinsics(
-              camera::camera_constants[camera::Camera::VISION_BOT_FRONT_LEFT]
+              camera::camera_constants[camera::Camera::STOVETOP_BOT_FRONT_LEFT]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
-          camera::Camera::VISION_BOT_FRONT_LEFT),
-      camera::camera_constants[camera::Camera::VISION_BOT_FRONT_LEFT]
+          camera::Camera::STOVETOP_BOT_FRONT_LEFT),
+      camera::camera_constants[camera::Camera::STOVETOP_BOT_FRONT_LEFT]
           .extrinsics_path,
       4972, false);
 
@@ -64,11 +64,11 @@ auto main() -> int {
       std::make_unique<localization::GPUAprilTagDetector>(
           1280, 720,
           utils::read_intrinsics(
-              camera::camera_constants[camera::Camera::VISION_BOT_BACK_RIGHT]
+              camera::camera_constants[camera::Camera::STOVETOP_BOT_BACK_RIGHT]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
-          camera::Camera::VISION_BOT_BACK_RIGHT),
-      camera::camera_constants[camera::Camera::VISION_BOT_BACK_RIGHT]
+          camera::Camera::STOVETOP_BOT_BACK_RIGHT),
+      camera::camera_constants[camera::Camera::STOVETOP_BOT_BACK_RIGHT]
           .extrinsics_path,
       4973, false);
 
@@ -77,11 +77,11 @@ auto main() -> int {
       std::make_unique<localization::GPUAprilTagDetector>(
           1280, 720,
           utils::read_intrinsics(
-              camera::camera_constants[camera::Camera::VISION_BOT_BACK_LEFT]
+              camera::camera_constants[camera::Camera::STOVETOP_BOT_BACK_LEFT]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
-          camera::Camera::VISION_BOT_BACK_LEFT),
-      camera::camera_constants[camera::Camera::VISION_BOT_BACK_LEFT]
+          camera::Camera::STOVETOP_BOT_BACK_LEFT),
+      camera::camera_constants[camera::Camera::STOVETOP_BOT_BACK_LEFT]
           .extrinsics_path,
       4974, false);
 }
