@@ -17,11 +17,13 @@ ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
 
 using json = nlohmann::json;
 
-auto main() -> int {
+auto main(int argc, char* argv[]) -> int {
+  absl::ParseCommandLine(argc, argv);
 
   camera::CscoreStreamer streamer("tag_estimator_test", 4971, 30, 1080, 1080);
 
-  camera::Camera config = camera::SelectCameraConfig();
+  camera::Camera config =
+      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
   camera::CameraSource source("stress_test_camera",
                               camera::GetCameraStream(config));
   cv::Mat frame = source.GetFrame();
@@ -49,11 +51,11 @@ auto main() -> int {
 
     for (auto& tag_detection : tag_detections) {
       for (auto& corner : tag_detection.corners) {
-        cv::circle(frame, corner, 10, cv::Scalar(0, 0, 255));
+        cv::circle(timestamped_frame.frame, corner, 10, cv::Scalar(0, 0, 255));
       }
     }
 
-    streamer.WriteFrame(frame);
+    streamer.WriteFrame(timestamped_frame.frame);
     timer.Stop();
   }
 }
