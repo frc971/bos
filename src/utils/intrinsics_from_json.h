@@ -2,6 +2,8 @@
 
 #include "src/utils/pch.h"
 
+// TODO namepsace camera
+
 template <typename T>
 auto camera_matrix_from_json(nlohmann::json intrinsics) -> T;
 
