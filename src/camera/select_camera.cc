@@ -11,11 +11,6 @@ namespace camera {
     If any input is invalid, the function returns a call to itself.
 */
 
-void PrintCameraConstant(Camera camera) {
-  std::cout << "Selected camera" << std::endl;
-  std::cout << "Pipline: " << camera_constants[camera] << std::endl;
-}
-
 auto SelectCameraConfig() -> Camera {
   std::cout << "Please select a camera" << std::endl;
   for (const auto& camera_constant : camera_constants) {
