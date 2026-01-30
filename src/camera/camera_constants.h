@@ -8,6 +8,35 @@ using camera_constant_t = struct CameraConstant {
   std::string intrinsics_path;
   std::string extrinsics_path;
   std::string name;
+  std::optional<double> backlight = std::nullopt;
+  std::optional<double> frame_width = std::nullopt;
+  std::optional<double> frame_height = std::nullopt;
+  std::optional<double> fps = std::nullopt;
+  std::optional<double> exposure = std::nullopt;
+  std::optional<double> brightness = std::nullopt;
+  std::optional<double> sharpness = std::nullopt;
+
+  friend std::ostream& operator<<(std::ostream& os, const CameraConstant& c) {
+    os << "pipeline: " << c.pipeline
+       << "\tintrinsics_path: " << c.intrinsics_path
+       << "\textrinsics_path: " << c.extrinsics_path
+       << "\tname: " << c.name << '\n';
+
+    const auto print = [&](std::string_view label, const auto& opt) {
+      if (opt) os << '\t' << label << ": " << *opt;
+    };
+
+    print("Backlight",    c.backlight);
+    print("Frame Width",  c.frame_width);
+    print("Frame Height", c.frame_height);
+    print("Fps",          c.fps);
+    print("Exposure",     c.exposure);
+    print("Brightness",   c.brightness);
+    print("Sharpness",    c.sharpness);
+    os << std::endl;
+
+    return os;
+  }
 };
 
 enum Camera {

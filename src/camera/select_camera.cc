@@ -11,11 +11,6 @@ namespace camera {
     If any input is invalid, the function returns a call to itself.
 */
 
-void PrintCameraConstant(Camera camera) {
-  std::cout << "Selected camera" << std::endl;
-  std::cout << "Pipline: " << camera_constants[camera].pipeline << std::endl;
-}
-
 auto SelectCameraConfig() -> Camera {
   std::cout << "Please select a camera" << std::endl;
   for (const auto& camera_constant : camera_constants) {
@@ -46,8 +41,7 @@ auto GetCameraStream(Camera camera) -> std::unique_ptr<ICamera> {
     case Camera::REALSENSE:
       return std::make_unique<camera::RealSenseCamera>();
     default:
-      return std::make_unique<camera::CVCamera>(
-          cv::VideoCapture(camera_constants[camera].pipeline));
+      return std::make_unique<camera::CVCamera>(camera_constants[camera]);
   }
 }
 }  // namespace camera
