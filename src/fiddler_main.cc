@@ -24,8 +24,8 @@ auto main() -> int {
 
   camera::CameraSource back_right_camera = camera::CameraSource(
       "back_right",
-      std::make_unique<camera::CVCamera>(cv::VideoCapture(
-          camera::camera_constants[camera::Camera::FIDDLER_USB1].pipeline)));
+      std::make_unique<camera::CVCamera>(
+          camera::camera_constants[camera::Camera::FIDDLER_USB1]));
 
   std::thread usb1_thread(
       localization::run_localization, std::ref(back_right_camera),

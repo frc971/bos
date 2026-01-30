@@ -2,16 +2,30 @@
 
 namespace camera {
 
-CVCamera::CVCamera(const cv::VideoCapture& cap) : cap_(cap) {
-  // cap_.set(cv::CAP_PROP_BACKLIGHT, 0);
-  // cap_.set(cv::CAP_PROP_FRAME_WIDTH, 1920);
-  // cap_.set(cv::CAP_PROP_FRAME_HEIGHT, 1080);
-  // cap_.set(cv::CAP_PROP_FPS, 60);
-  // cap_.set(cv::CAP_PROP_AUTO_EXPOSURE, 1);  // V4L2: 1 = manual
-  // cap_.set(cv::CAP_PROP_EXPOSURE, 500);
-  // cap_.set(cv::CAP_PROP_BRIGHTNESS, 0.5);
-  // cap_.set(cv::CAP_PROP_SHARPNESS, 100);
+CVCamera::CVCamera(const CameraConstant& c)
+    : cap_(cv::VideoCapture(c.pipeline)) {
+
+  auto set_if = [&](int prop, const auto& opt) {
+    if (opt) {
+      cap_.set(prop, static_cast<double>(*opt));
+    }
+  };
+
+  set_if(cv::CAP_PROP_BACKLIGHT, c.backlight);
+  set_if(cv::CAP_PROP_FRAME_WIDTH, c.frame_width);
+  set_if(cv::CAP_PROP_FRAME_HEIGHT, c.frame_height);
+  set_if(cv::CAP_PROP_FPS, c.fps);
+  set_if(cv::CAP_PROP_BRIGHTNESS, c.brightness);
+  set_if(cv::CAP_PROP_SHARPNESS, c.sharpness);
+
+  if (c.exposure) {
+    cap_.set(cv::CAP_PROP_AUTO_EXPOSURE, 1);  // V4L2: 1 = manual
+    cap_.set(cv::CAP_PROP_EXPOSURE, static_cast<double>(*c.exposure));
+  }
 }
+
+CVCamera::CVCamera(const std::string& pipeline)
+    : cap_(cv::VideoCapture(pipeline)) {}
 
 auto CVCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t timestamped_frame;

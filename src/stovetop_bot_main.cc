@@ -11,27 +11,23 @@ auto main() -> int {
 
   camera::CameraSource front_right_camera = camera::CameraSource(
       "front_right",
-      std::make_unique<camera::CVCamera>(cv::VideoCapture(
-          camera::camera_constants[camera::Camera::STOVETOP_BOT_FRONT_RIGHT]
-              .pipeline)));
+      std::make_unique<camera::CVCamera>(
+          camera::camera_constants[camera::Camera::STOVETOP_BOT_FRONT_RIGHT]));
 
   camera::CameraSource front_left_camera = camera::CameraSource(
       "front_left",
-      std::make_unique<camera::CVCamera>(cv::VideoCapture(
-          camera::camera_constants[camera::Camera::STOVETOP_BOT_FRONT_LEFT]
-              .pipeline)));
+      std::make_unique<camera::CVCamera>(
+          camera::camera_constants[camera::Camera::STOVETOP_BOT_FRONT_LEFT]));
 
   camera::CameraSource back_right_camera = camera::CameraSource(
       "back_right",
-      std::make_unique<camera::CVCamera>(cv::VideoCapture(
-          camera::camera_constants[camera::Camera::STOVETOP_BOT_BACK_RIGHT]
-              .pipeline)));
+      std::make_unique<camera::CVCamera>(
+          camera::camera_constants[camera::Camera::STOVETOP_BOT_BACK_RIGHT]));
 
   camera::CameraSource back_left_camera = camera::CameraSource(
       "back_left",
-      std::make_unique<camera::CVCamera>(cv::VideoCapture(
-          camera::camera_constants[camera::Camera::STOVETOP_BOT_BACK_LEFT]
-              .pipeline)));
+      std::make_unique<camera::CVCamera>(
+          camera::camera_constants[camera::Camera::STOVETOP_BOT_BACK_LEFT]));
 
   std::thread front_right_thread(
       localization::run_localization, std::ref(front_right_camera),

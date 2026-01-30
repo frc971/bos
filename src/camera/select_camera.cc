@@ -13,7 +13,7 @@ namespace camera {
 
 void PrintCameraConstant(Camera camera) {
   std::cout << "Selected camera" << std::endl;
-  std::cout << "Pipline: " << camera_constants[camera].pipeline << std::endl;
+  std::cout << "Pipline: " << camera_constants[camera] << std::endl;
 }
 
 auto SelectCameraConfig() -> Camera {
@@ -46,8 +46,7 @@ auto GetCameraStream(Camera camera) -> std::unique_ptr<ICamera> {
     case Camera::REALSENSE:
       return std::make_unique<camera::RealSenseCamera>();
     default:
-      return std::make_unique<camera::CVCamera>(
-          cv::VideoCapture(camera_constants[camera].pipeline));
+      return std::make_unique<camera::CVCamera>(camera_constants[camera]);
   }
 }
 }  // namespace camera
