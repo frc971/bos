@@ -8,13 +8,13 @@ using camera_constant_t = struct CameraConstant {
   std::string intrinsics_path;
   std::string extrinsics_path;
   std::string name;
-  std::optional<uint8_t> backlight = std::nullopt;
-  std::optional<unsigned int> frame_width = std::nullopt;
-  std::optional<unsigned int> frame_height = std::nullopt;
-  std::optional<unsigned int> fps = std::nullopt;
-  std::optional<unsigned int> exposure = std::nullopt;
-  std::optional<float> brightness = std::nullopt;
-  std::optional<unsigned int> sharpness = std::nullopt;
+  std::optional<double> backlight = std::nullopt;
+  std::optional<double> frame_width = std::nullopt;
+  std::optional<double> frame_height = std::nullopt;
+  std::optional<double> fps = std::nullopt;
+  std::optional<double> exposure = std::nullopt;
+  std::optional<double> brightness = std::nullopt;
+  std::optional<double> sharpness = std::nullopt;
 
   friend std::ostream& operator<<(std::ostream& os, const CameraConstant& c) {
     os << "pipeline: " << c.pipeline
@@ -33,6 +33,7 @@ using camera_constant_t = struct CameraConstant {
     print("Exposure",     c.exposure);
     print("Brightness",   c.brightness);
     print("Sharpness",    c.sharpness);
+    os << std::endl;
 
     return os;
   }

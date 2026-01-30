@@ -7,7 +7,7 @@ CVCamera::CVCamera(const CameraConstant& c)
 
   auto set_if = [&](int prop, const auto& opt) {
     if (opt) {
-      cap_.set(prop, static_cast<double>(*opt));
+      cap_.set(prop, *opt);
     }
   };
 
