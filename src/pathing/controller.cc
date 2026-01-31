@@ -1,8 +1,24 @@
 #include "src/pathing/controller.h"
 #include "src/pathing/pathing.h"
 #include "src/pathing/velocity_sender.h"
+#include <frc/Timer.h>
+#include <chrono>
+#include <thread>
 
 namespace pathing {
+
+Controller::Controller()
+    : instance_(nt::NetworkTableInstance::GetDefault()) {
+  std::shared_ptr<nt::NetworkTable> table = instance_.GetTable("Pathing");
+  nt::StructTopic<frc::Pose2d> current_pose_topic =
+      table->GetStructTopic<frc::Pose2d>("CurrentPose");
+  current_pose_sub_ = current_pose_topic.Subscribe({});
+  
+  nt::StructTopic<frc::Pose2d> target_pose_topic =
+      table->GetStructTopic<frc::Pose2d>("TargetPose");
+  target_pose_sub_ = target_pose_topic.Subscribe({});
+}
+
   void Controller::Send() { 
     VelocitySender velocity_sender;
 
@@ -24,14 +40,24 @@ namespace pathing {
 
     cv::Mat grid = initializeGrid(gridData);
 
-    auto poses = createSpline(grid, 10, 5, 45, 22, nodeSizeMeters);
+    frc::Pose2d startPose = current_pose_sub_.Get();
+    frc::Pose2d targetPose = target_pose_sub_.Get();
+    
+    int startX = static_cast<int>(startPose.X().value() / nodeSizeMeters);
+    int startY = static_cast<int>(startPose.Y().value() / nodeSizeMeters);
+    int targetX = static_cast<int>(targetPose.X().value() / nodeSizeMeters);
+    int targetY = static_cast<int>(targetPose.Y().value() / nodeSizeMeters);
 
-    constexpr int64_t kDtUs = 20'000;
+    auto poses = createSpline(grid, startX, startY, targetX, targetY, nodeSizeMeters);
+
+    constexpr int64_t kDtUs = 100'000;
     constexpr double kDtSec = kDtUs / 1'000'000.0;
     constexpr double kMaxAccel = 3.0;
     constexpr double kMaxDecel = 3.0;
     constexpr double kMaxModuleSpeed = 5.0;
-    int64_t t = 0;
+    
+    frc::Timer timer;
+    timer.Start();
 
     std::vector<double> pathDist(poses.size(), 0.0);
     for (size_t i = 1; i < poses.size(); ++i) {
@@ -70,60 +96,89 @@ namespace pathing {
 
     double currentVx = 0.0;
     double currentVy = 0.0;
-    double currentX = poses[0].X().value();
-    double currentY = poses[0].Y().value();
     double currentSpeed = 0.0;
+    
+    constexpr double kLookaheadDist = 0.5;  // meters
+    constexpr double kGoalTolerance = 0.1;  // meters
+    
+    size_t currentWaypoint = 0;
+    bool pathComplete = false;
 
-    for (size_t i = 0; i < poses.size(); ++i) {
-      // TODO: get this from the java networktables agent side
-        frc::Pose2d actualPose{units::meter_t{currentX}, units::meter_t{currentY},
-                             poses[i].Rotation()};
-
-      double desiredSpeed = targetSpeed[i];
-
+    while (!pathComplete) {
+      frc::Pose2d actualPose = current_pose_sub_.Get();
+      double robotX = actualPose.X().value();
+      double robotY = actualPose.Y().value();
+      
+      size_t targetIdx = currentWaypoint;
+      double minDist = INFINITY;
+      
+      for (size_t i = currentWaypoint; i < poses.size(); ++i) {
+        double dx = poses[i].X().value() - robotX;
+        double dy = poses[i].Y().value() - robotY;
+        double dist = std::sqrt(dx * dx + dy * dy);
+        
+        if (dist >= kLookaheadDist) {
+          targetIdx = i;
+          break;
+        }
+        
+        if (dist < minDist) {
+          minDist = dist;
+          currentWaypoint = i;
+        }
+      }
+      
+      double goalDx = poses.back().X().value() - robotX;
+      double goalDy = poses.back().Y().value() - robotY;
+      double goalDist = std::sqrt(goalDx * goalDx + goalDy * goalDy);
+      
+      if (goalDist < kGoalTolerance) {
+        pathComplete = true;
+        velocity_sender.Send(0.0, 0.0);
+        break;
+      }
+      
+      if (targetIdx >= poses.size() - 1) {
+        targetIdx = poses.size() - 1;
+      }
+      
+      double targetX = poses[targetIdx].X().value();
+      double targetY = poses[targetIdx].Y().value();
+      double dx = targetX - robotX;
+      double dy = targetY - robotY;
+      double distToTarget = std::sqrt(dx * dx + dy * dy);
+      
+      double dirX = distToTarget > 0.001 ? dx / distToTarget : 0.0;
+      double dirY = distToTarget > 0.001 ? dy / distToTarget : 0.0;
+      
+      double desiredSpeed = targetSpeed[targetIdx];
+      
       double dvMag = desiredSpeed - currentSpeed;
       double accelMag = 0.0;
-
+      
       if (dvMag > 0) {
         accelMag = std::min(dvMag / kDtSec, kMaxAccel);
       } else {
         accelMag = std::max(dvMag / kDtSec, -kMaxDecel);
       }
-
+      
       // TODO: find the max acceleration of the robot in order to calibrate this
-
+      
       currentSpeed += accelMag * kDtSec;
       currentSpeed = std::max(0.0, currentSpeed);
-
-      if (i > 0) {
-        double dx = poses[i].X().value() - poses[i - 1].X().value();
-        double dy = poses[i].Y().value() - poses[i - 1].Y().value();
-        double segDist = std::sqrt(dx * dx + dy * dy);
-
-        double dirX = segDist > 0.001 ? dx / segDist : 0.0;
-        double dirY = segDist > 0.001 ? dy / segDist : 0.0;
-
-        double newVx = dirX * currentSpeed;
-        double newVy = dirY * currentSpeed;
-
-        double ax = (newVx - currentVx) / kDtSec;
-        double ay = (newVy - currentVy) / kDtSec;
-
-        currentVx = newVx;
-        currentVy = newVy;
-
-        currentX += currentVx * kDtSec;
-        currentY += currentVy * kDtSec;
-
-        // TODO: make this compatible with the java agent and figure out how it will all work
-        // velocity_sender.Send(ax, ay, static_cast<double>(t) / 1'000'000.0);
-
-        std::cout << ax;
-        std::cout << ", " << ay << std::endl;
-
-      }
-
-      t += kDtUs;
+      
+      double newVx = dirX * currentSpeed;
+      double newVy = dirY * currentSpeed;
+      
+      double ax = (newVx - currentVx) / kDtSec;
+      double ay = (newVy - currentVy) / kDtSec;
+      
+      currentVx = newVx;
+      currentVy = newVy;
+      
+      velocity_sender.Send(ax, ay);
+      
+      std::this_thread::sleep_for(std::chrono::microseconds(kDtUs));
     }
 
   }
