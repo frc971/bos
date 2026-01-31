@@ -2,22 +2,10 @@
 #include <opencv2/calib3d.hpp>
 #include <utility>
 #include "src/utils/camera_utils.h"
+#include "src/utils/extrinsics_from_json.h"
 #include "src/utils/intrinsics_from_json.h"
 
 namespace localization {
-
-auto ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json)
-    -> frc::Transform3d {
-  frc::Pose3d camera_pose(
-      units::meter_t{extrinsics_json["translation_x"]},
-      units::meter_t{extrinsics_json["translation_y"]},
-      units::meter_t{extrinsics_json["translation_z"]},
-      frc::Rotation3d(units::radian_t{extrinsics_json["rotation_x"]},
-                      units::radian_t{extrinsics_json["rotation_y"]},
-                      units::radian_t{extrinsics_json["rotation_z"]}));
-  frc::Transform3d robot_to_camera(frc::Pose3d(), camera_pose);
-  return robot_to_camera.Inverse();
-}
 
 SquareSolver::SquareSolver(const std::string& intrinsics_path,
                            const std::string& extrinsics_path,
@@ -25,11 +13,12 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
                            std::vector<cv::Point3f> tag_corners)
     : layout_(std::move(layout)),
       tag_corners_(std::move(tag_corners)),
-      camera_matrix_(camera_matrix_from_json<cv::Mat>(
+      camera_matrix_(utils::camera_matrix_from_json<cv::Mat>(
           utils::read_intrinsics(intrinsics_path))),
-      distortion_coefficients_(distortion_coefficients_from_json<cv::Mat>(
-          utils::read_intrinsics(intrinsics_path))),
-      camera_to_robot_(ExtrinsicsJsonToCameraToRobot(
+      distortion_coefficients_(
+          utils::distortion_coefficients_from_json<cv::Mat>(
+              utils::read_intrinsics(intrinsics_path))),
+      camera_to_robot_(utils::ExtrinsicsJsonToCameraToRobot(
           utils::read_extrinsics(extrinsics_path))) {}
 
 SquareSolver::SquareSolver(camera::Camera camera_config,

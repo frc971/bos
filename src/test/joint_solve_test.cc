@@ -12,8 +12,35 @@
 constexpr double ktag_size = 0.1651;  // meters
 const frc::AprilTagFieldLayout kapriltag_layout =
     frc::AprilTagFieldLayout("/bos/constants/2026-rebuilt-andymark.json");
-constexpr int kimage_tag_size = 50;
+constexpr int kimage_tag_size = 25;
 constexpr int ktag_id = 31;
+constexpr int ktag_offset_y = 0;
+constexpr int ktag_offset_x = 0;
+
+auto cvPoseToEigen(cv::Mat pose) -> Eigen::MatrixX4d {
+  Eigen::Matrix4d eigen;
+  for (int r = 0; r < 4; ++r) {
+    for (int c = 0; c < 4; ++c) {
+      eigen(r, c) = pose.at<double>(r, c);
+    }
+  }
+  return eigen;
+}
+
+auto inverse(cv::Mat& rvec, cv::Mat& tvec) {
+  cv::Mat R;
+  cv::Rodrigues(rvec, R);
+
+  cv::Mat R_inv = R.t();  // transpose = inverse for rotation matrix
+  // Invert the rotation
+
+  // Invert the translation
+  tvec = -R_inv * tvec;
+
+  // Convert back to rvec if needed
+  cv::Mat rvec_inv;
+  cv::Rodrigues(R_inv, rvec);
+}
 
 auto createTransformMatrix(double rx, double ry, double rz, double tx,
                            double ty, double tz) -> cv::Mat {
@@ -73,17 +100,22 @@ auto main() -> int {
   cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64F);  // output rotation vector
   cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64F);  // output translation vector
   auto config = camera::Camera::STOVETOP_BOT_FRONT_RIGHT;
-  auto camera_matrix = camera_matrix_from_json<cv::Mat>(
+  auto camera_matrix = utils::camera_matrix_from_json<cv::Mat>(
       utils::read_intrinsics(camera::camera_constants[config].intrinsics_path));
 
-  auto distortion_coefficients = distortion_coefficients_from_json<cv::Mat>(
-      utils::read_intrinsics(camera::camera_constants[config].intrinsics_path));
+  auto distortion_coefficients =
+      utils::distortion_coefficients_from_json<cv::Mat>(utils::read_intrinsics(
+          camera::camera_constants[config].intrinsics_path));
 
   std::vector<cv::Point2d> image_points = {
-      cv::Point2f(1000 - kimage_tag_size, 500 + kimage_tag_size),
-      cv::Point2f(1000 + kimage_tag_size, 500 + kimage_tag_size),
-      cv::Point2f(1000 + kimage_tag_size, 500 - kimage_tag_size),
-      cv::Point2f(1000 - kimage_tag_size, 500 - kimage_tag_size),
+      cv::Point2f(1000 - kimage_tag_size + ktag_offset_x,
+                  500 + kimage_tag_size + ktag_offset_y),
+      cv::Point2f(1000 + kimage_tag_size + ktag_offset_x,
+                  500 + kimage_tag_size + ktag_offset_y),
+      cv::Point2f(1000 + kimage_tag_size + ktag_offset_x,
+                  500 - kimage_tag_size + ktag_offset_y),
+      cv::Point2f(1000 - kimage_tag_size + ktag_offset_x,
+                  500 - kimage_tag_size + ktag_offset_y),
   };
 
   auto tag_pose = kapriltag_layout.GetTagPose(ktag_id).value();
@@ -91,7 +123,7 @@ auto main() -> int {
 
   for (auto& apriltag_corner : apriltag_corners) {
     apriltag_corner.x = -apriltag_corner.x;
-    apriltag_corner.y = -apriltag_corner.y;
+    // apriltag_corner.y = -apriltag_corner.y;
 
     cv::Mat pt = (cv::Mat_<double>(4, 1) << apriltag_corner.x,
                   apriltag_corner.y, apriltag_corner.z, 1.0);
@@ -123,8 +155,27 @@ auto main() -> int {
   std::cout << "Mean reprojection error: " << meanError << " pixels"
             << std::endl;
 
-  std::cout << "feild_to_camera\n";
-  std::cout << createTransformMatrix(rvec, tvec);
+  inverse(rvec, tvec);
+
+  const double translation_x = tvec.ptr<double>()[2];
+  const double translation_y = tvec.ptr<double>()[0];
+  const double translation_z = tvec.ptr<double>()[1];
+
+  const double rotation_x = rvec.ptr<double>()[2];
+  const double rotation_y = rvec.ptr<double>()[0];
+  const double rotation_z = rvec.ptr<double>()[1];
+
+  frc::Pose3d camera_pose(
+      units::meter_t{translation_x}, units::meter_t{translation_y},
+      units::meter_t{translation_z},
+      frc::Rotation3d(units::radian_t{rotation_x}, units::radian_t{rotation_y},
+                      units::radian_t{rotation_z}));
+
+  PrintPose3d(camera_pose);
+
+  // cv::Mat feild_to_camera = createTransformMatrix(rvec, tvec).inv();
+  // frc::Pose3d a(cvPoseToEigen(feild_to_camera));
+  // PrintPose3d(a);
 
   // auto camera_to_tag = createTransformMatrix(rvec, tvec);
   // auto tag_to_camera = camera_to_tag.inv();
