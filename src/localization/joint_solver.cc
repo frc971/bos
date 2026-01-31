@@ -94,10 +94,12 @@ JointSolver::JointSolver(camera::Camera camera_config,
                   camera::camera_constants[camera_config].extrinsics_path,
                   layout, tag_size) {
   for (const auto& tag : layout.GetTags()) {
+    // TODO document
     std::vector<cv::Point3f> absolute_tag_corners;
     absolute_tag_corners.reserve(4);
     frc::Pose3d tag_pose = tag.pose;
     auto feild_to_tag = createTransformMatrix(tag_pose);
+    feild_to_tag.at<double>(0, 3) = -feild_to_tag.at<double>(0, 3);
     for (const cv::Point3f& apriltag_corner : kapriltag_corners) {
       cv::Mat tag_corner = (cv::Mat_<double>(4, 1) << -apriltag_corner.x,
                             apriltag_corner.y, apriltag_corner.z, 1.0);
@@ -154,7 +156,7 @@ auto JointSolver::EstimatePosition(
   frc::Pose3d camera_pose(
       units::meter_t{translation_x}, units::meter_t{translation_y},
       units::meter_t{translation_z},
-      frc::Rotation3d(units::radian_t{rotation_x}, units::radian_t{rotation_y},
+      frc::Rotation3d(units::radian_t{rotation_x}, units::radian_t{-rotation_y},
                       units::radian_t{rotation_z}));
 
   frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot_);
