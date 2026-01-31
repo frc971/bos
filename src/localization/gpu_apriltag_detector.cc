@@ -55,7 +55,7 @@ auto GPUAprilTagDetector::GetTagDetections(
       zarray_get(raw_detections, i, &gpu_detection);
 
       tag_detection_t detection;
-      detection.tag_id = gpu_detection->id;
+      detection.tag_id = 16;  // gpu_detection->id;
       detection.timestamp = timestamped_frame.timestamp;
       detection.confidence = gpu_detection->decision_margin;
 
