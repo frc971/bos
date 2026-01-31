@@ -100,7 +100,7 @@ JointSolver::JointSolver(camera::Camera camera_config,
     auto feild_to_tag = createTransformMatrix(tag_pose);
     for (const cv::Point3f& apriltag_corner : kapriltag_corners) {
       cv::Mat tag_corner = (cv::Mat_<double>(4, 1) << -apriltag_corner.x,
-                            -apriltag_corner.y, apriltag_corner.z, 1.0);
+                            apriltag_corner.y, apriltag_corner.z, 1.0);
       cv::Mat result = feild_to_tag * tag_corner;
       absolute_tag_corners.push_back(cv::Point3d(
           result.at<double>(0), result.at<double>(1), result.at<double>(2)));
