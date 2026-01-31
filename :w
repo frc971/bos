@@ -12,8 +12,8 @@
 constexpr double ktag_size = 0.1651;  // meters
 const frc::AprilTagFieldLayout kapriltag_layout =
     frc::AprilTagFieldLayout("/bos/constants/2026-rebuilt-andymark.json");
-constexpr int kimage_tag_size = 50;
-constexpr int ktag_id = 19;
+constexpr int kimage_tag_size = 25;
+constexpr int ktag_id = 26;
 constexpr int ktag_offset_y = 0;
 constexpr int ktag_offset_x = -10;
 
@@ -137,17 +137,17 @@ auto main() -> int {
 
   auto tag_pose = kapriltag_layout.GetTagPose(ktag_id).value().RelativeTo({});
   auto feild_to_tag = createTransformMatrix(frc::Transform3d({}, tag_pose));
-  feild_to_tag.at<double>(0, 3) = -feild_to_tag.at<double>(0, 3);
 
   for (auto& apriltag_corner : apriltag_corners) {
     (void)apriltag_corner;
     apriltag_corner.x = -apriltag_corner.x;
-
-    cv::Mat pt = (cv::Mat_<double>(4, 1) << apriltag_corner.x,
-                  apriltag_corner.y, apriltag_corner.z, 1.0);
-    cv::Mat result = feild_to_tag * pt;
-    apriltag_corner = cv::Point3d(result.at<double>(0), result.at<double>(1),
-                                  result.at<double>(2));
+    // apriltag_corner.y = -apriltag_corner.y;
+    //
+    // cv::Mat pt = (cv::Mat_<double>(4, 1) << apriltag_corner.x,
+    //               apriltag_corner.y, apriltag_corner.z, 1.0);
+    // cv::Mat result = feild_to_tag * pt;
+    // apriltag_corner = cv::Point3d(result.at<double>(0), result.at<double>(1),
+    //                               result.at<double>(2));
   }
 
   // [886.039, 530.664][1088.88, 521.248][1074.46, 333.045][880.557, 333.923]
@@ -174,7 +174,49 @@ auto main() -> int {
             << std::endl;
 
   {
-    inverse(rvec, tvec);
+      // inverse(rvec, tvec);
+      // const double translation_x = tvec.ptr<double>()[2];
+      // const double translation_y = tvec.ptr<double>()[0];
+      // const double translation_z = tvec.ptr<double>()[1];
+      //
+      // const double rotation_x = rvec.ptr<double>()[2];
+      // const double rotation_y = rvec.ptr<double>()[0];
+      // const double rotation_z = rvec.ptr<double>()[1];
+      // frc::Pose3d camera_pose(
+      //     units::meter_t{translation_x}, units::meter_t{translation_y},
+      //     units::meter_t{translation_z},
+      //     frc::Rotation3d(units::radian_t{rotation_x}, units::radian_t{rotation_y},
+      //                     units::radian_t{rotation_z}));
+      // PrintPose3d(camera_pose);
+  }
+
+  {
+    auto camera_to_tag = createTransformMatrix(rvec, tvec);
+    auto tag_to_camera = camera_to_tag.inv();
+
+    auto tag_pose = kapriltag_layout.GetTagPose(ktag_id).value();
+    auto feild_to_tag = createTransformMatrix(tag_pose);
+    auto tag_to_feild = createTransformMatrix({tag_pose, {}});
+    std::cout << tag_to_feild;
+    return 0;
+
+    auto rotaion_matrix =
+        createTransformMatrix(0, std::numbers::pi, 0, 0, 0, 0);
+    std::cout << "rotation matrix\n";
+    std::cout << rotaion_matrix << std::endl;
+
+    std::cout << "tag to camera\n";
+    std::cout << tag_to_camera << std::endl;
+
+    std::cout << "feild to tag\n";
+    std::cout << feild_to_tag << std::endl;
+
+    auto feild_to_camera = feild_to_tag * tag_to_camera;
+    std::cout << "feild to camera\n";
+    std::cout << feild_to_camera << std::endl;
+
+    decomposeMatrix(feild_to_camera, rvec, tvec);
+
     const double translation_x = tvec.ptr<double>()[2];
     const double translation_y = tvec.ptr<double>()[0];
     const double translation_z = tvec.ptr<double>()[1];
@@ -188,52 +230,9 @@ auto main() -> int {
                             frc::Rotation3d(units::radian_t{rotation_x},
                                             units::radian_t{rotation_y},
                                             units::radian_t{rotation_z}));
+    std::cout << "Camera pose\n";
     PrintPose3d(camera_pose);
   }
-
-  // {
-  //   auto camera_to_tag = createTransformMatrix(rvec, tvec);
-  //   auto tag_to_camera = camera_to_tag.inv();
-  //
-  //   auto tag_pose = kapriltag_layout.GetTagPose(ktag_id).value();
-  //   auto feild_to_tag = createTransformMatrix(tag_pose);
-  //   auto tag_to_feild = createTransformMatrix({tag_pose, {}});
-  //   tag_to_feild.at<double>(0, 3) = -tag_to_feild.at<double>(0, 3);
-  //   feild_to_tag.at<double>(0, 3) = -feild_to_tag.at<double>(0, 3);
-  //
-  //   auto rotaion_matrix =
-  //       createTransformMatrix(0, std::numbers::pi, 0, 0, 0, 0);
-  //   std::cout << "rotation matrix\n";
-  //   std::cout << rotaion_matrix << std::endl;
-  //
-  //   std::cout << "tag to camera\n";
-  //   std::cout << tag_to_camera << std::endl;
-  //
-  //   std::cout << "feild to tag\n";
-  //   std::cout << feild_to_tag << std::endl;
-  //
-  //   auto feild_to_camera = feild_to_tag * tag_to_camera;
-  //   std::cout << "feild to camera\n";
-  //   std::cout << feild_to_camera << std::endl;
-  //
-  //   decomposeMatrix(feild_to_camera, rvec, tvec);
-  //
-  //   const double translation_x = tvec.ptr<double>()[2];
-  //   const double translation_y = tvec.ptr<double>()[0];
-  //   const double translation_z = tvec.ptr<double>()[1];
-  //
-  //   const double rotation_x = rvec.ptr<double>()[2];
-  //   const double rotation_y = rvec.ptr<double>()[0];
-  //   const double rotation_z = rvec.ptr<double>()[1];
-  //   frc::Pose3d camera_pose(units::meter_t{translation_x},
-  //                           units::meter_t{-translation_y},
-  //                           units::meter_t{translation_z},
-  //                           frc::Rotation3d(units::radian_t{rotation_x},
-  //                                           units::radian_t{rotation_y},
-  //                                           units::radian_t{rotation_z}));
-  //   std::cout << "Camera pose\n";
-  //   PrintPose3d(camera_pose);
-  // }
 
   return 0;
 }
