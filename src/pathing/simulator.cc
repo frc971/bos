@@ -45,7 +45,7 @@ auto main() -> int {
     return 1;
   }
 
-  constexpr int64_t kDtUs = 20'000;
+  constexpr int64_t kDtUs = 100'000;  // 100ms for simulation (faster, less data)
   constexpr double kDtSec = kDtUs / 1'000'000.0;
   constexpr double kMaxAccel = 3.0;
   constexpr double kMaxDecel = 3.0;
@@ -92,13 +92,78 @@ auto main() -> int {
   double currentX = poses[0].X().value();
   double currentY = poses[0].Y().value();
   double currentSpeed = 0.0;
+  
+  constexpr double kLookaheadDist = 0.5;  // meters
+  constexpr double kGoalTolerance = 0.1;  // meters
+  constexpr int kFlushInterval = 1;  // Flush every 10 iterations
+  
+  size_t currentWaypoint = 0;
+  bool pathComplete = false;
+  int iterationCount = 0;
 
-  for (size_t i = 0; i < poses.size(); ++i) {
-    frc::Pose2d actualPose{units::meter_t{currentX}, units::meter_t{currentY},
-                           poses[i].Rotation()};
+  while (!pathComplete) {
+    // Simulate robot pose (in real system, this comes from NetworkTables)
+    double robotX = currentX;
+    double robotY = currentY;
+    
+    frc::Pose2d actualPose{units::meter_t{robotX}, units::meter_t{robotY},
+                           poses[std::min(currentWaypoint, poses.size() - 1)].Rotation()};
     poseLog.Append(actualPose, t);
 
-    double desiredSpeed = targetSpeed[i];
+    // Find closest waypoint ahead on path
+    size_t targetIdx = currentWaypoint;
+    double minDist = INFINITY;
+    
+    for (size_t i = currentWaypoint; i < poses.size(); ++i) {
+      double dx = poses[i].X().value() - robotX;
+      double dy = poses[i].Y().value() - robotY;
+      double dist = std::sqrt(dx * dx + dy * dy);
+      
+      // Look for waypoint at lookahead distance
+      if (dist >= kLookaheadDist) {
+        targetIdx = i;
+        break;
+      }
+      
+      // Track closest waypoint for progress
+      if (dist < minDist) {
+        minDist = dist;
+        currentWaypoint = i;
+      }
+    }
+    
+    // Check if we reached the goal
+    double goalDx = poses.back().X().value() - robotX;
+    double goalDy = poses.back().Y().value() - robotY;
+    double goalDist = std::sqrt(goalDx * goalDx + goalDy * goalDy);
+    
+    if (goalDist < kGoalTolerance) {
+      pathComplete = true;
+      accelXLog.Append(0.0, t);
+      accelYLog.Append(0.0, t);
+      accelMagLog.Append(0.0, t);
+      velXLog.Append(0.0, t);
+      velYLog.Append(0.0, t);
+      break;
+    }
+    
+    // If we're past the end, target the final waypoint
+    if (targetIdx >= poses.size() - 1) {
+      targetIdx = poses.size() - 1;
+    }
+    
+    // Calculate direction to target waypoint
+    double targetX = poses[targetIdx].X().value();
+    double targetY = poses[targetIdx].Y().value();
+    double dx = targetX - robotX;
+    double dy = targetY - robotY;
+    double distToTarget = std::sqrt(dx * dx + dy * dy);
+    
+    double dirX = distToTarget > 0.001 ? dx / distToTarget : 0.0;
+    double dirY = distToTarget > 0.001 ? dy / distToTarget : 0.0;
+    
+    // Use target speed from path profile
+    double desiredSpeed = targetSpeed[targetIdx];
 
     double dvMag = desiredSpeed - currentSpeed;
     double accelMag = 0.0;
@@ -112,36 +177,34 @@ auto main() -> int {
     currentSpeed += accelMag * kDtSec;
     currentSpeed = std::max(0.0, currentSpeed);
 
-    if (i > 0) {
-      double dx = poses[i].X().value() - poses[i - 1].X().value();
-      double dy = poses[i].Y().value() - poses[i - 1].Y().value();
-      double segDist = std::sqrt(dx * dx + dy * dy);
+    // Calculate desired velocity in robot frame
+    double newVx = dirX * currentSpeed;
+    double newVy = dirY * currentSpeed;
 
-      double dirX = segDist > 0.001 ? dx / segDist : 0.0;
-      double dirY = segDist > 0.001 ? dy / segDist : 0.0;
+    double ax = (newVx - currentVx) / kDtSec;
+    double ay = (newVy - currentVy) / kDtSec;
 
-      double newVx = dirX * currentSpeed;
-      double newVy = dirY * currentSpeed;
+    currentVx = newVx;
+    currentVy = newVy;
 
-      double ax = (newVx - currentVx) / kDtSec;
-      double ay = (newVy - currentVy) / kDtSec;
+    // Simulate robot motion (integrating velocity)
+    currentX += currentVx * kDtSec;
+    currentY += currentVy * kDtSec;
 
-      currentVx = newVx;
-      currentVy = newVy;
+    double accelMagTotal = std::sqrt(ax * ax + ay * ay);
 
-      currentX += currentVx * kDtSec;
-      currentY += currentVy * kDtSec;
-
-      double accelMagTotal = std::sqrt(ax * ax + ay * ay);
-
-      accelXLog.Append(ax, t);
-      accelYLog.Append(ay, t);
-      accelMagLog.Append(accelMagTotal, t);
-      velXLog.Append(currentVx, t);
-      velYLog.Append(currentVy, t);
-    }
+    accelXLog.Append(ax, t);
+    accelYLog.Append(ay, t);
+    accelMagLog.Append(accelMagTotal, t);
+    velXLog.Append(currentVx, t);
+    velYLog.Append(currentVy, t);
 
     t += kDtUs;
+    
+    // Flush log periodically to prevent buffer overflow
+    if (++iterationCount % kFlushInterval == 0) {
+      log.Flush();
+    }
   }
 
   log.Flush();

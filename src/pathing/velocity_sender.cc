@@ -17,17 +17,13 @@ VelocitySender::VelocitySender()
 
   nt::DoubleArrayTopic vel_topic = table->GetDoubleArrayTopic("Velocity");
   vel_publisher_ = vel_topic.Publish();
-
-  nt::DoubleTopic latency_topic = table->GetDoubleTopic("Latency");
-  latency_publisher_ = latency_topic.Publish();
 }
 
 
-void VelocitySender::Send(const double ax, const double bx, double latency) {
+void VelocitySender::Send(const double ax, const double bx) {
   if (mutex_.try_lock()) {
     std::vector<double> vel_array = {ax, bx};
     vel_publisher_.Set(vel_array);
-    latency_publisher_.Set(latency);
   }
 
   mutex_.unlock();

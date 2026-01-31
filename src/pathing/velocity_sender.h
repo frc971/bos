@@ -13,13 +13,12 @@ namespace pathing {
 class VelocitySender {
  public:
   VelocitySender();
-  void Send(const double ax, const double ay, double latency);
+  void Send(const double ax, const double ay);
 
  private:
   nt::NetworkTableInstance instance_;
 
   nt::DoubleArrayPublisher vel_publisher_;
-  nt::DoublePublisher latency_publisher_;
 
   std::mutex mutex_;
 };
