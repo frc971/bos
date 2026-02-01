@@ -57,6 +57,12 @@ auto GPUAprilTagDetector::GetTagDetections(
 
       tag_detection_t detection;
       detection.tag_id = gpu_detection->id;
+      if (detection.tag_id == 3) {
+        detection.tag_id = 4;
+      }
+      if (detection.tag_id == 12) {
+        detection.tag_id = 3;
+      }
       detection.timestamp = timestamped_frame.timestamp;
       detection.confidence = gpu_detection->decision_margin;
 
