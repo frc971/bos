@@ -107,11 +107,11 @@ JointSolver::JointSolver(camera::Camera camera_config,
     for (const cv::Point3f& apriltag_corner : kapriltag_corners) {
       cv::Mat tag_corner = (cv::Mat_<double>(4, 1) << -apriltag_corner.x,
                             apriltag_corner.y, apriltag_corner.z, 1.0);
-      absolute_apriltag_corners_.insert({tag.ID, absolute_tag_corners});
       cv::Mat result = feild_to_tag * tag_corner;
       absolute_tag_corners.push_back(cv::Point3d(
           result.at<double>(0), result.at<double>(1), result.at<double>(2)));
     }
+    absolute_apriltag_corners_.insert({tag.ID, absolute_tag_corners});
   }
 }
 
@@ -166,8 +166,6 @@ auto JointSolver::EstimatePosition(
   frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot_);
   return {position_estimate_t{
       .pose = robot_pose, .distance = 0, .timestamp = timestamp}};
-
-  return {};
 }
 
 }  // namespace localization
