@@ -20,7 +20,7 @@ auto main() -> int {
       std::make_unique<camera::CVCamera>(
           camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]));
 
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+  std::this_thread::sleep_for(std::chrono::seconds(7));
 
   // camera::CameraSource back_right_camera = camera::CameraSource(
   //     "back_right",
@@ -32,6 +32,7 @@ auto main() -> int {
   //     std::make_unique<camera::CVCamera>(
   //         camera::camera_constants[camera::Camera::IMX296_1])));
 
+  LOG(INFO) << "Starting estimators";
   std::thread front_right_thread(
       localization::run_localization, std::ref(front_right_camera),
       std::make_unique<localization::GPUAprilTagDetector>(
