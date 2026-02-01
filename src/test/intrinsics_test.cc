@@ -38,7 +38,8 @@ void warmupCamera(const std::string& pipeline) {
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  camera::Camera config = camera::SelectCameraConfig();
+  camera::Camera config =
+      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
   camera::CameraSource source("stress_test_camera",
                               camera::GetCameraStream(config));
   cv::Mat frame = source.GetFrame();

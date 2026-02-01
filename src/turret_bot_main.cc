@@ -20,6 +20,8 @@ auto main() -> int {
       std::make_unique<camera::CVCamera>(
           camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]));
 
+  std::this_thread::sleep_for(std::chrono::seconds(5));
+
   // camera::CameraSource back_right_camera = camera::CameraSource(
   //     "back_right",
   //     std::make_unique<camera::CVCamera>(

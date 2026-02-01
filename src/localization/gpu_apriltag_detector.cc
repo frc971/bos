@@ -44,6 +44,8 @@ auto GPUAprilTagDetector::GetTagDetections(
     cv::Mat gray;
     cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
     gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
+  } else {
+    LOG(ERROR) << "Unknown frame type";
   }
   const zarray_t* raw_detections = gpu_detector_->Detections();
   std::vector<tag_detection_t> tag_detections;
