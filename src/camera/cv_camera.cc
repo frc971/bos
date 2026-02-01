@@ -11,7 +11,7 @@ CVCamera::CVCamera(const CameraConstant& c)
   cap_.set(cv::CAP_PROP_BRIGHTNESS, 20);
   cap_.set(cv::CAP_PROP_FRAME_WIDTH, 1920);
   cap_.set(cv::CAP_PROP_FRAME_HEIGHT, 1080);
-  cap_.set(cv::CAP_PROP_FPS, 5);
+  cap_.set(cv::CAP_PROP_FPS, 60);
 
   // set_if(cv::CAP_PROP_FRAME_WIDTH, c.frame_width);
   // set_if(cv::CAP_PROP_FRAME_HEIGHT, c.frame_height);

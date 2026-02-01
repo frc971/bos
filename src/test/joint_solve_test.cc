@@ -138,6 +138,9 @@ auto main() -> int {
   auto tag_pose = kapriltag_layout.GetTagPose(ktag_id).value().RelativeTo({});
   auto feild_to_tag = createTransformMatrix(frc::Transform3d({}, tag_pose));
   feild_to_tag.at<double>(0, 3) = -feild_to_tag.at<double>(0, 3);
+  feild_to_tag.at<double>(0, 2) = -feild_to_tag.at<double>(0, 2);
+  feild_to_tag.at<double>(0, 1) = -feild_to_tag.at<double>(0, 1);
+  feild_to_tag.at<double>(0, 0) = -feild_to_tag.at<double>(0, 0);
 
   for (auto& apriltag_corner : apriltag_corners) {
     (void)apriltag_corner;
