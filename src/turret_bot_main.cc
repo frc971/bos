@@ -49,6 +49,7 @@ auto main() -> int {
       camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]
           .extrinsics_path,
       4972, false);
+  LOG(INFO) << "Started estimators square";
 
   front_right_thread.join();
 }

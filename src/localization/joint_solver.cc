@@ -100,14 +100,18 @@ JointSolver::JointSolver(camera::Camera camera_config,
     frc::Pose3d tag_pose = tag.pose;
     auto feild_to_tag = createTransformMatrix(tag_pose);
     feild_to_tag.at<double>(0, 3) = -feild_to_tag.at<double>(0, 3);
+    feild_to_tag.at<double>(0, 2) = -feild_to_tag.at<double>(0, 2);
+    feild_to_tag.at<double>(0, 1) = -feild_to_tag.at<double>(0, 1);
+    feild_to_tag.at<double>(0, 0) = -feild_to_tag.at<double>(0, 0);
+
     for (const cv::Point3f& apriltag_corner : kapriltag_corners) {
       cv::Mat tag_corner = (cv::Mat_<double>(4, 1) << -apriltag_corner.x,
                             apriltag_corner.y, apriltag_corner.z, 1.0);
+      absolute_apriltag_corners_.insert({tag.ID, absolute_tag_corners});
       cv::Mat result = feild_to_tag * tag_corner;
       absolute_tag_corners.push_back(cv::Point3d(
           result.at<double>(0), result.at<double>(1), result.at<double>(2)));
     }
-    absolute_apriltag_corners_.insert({tag.ID, absolute_tag_corners});
   }
 }
 
@@ -150,7 +154,7 @@ auto JointSolver::EstimatePosition(
   const double translation_z = tvec.ptr<double>()[1];
 
   const double rotation_x = rvec.ptr<double>()[2];
-  const double rotation_y = rvec.ptr<double>()[0];
+  const double rotation_y = -rvec.ptr<double>()[0];
   const double rotation_z = rvec.ptr<double>()[1];
 
   frc::Pose3d camera_pose(
