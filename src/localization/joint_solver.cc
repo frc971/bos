@@ -154,9 +154,9 @@ auto JointSolver::EstimatePosition(
   const double rotation_z = rvec.ptr<double>()[1];
 
   frc::Pose3d camera_pose(
-      units::meter_t{translation_x}, units::meter_t{translation_y},
+      units::meter_t{translation_x}, units::meter_t{-translation_y},
       units::meter_t{translation_z},
-      frc::Rotation3d(units::radian_t{rotation_x}, units::radian_t{-rotation_y},
+      frc::Rotation3d(units::radian_t{rotation_x}, units::radian_t{rotation_y},
                       units::radian_t{rotation_z}));
 
   frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot_);
