@@ -20,17 +20,8 @@ auto main() -> int {
       std::make_unique<camera::CVCamera>(
           camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]));
 
-  std::this_thread::sleep_for(std::chrono::seconds(5));
-
-  // camera::CameraSource back_right_camera = camera::CameraSource(
-  //     "back_right",
-  //     std::make_unique<camera::CVCamera>(
-  //         camera::camera_constants[camera::Camera::IMX296_0])));
-  //
-  // camera::CameraSource back_left_camera = camera::CameraSource(
-  //     "back_left",
-  //     std::make_unique<camera::CVCamera>(
-  //         camera::camera_constants[camera::Camera::IMX296_1])));
+  LOG(INFO) << "Started cameras";
+  std::this_thread::sleep_for(std::chrono::seconds(2));
 
   std::thread front_right_thread(
       localization::run_localization, std::ref(front_right_camera),
@@ -59,5 +50,5 @@ auto main() -> int {
           .extrinsics_path,
       4972, false);
 
-  front_left_thread.join();
+  front_right_thread.join();
 }
