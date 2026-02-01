@@ -16,7 +16,7 @@ using camera_constant_t = struct CameraConstant {
   std::optional<double> brightness = std::nullopt;
   std::optional<double> sharpness = std::nullopt;
 
-  friend std::ostream& operator<<(std::ostream& os, const CameraConstant& c) {
+  friend auto operator<<(std::ostream& os, const CameraConstant& c) -> std::ostream& {
     os << "pipeline: " << c.pipeline
        << "\tintrinsics_path: " << c.intrinsics_path
        << "\textrinsics_path: " << c.extrinsics_path
@@ -116,7 +116,7 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .extrinsics_path = "/bos/constants/turret_bot/front_right_extrinsics.json", 
             .name = "turret_bot_front_right",
             .backlight = 0.0,
-            .exposure = 4000.0},
+            .exposure = 100.0},
     [Camera::TURRET_BOT_FRONT_LEFT] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
@@ -125,7 +125,7 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .extrinsics_path = "/bos/constants/turret_bot/front_left_extrinsics.json", 
             .name = "turret_bot_front_left",
             .backlight = 0.0,
-            .exposure = 1000.0},
+            .exposure = 100.0},
     [Camera::TURRET_BOT_BACK_RIGHT] =
         camera_constant_t{
             .pipeline =
