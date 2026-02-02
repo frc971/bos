@@ -136,11 +136,11 @@ auto main() -> int {
   };
 
   auto tag_pose = kapriltag_layout.GetTagPose(ktag_id).value().RelativeTo({});
-  auto feild_to_tag = createTransformMatrix(frc::Transform3d({}, tag_pose));
-  feild_to_tag.at<double>(0, 3) = -feild_to_tag.at<double>(0, 3);
-  feild_to_tag.at<double>(0, 2) = -feild_to_tag.at<double>(0, 2);
-  feild_to_tag.at<double>(0, 1) = -feild_to_tag.at<double>(0, 1);
-  feild_to_tag.at<double>(0, 0) = -feild_to_tag.at<double>(0, 0);
+  auto field_to_tag = createTransformMatrix(frc::Transform3d({}, tag_pose));
+  field_to_tag.at<double>(0, 3) = -field_to_tag.at<double>(0, 3);
+  field_to_tag.at<double>(0, 2) = -field_to_tag.at<double>(0, 2);
+  field_to_tag.at<double>(0, 1) = -field_to_tag.at<double>(0, 1);
+  field_to_tag.at<double>(0, 0) = -field_to_tag.at<double>(0, 0);
 
   for (auto& apriltag_corner : apriltag_corners) {
     (void)apriltag_corner;
@@ -148,7 +148,7 @@ auto main() -> int {
 
     cv::Mat pt = (cv::Mat_<double>(4, 1) << apriltag_corner.x,
                   apriltag_corner.y, apriltag_corner.z, 1.0);
-    cv::Mat result = feild_to_tag * pt;
+    cv::Mat result = field_to_tag * pt;
     apriltag_corner = cv::Point3d(result.at<double>(0), result.at<double>(1),
                                   result.at<double>(2));
   }
@@ -199,10 +199,10 @@ auto main() -> int {
   //   auto tag_to_camera = camera_to_tag.inv();
   //
   //   auto tag_pose = kapriltag_layout.GetTagPose(ktag_id).value();
-  //   auto feild_to_tag = createTransformMatrix(tag_pose);
-  //   auto tag_to_feild = createTransformMatrix({tag_pose, {}});
-  //   tag_to_feild.at<double>(0, 3) = -tag_to_feild.at<double>(0, 3);
-  //   feild_to_tag.at<double>(0, 3) = -feild_to_tag.at<double>(0, 3);
+  //   auto field_to_tag = createTransformMatrix(tag_pose);
+  //   auto tag_to_field = createTransformMatrix({tag_pose, {}});
+  //   tag_to_field.at<double>(0, 3) = -tag_to_field.at<double>(0, 3);
+  //   field_to_tag.at<double>(0, 3) = -field_to_tag.at<double>(0, 3);
   //
   //   auto rotaion_matrix =
   //       createTransformMatrix(0, std::numbers::pi, 0, 0, 0, 0);
@@ -212,14 +212,14 @@ auto main() -> int {
   //   std::cout << "tag to camera\n";
   //   std::cout << tag_to_camera << std::endl;
   //
-  //   std::cout << "feild to tag\n";
-  //   std::cout << feild_to_tag << std::endl;
+  //   std::cout << "field to tag\n";
+  //   std::cout << field_to_tag << std::endl;
   //
-  //   auto feild_to_camera = feild_to_tag * tag_to_camera;
-  //   std::cout << "feild to camera\n";
-  //   std::cout << feild_to_camera << std::endl;
+  //   auto field_to_camera = field_to_tag * tag_to_camera;
+  //   std::cout << "field to camera\n";
+  //   std::cout << field_to_camera << std::endl;
   //
-  //   decomposeMatrix(feild_to_camera, rvec, tvec);
+  //   decomposeMatrix(field_to_camera, rvec, tvec);
   //
   //   const double translation_x = tvec.ptr<double>()[2];
   //   const double translation_y = tvec.ptr<double>()[0];
