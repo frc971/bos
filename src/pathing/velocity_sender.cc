@@ -19,7 +19,6 @@ VelocitySender::VelocitySender()
   vel_publisher_ = vel_topic.Publish();
 }
 
-
 void VelocitySender::Send(const double ax, const double bx) {
   if (mutex_.try_lock()) {
     std::vector<double> vel_array = {ax, bx};
