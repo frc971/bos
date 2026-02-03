@@ -8,9 +8,8 @@
 
 cv::Mat initializeGrid(const std::vector<std::vector<bool>>& gridData);
 
-std::vector<std::pair<int, int>> BFS(const cv::Mat& grid,
-                                     std::pair<int, int> start,
-                                     std::pair<int, int> target);
+auto BFS(const cv::Mat& grid, std::pair<int, int> start,
+         std::pair<int, int> target) -> std::vector<std::pair<int, int>>;
 
-std::vector<frc::Pose2d> createSpline(cv::Mat& grid, int sx, int sy, int tx,
-                                      int ty, double nodeSize);
+auto createSpline(cv::Mat& grid, int sx, int sy, int tx, int ty,
+                  double nodeSize) -> std::vector<frc::Pose2d>;

@@ -3,8 +3,6 @@
 #include <opencv2/opencv.hpp>
 #include <queue>
 
-
-
 auto initializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat {
 
   int H = gridData.size();
@@ -19,9 +17,8 @@ auto initializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat {
   return grid;
 }
 
-auto BFS(const cv::Mat& grid,
-                                     std::pair<int, int> start,
-                                     std::pair<int, int> target) {
+auto BFS(const cv::Mat& grid, std::pair<int, int> start,
+         std::pair<int, int> target) -> std::vector<std::pair<int, int>> {
 
   if (grid.at<uchar>(start.second, start.first) == 0)
     return {};
@@ -90,8 +87,8 @@ auto BFS(const cv::Mat& grid,
   return {};
 }
 
-auto createSpline(cv::Mat& grid, int sx, int sy, int tx,
-                                      int ty, double nodeSize) -> std::vector<frc::Pose2d> {
+auto createSpline(cv::Mat& grid, int sx, int sy, int tx, int ty,
+                  double nodeSize) -> std::vector<frc::Pose2d> {
 
   auto path = BFS(grid, {sx, sy}, {tx, ty});
 
