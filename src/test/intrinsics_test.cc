@@ -38,7 +38,8 @@ void warmupCamera(const std::string& pipeline) {
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  camera::Camera config = camera::SelectCameraConfig();
+  camera::Camera config =
+      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
   camera::CameraSource source("stress_test_camera",
                               camera::GetCameraStream(config));
   cv::Mat frame = source.GetFrame();
@@ -53,7 +54,7 @@ auto main(int argc, char* argv[]) -> int {
       distortion_coefficients_from_json(intrinsics);
 
   camera::CscoreStreamer raw_streamer("raw_stream", 4971, 30, 1080, 1080);
-  camera::CscoreStreamer undistorted_streamer("undistorted_stream", 4971, 30,
+  camera::CscoreStreamer undistorted_streamer("undistorted_stream", 4972, 30,
                                               1080, 1080);
 
   while (true) {
