@@ -3,9 +3,9 @@
 #include <opencv2/opencv.hpp>
 #include <queue>
 
-const int CELL_SIZE = 20;
 
-cv::Mat initializeGrid(const std::vector<std::vector<bool>>& gridData) {
+
+auto initializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat {
 
   int H = gridData.size();
   int W = gridData[0].size();
@@ -19,7 +19,7 @@ cv::Mat initializeGrid(const std::vector<std::vector<bool>>& gridData) {
   return grid;
 }
 
-std::vector<std::pair<int, int>> BFS(const cv::Mat& grid,
+auto BFS(const cv::Mat& grid,
                                      std::pair<int, int> start,
                                      std::pair<int, int> target) {
 
@@ -90,8 +90,8 @@ std::vector<std::pair<int, int>> BFS(const cv::Mat& grid,
   return {};
 }
 
-std::vector<frc::Pose2d> createSpline(cv::Mat& grid, int sx, int sy, int tx,
-                                      int ty, double nodeSize) {
+auto createSpline(cv::Mat& grid, int sx, int sy, int tx,
+                                      int ty, double nodeSize) -> std::vector<frc::Pose2d> {
 
   auto path = BFS(grid, {sx, sy}, {tx, ty});
 
@@ -99,6 +99,7 @@ std::vector<frc::Pose2d> createSpline(cv::Mat& grid, int sx, int sy, int tx,
     return {};
 
   std::vector<std::pair<double, double>> pts;
+  pts.reserve(path.size());
 
   for (auto& p : path) {
     pts.emplace_back(p.first * nodeSize + nodeSize / 2,

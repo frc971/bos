@@ -98,10 +98,9 @@ auto main() -> int {
   constexpr int kFlushInterval = 1;       // 10 iterations
 
   size_t currentWaypoint = 0;
-  bool pathComplete = false;
   int iterationCount = 0;
 
-  while (!pathComplete) {
+  while (true) {
     double robotX = currentX;
     double robotY = currentY;
 
@@ -135,7 +134,7 @@ auto main() -> int {
     double goalDist = std::sqrt(goalDx * goalDx + goalDy * goalDy);
 
     if (goalDist < kGoalTolerance) {
-      pathComplete = true;
+
       accelXLog.Append(0.0, t);
       accelYLog.Append(0.0, t);
       accelMagLog.Append(0.0, t);
