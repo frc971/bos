@@ -44,7 +44,8 @@ auto SquareSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections)
     -> std::vector<position_estimate_t> {
   // map?
-  std::vector<position_estimate_t> position_estimates(detections.size());
+  std::vector<position_estimate_t> position_estimates;
+  position_estimates.reserve(detections.size());
   for (const auto& detection : detections) {
     cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
     cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
