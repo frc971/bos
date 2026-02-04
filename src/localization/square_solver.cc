@@ -61,7 +61,6 @@ auto SquareSolver::EstimatePosition(
     const double rotation_x = rvec.ptr<double>()[2];
     const double rotation_y = rvec.ptr<double>()[0];
     const double rotation_z = rvec.ptr<double>()[1];
-    LOG(INFO) << translation_x << " " << translation_y;
 
     auto pose = frc::Pose3d(frc::Translation3d(units::meter_t{translation_x},
                                                units::meter_t{translation_y},
