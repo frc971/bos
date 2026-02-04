@@ -2,6 +2,8 @@
 #include <iomanip>
 #include <iostream>
 
+namespace utils {
+
 void PrintPose3d(const frc::Pose3d& pose) {
   // Extract translation (in meters)
   double x = pose.X().value();
@@ -36,3 +38,5 @@ void PrintTransform3d(const frc::Transform3d& transform) {
       units::degree_t{r.X()}.value(), units::degree_t{r.Y()}.value(),
       units::degree_t{r.Z()}.value());
 }
+
+}  // namespace utils

@@ -17,7 +17,7 @@ JointSolver::JointSolver(const std::string& intrinsics_path,
                          const std::string& extrinsics_path,
                          AprilTagFieldLayout layout, double tag_size)
     : layout_(std::move(layout)),
-      camera_matrix_(camera_matrix_from_json<Eigen::MatrixXd>(
+      camera_matrix_(utils::camera_matrix_from_json<Eigen::MatrixXd>(
           utils::read_intrinsics(intrinsics_path))),
       initial_solver_(utils::read_extrinsics(extrinsics_path)) {}
 
