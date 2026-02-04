@@ -12,7 +12,7 @@ using point3d_t = struct Point3d {
 
 using tag_detection_t = struct TagDetection {
   int tag_id;
-  std::array<cv::Point2f, 4> corners;  // Image coordinates of tag corners
+  std::array<cv::Point2d, 4> corners;  // Image coordinates of tag corners
   double timestamp;
   double confidence;
 };

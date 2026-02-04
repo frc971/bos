@@ -56,6 +56,8 @@ enum Camera {
   STOVETOP_BOT_BACK_RIGHT,
   STOVETOP_BOT_BACK_LEFT,
 
+  DEV_ORIN,
+
   DEFAULT_USB0,
   REALSENSE,
   CAMERA_LENGTH,
@@ -177,6 +179,15 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .intrinsics_path = "/bos/constants/vision_bot_back_left_intrinsics.json",
             .extrinsics_path = "/bos/constants/vision_bot_back_left_extrinsics.json", 
             .name = "vision_bot_back_left"},
+    [Camera::DEV_ORIN] =
+        camera_constant_t{
+            .pipeline = "/dev/v4l/by-path/"
+                        "platform-3610000.usb-usb-0:2.1:1.0-video-index0",
+            .intrinsics_path =
+                "/bos/constants/dev_orin_intrinsics.json",
+            .extrinsics_path =
+                "/bos/constants/dev_orin_extrinsics.json",
+            .name = "dev_orin"},
     [Camera::DEFAULT_USB0] =
         camera_constant_t{
             .pipeline = "platform-3610000.usb-usb-0:2.2:1.0-video-index0",
