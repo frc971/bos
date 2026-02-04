@@ -25,10 +25,11 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
                            std::vector<cv::Point3f> tag_corners)
     : layout_(std::move(layout)),
       tag_corners_(std::move(tag_corners)),
-      camera_matrix_(camera_matrix_from_json<cv::Mat>(
+      camera_matrix_(utils::camera_matrix_from_json<cv::Mat>(
           utils::read_intrinsics(intrinsics_path))),
-      distortion_coefficients_(distortion_coefficients_from_json<cv::Mat>(
-          utils::read_intrinsics(intrinsics_path))),
+      distortion_coefficients_(
+          utils::distortion_coefficients_from_json<cv::Mat>(
+              utils::read_intrinsics(intrinsics_path))),
       camera_to_robot_(ExtrinsicsJsonToCameraToRobot(
           utils::read_extrinsics(extrinsics_path))) {}
 
