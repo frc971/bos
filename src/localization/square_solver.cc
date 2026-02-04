@@ -71,11 +71,14 @@ auto SquareSolver::EstimatePosition(
 
     Eigen::Vector3d rotation_vector(rotation_x, rotation_y, rotation_z);
 
-    frc::Transform3d camera_to_tag(
-        units::meter_t{pose.X()}, units::meter_t{-pose.Y()},
-        units::meter_t{-pose.Z()},
-        frc::Rotation3d(rotation_vector,
-                        units::radian_t{rotation_vector.norm()}));
+    auto rotation = frc::Rotation3d(rotation_vector,
+                                    units::radian_t{rotation_vector.norm()});
+
+    rotation.RotateBy(frc::Rotation3d(0_deg, 0_deg, 180_deg));
+
+    frc::Transform3d camera_to_tag(units::meter_t{pose.X()},
+                                   units::meter_t{-pose.Y()},
+                                   units::meter_t{-pose.Z()}, rotation);
 
     frc::Transform3d tag_to_camera = camera_to_tag.Inverse();
 
