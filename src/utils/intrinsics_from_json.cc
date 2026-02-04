@@ -1,5 +1,7 @@
 #include "src/utils/intrinsics_from_json.h"
 #include "third_party/971apriltag/971apriltag.h"
+
+namespace utils {
 template <>
 auto camera_matrix_from_json<frc971::apriltag::CameraMatrix>(
     nlohmann::json intrinsics) -> frc971::apriltag::CameraMatrix {
@@ -48,3 +50,5 @@ auto camera_matrix_from_json<Eigen::MatrixXd>(nlohmann::json intrinsics)
       intrinsics["cy"], 0, 0, 1;
   return K;
 }
+
+}  // namespace utils
