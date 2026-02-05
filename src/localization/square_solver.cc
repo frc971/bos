@@ -25,10 +25,11 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
                            std::vector<cv::Point3f> tag_corners)
     : layout_(std::move(layout)),
       tag_corners_(std::move(tag_corners)),
-      camera_matrix_(camera_matrix_from_json<cv::Mat>(
+      camera_matrix_(utils::camera_matrix_from_json<cv::Mat>(
           utils::read_intrinsics(intrinsics_path))),
-      distortion_coefficients_(distortion_coefficients_from_json<cv::Mat>(
-          utils::read_intrinsics(intrinsics_path))),
+      distortion_coefficients_(
+          utils::distortion_coefficients_from_json<cv::Mat>(
+              utils::read_intrinsics(intrinsics_path))),
       camera_to_robot_(ExtrinsicsJsonToCameraToRobot(
           utils::read_extrinsics(extrinsics_path))) {}
 
@@ -43,7 +44,8 @@ auto SquareSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections)
     -> std::vector<position_estimate_t> {
   // map?
-  std::vector<position_estimate_t> position_estimates(detections.size());
+  std::vector<position_estimate_t> position_estimates;
+  position_estimates.reserve(detections.size());
   for (const auto& detection : detections) {
     cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
     cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
@@ -60,7 +62,6 @@ auto SquareSolver::EstimatePosition(
     const double rotation_x = rvec.ptr<double>()[2];
     const double rotation_y = rvec.ptr<double>()[0];
     const double rotation_z = rvec.ptr<double>()[1];
-    LOG(INFO) << translation_x << " " << translation_y;
 
     auto pose = frc::Pose3d(frc::Translation3d(units::meter_t{translation_x},
                                                units::meter_t{translation_y},
