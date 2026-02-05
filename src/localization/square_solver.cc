@@ -4,6 +4,42 @@
 #include "src/utils/camera_utils.h"
 #include "src/utils/intrinsics_from_json.h"
 
+auto makeTransform(const cv::Mat& rvec, const cv::Mat& tvec) -> cv::Mat {
+  CV_Assert(rvec.total() == 3 && tvec.total() == 3);
+
+  cv::Mat R;
+  cv::Rodrigues(rvec, R);  // 3x3
+
+  cv::Mat T = cv::Mat::eye(4, 4, CV_64F);
+
+  R.copyTo(T(cv::Rect(0, 0, 3, 3)));
+
+  T.at<double>(0, 3) = tvec.at<double>(0);
+  T.at<double>(1, 3) = tvec.at<double>(1);
+  T.at<double>(2, 3) = tvec.at<double>(2);
+
+  return T;
+}
+
+template <typename Derived>
+auto eigenToCvMat(const Eigen::MatrixBase<Derived>& mat) -> cv::Mat {
+  cv::Mat cvMat(mat.rows(), mat.cols(), CV_64F);
+  Eigen::Map<
+      Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
+      cvMat.ptr<double>(), mat.rows(), mat.cols()) = mat;
+  return cvMat;
+}
+
+auto cvMatToEigen(const cv::Mat& mat) -> Eigen::Matrix4d {
+  Eigen::Matrix4d out;
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      out(i, j) = mat.at<double>(i, j);
+    }
+  }
+  return out;
+}
+
 namespace localization {
 
 auto ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json)
@@ -38,7 +74,12 @@ SquareSolver::SquareSolver(camera::Camera camera_config,
                            std::vector<cv::Point3f> tag_corners)
     : SquareSolver(camera::camera_constants[camera_config].intrinsics_path,
                    camera::camera_constants[camera_config].extrinsics_path,
-                   std::move(layout), std::move(tag_corners)) {}
+                   std::move(layout), std::move(tag_corners)) {
+
+  cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, 0, std::numbers::pi);
+  cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
+  rotate_z_ = makeTransform(rvec, tvec);
+}
 
 auto SquareSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections)
@@ -53,63 +94,26 @@ auto SquareSolver::EstimatePosition(
                  distortion_coefficients_, rvec, tvec, false,
                  cv::SOLVEPNP_IPPE_SQUARE);
 
-    // Currently we do not use transation z, rotation x and rotation y
-    // Converting to wpi coordinates
     const double translation_x = tvec.ptr<double>()[2];
     const double translation_y = tvec.ptr<double>()[0];
-    const double translation_z = tvec.ptr<double>()[1];
 
-    const double rotation_x = rvec.ptr<double>()[2];
-    const double rotation_y = rvec.ptr<double>()[0];
-    const double rotation_z = rvec.ptr<double>()[1];
+    auto camera_to_tag = makeTransform(rvec, tvec);
+    auto tag_to_camera = camera_to_tag.inv();
 
-    auto pose = frc::Pose3d(frc::Translation3d(units::meter_t{translation_x},
-                                               units::meter_t{translation_y},
-                                               units::meter_t{translation_z}),
-                            frc::Rotation3d(units::radian_t{rotation_x},
-                                            units::radian_t{rotation_y},
-                                            units::radian_t{rotation_z}));
+    auto feild_to_tag =
+        eigenToCvMat(localization::kapriltag_layout.GetTagPose(detection.tag_id)
+                         .value()
+                         .ToMatrix());
 
-    frc::Transform3d camera_to_tag(
-        units::meter_t{pose.X()}, units::meter_t{-pose.Y()},
-        units::meter_t{-pose.Z()},
-        frc::Rotation3d(units::radian_t{pose.Rotation().X()},
-                        units::radian_t{-pose.Rotation().Y()},
-                        units::radian_t{-pose.Rotation().Z()} + 180_deg));
-
-    frc::Transform3d tag_to_camera = camera_to_tag.Inverse();
-
-    frc::Pose3d tag_pose = layout_.GetTagPose(detection.tag_id).value();
-
-    frc::Pose3d camera_pose = tag_pose.TransformBy(tag_to_camera);
-
-    frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot_);
-
-    // // TODO check if there is a way of doing this in a better way
-    // frc::Transform3d camera_to_tag(
-    //     units::meter_t{translation_x}, units::meter_t{-translation_y},
-    //     units::meter_t{-translation_z},
-    //     frc::Rotation3d(units::radian_t{rotation_x},
-    //                     units::radian_t{-rotation_y},
-    //                     units::radian_t{-rotation_z} + 180_deg));
-
-    // frc::Transform3d tag_to_camera = camera_to_tag.Inverse();
-    // PrintTransform3d(tag_to_camera);
-    //
-    // auto maybe_tag_pose = layout_.GetTagPose(detection.tag_id);
-    // if (!maybe_tag_pose.has_value()) {
-    //   LOG(WARNING) << "Got invalid tag id: " << detection.tag_id;
-    // }
-    // frc::Pose3d tag_pose = maybe_tag_pose.value();
-    //
-    // frc::Pose3d camera_pose = tag_pose.TransformBy(tag_to_camera);
-    //
-    // frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot_);
+    frc::Pose3d robot_pose(
+        cvMatToEigen((feild_to_tag * rotate_z_ * tag_to_camera) *
+                     eigenToCvMat(camera_to_robot_.ToMatrix())));
 
     position_estimates.push_back({robot_pose,
                                   std::hypot(translation_x, translation_y),
                                   detection.timestamp});
   }
+
   return position_estimates;
 }
 
