@@ -22,6 +22,8 @@ CVCamera::CVCamera(const CameraConstant& c)
   if (c.exposure) {
     cap_.set(cv::CAP_PROP_AUTO_EXPOSURE, 1);  // V4L2: 1 = manual
     cap_.set(cv::CAP_PROP_EXPOSURE, static_cast<double>(*c.exposure));
+  } else {
+    cap_.set(cv::CAP_PROP_AUTO_EXPOSURE, 3);
   }
 }
 
