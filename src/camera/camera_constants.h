@@ -115,8 +115,7 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .intrinsics_path = "/bos/constants/turret_bot/front_right_intrinsics.json",
             .extrinsics_path = "/bos/constants/turret_bot/front_right_extrinsics.json", 
             .name = "turret_bot_front_right",
-            .backlight = 0.0,
-            .exposure = 5.0},
+            .backlight = 0.0},
     [Camera::TURRET_BOT_FRONT_LEFT] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
@@ -124,8 +123,7 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .intrinsics_path = "/bos/constants/turret_bot/front_left_intrinsics.json",
             .extrinsics_path = "/bos/constants/turret_bot/front_left_extrinsics.json", 
             .name = "turret_bot_front_left",
-            .backlight = 0.0,
-            .exposure = 5.0},
+            .backlight = 0.0},
     [Camera::TURRET_BOT_BACK_RIGHT] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
