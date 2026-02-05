@@ -1,47 +1,34 @@
-#include "src/localization/joint_solver.h"
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/intrinsics_from_json.h"
-
-constexpr int kimage_tag_size = 50;
-constexpr int ktag_id = 29;
-constexpr int ktag_offset_y = 0;
-constexpr int ktag_offset_x = 0;
-constexpr camera::Camera kconfig = camera::Camera::DUMMY_CAMERA;
+constexpr int kimage_tag_width = 20;
+constexpr int kimage_tag_height = 20;
+constexpr std::array<int, 2> ktag_ids = {15, 31};
+constexpr int kimage_width = 20;
+constexpr int kimage_height = 20;
 
 auto main() -> int {
-  cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64F);  // output rotation vector
-  cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64F);  // output translation vector
-  auto camera_matrix =
-      utils::camera_matrix_from_json<cv::Mat>(utils::read_intrinsics(
-          camera::camera_constants[kconfig].intrinsics_path));
+  std::cout << "Things happening" << std::endl;
+  const std::array<cv::Point2f, 4> image_points = {
+      cv::Point2f(kimage_width / 2.0 - kimage_tag_width / 2.0,
+                  kimage_height / 2.0 + kimage_tag_height / 2.0),
+      cv::Point2f(kimage_width / 2.0 + kimage_tag_width / 2.0,
+                  kimage_height / 2.0 + kimage_tag_height / 2.0),
+      cv::Point2f(kimage_width / 2.0 + kimage_tag_width / 2.0,
+                  kimage_height / 2.0 - kimage_tag_height / 2.0),
+      cv::Point2f(kimage_width / 2.0 - kimage_tag_width / 2.0,
+                  kimage_height / 2.0 - kimage_tag_height / 2.0)};
+  localization::SquareSolver solver(camera::Camera::DUMMY_CAMERA);
+  std::cout << "2" << std::endl;
 
-  auto distortion_coefficients =
-      utils::distortion_coefficients_from_json<cv::Mat>(utils::read_intrinsics(
-          camera::camera_constants[kconfig].intrinsics_path));
+  for (const int id : ktag_ids) {
+    const localization::tag_detection_t fake_detection{.tag_id = id,
+                                                       .corners = image_points};
+    const std::vector<localization::tag_detection_t> fake_detections{
+        fake_detection};
+    std::cout << id << ":\n"
+              << solver.EstimatePosition(fake_detections)[0] << std::endl;
+  }
 
-  localization::SquareSolver solver(kconfig);
-
-  std::array<cv::Point2f, 4> image_points = {
-      cv::Point2f(1000 - kimage_tag_size + ktag_offset_x,
-                  500 + kimage_tag_size + ktag_offset_y),
-      cv::Point2f(1000 + kimage_tag_size + ktag_offset_x,
-                  500 + kimage_tag_size + ktag_offset_y),
-      cv::Point2f(1000 + kimage_tag_size + ktag_offset_x,
-                  500 - kimage_tag_size + ktag_offset_y),
-      cv::Point2f(1000 - kimage_tag_size + ktag_offset_x,
-                  500 - kimage_tag_size + ktag_offset_y),
-  };
-  localization::tag_detection_t dummy_tag_detection{
-      .tag_id = ktag_id,
-      .corners = image_points,
-      .timestamp = 0.0,
-      .confidence = 0.0,
-  };
-
-  localization::position_estimate_t position_estimate =
-      solver.EstimatePosition({dummy_tag_detection})[0];
-
-  utils::PrintPose3d(position_estimate.pose);
-  LOG(INFO) << position_estimate;
+  return 0;
 }
