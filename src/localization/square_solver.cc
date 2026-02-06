@@ -3,6 +3,7 @@
 #include <utility>
 #include "src/utils/camera_utils.h"
 #include "src/utils/intrinsics_from_json.h"
+#include "src/utils/log.h"
 
 auto MakeTransform(const cv::Mat& rvec, const cv::Mat& tvec) -> cv::Mat {
   CV_Assert(rvec.total() == 3 && tvec.total() == 3);
@@ -48,6 +49,8 @@ auto ConvertOpencvCoordinateToWpilib(cv::Mat& vec) {
   vec.ptr<double>()[1] = y;
   vec.ptr<double>()[2] = z;
 }
+
+static const cv::Mat zero_vec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
 
 namespace localization {
 
@@ -111,7 +114,12 @@ auto SquareSolver::EstimatePosition(
     ConvertOpencvCoordinateToWpilib(rvec);
 
     cv::Mat camera_to_tag = MakeTransform(rvec, tvec);
-    cv::Mat tag_to_camera = camera_to_tag.inv();
+    cv::Mat camera_to_tag_rotation = MakeTransform(rvec, zero_vec);
+    cv::Mat camera_to_tag_translation = MakeTransform(zero_vec, tvec);
+    cv::Mat tag_to_camera_rotation = camera_to_tag_rotation.inv();
+    cv::Mat tag_to_camera_translation =
+        rotate_z_ * camera_to_tag_translation * rotate_z_;
+    cv::Mat tag_to_camera = tag_to_camera_translation * tag_to_camera_rotation;
 
     cv::Mat feild_to_tag =
         EigenToCvMat(localization::kapriltag_layout.GetTagPose(detection.tag_id)
