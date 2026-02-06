@@ -32,7 +32,8 @@ auto SquareSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections)
     -> std::vector<position_estimate_t> {
   // map?
-  std::vector<position_estimate_t> position_estimates(detections.size());
+  std::vector<position_estimate_t> position_estimates;
+  position_estimates.reserve(detections.size());
   for (const auto& detection : detections) {
     cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
     cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
@@ -49,7 +50,6 @@ auto SquareSolver::EstimatePosition(
     const double rotation_x = rvec.ptr<double>()[2];
     const double rotation_y = rvec.ptr<double>()[0];
     const double rotation_z = rvec.ptr<double>()[1];
-    LOG(INFO) << translation_x << " " << translation_y;
 
     auto pose = frc::Pose3d(frc::Translation3d(units::meter_t{translation_x},
                                                units::meter_t{translation_y},
@@ -72,27 +72,6 @@ auto SquareSolver::EstimatePosition(
     frc::Pose3d camera_pose = tag_pose.TransformBy(tag_to_camera);
 
     frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot_);
-
-    // // TODO check if there is a way of doing this in a better way
-    // frc::Transform3d camera_to_tag(
-    //     units::meter_t{translation_x}, units::meter_t{-translation_y},
-    //     units::meter_t{-translation_z},
-    //     frc::Rotation3d(units::radian_t{rotation_x},
-    //                     units::radian_t{-rotation_y},
-    //                     units::radian_t{-rotation_z} + 180_deg));
-
-    // frc::Transform3d tag_to_camera = camera_to_tag.Inverse();
-    // PrintTransform3d(tag_to_camera);
-    //
-    // auto maybe_tag_pose = layout_.GetTagPose(detection.tag_id);
-    // if (!maybe_tag_pose.has_value()) {
-    //   LOG(WARNING) << "Got invalid tag id: " << detection.tag_id;
-    // }
-    // frc::Pose3d tag_pose = maybe_tag_pose.value();
-    //
-    // frc::Pose3d camera_pose = tag_pose.TransformBy(tag_to_camera);
-    //
-    // frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot_);
 
     position_estimates.push_back({robot_pose,
                                   std::hypot(translation_x, translation_y),

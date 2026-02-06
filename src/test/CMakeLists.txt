@@ -31,3 +31,5 @@ target_link_libraries(absl_flag_test absl::flags absl::flags_parse)
 add_executable(joint_solve_test joint_solve_test.cc)
 target_link_libraries(joint_solve_test absl::flags absl::flags_parse utils wpilibc apriltag)
 
+add_executable(solver_test solver_test.cc)
+target_link_libraries(solver_test absl::flags absl::flags_parse utils localization)
