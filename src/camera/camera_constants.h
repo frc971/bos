@@ -57,6 +57,7 @@ enum Camera {
   STOVETOP_BOT_BACK_LEFT,
 
   DEFAULT_USB0,
+  DUMMY_CAMERA, // For tests such as solver_test.cc
   REALSENSE,
   CAMERA_LENGTH,
 };
@@ -182,6 +183,14 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
                 "/bos/constants/default_usb_camera0_intrinsics.json",
             .extrinsics_path =
                 "/bos/constants/default_usb_camera0_extrinsics.json",
+            .name = "default_usb0"},
+  [Camera::DUMMY_CAMERA] =
+        camera_constant_t{
+            .pipeline = "",
+            .intrinsics_path =
+                "/bos/constants/dummy_camera_intrinsics.json",
+            .extrinsics_path =
+                "/bos/constants/dummy_camera_extrinsics.json",
             .name = "default_usb0"},
     [Camera::REALSENSE] =
         camera_constant_t{
