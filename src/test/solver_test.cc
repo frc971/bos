@@ -8,14 +8,14 @@ constexpr int kimage_width = 20;
 constexpr int kimage_height = 20;
 
 auto main() -> int {
-  const std::array<cv::Point2f, 4> image_points = {
-      cv::Point2f(kimage_width / 2.0 - kimage_tag_width / 2.0,
+  const std::array<cv::Point2d, 4> image_points = {
+      cv::Point2d(kimage_width / 2.0 - kimage_tag_width / 2.0,
                   kimage_height / 2.0 + kimage_tag_height / 2.0),
-      cv::Point2f(kimage_width / 2.0 + kimage_tag_width / 2.0,
+      cv::Point2d(kimage_width / 2.0 + kimage_tag_width / 2.0,
                   kimage_height / 2.0 + kimage_tag_height / 2.0),
-      cv::Point2f(kimage_width / 2.0 + kimage_tag_width / 2.0,
+      cv::Point2d(kimage_width / 2.0 + kimage_tag_width / 2.0,
                   kimage_height / 2.0 - kimage_tag_height / 2.0),
-      cv::Point2f(kimage_width / 2.0 - kimage_tag_width / 2.0,
+      cv::Point2d(kimage_width / 2.0 - kimage_tag_width / 2.0,
                   kimage_height / 2.0 - kimage_tag_height / 2.0)};
   localization::SquareSolver solver(camera::Camera::DUMMY_CAMERA);
 

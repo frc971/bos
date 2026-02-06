@@ -191,7 +191,7 @@ auto main() -> int {
                             frc::Rotation3d(units::radian_t{rotation_x},
                                             units::radian_t{rotation_y},
                                             units::radian_t{rotation_z}));
-    PrintPose3d(camera_pose);
+    utils::PrintPose3d(camera_pose);
   }
 
   // {
