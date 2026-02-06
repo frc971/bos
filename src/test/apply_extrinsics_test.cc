@@ -4,7 +4,7 @@
 
 const int ktag_id = 26;
 
-auto makeTransform(const cv::Mat& rvec, const cv::Mat& tvec) -> cv::Mat {
+auto MakeTransform(const cv::Mat& rvec, const cv::Mat& tvec) -> cv::Mat {
   CV_Assert(rvec.total() == 3 && tvec.total() == 3);
 
   cv::Mat R;
@@ -22,7 +22,7 @@ auto makeTransform(const cv::Mat& rvec, const cv::Mat& tvec) -> cv::Mat {
 }
 
 template <typename Derived>
-auto eigenToCvMat(const Eigen::MatrixBase<Derived>& mat) -> cv::Mat {
+auto EigenToCvMat(const Eigen::MatrixBase<Derived>& mat) -> cv::Mat {
   cv::Mat cvMat(mat.rows(), mat.cols(), CV_64F);
   Eigen::Map<
       Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
@@ -71,15 +71,15 @@ auto main() -> int {
   }
 
   {
-    auto camera_to_tag = makeTransform(rvec, tvec);
+    auto camera_to_tag = MakeTransform(rvec, tvec);
     auto tag_to_camera = camera_to_tag.inv();
 
-    auto feild_to_tag = eigenToCvMat(
+    auto feild_to_tag = EigenToCvMat(
         localization::kapriltag_layout.GetTagPose(ktag_id).value().ToMatrix());
 
     cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, 0, std::numbers::pi);
     cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
-    auto rotate_z = makeTransform(rvec, tvec);
+    auto rotate_z = MakeTransform(rvec, tvec);
     LOG(INFO) << "\n" << feild_to_tag;
     LOG(INFO) << "\n" << feild_to_tag * rotate_z;
     LOG(INFO) << "\n" << feild_to_tag * rotate_z * tag_to_camera;
