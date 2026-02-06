@@ -30,3 +30,6 @@ target_link_libraries(absl_flag_test absl::flags absl::flags_parse)
 
 add_executable(apply_extrinsics_test apply_extrinsics_test.cc)
 target_link_libraries(apply_extrinsics_test absl::flags absl::flags_parse utils localization)
+
+add_executable(solver_test solver_test.cc)
+target_link_libraries(solver_test absl::flags absl::flags_parse utils localization)
