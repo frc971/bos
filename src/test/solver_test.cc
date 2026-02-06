@@ -6,17 +6,18 @@ constexpr int kimage_tag_height = 20;
 constexpr std::array<int, 2> ktag_ids = {15, 31};
 constexpr int kimage_width = 20;
 constexpr int kimage_height = 20;
+constexpr int krotation = 1;
 
 auto main() -> int {
   // Top left, Top right, Bottom right, Bottom left
   const std::array<cv::Point2f, 4> image_points = {
-      cv::Point2f(kimage_width / 2.0 - kimage_tag_width / 2.0,
+      cv::Point2f(kimage_width / 2.0 - kimage_tag_width / 2.0 + krotation,
                   kimage_height / 2.0 + kimage_tag_height / 2.0),
-      cv::Point2f(kimage_width / 2.0 + kimage_tag_width / 2.0 - 5,
+      cv::Point2f(kimage_width / 2.0 + kimage_tag_width / 2.0 - krotation,
                   kimage_height / 2.0 + kimage_tag_height / 2.0),
-      cv::Point2f(kimage_width / 2.0 + kimage_tag_width / 2.0 - 5,
+      cv::Point2f(kimage_width / 2.0 + kimage_tag_width / 2.0 - krotation,
                   kimage_height / 2.0 - kimage_tag_height / 2.0),
-      cv::Point2f(kimage_width / 2.0 - kimage_tag_width / 2.0,
+      cv::Point2f(kimage_width / 2.0 - kimage_tag_width / 2.0 + krotation,
                   kimage_height / 2.0 - kimage_tag_height / 2.0)};
   localization::SquareSolver solver(camera::Camera::DUMMY_CAMERA);
 
