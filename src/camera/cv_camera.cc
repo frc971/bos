@@ -5,7 +5,6 @@ namespace camera {
 
 CVCamera::CVCamera(const CameraConstant& c)
     : cap_(cv::VideoCapture(c.pipeline)) {
-
   auto set_if = [&](int prop, const auto& opt) {
     if (opt) {
       cap_.set(prop, *opt);

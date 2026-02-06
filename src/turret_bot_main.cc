@@ -20,7 +20,7 @@ auto main() -> int {
       std::make_unique<camera::CVCamera>(
           camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]));
 
-  std::this_thread::sleep_for(std::chrono::seconds(7));
+  std::this_thread::sleep_for(std::chrono::seconds(3));
 
   // camera::CameraSource back_right_camera = camera::CameraSource(
   //     "back_right",
@@ -41,7 +41,7 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
                   .intrinsics_path)),
-      std::make_unique<localization::SquareSolver>(
+      std::make_unique<localization::JointSolver>(
           camera::Camera::TURRET_BOT_FRONT_RIGHT),
       camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
           .extrinsics_path,
@@ -54,11 +54,12 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]
                   .intrinsics_path)),
-      std::make_unique<localization::SquareSolver>(
+      std::make_unique<localization::JointSolver>(
           camera::Camera::TURRET_BOT_FRONT_LEFT),
       camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]
           .extrinsics_path,
       4972, false);
+  LOG(INFO) << "Started estimators square";
 
-  front_left_thread.join();
+  front_right_thread.join();
 }

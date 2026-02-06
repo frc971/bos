@@ -2,22 +2,10 @@
 #include <opencv2/calib3d.hpp>
 #include <utility>
 #include "src/utils/camera_utils.h"
+#include "src/utils/extrinsics_from_json.h"
 #include "src/utils/intrinsics_from_json.h"
 
 namespace localization {
-
-auto ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json)
-    -> frc::Transform3d {
-  frc::Pose3d camera_pose(
-      units::meter_t{extrinsics_json["translation_x"]},
-      units::meter_t{extrinsics_json["translation_y"]},
-      units::meter_t{extrinsics_json["translation_z"]},
-      frc::Rotation3d(units::radian_t{extrinsics_json["rotation_x"]},
-                      units::radian_t{extrinsics_json["rotation_y"]},
-                      units::radian_t{extrinsics_json["rotation_z"]}));
-  frc::Transform3d robot_to_camera(frc::Pose3d(), camera_pose);
-  return robot_to_camera.Inverse();
-}
 
 SquareSolver::SquareSolver(const std::string& intrinsics_path,
                            const std::string& extrinsics_path,
@@ -30,7 +18,7 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
       distortion_coefficients_(
           utils::distortion_coefficients_from_json<cv::Mat>(
               utils::read_intrinsics(intrinsics_path))),
-      camera_to_robot_(ExtrinsicsJsonToCameraToRobot(
+      camera_to_robot_(utils::ExtrinsicsJsonToCameraToRobot(
           utils::read_extrinsics(extrinsics_path))) {}
 
 SquareSolver::SquareSolver(camera::Camera camera_config,
@@ -84,27 +72,6 @@ auto SquareSolver::EstimatePosition(
     frc::Pose3d camera_pose = tag_pose.TransformBy(tag_to_camera);
 
     frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot_);
-
-    // // TODO check if there is a way of doing this in a better way
-    // frc::Transform3d camera_to_tag(
-    //     units::meter_t{translation_x}, units::meter_t{-translation_y},
-    //     units::meter_t{-translation_z},
-    //     frc::Rotation3d(units::radian_t{rotation_x},
-    //                     units::radian_t{-rotation_y},
-    //                     units::radian_t{-rotation_z} + 180_deg));
-
-    // frc::Transform3d tag_to_camera = camera_to_tag.Inverse();
-    // PrintTransform3d(tag_to_camera);
-    //
-    // auto maybe_tag_pose = layout_.GetTagPose(detection.tag_id);
-    // if (!maybe_tag_pose.has_value()) {
-    //   LOG(WARNING) << "Got invalid tag id: " << detection.tag_id;
-    // }
-    // frc::Pose3d tag_pose = maybe_tag_pose.value();
-    //
-    // frc::Pose3d camera_pose = tag_pose.TransformBy(tag_to_camera);
-    //
-    // frc::Pose3d robot_pose = camera_pose.TransformBy(camera_to_robot_);
 
     position_estimates.push_back({robot_pose,
                                   std::hypot(translation_x, translation_y),
