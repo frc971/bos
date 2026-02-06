@@ -28,3 +28,6 @@ target_link_libraries(gamepiece_test_no_img PRIVATE gamepiece yolo camera utils 
 add_executable(absl_flag_test absl_flag_test.cc)
 target_link_libraries(absl_flag_test absl::flags absl::flags_parse)
 
+add_executable(solver_test solver_test.cc)
+target_link_libraries(solver_test absl::flags absl::flags_parse utils localization)
+
