@@ -38,5 +38,50 @@ void PrintTransform3d(const frc::Transform3d& transform) {
       units::degree_t{r.X()}.value(), units::degree_t{r.Y()}.value(),
       units::degree_t{r.Z()}.value());
 }
+void PrintTransformationMatrix(const cv::Mat& T) {
+
+  CV_Assert(T.rows == 4 && T.cols == 4);
+  CV_Assert(T.type() == CV_64F || T.type() == CV_32F);
+
+  // Translation
+  double x = T.at<double>(0, 3);
+  double y = T.at<double>(1, 3);
+  double z = T.at<double>(2, 3);
+
+  // Rotation matrix
+  cv::Mat R = T(cv::Rect(0, 0, 3, 3));
+
+  // ZYX Euler angles (Yaw-Pitch-Roll)
+  double sy = std::sqrt(R.at<double>(0, 0) * R.at<double>(0, 0) +
+                        R.at<double>(1, 0) * R.at<double>(1, 0));
+
+  bool singular = sy < 1e-6;
+
+  double roll, pitch, yaw;
+
+  if (!singular) {
+    roll = std::atan2(R.at<double>(2, 1), R.at<double>(2, 2));
+    pitch = std::atan2(-R.at<double>(2, 0), sy);
+    yaw = std::atan2(R.at<double>(1, 0), R.at<double>(0, 0));
+  } else {
+    // Gimbal lock
+    roll = std::atan2(-R.at<double>(1, 2), R.at<double>(1, 1));
+    pitch = std::atan2(-R.at<double>(2, 0), sy);
+    yaw = 0.0;
+  }
+
+  // Convert radians → degrees
+  roll *= 180.0 / CV_PI;
+  pitch *= 180.0 / CV_PI;
+  yaw *= 180.0 / CV_PI;
+
+  std::cout << "Transformation Matrix-> "
+            << "X: " << x << " m, "
+            << "Y: " << y << " m, "
+            << "Z: " << z << " m, "
+            << "Roll: " << roll << "°, "
+            << "Pitch: " << pitch << "°, "
+            << "Yaw: " << yaw << "°" << std::endl;
+}
 
 }  // namespace utils
