@@ -46,7 +46,7 @@ auto ConvertOpencvCoordinateToWpilib(cv::Mat& vec) {
   const double y = vec.ptr<double>()[0];
   const double z = vec.ptr<double>()[1];
   vec.ptr<double>()[0] = x;
-  vec.ptr<double>()[1] = y;
+  vec.ptr<double>()[1] = -y;
   vec.ptr<double>()[2] = z;
 }
 
