@@ -47,7 +47,7 @@ auto ConvertOpencvCoordinateToWpilib(cv::Mat& vec) {
   const double z = vec.ptr<double>()[1];
   vec.ptr<double>()[0] = x;
   vec.ptr<double>()[1] = -y;
-  vec.ptr<double>()[2] = z;
+  vec.ptr<double>()[2] = -z;
 }
 
 static const cv::Mat zero_vec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
@@ -92,6 +92,8 @@ SquareSolver::SquareSolver(camera::Camera camera_config,
   cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, 0, std::numbers::pi);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
   rotate_z_ = MakeTransform(rvec, tvec);
+  rotate_xyz_ = cv::Mat::eye(4, 4, CV_64F) * -1;
+  rotate_xyz_.at<double>(3, 3) = 1;
 }
 
 auto SquareSolver::EstimatePosition(
@@ -118,14 +120,12 @@ auto SquareSolver::EstimatePosition(
     cv::Mat camera_to_tag_translation = MakeTransform(zero_vec, tvec);
     cv::Mat tag_to_camera_rotation = camera_to_tag_rotation.inv();
     cv::Mat tag_to_camera_translation =
-        rotate_z_ * camera_to_tag_translation * rotate_z_;
+        rotate_xyz_ * camera_to_tag_translation * rotate_xyz_;
     cv::Mat tag_to_camera = tag_to_camera_translation * tag_to_camera_rotation;
-
     cv::Mat feild_to_tag =
         EigenToCvMat(localization::kapriltag_layout.GetTagPose(detection.tag_id)
                          .value()
                          .ToMatrix());
-
     frc::Pose3d robot_pose(CvMatToEigen(
         ((feild_to_tag * rotate_z_) * tag_to_camera) * camera_to_robot_));
 
