@@ -92,8 +92,8 @@ SquareSolver::SquareSolver(camera::Camera camera_config,
   cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, 0, std::numbers::pi);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
   rotate_z_ = MakeTransform(rvec, tvec);
-  rotate_xyz_ = cv::Mat::eye(4, 4, CV_64F) * -1;
-  rotate_xyz_.at<double>(3, 3) = 1;
+  invert_translation_ = cv::Mat::eye(4, 4, CV_64F) * -1;
+  invert_translation_.at<double>(3, 3) = 1;
 }
 
 auto SquareSolver::EstimatePosition(
@@ -120,7 +120,7 @@ auto SquareSolver::EstimatePosition(
     cv::Mat camera_to_tag_translation = MakeTransform(zero_vec, tvec);
     cv::Mat tag_to_camera_rotation = camera_to_tag_rotation.inv();
     cv::Mat tag_to_camera_translation =
-        rotate_xyz_ * camera_to_tag_translation * rotate_xyz_;
+        invert_translation_ * camera_to_tag_translation * invert_translation_;
     cv::Mat tag_to_camera = tag_to_camera_translation * tag_to_camera_rotation;
     cv::Mat feild_to_tag =
         EigenToCvMat(localization::kapriltag_layout.GetTagPose(detection.tag_id)
