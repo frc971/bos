@@ -19,7 +19,7 @@ using tag_detection_t = struct TagDetection {
 
 using position_estimate_t = struct PositionEstimate {
   frc::Pose3d pose;
-  double varience;
+  double variance;
   double timestamp;
   friend auto operator<<(std::ostream& os, const PositionEstimate& t)
       -> std::ostream& {

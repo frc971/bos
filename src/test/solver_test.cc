@@ -23,9 +23,6 @@ auto main() -> int {
       cv::Point2f(kimage_width / 2.0 - kimage_tag_width / 2.0 + ktag_offset,
                   kimage_height / 2.0 - kimage_tag_height / 2.0 - krotation)};
   localization::SquareSolver solver(camera::Camera::DUMMY_CAMERA);
-  for (auto& point : image_points) {
-    std::cout << point << std::endl;
-  }
 
   for (const int id : ktag_ids) {
     const localization::tag_detection_t fake_detection{.tag_id = id,

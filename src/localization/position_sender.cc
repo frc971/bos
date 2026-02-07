@@ -31,7 +31,7 @@ void PositionSender::Send(
     double latency) {
   if (mutex_.try_lock()) {
     for (auto& detection : detections) {
-      double variance = detection.varience;
+      double variance = detection.variance;
       std::array<double, 7> tag_estimation{
           detection.pose.X().value(),
           detection.pose.Y().value(),
