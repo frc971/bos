@@ -26,7 +26,7 @@ class SquareSolver : public IPositionSolver {
   cv::Mat camera_matrix_;
   cv::Mat distortion_coefficients_;
   cv::Mat camera_to_robot_;
-  cv::Mat rotate_xyz_;
+  cv::Mat invert_translation_;
   cv::Mat rotate_z_;
 };
 }  // namespace localization
