@@ -35,6 +35,19 @@ using position_estimate_t = struct PositionEstimate {
                units::degree_t{r.Z()}.value());
     return os;
   }
+  friend auto operator==(const PositionEstimate& left,
+                         const PositionEstimate& right) -> bool {
+    const auto& lt = left.pose.Translation();
+    const auto& lr = left.pose.Rotation();
+    const auto& rt = left.pose.Translation();
+    const auto& rr = left.pose.Rotation();
+
+    return lt.X().value() == rt.X().value() &&
+           lt.Y().value() == rt.Y().value() &&
+           lt.Z().value() == rt.Z().value() &&
+           lr.X().value() == rr.X().value() &&
+           lr.Y().value() == rr.Y().value() && lr.Z().value() == rr.Z().value();
+  }
 };
 
 using pose2d_t = struct Pose2d {
