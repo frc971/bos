@@ -115,7 +115,6 @@ auto SquareSolver::EstimatePosition(
     ConvertOpencvCoordinateToWpilib(tvec);
     ConvertOpencvCoordinateToWpilib(rvec);
 
-    cv::Mat camera_to_tag = MakeTransform(rvec, tvec);
     cv::Mat camera_to_tag_rotation = MakeTransform(rvec, zero_vec);
     cv::Mat camera_to_tag_translation = MakeTransform(zero_vec, tvec);
     cv::Mat tag_to_camera_rotation = camera_to_tag_rotation.inv();
