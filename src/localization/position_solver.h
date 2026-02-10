@@ -17,6 +17,7 @@ const std::vector<cv::Point3f> kapriltag_corners = {
 const frc::AprilTagFieldLayout kapriltag_layout =
     frc::AprilTagFieldLayout("/bos/constants/2026-rebuilt-andymark.json");
 
+// Interface for a class when given a apriltag detections, uses the detections to get the position of the robot
 class IPositionSolver {
  public:
   virtual auto EstimatePosition(const std::vector<tag_detection_t>& detections)

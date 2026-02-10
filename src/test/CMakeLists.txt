@@ -7,12 +7,6 @@ target_link_libraries(intrinsics_test PRIVATE ${OpenCV_LIBS} camera nlohmann_jso
 add_executable(yolo_test yolo_test.cc)
 target_link_libraries(yolo_test PRIVATE camera yolo utils)
 
-add_executable(camera_source_test camera_source_test.cc)
-target_link_libraries(camera_source_test PRIVATE ${OpenCV_LIBS} camera)
-
-add_executable(timer_test timer_test.cc)
-target_link_libraries(timer_test PRIVATE utils)
-
 add_executable(stress_test stress_test.cc)
 target_link_libraries(stress_test PRIVATE ${OpenCV_LIBS} apriltag ntcore camera nlohmann_json::nlohmann_json Eigen3::Eigen localization utils yolo absl::flags absl::flags_parse)
 
@@ -25,9 +19,5 @@ target_link_libraries(gamepiece_test PRIVATE gamepiece yolo camera utils localiz
 add_executable(gamepiece_test_no_img gamepiece_test_no_img.cc)
 target_link_libraries(gamepiece_test_no_img PRIVATE gamepiece yolo camera utils localization)
 
-add_executable(absl_flag_test absl_flag_test.cc)
-target_link_libraries(absl_flag_test absl::flags absl::flags_parse)
-
-add_executable(joint_solve_test joint_solve_test.cc)
-target_link_libraries(joint_solve_test absl::flags absl::flags_parse utils wpilibc apriltag)
-
+add_executable(solver_test solver_test.cc)
+target_link_libraries(solver_test absl::flags absl::flags_parse utils localization)

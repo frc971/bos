@@ -29,28 +29,27 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
 void PositionSender::Send(
     const std::vector<localization::position_estimate_t>& detections,
     double latency) {
-  if (mutex_.try_lock()) {
-    for (auto& detection : detections) {
-      double variance = detection.distance;
-      std::array<double, 7> tag_estimation{
-          detection.pose.X().value(),
-          detection.pose.Y().value(),
-          detection.pose.Rotation().Z().value(),
-          variance,
-          detection.timestamp +
-              instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
-          latency};
+  mutex_.lock();
+  for (auto& detection : detections) {
+    double variance = detection.variance;
+    std::array<double, 7> tag_estimation{
+        detection.pose.X().value(),
+        detection.pose.Y().value(),
+        detection.pose.Rotation().Z().value(),
+        variance,
+        detection.timestamp +
+            instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
+        latency};
 
-      pose_publisher_.Set(
-          frc::Pose2d(units::meter_t{detection.pose.X().value()},
-                      units::meter_t{detection.pose.Y().value()},
-                      units::radian_t{detection.pose.Rotation().Z().value()}));
+    pose_publisher_.Set(
+        frc::Pose2d(units::meter_t{detection.pose.X().value()},
+                    units::meter_t{detection.pose.Y().value()},
+                    units::radian_t{detection.pose.Rotation().Z().value()}));
 
-      tag_estimation_publisher_.Set(tag_estimation);
-      latency_publisher_.Set(latency);
-      if (verbose_) {
-        LOG(INFO) << detection;
-      }
+    tag_estimation_publisher_.Set(tag_estimation);
+    latency_publisher_.Set(latency);
+    if (verbose_) {
+      LOG(INFO) << detection;
     }
 
     mutex_.unlock();

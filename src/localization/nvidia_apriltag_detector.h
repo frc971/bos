@@ -8,6 +8,9 @@
 namespace localization {
 
 // NEEDS TO BE TESTED
+// Nvidia's apriltag detection algorithim
+// Supports either VPA or CPU backend
+// VPA and CPU are both slower than GPU we learned through benchmarks, but they can be used to offload some computation from the GPU
 class NvidiaAprilTagDetector : IAprilTagDetector {
  public:
   NvidiaAprilTagDetector(int image_width, int image_height,

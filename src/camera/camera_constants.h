@@ -48,17 +48,13 @@ enum Camera {
 
   TURRET_BOT_FRONT_RIGHT,
   TURRET_BOT_FRONT_LEFT,
-  TURRET_BOT_BACK_RIGHT,
-  TURRET_BOT_BACK_LEFT,
 
-  STOVETOP_BOT_FRONT_RIGHT,
-  STOVETOP_BOT_FRONT_LEFT,
-  STOVETOP_BOT_BACK_RIGHT,
-  STOVETOP_BOT_BACK_LEFT,
-
-  DEV_ORIN,
+  MAIN_ROBOT_FRONT_CAMERA,
+  MAIN_ROBOT_LEFT_CAMERA,
+  MAIN_ROBOT_RIGHT_CAMERA,
 
   DEFAULT_USB0,
+  DUMMY_CAMERA, // For tests such as solver_test.cc
   REALSENSE,
   CAMERA_LENGTH,
 };
@@ -117,8 +113,7 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .intrinsics_path = "/bos/constants/turret_bot/front_right_intrinsics.json",
             .extrinsics_path = "/bos/constants/turret_bot/front_right_extrinsics.json", 
             .name = "turret_bot_front_right",
-            .backlight = 0.0,
-            .exposure = 5.0},
+            .backlight = 0.0},
     [Camera::TURRET_BOT_FRONT_LEFT] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
@@ -126,77 +121,31 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .intrinsics_path = "/bos/constants/turret_bot/front_left_intrinsics.json",
             .extrinsics_path = "/bos/constants/turret_bot/front_left_extrinsics.json", 
             .name = "turret_bot_front_left",
-            .backlight = 0.0,
-            .exposure = 5.0},
-    [Camera::TURRET_BOT_BACK_RIGHT] =
-        camera_constant_t{
-            .pipeline =
-                "nvarguscamerasrc sensor-id=0 "
-                "aelock=true exposuretimerange=\"100000 "
-                "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
-                "video/x-raw(memory:NVMM), width=1456, height=1088, "
-                "framerate=30/1, "
-                "format=NV12 ! "
-                "nvvidconv ! "
-                "video/x-raw, format=BGRx ! "
-                "queue ! "
-                "appsink",
-            .intrinsics_path = "/bos/constants/turret_bot/back_right_intrinsics.json",
-            .extrinsics_path = "/bos/constants/turret_bot/back_right_extrinsics.json", 
-            .name = "turret_bot_back_right"},
-  [Camera::TURRET_BOT_BACK_LEFT] =
-        camera_constant_t{
-            .pipeline =
-                "nvarguscamerasrc sensor-id=1 "
-                "aelock=true exposuretimerange=\"100000 "
-                "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
-                "video/x-raw(memory:NVMM), width=1456, height=1088, "
-                "framerate=30/1, "
-                "format=NV12 ! "
-                "nvvidconv ! "
-                "video/x-raw, format=BGRx ! "
-                "queue ! "
-                "appsink",
-            .intrinsics_path = "/bos/constants/turret_bot/back_left_intrinsics.json",
-            .extrinsics_path = "/bos/constants/turret_bot/back_left_extrinsics.json", 
-          .name = "turret_bot_back_left"},
-    [Camera::STOVETOP_BOT_FRONT_RIGHT] =
+            .backlight = 0.0},
+    [Camera::MAIN_ROBOT_FRONT_CAMERA] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:1.1:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/stovetop_bot/front_right_intrinsics.json",
-            .extrinsics_path = "/bos/constants/stovetop_bot/front_right_extrinsics.json", 
-            .name = "stovetop_bot_front_right"},
-    [Camera::STOVETOP_BOT_FRONT_LEFT] =
+                        "",
+            .intrinsics_path = "/bos/constants/main_bot/front_intrinsics.json",
+            .extrinsics_path = "/bos/constants/main_bot/front_extrinsics.json", 
+            .name = "main_bot_front",
+            .backlight = 0.0},
+    [Camera::MAIN_ROBOT_LEFT_CAMERA] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.3:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/stovetop_bot/front_left_intrinsics.json",
-            .extrinsics_path = "/bos/constants/stovetop_bot/front_left_extrinsics.json", 
-            .name = "stovetop_bot_front_left"},
-    [Camera::STOVETOP_BOT_BACK_RIGHT] =
+                        "",
+            .intrinsics_path = "/bos/constants/main_bot/left_intrinsics.json",
+            .extrinsics_path = "/bos/constants/main_bot/left_extrinsics.json", 
+            .name = "main_bot_left",
+            .backlight = 0.0},
+    [Camera::MAIN_ROBOT_RIGHT_CAMERA] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/vision_bot_back_right_intrinsics.json",
-            .extrinsics_path = "/bos/constants/vision_bot_back_right_extrinsics.json",
-            .name = "turret_bot_back_right"},
-    [Camera::STOVETOP_BOT_BACK_LEFT] =
-        camera_constant_t{
-            .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/vision_bot_back_left_intrinsics.json",
-            .extrinsics_path = "/bos/constants/vision_bot_back_left_extrinsics.json", 
-            .name = "vision_bot_back_left"},
-    [Camera::DEV_ORIN] =
-        camera_constant_t{
-            .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.1:1.0-video-index0",
-            .intrinsics_path =
-                "/bos/constants/dev_orin_intrinsics.json",
-            .extrinsics_path =
-                "/bos/constants/dev_orin_extrinsics.json",
-            .name = "dev_orin"},
+                        "",
+            .intrinsics_path = "/bos/constants/main_bot/right_intrinsics.json",
+            .extrinsics_path = "/bos/constants/main_bot/right_extrinsics.json", 
+            .name = "main_bot_right",
+            .backlight = 0.0},
     [Camera::DEFAULT_USB0] =
         camera_constant_t{
             .pipeline = "platform-3610000.usb-usb-0:2.2:1.0-video-index0",
@@ -204,6 +153,14 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
                 "/bos/constants/default_usb_camera0_intrinsics.json",
             .extrinsics_path =
                 "/bos/constants/default_usb_camera0_extrinsics.json",
+            .name = "default_usb0"},
+  [Camera::DUMMY_CAMERA] =
+        camera_constant_t{
+            .pipeline = "",
+            .intrinsics_path =
+                "/bos/constants/dummy_camera_intrinsics.json",
+            .extrinsics_path =
+                "/bos/constants/dummy_camera_extrinsics.json",
             .name = "default_usb0"},
     [Camera::REALSENSE] =
         camera_constant_t{
