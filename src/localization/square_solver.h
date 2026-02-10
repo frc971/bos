@@ -8,6 +8,7 @@ using json = nlohmann::json;
 
 namespace localization {
 
+// Solves for position of robot using opencv's SOLVEPNP_IPPE_SQUARE method
 class SquareSolver : public IPositionSolver {
  public:
   SquareSolver(const std::string& intrinsics_path,
