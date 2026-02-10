@@ -22,16 +22,6 @@ auto main() -> int {
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  // camera::CameraSource back_right_camera = camera::CameraSource(
-  //     "back_right",
-  //     std::make_unique<camera::CVCamera>(
-  //         camera::camera_constants[camera::Camera::IMX296_0])));
-  //
-  // camera::CameraSource back_left_camera = camera::CameraSource(
-  //     "back_left",
-  //     std::make_unique<camera::CVCamera>(
-  //         camera::camera_constants[camera::Camera::IMX296_1])));
-
   LOG(INFO) << "Starting estimators";
   std::thread front_right_thread(
       localization::run_localization, std::ref(front_right_camera),

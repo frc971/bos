@@ -11,6 +11,7 @@
 #include "src/utils/pch.h"
 
 namespace localization {
+// Sends position estimates from the orin to the rio. It is safe to call Send() on multiple threads because of the mutex
 class PositionSender {
  public:
   PositionSender(const std::string& camera_name, bool verbose = false);
