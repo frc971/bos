@@ -121,12 +121,12 @@ auto SquareSolver::EstimatePosition(
     cv::Mat tag_to_camera_translation =
         invert_translation_ * camera_to_tag_translation * invert_translation_;
     cv::Mat tag_to_camera = tag_to_camera_translation * tag_to_camera_rotation;
-    cv::Mat feild_to_tag =
+    cv::Mat field_to_tag =
         EigenToCvMat(localization::kapriltag_layout.GetTagPose(detection.tag_id)
                          .value()
                          .ToMatrix());
     frc::Pose3d robot_pose(CvMatToEigen(
-        ((feild_to_tag * rotate_z_) * tag_to_camera) * camera_to_robot_));
+        ((field_to_tag * rotate_z_) * tag_to_camera) * camera_to_robot_));
 
     position_estimates.push_back({robot_pose,
                                   std::hypot(translation_x, translation_y),

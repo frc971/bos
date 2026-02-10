@@ -43,8 +43,8 @@ auto JointSolver::EstimatePosition(
   std::vector<Eigen::MatrixXd> w(detections.size());
   std::array<Eigen::Vector4d, 4> tag_corners;
   for (const auto& detection : detections) {
-    auto feild_to_tag = layout_.GetTagPose(detection.tag_id)->ToMatrix();
-    w.emplace_back(camera_matrix_ * PI * feild_to_tag);
+    auto field_to_tag = layout_.GetTagPose(detection.tag_id)->ToMatrix();
+    w.emplace_back(camera_matrix_ * PI * field_to_tag);
   }
   Eigen::Matrix4d A = initial_position_estimate.pose.ToMatrix();
   for (size_t i = 0; i < detections.size(); i++) {
