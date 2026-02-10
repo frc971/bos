@@ -19,7 +19,7 @@ JointSolver::JointSolver(const std::string& intrinsics_path,
     : layout_(std::move(layout)),
       camera_matrix_(utils::camera_matrix_from_json<Eigen::MatrixXd>(
           utils::read_intrinsics(intrinsics_path))),
-      initial_solver_(utils::read_extrinsics(extrinsics_path)) {}
+      initial_solver_(camera::Camera::DUMMY_CAMERA) {}
 
 JointSolver::JointSolver(camera::Camera camera_config,
                          const frc::AprilTagFieldLayout& layout,
