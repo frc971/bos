@@ -6,6 +6,9 @@
 
 namespace localization {
 
+// Austin's GPU apriltag detection wrapper
+// If given and image, with too low or too high exposure, the program will crash with 'invalid device ordinal'.
+// Hopefully we can fix change the code to catch that error
 class GPUAprilTagDetector : public IAprilTagDetector {
  public:
   GPUAprilTagDetector(uint image_width, uint image_height,

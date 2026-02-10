@@ -6,6 +6,7 @@
 
 namespace camera {
 
+// Wrap opencv's camera into the ICamera interface
 class CVCamera : public ICamera {
  public:
   CVCamera(const CameraConstant& camera_constants);
