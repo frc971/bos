@@ -23,9 +23,7 @@ class JointSolver : public IPositionSolver {
 
  private:
   frc::AprilTagFieldLayout layout_;
-  cv::Mat camera_matrix_;
-  cv::Mat distortion_coefficients_;
-  frc::Transform3d camera_to_robot_;
-  std::unordered_map<int, std::vector<cv::Point3f>> absolute_apriltag_corners_;
+  Eigen::MatrixXd camera_matrix_;
+  SquareSolver initial_solver_;
 };
 }  // namespace localization

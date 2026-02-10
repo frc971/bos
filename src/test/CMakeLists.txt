@@ -19,5 +19,8 @@ target_link_libraries(gamepiece_test PRIVATE gamepiece yolo camera utils localiz
 add_executable(gamepiece_test_no_img gamepiece_test_no_img.cc)
 target_link_libraries(gamepiece_test_no_img PRIVATE gamepiece yolo camera utils localization)
 
+add_executable(joint_solve_test joint_solver_test.cc)
+target_link_libraries(joint_solve_test localization absl::flags absl::flags_parse utils wpilibc apriltag GTest::gtest GTest::gtest_main)
+
 add_executable(solver_test solver_test.cc)
 target_link_libraries(solver_test absl::flags absl::flags_parse utils localization)
