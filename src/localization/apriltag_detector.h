@@ -5,6 +5,7 @@
 
 namespace localization {
 
+// Interface for different backend implementations of detecting an apriltag from a image
 class IAprilTagDetector {
  public:
   virtual auto GetTagDetections(camera::timestamped_frame_t& frame)
