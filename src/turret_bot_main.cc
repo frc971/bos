@@ -4,6 +4,7 @@
 #include "src/camera/cv_camera.h"
 #include "src/localization/joint_solver.h"
 #include "src/localization/run_localization.h"
+#include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 auto main() -> int {
