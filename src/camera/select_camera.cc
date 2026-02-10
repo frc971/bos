@@ -6,11 +6,6 @@
 
 namespace camera {
 
-/*
-    Asks Users for input and selects camera based on that.
-    If any input is invalid, the function returns a call to itself.
-*/
-
 auto SelectCameraConfig() -> Camera {
   std::cout << "Please select a camera" << std::endl;
   for (const auto& camera_constant : camera_constants) {
