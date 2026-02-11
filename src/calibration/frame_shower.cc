@@ -19,12 +19,10 @@ auto main(int argc, char* argv[]) -> int {
   camera::CscoreStreamer streamer(
       "frame_shower", absl::GetFlag(FLAGS_port).value_or(4971), 30, 1080, 1080);
 
-  std::cout << "Camera opened successfully" << std::endl;
+  LOG(INFO) << "Camera opened successfully" << std::endl;
 
   while (true) {
     cv::Mat frame = camera->GetFrame().frame;
-    cv::resize(frame, frame, cv::Size(1080, 1080));
-    cv::cvtColor(frame, frame, cv::COLOR_BGRA2BGR);
     streamer.WriteFrame(frame);
   }
   cv::destroyAllWindows();

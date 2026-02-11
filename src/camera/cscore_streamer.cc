@@ -19,6 +19,9 @@ CscoreStreamer::CscoreStreamer(const std::string& name, uint port, uint fps,
 }
 
 void CscoreStreamer::WriteFrame(cv::Mat& mat) {
-  source_.PutFrame(mat);
+  cv::Mat frame;
+  cv::resize(mat, frame, cv::Size(1080, 1080));
+  cv::cvtColor(frame, frame, cv::COLOR_BGRA2BGR);
+  source_.PutFrame(frame);
 }
 }  // namespace camera

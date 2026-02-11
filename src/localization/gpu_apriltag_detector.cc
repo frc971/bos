@@ -54,6 +54,7 @@ auto GPUAprilTagDetector::GetTagDetections(
   std::vector<tag_detection_t> tag_detections;
 
   if (zarray_size(raw_detections)) {
+    LOG(INFO) << zarray_size(raw_detections);
     for (int i = 0; i < zarray_size(raw_detections); ++i) {
       apriltag_detection_t* gpu_detection;
       zarray_get(raw_detections, i, &gpu_detection);
