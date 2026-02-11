@@ -7,6 +7,7 @@
 #include "src/utils/log.h"
 
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
+ABSL_FLAG(std::optional<int>, port, std::nullopt, "");                 //NOLINT
 
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
@@ -15,7 +16,8 @@ auto main(int argc, char* argv[]) -> int {
       camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
   std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
 
-  camera::CscoreStreamer streamer("frame_shower", 4971, 30, 1080, 1080);
+  camera::CscoreStreamer streamer(
+      "frame_shower", absl::GetFlag(FLAGS_port).value_or(4971), 30, 1080, 1080);
 
   std::cout << "Camera opened successfully" << std::endl;
 
