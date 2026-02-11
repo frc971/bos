@@ -19,6 +19,8 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
       distortion_coefficients_(
           utils::distortion_coefficients_from_json<cv::Mat>(intrinsics)) {
 
+  LOG(INFO) << image_width << " " << image_height;
+
   apriltag_detector_ = apriltag_detector_create();
 
   apriltag_detector_add_family_bits(apriltag_detector_, tag36h11_create(), 1);
@@ -38,13 +40,16 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
 auto GPUAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame)
     -> std::vector<tag_detection_t> {
+  LOG(INFO) << timestamped_frame.frame.size;
   if (timestamped_frame.frame.channels() == 1) {
     gpu_detector_->DetectGrayHost(
         (unsigned char*)timestamped_frame.frame.ptr());
   } else if (timestamped_frame.frame.channels() == 3) {
+    LOG(INFO) << "detecting";
     cv::Mat gray;
     cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
     gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
+    LOG(INFO) << "detecting done";
   } else {
     LOG(ERROR) << "Unknown frame type";
   }

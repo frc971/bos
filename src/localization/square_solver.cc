@@ -80,21 +80,20 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
               utils::read_intrinsics(intrinsics_path))),
       camera_to_robot_(EigenToCvMat(
           ExtrinsicsJsonToCameraToRobot(utils::read_extrinsics(extrinsics_path))
-              .ToMatrix())) {}
-
-SquareSolver::SquareSolver(camera::Camera camera_config,
-                           frc::AprilTagFieldLayout layout,
-                           std::vector<cv::Point3f> tag_corners)
-    : SquareSolver(camera::camera_constants[camera_config].intrinsics_path,
-                   camera::camera_constants[camera_config].extrinsics_path,
-                   std::move(layout), std::move(tag_corners)) {
-
+              .ToMatrix())) {
   cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, 0, std::numbers::pi);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
   rotate_z_ = MakeTransform(rvec, tvec);
   invert_translation_ = cv::Mat::eye(4, 4, CV_64F) * -1;
   invert_translation_.at<double>(3, 3) = 1;
 }
+
+SquareSolver::SquareSolver(camera::Camera camera_config,
+                           frc::AprilTagFieldLayout layout,
+                           std::vector<cv::Point3f> tag_corners)
+    : SquareSolver(camera::camera_constants[camera_config].intrinsics_path,
+                   camera::camera_constants[camera_config].extrinsics_path,
+                   std::move(layout), std::move(tag_corners)) {}
 
 auto SquareSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections)

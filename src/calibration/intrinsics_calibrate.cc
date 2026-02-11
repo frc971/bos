@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "src/calibration/intrinsics_calibrate_lib.h"
@@ -9,6 +11,7 @@
 #include "src/camera/select_camera.h"
 
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
+ABSL_FLAG(std::optional<int>, port, std::nullopt, "");                 //NOLINT
 
 using json = nlohmann::json;
 
@@ -48,11 +51,26 @@ void CaptureFrames(
   }
 }
 
+auto WriteIntrinsicToFile(cv::Mat camera_matrix, cv::Mat dist_coeffs,
+                          const std::string& path, bool print = false) {
+  std::ofstream intrinsics_file(path);
+  json intrinsics = calibration::intrisincs_to_json(std::move(camera_matrix),
+                                                    std::move(dist_coeffs));
+  intrinsics_file << intrinsics.dump(4);
+  if (print) {
+    std::cout << "Intrinsics: \n"
+              << std::endl
+              << intrinsics.dump(4) << std::endl;
+  }
+  intrinsics_file.close();
+}
+
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  camera::CscoreStreamer streamer("intrinsics_calibrate", 4971, 30, 1080, 1080,
-                                  true);
+  camera::CscoreStreamer streamer("intrinsics_calibrate",
+                                  absl::GetFlag(FLAGS_port).value_or(4971), 30,
+                                  1080, 1080);
 
   camera::Camera config =
       camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
@@ -99,10 +117,6 @@ auto main(int argc, char* argv[]) -> int {
   calibration::CalibrateCamera(detection_results, frame_size, cameraMatrix,
                                distCoeffs);
 
-  std::ofstream intrinsics_file(
-      camera::camera_constants[config].intrinsics_path);
-  json intrinsics = calibration::intrisincs_to_json(cameraMatrix, distCoeffs);
-  intrinsics_file << intrinsics.dump(4);
-  std::cout << "Intrinsics: \n" << std::endl << intrinsics.dump(4) << std::endl;
-  intrinsics_file.close();
+  WriteIntrinsicToFile(cameraMatrix, distCoeffs, "intrinsics.json", true);
+  WriteIntrinsicToFile(cameraMatrix, distCoeffs, "intrinsics.json");
 }
