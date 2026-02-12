@@ -51,6 +51,7 @@ void Controller::Send() {
 
   if (poses.empty()) {
     sender.Send(0, 0);
+    running_.store(false);
     return;
   }
 
@@ -79,7 +80,7 @@ void Controller::Send() {
 
   size_t idx = 0;
 
-  while (true) {
+  while (running_) {
 
     frc::Pose2d pose = current_pose_sub_.Get();
     double rx = pose.X().value();
@@ -114,6 +115,7 @@ void Controller::Send() {
 
     if (mag < 1e-6) {
       sender.Send(0, 0);
+      if (!running_) break;
       continue;
     }
 
@@ -125,5 +127,7 @@ void Controller::Send() {
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
   }
 }
+
+void Controller::Stop() { running_.store(false); }
 
 }  // namespace pathing

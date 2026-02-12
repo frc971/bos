@@ -3,6 +3,7 @@
 #include <networktables/StructTopic.h>
 #include <units/angle.h>
 #include "frc/DataLogManager.h"
+#include <frc/Timer.h>
 
 namespace pathing {
 
@@ -19,12 +20,13 @@ VelocitySender::VelocitySender()
   vel_publisher_ = vel_topic.Publish();
 }
 
-void VelocitySender::Send(const double ax, const double bx) {
+void VelocitySender::Send(const double ax, const double ay) {
   if (mutex_.try_lock()) {
-    std::vector<double> vel_array = {ax, bx};
+    double timestamp = frc::Timer::GetFPGATimestamp().to<double>() +
+                       instance_.GetServerTimeOffset().value_or(0) / 1000000.0;
+    std::vector<double> vel_array = {ax, ay, timestamp};
     vel_publisher_.Set(vel_array);
+    mutex_.unlock();
   }
-
-  mutex_.unlock();
 }
 }  // namespace pathing

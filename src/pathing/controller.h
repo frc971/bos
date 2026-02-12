@@ -4,12 +4,14 @@
 #include <networktables/NetworkTableInstance.h>
 #include <networktables/StructTopic.h>
 #include <cstdint>
+#include <atomic>
 
 namespace pathing {
 class Controller {
  public:
   Controller();
   void Send();
+  void Stop();
 
  private:
   nt::NetworkTableInstance instance_;
@@ -19,6 +21,8 @@ class Controller {
   int64_t kDtUs = 20'000;
   double ax;
   double ay;
+
+  std::atomic<bool> running_{false};
 };
 
 }  // namespace pathing
