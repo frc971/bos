@@ -4,7 +4,7 @@
 #include <thread>
 #include <iostream>
 
-int main() {
+auto main() -> int{
   auto instance = nt::NetworkTableInstance::GetDefault();
   auto table = instance.GetTable("Pathing");
   
