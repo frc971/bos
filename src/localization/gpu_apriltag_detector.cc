@@ -2,7 +2,7 @@
 #include <opencv2/calib3d.hpp>
 #include "apriltag/apriltag.h"
 #include "apriltag/tag36h11.h"
-#include "src/utils/intrinsics_from_json.h"
+#include "src/utils/constants_from_json.h"
 #include "third_party/971apriltag/971apriltag.h"
 
 namespace localization {
