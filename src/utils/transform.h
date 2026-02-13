@@ -1,4 +1,5 @@
 #pragma once
+#include <frc/geometry/Pose3d.h>
 #include <opencv2/calib3d.hpp>
 #include "src/utils/pch.h"
 
@@ -13,4 +14,8 @@ auto CvMatToEigen(const cv::Mat& mat) -> Eigen::Matrix4d;
 
 auto ConvertOpencvCoordinateToWpilib(cv::Mat& vec) -> void;
 
+auto ConvertOpencvTransformationMatrixToWpilibPose(const cv::Mat& matrix)
+    -> frc::Pose3d;
+
+auto Pose3dToCvMat(frc::Pose3d) -> cv::Mat;
 }  // namespace utils
