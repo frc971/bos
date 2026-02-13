@@ -125,7 +125,7 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
     [Camera::MAIN_ROBOT_FRONT_CAMERA] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:1.2:1.0-video-index0",
+                        "platform-3610000.usb-usb-0:1.1:1.0-video-index0",
             .intrinsics_path = "/bos/constants/main_bot/front_intrinsics.json",
             .extrinsics_path = "/bos/constants/main_bot/front_extrinsics.json", 
             .name = "main_bot_front",
@@ -145,7 +145,7 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
     [Camera::MAIN_ROBOT_RIGHT_CAMERA] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:1.1:1.0-video-index0",
+                        "platform-3610000.usb-usb-0:1.2:1.0-video-index0",
             .intrinsics_path = "/bos/constants/main_bot/right_intrinsics.json",
             .extrinsics_path = "/bos/constants/main_bot/right_extrinsics.json", 
             .name = "main_bot_right",
