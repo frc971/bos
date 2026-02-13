@@ -114,12 +114,18 @@ auto SquareSolver::EstimatePosition(
     ConvertOpencvCoordinateToWpilib(tvec);
     ConvertOpencvCoordinateToWpilib(rvec);
 
+    cv::Mat camera_to_tag = MakeTransform(rvec, tvec);
     cv::Mat camera_to_tag_rotation = MakeTransform(rvec, zero_vec);
     cv::Mat camera_to_tag_translation = MakeTransform(zero_vec, tvec);
     cv::Mat tag_to_camera_rotation = camera_to_tag_rotation.inv();
     cv::Mat tag_to_camera_translation =
         invert_translation_ * camera_to_tag_translation * invert_translation_;
     cv::Mat tag_to_camera = tag_to_camera_translation * tag_to_camera_rotation;
+
+    tag_to_camera = camera_to_tag.inv();
+
+    // utils::PrintTransformationMatrix(tag_to_camera);
+
     cv::Mat field_to_tag =
         EigenToCvMat(localization::kapriltag_layout.GetTagPose(detection.tag_id)
                          .value()
