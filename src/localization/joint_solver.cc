@@ -2,7 +2,7 @@
 #include <opencv2/calib3d.hpp>
 #include <utility>
 #include "src/utils/camera_utils.h"
-#include "src/utils/intrinsics_from_json.h"
+#include "src/utils/constants_from_json.h"
 
 namespace localization {
 using frc::AprilTagFieldLayout;
