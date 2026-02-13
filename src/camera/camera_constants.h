@@ -53,7 +53,7 @@ enum Camera {
   MAIN_ROBOT_LEFT_CAMERA,
   MAIN_ROBOT_RIGHT_CAMERA,
 
-  DEFAULT_USB0,
+  DEV_ORIN,
   DUMMY_CAMERA, // For tests such as solver_test.cc
   REALSENSE,
   CAMERA_LENGTH,
@@ -153,14 +153,15 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .frame_width=1280,
             .frame_height=720,
             .fps=30},
-    [Camera::DEFAULT_USB0] =
+    [Camera::DEV_ORIN] =
         camera_constant_t{
-            .pipeline = "platform-3610000.usb-usb-0:2.2:1.0-video-index0",
+            .pipeline = "/dev/v4l/by-path/"
+                        "platform-3610000.usb-usb-0:2.1:1.0-video-index0",
             .intrinsics_path =
-                "/bos/constants/default_usb_camera0_intrinsics.json",
+                "/bos/constants/misc/dev_orin_intrinsics.json",
             .extrinsics_path =
-                "/bos/constants/default_usb_camera0_extrinsics.json",
-            .name = "default_usb0"},
+                "/bos/constants/misc/dev_orin_extrinsics.json",
+            .name = "dev_orin"},
   [Camera::DUMMY_CAMERA] =
         camera_constant_t{
             .pipeline = "",

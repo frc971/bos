@@ -118,5 +118,4 @@ auto main(int argc, char* argv[]) -> int {
                                distCoeffs);
 
   WriteIntrinsicToFile(cameraMatrix, distCoeffs, "intrinsics.json", true);
-  WriteIntrinsicToFile(cameraMatrix, distCoeffs, "intrinsics.json");
 }
