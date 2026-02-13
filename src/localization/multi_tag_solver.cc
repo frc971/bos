@@ -7,10 +7,18 @@ static const cv::Mat zero_vec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
 
 namespace localization {
 
+auto CvMatToPoint3f(cv::Mat mat) -> cv::Point3d {
+  return {mat.at<double>(0), mat.at<double>(1), mat.at<double>(2)};
+}
+
+auto HomogenizePoint3d(cv::Point3d point) -> cv::Mat {
+  return (cv::Mat_<double>(4, 1) << point.x, point.y, point.z, 1);  // NOLINT
+}
+
 MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
                                const std::string& extrinsics_path,
                                const frc::AprilTagFieldLayout& layout,
-                               const std::vector<cv::Point3f>& tag_corners)
+                               const std::vector<cv::Point3d>& tag_corners)
     : camera_matrix_(utils::camera_matrix_from_json<cv::Mat>(
           utils::read_intrinsics(intrinsics_path))),
       distortion_coefficients_(
@@ -28,17 +36,21 @@ MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
   for (const frc::AprilTag& tag : layout.GetTags()) {
     cv::Mat field_to_tag = utils::Pose3dToCvMat(tag.pose);
     tag_corners_[tag.ID] = {
-        field_to_tag * rotate_z * cv::Mat(kapriltag_corners[0]),
-        field_to_tag * rotate_z * cv::Mat(kapriltag_corners[1]),
-        field_to_tag * rotate_z * cv::Mat(kapriltag_corners[2]),
-        field_to_tag * rotate_z * cv::Mat(kapriltag_corners[3]),
+        CvMatToPoint3f(field_to_tag * rotate_z *
+                       HomogenizePoint3d(kapriltag_corners[0])),
+        CvMatToPoint3f(field_to_tag * rotate_z *
+                       HomogenizePoint3d(kapriltag_corners[1])),
+        CvMatToPoint3f(field_to_tag * rotate_z *
+                       HomogenizePoint3d(kapriltag_corners[2])),
+        CvMatToPoint3f(field_to_tag * rotate_z *
+                       HomogenizePoint3d(kapriltag_corners[3])),
     };
   }
 }
 
 MultiTagSolver::MultiTagSolver(camera::Camera camera_config,
                                const frc::AprilTagFieldLayout& layout,
-                               const std::vector<cv::Point3f>& tag_corners)
+                               const std::vector<cv::Point3d>& tag_corners)
     : MultiTagSolver(camera::camera_constants[camera_config].intrinsics_path,
                      camera::camera_constants[camera_config].extrinsics_path,
                      layout, tag_corners) {}
@@ -46,8 +58,8 @@ MultiTagSolver::MultiTagSolver(camera::Camera camera_config,
 auto MultiTagSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections)
     -> std::vector<position_estimate_t> {
-  std::vector<cv::Point3f> object_points;
-  std::vector<cv::Point2f> image_points;
+  std::vector<cv::Point3d> object_points;
+  std::vector<cv::Point2d> image_points;
   for (const tag_detection_t& detection : detections) {
     if (!tag_corners_[detection.tag_id].has_value()) {
       LOG(WARNING) << "Invalid tag id: " << detection.tag_id;
@@ -55,8 +67,8 @@ auto MultiTagSolver::EstimatePosition(
     image_points.insert(image_points.end(), detection.corners.begin(),
                         detection.corners.end());
     object_points.insert(object_points.end(),
-                         tag_corners_[detection.tag_id]->begin(),
-                         tag_corners_[detection.tag_id]->end());
+                         tag_corners_[detection.tag_id].value().begin(),
+                         tag_corners_[detection.tag_id].value().end());
   }
   cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
   cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);

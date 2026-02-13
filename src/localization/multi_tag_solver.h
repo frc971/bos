@@ -15,11 +15,11 @@ class MultiTagSolver : public IPositionSolver {
   MultiTagSolver(
       const std::string& intrinsics_path, const std::string& extrinsics_path,
       const frc::AprilTagFieldLayout& layout = kapriltag_layout,
-      const std::vector<cv::Point3f>& tag_corners = kapriltag_corners);
+      const std::vector<cv::Point3d>& tag_corners = kapriltag_corners);
   MultiTagSolver(
       camera::Camera camera_config,
       const frc::AprilTagFieldLayout& layout = kapriltag_layout,
-      const std::vector<cv::Point3f>& tag_corners = kapriltag_corners);
+      const std::vector<cv::Point3d>& tag_corners = kapriltag_corners);
   auto EstimatePosition(const std::vector<tag_detection_t>& detections)
       -> std::vector<position_estimate_t> override;
 
@@ -27,6 +27,6 @@ class MultiTagSolver : public IPositionSolver {
   cv::Mat camera_matrix_;
   cv::Mat distortion_coefficients_;
   cv::Mat camera_to_robot_;
-  std::array<std::optional<std::array<cv::Mat, 4>>, kmax_tags> tag_corners_;
+  std::array<std::optional<std::array<cv::Point3d, 4>>, kmax_tags> tag_corners_;
 };
 }  // namespace localization

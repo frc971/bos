@@ -9,7 +9,7 @@ namespace localization {
 
 constexpr double ktag_size = 0.1651;  // meters
 // TODO make an array
-const std::vector<cv::Point3f> kapriltag_corners = {
+const std::vector<cv::Point3d> kapriltag_corners = {
     {-ktag_size / 2, ktag_size / 2, 0},
     {ktag_size / 2, ktag_size / 2, 0},
     {ktag_size / 2, -ktag_size / 2, 0},
