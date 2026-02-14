@@ -21,6 +21,10 @@ class SquareSolver : public IPositionSolver {
   auto EstimatePosition(const std::vector<tag_detection_t>& detections)
       -> std::vector<position_estimate_t> override;
 
+  auto EstimatePosition(
+      const std::vector<std::vector<tag_detection_t>>& detections)
+      -> std::vector<position_estimate_t> override;
+
  private:
   frc::AprilTagFieldLayout layout_;
   std::vector<cv::Point3f> tag_corners_;
