@@ -23,9 +23,6 @@ class IPositionSolver {
  public:
   virtual auto EstimatePosition(const std::vector<tag_detection_t>& detections)
       -> std::vector<position_estimate_t> = 0;
-  virtual auto EstimatePosition(
-      const std::vector<std::vector<tag_detection_t>>& detections)
-      -> std::vector<position_estimate_t> = 0;
   virtual ~IPositionSolver() = default;
 };
 
