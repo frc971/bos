@@ -166,9 +166,9 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
         camera_constant_t{
             .pipeline = "",
             .intrinsics_path =
-                "/bos/constants/dummy_camera_intrinsics.json",
+                "/bos/constants/misc/dummy_camera_intrinsics.json",
             .extrinsics_path =
-                "/bos/constants/dummy_camera_extrinsics.json",
+                "/bos/constants/misc/dummy_camera_extrinsics.json",
             .name = "default_usb0"},
     [Camera::REALSENSE] =
         camera_constant_t{
