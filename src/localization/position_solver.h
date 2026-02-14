@@ -15,12 +15,16 @@ const std::vector<cv::Point3f> kapriltag_corners = {
     {-ktag_size / 2, -ktag_size / 2, 0}};
 
 const frc::AprilTagFieldLayout kapriltag_layout =
-    frc::AprilTagFieldLayout("/bos/constants/2026-rebuilt-andymark.json");
+    frc::AprilTagFieldLayout::LoadField(
+        frc::AprilTagField::k2026RebuiltAndyMark);
 
 // Interface for a class when given a apriltag detections, uses the detections to get the position of the robot
 class IPositionSolver {
  public:
   virtual auto EstimatePosition(const std::vector<tag_detection_t>& detections)
+      -> std::vector<position_estimate_t> = 0;
+  virtual auto EstimatePosition(
+      const std::vector<std::vector<tag_detection_t>>& detections)
       -> std::vector<position_estimate_t> = 0;
   virtual ~IPositionSolver() = default;
 };

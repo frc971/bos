@@ -36,4 +36,11 @@ auto JointSolver::EstimatePosition(
   return {};
 }
 
+auto JointSolver::EstimatePosition(
+    const std::vector<std::vector<tag_detection_t>>& detections)
+    -> std::vector<position_estimate_t> {
+  assert(detections.size() == 1);
+  return EstimatePosition(detections[0]);
+}
+
 }  // namespace localization

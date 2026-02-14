@@ -20,6 +20,9 @@ class JointSolver : public IPositionSolver {
               double tag_size = ktag_size);
   auto EstimatePosition(const std::vector<tag_detection_t>& detections)
       -> std::vector<position_estimate_t> override;
+  auto EstimatePosition(
+      const std::vector<std::vector<tag_detection_t>>& detections)
+      -> std::vector<position_estimate_t> override;
 
  private:
   frc::AprilTagFieldLayout layout_;
