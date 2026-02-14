@@ -39,7 +39,7 @@ auto main() -> int {
               camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
-          camera::Camera::MAIN_ROBOT_LEFT_CAMERA),
+          camera::Camera::MAIN_ROBOT_FRONT_CAMERA),
       camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]
           .extrinsics_path,
       4971, false);
@@ -71,6 +71,6 @@ auto main() -> int {
 
   LOG(INFO) << "Started estimators";
 
-  right_thread.join();
+  front_thread.join();
   std::this_thread::sleep_for(std::chrono::hours::max());
 }
