@@ -14,13 +14,13 @@ class JointSolver {
   JointSolver(const std::vector<camera::camera_constant_t>& camera_constants_,
               const frc::AprilTagFieldLayout& layout = kapriltag_layout);
   auto EstimatePosition(
-      const std::vector<std::vector<tag_detection_t>>& all_cam_detections_)
-      -> position_estimate_t;
+      const std::map<camera::camera_constant_t, std::vector<tag_detection_t>>&
+          all_cam_detections) -> position_estimate_t;
 
  private:
   std::map<camera::camera_constant_t, Eigen::Matrix<double, 3, 4>>
-      image_to_camera_;  // per camera
-  std::map<camera::camera_constant_t, Eigen::Matrix4d> camera_to_robot_;
+      image_to_robot_;
   std::array<std::optional<Eigen::Matrix4d>, kmax_tags> tag_poses_;
+  static constexpr double kacceptable_reprojection_error = 0.005;
 };
 }  // namespace localization
