@@ -24,6 +24,5 @@ class JointSolver : public IPositionSolver {
  private:
   frc::AprilTagFieldLayout layout_;
   Eigen::MatrixXd camera_matrix_;
-  SquareSolver initial_solver_;
 };
 }  // namespace localization
