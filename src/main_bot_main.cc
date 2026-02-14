@@ -12,10 +12,10 @@ auto main() -> int {
   // TODO configure vision bot camera paths
 
   LOG(INFO) << "Starting cameras";
-  // camera::CameraSource front_camera = camera::CameraSource(
-  //     "front",
-  //     std::make_unique<camera::CVCamera>(
-  //         camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]));
+  camera::CameraSource front_camera = camera::CameraSource(
+      "front",
+      std::make_unique<camera::CVCamera>(
+          camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]));
 
   camera::CameraSource left_camera = camera::CameraSource(
       "front_left",
@@ -31,18 +31,18 @@ auto main() -> int {
   std::this_thread::sleep_for(std::chrono::seconds(2));
   LOG(INFO) << "Starting estimators";
 
-  // std::thread front_thread(
-  //     localization::run_localization, std::ref(front_camera),
-  //     std::make_unique<localization::GPUAprilTagDetector>(
-  //         front_camera.GetFrame().cols, front_camera.GetFrame().rows,
-  //         utils::read_intrinsics(
-  //             camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]
-  //                 .intrinsics_path)),
-  //     std::make_unique<localization::SquareSolver>(
-  //         camera::Camera::MAIN_ROBOT_LEFT_CAMERA),
-  //     camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]
-  //         .extrinsics_path,
-  //     4971, false);
+  std::thread front_thread(
+      localization::run_localization, std::ref(front_camera),
+      std::make_unique<localization::GPUAprilTagDetector>(
+          front_camera.GetFrame().cols, front_camera.GetFrame().rows,
+          utils::read_intrinsics(
+              camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]
+                  .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::MAIN_ROBOT_LEFT_CAMERA),
+      camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]
+          .extrinsics_path,
+      4971, false);
 
   std::thread left_thread(
       localization::run_localization, std::ref(left_camera),
@@ -72,4 +72,5 @@ auto main() -> int {
   LOG(INFO) << "Started estimators";
 
   right_thread.join();
+  std::this_thread::sleep_for(std::chrono::hours::max());
 }

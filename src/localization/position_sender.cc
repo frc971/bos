@@ -51,8 +51,7 @@ void PositionSender::Send(
     if (verbose_) {
       LOG(INFO) << detection;
     }
-
-    mutex_.unlock();
   }
+  mutex_.unlock();
 }
 }  // namespace localization
