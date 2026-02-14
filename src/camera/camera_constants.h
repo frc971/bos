@@ -12,7 +12,7 @@ using camera_constant_t = struct CameraConstant {
   std::optional<double> frame_width = std::nullopt;
   std::optional<double> frame_height = std::nullopt;
   std::optional<double> fps = std::nullopt;
-  std::optional<double> exposure = std::nullopt;
+  std::optional<double> exposure = std::nullopt; // Nullopt = auto exposure
   std::optional<double> brightness = std::nullopt;
   std::optional<double> sharpness = std::nullopt;
 
@@ -129,7 +129,8 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .extrinsics_path = "/bos/constants/main_bot/front_extrinsics.json", 
             .name = "main_bot_front",
             .backlight = 0.0,
-            .fps=30},
+            .fps=30,
+            .exposure=std::nullopt},
     [Camera::MAIN_ROBOT_LEFT_CAMERA] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
@@ -140,7 +141,8 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .backlight = 0.0,
             .frame_width=1280,
             .frame_height=720,
-            .fps=30},
+            .fps=30,
+            .exposure=std::nullopt},
     [Camera::MAIN_ROBOT_RIGHT_CAMERA] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
@@ -151,7 +153,8 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .backlight = 0.0,
             .frame_width=1280,
             .frame_height=720,
-            .fps=30},
+            .fps=30,
+            .exposure=std::nullopt},
     [Camera::DEV_ORIN] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"

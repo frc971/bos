@@ -20,8 +20,8 @@ namespace localization {
 //     camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
 //         .extrinsics_path,
 //     4971, false);
-void run_localization(camera::CameraSource& source,
-                      std::unique_ptr<localization::IAprilTagDetector> detector,
-                      std::unique_ptr<localization::IPositionSolver> solver,
-                      const std::string& extrinsics, uint port, bool verbose);
+void RunLocalization(camera::CameraSource& source,
+                     std::unique_ptr<localization::IAprilTagDetector> detector,
+                     std::unique_ptr<localization::IPositionSolver> solver,
+                     const std::string& extrinsics, uint port, bool verbose);
 }  // namespace localization

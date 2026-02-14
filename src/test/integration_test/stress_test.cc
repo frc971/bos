@@ -36,10 +36,10 @@ auto main(int argc, char* argv[]) -> int {
 
   // std::bind?
   std::thread usb0_thread(
-      localization::run_localization, std::ref(source),
+      localization::RunLocalization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
           frame.cols, frame.rows,
-          utils::read_intrinsics(
+          utils::ReadIntrinsics(
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
@@ -48,10 +48,10 @@ auto main(int argc, char* argv[]) -> int {
       4971, false);
 
   std::thread usb1_thread(
-      localization::run_localization, std::ref(source),
+      localization::RunLocalization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
           frame.cols, frame.rows,
-          utils::read_intrinsics(
+          utils::ReadIntrinsics(
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
@@ -60,10 +60,10 @@ auto main(int argc, char* argv[]) -> int {
       4972, false);
 
   std::thread usb2_thread(
-      localization::run_localization, std::ref(source),
+      localization::RunLocalization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
           frame.cols, frame.rows,
-          utils::read_intrinsics(
+          utils::ReadIntrinsics(
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
@@ -72,10 +72,10 @@ auto main(int argc, char* argv[]) -> int {
       4973, false);
 
   std::thread usb3_thread(
-      localization::run_localization, std::ref(source),
+      localization::RunLocalization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
           frame.cols, frame.rows,
-          utils::read_intrinsics(
+          utils::ReadIntrinsics(
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
