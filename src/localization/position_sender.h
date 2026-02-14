@@ -22,6 +22,7 @@ class PositionSender {
   nt::NetworkTableInstance instance_;
 
   nt::StructPublisher<frc::Pose2d> pose_publisher_;
+  nt::StructPublisher<frc::Pose3d> pose3d_publisher_;
   nt::DoublePublisher latency_publisher_;
   nt::DoubleArrayPublisher tag_estimation_publisher_;
 
