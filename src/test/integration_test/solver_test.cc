@@ -1,6 +1,6 @@
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
-#include "src/utils/intrinsics_from_json.h"
+#include "src/utils/constants_from_json.h"
 constexpr int kimage_tag_width = 10;
 constexpr int kimage_tag_height = 10;
 constexpr std::array<int, 2> ktag_ids = {15, 31};

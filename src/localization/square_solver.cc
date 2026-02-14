@@ -2,70 +2,13 @@
 #include <opencv2/calib3d.hpp>
 #include <utility>
 #include "src/utils/camera_utils.h"
-#include "src/utils/intrinsics_from_json.h"
+#include "src/utils/constants_from_json.h"
 #include "src/utils/log.h"
-
-auto MakeTransform(const cv::Mat& rvec, const cv::Mat& tvec) -> cv::Mat {
-  CV_Assert(rvec.total() == 3 && tvec.total() == 3);
-
-  cv::Mat R;
-  cv::Rodrigues(rvec, R);  // 3x3
-
-  cv::Mat T = cv::Mat::eye(4, 4, CV_64F);
-
-  R.copyTo(T(cv::Rect(0, 0, 3, 3)));
-
-  T.at<double>(0, 3) = tvec.at<double>(0);
-  T.at<double>(1, 3) = tvec.at<double>(1);
-  T.at<double>(2, 3) = tvec.at<double>(2);
-
-  return T;
-}
-
-template <typename Derived>
-auto EigenToCvMat(const Eigen::MatrixBase<Derived>& mat) -> cv::Mat {
-  cv::Mat cvMat(mat.rows(), mat.cols(), CV_64F);
-  Eigen::Map<
-      Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
-      cvMat.ptr<double>(), mat.rows(), mat.cols()) = mat;
-  return cvMat;
-}
-
-auto CvMatToEigen(const cv::Mat& mat) -> Eigen::Matrix4d {
-  Eigen::Matrix4d out;
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      out(i, j) = mat.at<double>(i, j);
-    }
-  }
-  return out;
-}
-
-auto ConvertOpencvCoordinateToWpilib(cv::Mat& vec) {
-  const double x = vec.ptr<double>()[2];
-  const double y = vec.ptr<double>()[0];
-  const double z = vec.ptr<double>()[1];
-  vec.ptr<double>()[0] = x;
-  vec.ptr<double>()[1] = -y;
-  vec.ptr<double>()[2] = -z;
-}
+#include "src/utils/transform.h"
 
 static const cv::Mat zero_vec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
 
 namespace localization {
-
-auto ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json)
-    -> frc::Transform3d {
-  frc::Pose3d camera_pose(
-      units::meter_t{extrinsics_json["translation_x"]},
-      units::meter_t{extrinsics_json["translation_y"]},
-      units::meter_t{extrinsics_json["translation_z"]},
-      frc::Rotation3d(units::radian_t{extrinsics_json["rotation_x"]},
-                      units::radian_t{extrinsics_json["rotation_y"]},
-                      units::radian_t{extrinsics_json["rotation_z"]}));
-  frc::Transform3d robot_to_camera(frc::Pose3d(), camera_pose);
-  return robot_to_camera.Inverse();
-}
 
 SquareSolver::SquareSolver(const std::string& intrinsics_path,
                            const std::string& extrinsics_path,
@@ -73,17 +16,17 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
                            std::vector<cv::Point3f> tag_corners)
     : layout_(std::move(layout)),
       tag_corners_(std::move(tag_corners)),
-      camera_matrix_(utils::camera_matrix_from_json<cv::Mat>(
-          utils::read_intrinsics(intrinsics_path))),
-      distortion_coefficients_(
-          utils::distortion_coefficients_from_json<cv::Mat>(
-              utils::read_intrinsics(intrinsics_path))),
-      camera_to_robot_(EigenToCvMat(
-          ExtrinsicsJsonToCameraToRobot(utils::read_extrinsics(extrinsics_path))
-              .ToMatrix())) {
+      camera_matrix_(utils::CameraMatrixFromJson<cv::Mat>(
+          utils::ReadIntrinsics(intrinsics_path))),
+      distortion_coefficients_(utils::DistortionCoefficientsFromJson<cv::Mat>(
+          utils::ReadIntrinsics(intrinsics_path))),
+      camera_to_robot_(
+          utils::EigenToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
+                                  utils::ReadExtrinsics(extrinsics_path))
+                                  .ToMatrix())) {
   cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, 0, std::numbers::pi);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
-  rotate_z_ = MakeTransform(rvec, tvec);
+  rotate_z_ = utils::MakeTransform(rvec, tvec);
   invert_translation_ = cv::Mat::eye(4, 4, CV_64F) * -1;
   invert_translation_.at<double>(3, 3) = 1;
 }
@@ -111,26 +54,16 @@ auto SquareSolver::EstimatePosition(
     const double translation_x = tvec.ptr<double>()[2];
     const double translation_y = tvec.ptr<double>()[0];
 
-    ConvertOpencvCoordinateToWpilib(tvec);
-    ConvertOpencvCoordinateToWpilib(rvec);
+    utils::ConvertOpencvCoordinateToWpilib(tvec);
+    utils::ConvertOpencvCoordinateToWpilib(rvec);
 
-    cv::Mat camera_to_tag = MakeTransform(rvec, tvec);
-    cv::Mat camera_to_tag_rotation = MakeTransform(rvec, zero_vec);
-    cv::Mat camera_to_tag_translation = MakeTransform(zero_vec, tvec);
-    cv::Mat tag_to_camera_rotation = camera_to_tag_rotation.inv();
-    cv::Mat tag_to_camera_translation =
-        invert_translation_ * camera_to_tag_translation * invert_translation_;
-    cv::Mat tag_to_camera = tag_to_camera_translation * tag_to_camera_rotation;
-
-    tag_to_camera = camera_to_tag.inv();
-
-    // utils::PrintTransformationMatrix(tag_to_camera);
-
-    cv::Mat field_to_tag =
-        EigenToCvMat(localization::kapriltag_layout.GetTagPose(detection.tag_id)
-                         .value()
-                         .ToMatrix());
-    frc::Pose3d robot_pose(CvMatToEigen(
+    cv::Mat camera_to_tag = utils::MakeTransform(rvec, tvec);
+    cv::Mat tag_to_camera = camera_to_tag.inv();
+    cv::Mat field_to_tag = utils::EigenToCvMat(
+        localization::kapriltag_layout.GetTagPose(detection.tag_id)
+            .value()
+            .ToMatrix());
+    frc::Pose3d robot_pose(utils::CvMatToEigen(
         ((field_to_tag * rotate_z_) * tag_to_camera) * camera_to_robot_));
 
     position_estimates.push_back({robot_pose,

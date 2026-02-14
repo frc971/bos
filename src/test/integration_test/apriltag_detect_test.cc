@@ -34,7 +34,7 @@ auto main(int argc, char* argv[]) -> int {
 
   localization::GPUAprilTagDetector detector(
       frame.cols, frame.rows,
-      utils::read_intrinsics(camera::camera_constants[config].intrinsics_path));
+      utils::ReadIntrinsics(camera::camera_constants[config].intrinsics_path));
 
   localization::SquareSolver solver(
       camera::camera_constants[config].intrinsics_path,

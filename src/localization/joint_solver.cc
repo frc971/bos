@@ -2,7 +2,7 @@
 #include <opencv2/calib3d.hpp>
 #include <utility>
 #include "src/utils/camera_utils.h"
-#include "src/utils/intrinsics_from_json.h"
+#include "src/utils/constants_from_json.h"
 
 namespace localization {
 using frc::AprilTagFieldLayout;
@@ -17,9 +17,9 @@ JointSolver::JointSolver(const std::string& intrinsics_path,
                          const std::string& extrinsics_path,
                          AprilTagFieldLayout layout, double tag_size)
     : layout_(std::move(layout)),
-      camera_matrix_(utils::camera_matrix_from_json<Eigen::MatrixXd>(
-          utils::read_intrinsics(intrinsics_path))),
-      initial_solver_(utils::read_extrinsics(extrinsics_path)) {}
+      camera_matrix_(utils::CameraMatrixFromJson<Eigen::MatrixXd>(
+          utils::ReadIntrinsics(intrinsics_path))),
+      initial_solver_(utils::ReadExtrinsics(extrinsics_path)) {}
 
 JointSolver::JointSolver(camera::Camera camera_config,
                          const frc::AprilTagFieldLayout& layout,

@@ -28,10 +28,10 @@ auto main() -> int {
           camera::camera_constants[camera::Camera::FIDDLER_USB1]));
 
   std::thread usb1_thread(
-      localization::run_localization, std::ref(back_right_camera),
+      localization::RunLocalization, std::ref(back_right_camera),
       std::make_unique<localization::GPUAprilTagDetector>(
           1280, 720,
-          utils::read_intrinsics(
+          utils::ReadIntrinsics(
               camera::camera_constants[camera::Camera::FIDDLER_USB1]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(

@@ -12,7 +12,7 @@ using camera_constant_t = struct CameraConstant {
   std::optional<double> frame_width = std::nullopt;
   std::optional<double> frame_height = std::nullopt;
   std::optional<double> fps = std::nullopt;
-  std::optional<double> exposure = std::nullopt;
+  std::optional<double> exposure = std::nullopt; // Nullopt = auto exposure
   std::optional<double> brightness = std::nullopt;
   std::optional<double> sharpness = std::nullopt;
 
@@ -55,7 +55,6 @@ enum Camera {
 
   DEV_ORIN,
   DUMMY_CAMERA, // For tests such as solver_test.cc
-  REALSENSE,
   CAMERA_LENGTH,
 };
 
@@ -125,12 +124,13 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
     [Camera::MAIN_ROBOT_FRONT_CAMERA] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:1.2:1.0-video-index0",
+                        "platform-3610000.usb-usb-0:1.1:1.0-video-index0",
             .intrinsics_path = "/bos/constants/main_bot/front_intrinsics.json",
             .extrinsics_path = "/bos/constants/main_bot/front_extrinsics.json", 
             .name = "main_bot_front",
             .backlight = 0.0,
-            .fps=30},
+            .fps=30,
+            .exposure=std::nullopt},
     [Camera::MAIN_ROBOT_LEFT_CAMERA] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
@@ -141,18 +141,20 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .backlight = 0.0,
             .frame_width=1280,
             .frame_height=720,
-            .fps=30},
+            .fps=30,
+            .exposure=std::nullopt},
     [Camera::MAIN_ROBOT_RIGHT_CAMERA] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:1.1:1.0-video-index0",
+                        "platform-3610000.usb-usb-0:1.2:1.0-video-index0",
             .intrinsics_path = "/bos/constants/main_bot/right_intrinsics.json",
             .extrinsics_path = "/bos/constants/main_bot/right_extrinsics.json", 
             .name = "main_bot_right",
             .backlight = 0.0,
             .frame_width=1280,
             .frame_height=720,
-            .fps=30},
+            .fps=30,
+            .exposure=std::nullopt},
     [Camera::DEV_ORIN] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
@@ -166,15 +168,9 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
         camera_constant_t{
             .pipeline = "",
             .intrinsics_path =
-                "/bos/constants/dummy_camera_intrinsics.json",
+                "/bos/constants/misc/dummy_camera_intrinsics.json",
             .extrinsics_path =
-                "/bos/constants/dummy_camera_extrinsics.json",
+                "/bos/constants/misc/dummy_camera_extrinsics.json",
             .name = "default_usb0"},
-    [Camera::REALSENSE] =
-        camera_constant_t{
-            .pipeline = "",
-            .intrinsics_path = "/bos/constants/realsense_intrinsics.json",
-            .extrinsics_path = "/bos/constants/realsense_extrinsics.json",
-            .name = "realsense"},
 };
 }; // namespace camera
