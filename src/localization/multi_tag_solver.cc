@@ -29,7 +29,7 @@ MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
                                   utils::read_extrinsics(extrinsics_path))
                                   .ToMatrix())) {
 
-  cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, 0, std::numbers::pi);
+  cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
   cv::Mat rotate_z = utils::MakeTransform(rvec, tvec);
 
@@ -69,6 +69,9 @@ auto MultiTagSolver::EstimatePosition(
     object_points.insert(object_points.end(),
                          tag_corners_[detection.tag_id].value().begin(),
                          tag_corners_[detection.tag_id].value().end());
+  }
+  if (image_points.size() == 0 || object_points.size() == 0) {
+    return {};
   }
   cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
   cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);

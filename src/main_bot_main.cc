@@ -1,6 +1,7 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/cv_camera.h"
+#include "src/localization/multi_tag_solver.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
@@ -51,7 +52,7 @@ auto main() -> int {
           utils::read_intrinsics(
               camera::camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA]
                   .intrinsics_path)),
-      std::make_unique<localization::SquareSolver>(
+      std::make_unique<localization::MultiTagSolver>(
           Camera::MAIN_ROBOT_LEFT_CAMERA),
       camera::camera_constants[camera::Camera::MAIN_ROBOT_LEFT_CAMERA]
           .extrinsics_path,
