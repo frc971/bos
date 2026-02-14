@@ -4,9 +4,7 @@
 
 namespace calibration {
 
-auto intrisincs_to_json(cv::Mat cameraMatrix,
-                        cv::Mat distCoeffs) -> json {  // TODO get index
-
+auto IntrinsicsToJson(cv::Mat cameraMatrix, cv::Mat distCoeffs) -> json {
   json output;
   output["fx"] = cameraMatrix.ptr<double>()[0];
   output["cx"] = cameraMatrix.ptr<double>()[2];

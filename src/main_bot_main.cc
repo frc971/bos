@@ -32,10 +32,10 @@ auto main() -> int {
   LOG(INFO) << "Starting estimators";
 
   std::thread front_thread(
-      localization::run_localization, std::ref(front_camera),
+      localization::RunLocalization, std::ref(front_camera),
       std::make_unique<localization::GPUAprilTagDetector>(
           front_camera.GetFrame().cols, front_camera.GetFrame().rows,
-          utils::read_intrinsics(
+          utils::ReadIntrinsics(
               camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
@@ -45,10 +45,10 @@ auto main() -> int {
       4971, false);
 
   std::thread left_thread(
-      localization::run_localization, std::ref(left_camera),
+      localization::RunLocalization, std::ref(left_camera),
       std::make_unique<localization::GPUAprilTagDetector>(
           left_camera.GetFrame().cols, left_camera.GetFrame().rows,
-          utils::read_intrinsics(
+          utils::ReadIntrinsics(
               camera::camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
@@ -58,10 +58,10 @@ auto main() -> int {
       4972, false);
 
   std::thread right_thread(
-      localization::run_localization, std::ref(right_camera),
+      localization::RunLocalization, std::ref(right_camera),
       std::make_unique<localization::GPUAprilTagDetector>(
           right_camera.GetFrame().cols, right_camera.GetFrame().rows,
-          utils::read_intrinsics(
+          utils::ReadIntrinsics(
               camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(

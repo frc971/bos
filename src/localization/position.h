@@ -36,15 +36,4 @@ using position_estimate_t = struct PositionEstimate {
     return os;
   }
 };
-
-using pose2d_t = struct Pose2d {
-  double x;
-  double y;
-  double rotation;
-};
-
-using pose3d_t = struct Pose3d {
-  point3d_t translation;
-  point3d_t rotation;
-};
 }  // namespace localization

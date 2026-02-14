@@ -16,14 +16,13 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
                            std::vector<cv::Point3f> tag_corners)
     : layout_(std::move(layout)),
       tag_corners_(std::move(tag_corners)),
-      camera_matrix_(utils::camera_matrix_from_json<cv::Mat>(
-          utils::read_intrinsics(intrinsics_path))),
-      distortion_coefficients_(
-          utils::distortion_coefficients_from_json<cv::Mat>(
-              utils::read_intrinsics(intrinsics_path))),
+      camera_matrix_(utils::CameraMatrixFromJson<cv::Mat>(
+          utils::ReadIntrinsics(intrinsics_path))),
+      distortion_coefficients_(utils::DistortionCoefficientsFromJson<cv::Mat>(
+          utils::ReadIntrinsics(intrinsics_path))),
       camera_to_robot_(
           utils::EigenToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
-                                  utils::read_extrinsics(extrinsics_path))
+                                  utils::ReadExtrinsics(extrinsics_path))
                                   .ToMatrix())) {
   cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, 0, std::numbers::pi);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
