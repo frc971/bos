@@ -13,17 +13,17 @@ auto main() -> int {
 
   LOG(INFO) << "Starting cameras";
   camera::CameraSource front_camera = camera::CameraSource(
-      "front",
+      "Front",
       std::make_unique<camera::CVCamera>(
           camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]));
 
   camera::CameraSource left_camera = camera::CameraSource(
-      "front_left",
+      "Left",
       std::make_unique<camera::CVCamera>(
           camera::camera_constants[camera::Camera::MAIN_ROBOT_LEFT_CAMERA]));
 
   camera::CameraSource right_camera = camera::CameraSource(
-      "back_right",
+      "Right",
       std::make_unique<camera::CVCamera>(
           camera::camera_constants[camera::Camera::MAIN_ROBOT_RIGHT_CAMERA]));
 
