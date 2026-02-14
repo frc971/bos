@@ -16,15 +16,13 @@ JointSolver::JointSolver(
   Eigen::Matrix<double, 3, 4> pi = Eigen::Matrix<double, 3, 4>::Zero();
   pi.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
   for (auto& camera_config : camera_constants_) {
-    image_to_camera_.insert(
+    camera_to_robot_.insert(
         {camera_config,
          utils::camera_matrix_from_json<Eigen::Matrix3d>(
              utils::read_intrinsics(camera_config.intrinsics_path)) *
-             pi});
-    camera_to_robot_.insert(
-        {camera_config,
-         utils::ExtrinsicsJsonToCameraToRobot(camera_config.extrinsics_path)
-             .ToMatrix()});
+             pi *
+             utils::ExtrinsicsJsonToCameraToRobot(camera_config.extrinsics_path)
+                 .ToMatrix()});
   }
 }
 
