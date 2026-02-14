@@ -46,7 +46,7 @@ template <>
 auto camera_matrix_from_json<Eigen::MatrixXd>(nlohmann::json intrinsics)
     -> Eigen::MatrixXd {
   Eigen::Matrix3d K;
-  K << intrinsics["fx"], 0, intrinsics["fx"], 0, intrinsics["fy"],
+  K << intrinsics["fx"], 0, intrinsics["cx"], 0, intrinsics["fy"],
       intrinsics["cy"], 0, 0, 1;
   return K;
 }

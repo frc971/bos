@@ -8,21 +8,19 @@
 using json = nlohmann::json;
 
 namespace localization {
-
-class JointSolver : public IPositionSolver {
+static constexpr int kmax_tags = 50;
+class JointSolver {
  public:
-  JointSolver(const std::string& intrinsics_path,
-              const std::string& extrinsics_path,
-              frc::AprilTagFieldLayout layout = kapriltag_layout,
-              double tag_size = ktag_size);
-  JointSolver(camera::Camera camera_config,
-              const frc::AprilTagFieldLayout& layout = kapriltag_layout,
-              double tag_size = ktag_size);
-  auto EstimatePosition(const std::vector<tag_detection_t>& detections)
-      -> std::vector<position_estimate_t> override;
+  JointSolver(const std::vector<camera::camera_constant_t>& camera_constants_,
+              const frc::AprilTagFieldLayout& layout = kapriltag_layout);
+  auto EstimatePosition(
+      const std::vector<std::vector<tag_detection_t>>& all_cam_detections_)
+      -> position_estimate_t;
 
  private:
-  frc::AprilTagFieldLayout layout_;
-  Eigen::MatrixXd camera_matrix_;
+  std::map<camera::camera_constant_t, Eigen::Matrix<double, 3, 4>>
+      image_to_camera_;  // per camera
+  std::map<camera::camera_constant_t, Eigen::Matrix4d> camera_to_robot_;
+  std::array<std::optional<Eigen::Matrix4d>, kmax_tags> tag_poses_;
 };
 }  // namespace localization
