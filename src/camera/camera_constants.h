@@ -55,7 +55,6 @@ enum Camera {
 
   DEV_ORIN,
   DUMMY_CAMERA, // For tests such as solver_test.cc
-  REALSENSE,
   CAMERA_LENGTH,
 };
 
@@ -170,11 +169,5 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .extrinsics_path =
                 "/bos/constants/misc/dummy_camera_extrinsics.json",
             .name = "default_usb0"},
-    [Camera::REALSENSE] =
-        camera_constant_t{
-            .pipeline = "",
-            .intrinsics_path = "/bos/constants/realsense_intrinsics.json",
-            .extrinsics_path = "/bos/constants/realsense_extrinsics.json",
-            .name = "realsense"},
 };
 }; // namespace camera
