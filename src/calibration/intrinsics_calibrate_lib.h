@@ -14,12 +14,12 @@ using detection_result_t = struct DetectionResult {
   std::vector<cv::Point2f> currentImagePoints;
 };
 
-const static int ksquares_x = 12;
-const static int ksquares_y = 9;
-const static float ksquares_length = 0.025;
-const static float kpixel_per_square = 128;
-const static float kmarker_length = 0.020;
-const static int kmargin_squares = 0;
+constexpr static int ksquares_x = 12;
+constexpr static int ksquares_y = 9;
+constexpr static float ksquares_length = 0.025;
+constexpr static float kpixel_per_square = 128;
+constexpr static float kmarker_length = 0.020;
+constexpr static int kmargin_squares = 0;
 
 auto CreateDetector(const cv::aruco::Dictionary& dictionary,
                     int squares_x = ksquares_x, int squares_y = ksquares_y,
@@ -28,7 +28,7 @@ auto CreateDetector(const cv::aruco::Dictionary& dictionary,
                     float marker_length = kmarker_length)
     -> cv::aruco::CharucoDetector;
 
-auto intrisincs_to_json(cv::Mat cameraMatrix, cv::Mat distCoeffs) -> json;
+auto IntrinsicsToJson(cv::Mat cameraMatrix, cv::Mat distCoeffs) -> json;
 auto GenerateBoard(const cv::aruco::CharucoBoard& board,
                    int squares_x = ksquares_x, int squares_y = ksquares_y,
                    float pixel_per_square = kpixel_per_square,

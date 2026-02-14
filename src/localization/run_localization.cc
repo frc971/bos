@@ -9,10 +9,10 @@
 
 namespace localization {
 
-void run_localization(camera::CameraSource& source,
-                      std::unique_ptr<localization::IAprilTagDetector> detector,
-                      std::unique_ptr<localization::IPositionSolver> solver,
-                      const std::string& extrinsics, uint port, bool verbose) {
+void RunLocalization(camera::CameraSource& source,
+                     std::unique_ptr<localization::IAprilTagDetector> detector,
+                     std::unique_ptr<localization::IPositionSolver> solver,
+                     const std::string& extrinsics, uint port, bool verbose) {
   localization::PositionSender position_sender(source.GetName(), verbose);
 
   camera::CscoreStreamer streamer(source.GetName(), port, 30, 1080, 1080);

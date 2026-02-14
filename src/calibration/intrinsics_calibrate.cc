@@ -54,8 +54,8 @@ void CaptureFrames(
 auto WriteIntrinsicToFile(cv::Mat camera_matrix, cv::Mat dist_coeffs,
                           const std::string& path, bool print = false) {
   std::ofstream intrinsics_file(path);
-  json intrinsics = calibration::intrisincs_to_json(std::move(camera_matrix),
-                                                    std::move(dist_coeffs));
+  json intrinsics = calibration::IntrinsicsToJson(std::move(camera_matrix),
+                                                  std::move(dist_coeffs));
   intrinsics_file << intrinsics.dump(4);
   if (print) {
     std::cout << "Intrinsics: \n"

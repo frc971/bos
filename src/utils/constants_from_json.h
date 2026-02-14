@@ -6,10 +6,10 @@
 namespace utils {
 
 template <typename T>
-auto camera_matrix_from_json(nlohmann::json intrinsics) -> T;
+auto CameraMatrixFromJson(nlohmann::json intrinsics) -> T;
 
 template <typename T>
-auto distortion_coefficients_from_json(nlohmann::json intrinsics) -> T;
+auto DistortionCoefficientsFromJson(nlohmann::json intrinsics) -> T;
 
 auto ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json)
     -> frc::Transform3d;
