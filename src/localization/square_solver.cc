@@ -13,7 +13,7 @@ namespace localization {
 SquareSolver::SquareSolver(const std::string& intrinsics_path,
                            const std::string& extrinsics_path,
                            frc::AprilTagFieldLayout layout,
-                           std::vector<cv::Point3f> tag_corners)
+                           std::vector<cv::Point3d> tag_corners)
     : layout_(std::move(layout)),
       tag_corners_(std::move(tag_corners)),
       camera_matrix_(utils::CameraMatrixFromJson<cv::Mat>(
@@ -34,7 +34,7 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
 
 SquareSolver::SquareSolver(camera::Camera camera_config,
                            frc::AprilTagFieldLayout layout,
-                           std::vector<cv::Point3f> tag_corners)
+                           std::vector<cv::Point3d> tag_corners)
     : SquareSolver(camera::camera_constants[camera_config].intrinsics_path,
                    camera::camera_constants[camera_config].extrinsics_path,
                    std::move(layout), std::move(tag_corners)) {}
