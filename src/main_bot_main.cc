@@ -11,7 +11,7 @@ auto main() -> int {
   utils::StartNetworktables();
   // TODO configure vision bot camera paths
 
-  LOG(INFO) << "Starting cameras";
+  LOG(INFO) << "Starting cameras with right camera disabled";
   camera::CameraSource front_camera = camera::CameraSource(
       "Front",
       std::make_unique<camera::CVCamera>(
@@ -57,20 +57,19 @@ auto main() -> int {
           .extrinsics_path,
       4972, false);
 
-  std::thread right_thread(
-      localization::RunLocalization, std::ref(right_camera),
-      std::make_unique<localization::GPUAprilTagDetector>(
-          right_camera.GetFrame().cols, right_camera.GetFrame().rows,
-          utils::ReadIntrinsics(
-              camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]
-                  .intrinsics_path)),
-      std::make_unique<localization::SquareSolver>(
-          camera::Camera::MAIN_ROBOT_RIGHT_CAMERA),
-      camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA].extrinsics_path,
-      4973, false);
+  // std::thread right_thread(
+  //     localization::RunLocalization, std::ref(right_camera),
+  //     std::make_unique<localization::GPUAprilTagDetector>(
+  //         right_camera.GetFrame().cols, right_camera.GetFrame().rows,
+  //         utils::ReadIntrinsics(
+  //             camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]
+  //                 .intrinsics_path)),
+  //     std::make_unique<localization::SquareSolver>(
+  //         camera::Camera::MAIN_ROBOT_RIGHT_CAMERA),
+  //     camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA].extrinsics_path,
+  //     4973, false);
 
   LOG(INFO) << "Started estimators";
 
   front_thread.join();
-  std::this_thread::sleep_for(std::chrono::hours::max());
 }
