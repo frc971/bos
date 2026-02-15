@@ -46,6 +46,29 @@ auto ConvertOpencvCoordinateToWpilib(cv::Mat& vec) -> void {
   vec.ptr<double>()[2] = -z;
 }
 
+auto ConvertOpencvTransformationMatrixToWpilibPose(const cv::Mat& transform)
+    -> frc::Pose3d {
+  cv::Mat R = transform(cv::Range(0, 3), cv::Range(0, 3)).clone();
+  cv::Mat tvec = transform(cv::Range(0, 3), cv::Range(3, 4)).clone();
+  cv::Mat rvec;
+  cv::Rodrigues(R, rvec);
+  ConvertOpencvCoordinateToWpilib(tvec);
+  ConvertOpencvCoordinateToWpilib(rvec);
+  cv::Mat wpilib_transform = MakeTransform(rvec, tvec);
+  return frc::Pose3d(CvMatToEigen(wpilib_transform));
+}
+
+auto Pose3dToCvMat(frc::Pose3d pose) -> cv::Mat {
+  frc::Pose3d opencv_pose(
+      frc::Translation3d(-units::meter_t{pose.Y().value()},
+                         -units::meter_t{pose.Z().value()},
+                         units::meter_t{pose.X().value()}),
+      frc::Rotation3d(-units::radian_t{pose.Rotation().Y()},
+                      -units::radian_t{pose.Rotation().Z()},
+                      units::radian_t{pose.Rotation().X()}));
+  return utils::EigenToCvMat(opencv_pose.ToMatrix());
+}
+
 template cv::Mat utils::EigenToCvMat<Eigen::Matrix<double, 4, 4>>(
     const Eigen::MatrixBase<Eigen::Matrix<double, 4, 4>>&);
 }  // namespace utils

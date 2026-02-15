@@ -11,16 +11,16 @@ constexpr double ktag_offset = 0;
 
 auto main() -> int {
   // Bottom left, bottom right, top right, top left
-  const std::array<cv::Point2f, 4> image_points = {
-      cv::Point2f(kimage_width / 2.0 - kimage_tag_width / 2.0 + ktag_offset,
+  const std::array<cv::Point2d, 4> image_points = {
+      cv::Point2d(kimage_width / 2.0 - kimage_tag_width / 2.0 + ktag_offset,
                   kimage_height / 2.0 + kimage_tag_height / 2.0),
-      cv::Point2f(
+      cv::Point2d(
           kimage_width / 2.0 + kimage_tag_width / 2.0 - krotation + ktag_offset,
           kimage_height / 2.0 + kimage_tag_height / 2.0 - krotation),
-      cv::Point2f(
+      cv::Point2d(
           kimage_width / 2.0 + kimage_tag_width / 2.0 - krotation + ktag_offset,
           kimage_height / 2.0 - kimage_tag_height / 2.0),
-      cv::Point2f(kimage_width / 2.0 - kimage_tag_width / 2.0 + ktag_offset,
+      cv::Point2d(kimage_width / 2.0 - kimage_tag_width / 2.0 + ktag_offset,
                   kimage_height / 2.0 - kimage_tag_height / 2.0 - krotation)};
   localization::SquareSolver solver(camera::Camera::DUMMY_CAMERA);
 
