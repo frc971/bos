@@ -29,7 +29,6 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
   rotate_z_ = utils::MakeTransform(rvec, tvec);
   invert_translation_ = cv::Mat::eye(4, 4, CV_64F) * -1;
   invert_translation_.at<double>(3, 3) = 1;
-  utils::PrintTransformationMatrix(camera_to_robot_);
 }
 
 SquareSolver::SquareSolver(camera::Camera camera_config,
@@ -59,7 +58,6 @@ auto SquareSolver::EstimatePosition(
     utils::ConvertOpencvCoordinateToWpilib(rvec);
 
     cv::Mat camera_to_tag = utils::MakeTransform(rvec, tvec);
-    utils::PrintTransformationMatrix(camera_to_tag);
     cv::Mat tag_to_camera = camera_to_tag.inv();
     cv::Mat field_to_tag = utils::EigenToCvMat(
         localization::kapriltag_layout.GetTagPose(detection.tag_id)
