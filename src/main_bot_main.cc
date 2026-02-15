@@ -57,17 +57,17 @@ auto main() -> int {
           .extrinsics_path,
       4972, false);
 
-  // std::thread right_thread(
-  //     localization::RunLocalization, std::ref(right_camera),
-  //     std::make_unique<localization::GPUAprilTagDetector>(
-  //         right_camera.GetFrame().cols, right_camera.GetFrame().rows,
-  //         utils::ReadIntrinsics(
-  //             camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]
-  //                 .intrinsics_path)),
-  //     std::make_unique<localization::SquareSolver>(
-  //         camera::Camera::MAIN_ROBOT_RIGHT_CAMERA),
-  //     camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA].extrinsics_path,
-  //     4973, false);
+  std::thread right_thread(
+      localization::RunLocalization, std::ref(right_camera),
+      std::make_unique<localization::GPUAprilTagDetector>(
+          right_camera.GetFrame().cols, right_camera.GetFrame().rows,
+          utils::ReadIntrinsics(
+              camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]
+                  .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::MAIN_ROBOT_RIGHT_CAMERA),
+      camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA].extrinsics_path,
+      4973, false);
 
   LOG(INFO) << "Started estimators";
 

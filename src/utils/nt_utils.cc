@@ -15,7 +15,7 @@ void StartNetworktables(int team_number) {
   inst.SetServerTeam(team_number);
   inst.StartDSClient();
 
-  LOG(INFO) << "Team number" << team_number;
+  LOG(INFO) << "Team number: " << team_number;
   LOG(INFO) << "Waiting for connection";
   while (!inst.IsConnected()) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
