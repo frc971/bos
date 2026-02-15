@@ -7,6 +7,13 @@ CVCamera::CVCamera(const CameraConstant& c)
     : cap_(cv::VideoCapture(c.pipeline)) {
   LOG(INFO) << c.pipeline;
 
+  backup_image_ = cv::imread("/bos/constants/dont_worry_about_it.jpg");
+  LOG(INFO) << "Backup image empty: " << backup_image_.empty();
+  if (c.frame_height.has_value() && c.frame_width.has_value()) {
+    cv::resize(backup_image_, backup_image_,
+               cv::Size(c.frame_width.value(), c.frame_height.value()));
+  }
+
   auto set_if = [&](int prop, const auto& opt) {
     if (opt) {
       cap_.set(prop, *opt);
@@ -36,6 +43,9 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
   cap_.grab();
   timestamped_frame.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   cap_.retrieve(timestamped_frame.frame);
+  if (timestamped_frame.frame.empty()) {
+    timestamped_frame.frame = backup_image_;
+  }
   return timestamped_frame;
 }
 
