@@ -39,7 +39,7 @@ auto main() -> int {
           utils::ReadIntrinsics(
               camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]
                   .intrinsics_path)),
-      std::make_unique<localization::MultiTagSolver>(
+      std::make_unique<localization::SquareSolver>(
           camera::Camera::MAIN_ROBOT_FRONT_CAMERA),
       camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]
           .extrinsics_path,
@@ -52,7 +52,7 @@ auto main() -> int {
           utils::ReadIntrinsics(
               camera::camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA]
                   .intrinsics_path)),
-      std::make_unique<localization::MultiTagSolver>(
+      std::make_unique<localization::SquareSolver>(
           Camera::MAIN_ROBOT_LEFT_CAMERA),
       camera::camera_constants[camera::Camera::MAIN_ROBOT_LEFT_CAMERA]
           .extrinsics_path,
@@ -65,7 +65,7 @@ auto main() -> int {
           utils::ReadIntrinsics(
               camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]
                   .intrinsics_path)),
-      std::make_unique<localization::MultiTagSolver>(
+      std::make_unique<localization::SquareSolver>(
           camera::Camera::MAIN_ROBOT_RIGHT_CAMERA),
       camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA].extrinsics_path,
       4973, false);

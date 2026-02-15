@@ -25,7 +25,7 @@ MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
           utils::ReadIntrinsics(intrinsics_path))),
       camera_to_robot_(
           utils::EigenToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
-                                  utils::ReadIntrinsics(extrinsics_path))
+                                  utils::ReadExtrinsics(extrinsics_path))
                                   .ToMatrix())) {
 
   cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);

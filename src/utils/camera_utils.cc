@@ -19,7 +19,7 @@ auto ReadExtrinsics(const std::string& path) -> nlohmann::json {
   nlohmann::json extrinsics;
   std::ifstream extrinsics_file(path);
   if (!extrinsics_file.is_open()) {
-    LOG(FATAL) << "Error: Cannot open intrinsics file: " << path << std::endl;
+    LOG(FATAL) << "Error: Cannot open extrinsics file: " << path << std::endl;
   } else {
     extrinsics_file >> extrinsics;
   }
