@@ -43,8 +43,8 @@ auto distortion_coefficients_from_json<cv::Mat>(nlohmann::json intrinsics)
 }
 
 template <>
-auto camera_matrix_from_json<Eigen::MatrixXd>(nlohmann::json intrinsics)
-    -> Eigen::MatrixXd {
+auto camera_matrix_from_json<Eigen::Matrix3d>(nlohmann::json intrinsics)
+    -> Eigen::Matrix3d {
   Eigen::Matrix3d K;
   K << intrinsics["fx"], 0, intrinsics["cx"], 0, intrinsics["fy"],
       intrinsics["cy"], 0, 0, 1;
