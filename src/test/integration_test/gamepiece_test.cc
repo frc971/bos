@@ -27,8 +27,8 @@ auto main() -> int {
       gamepiece::run_gamepiece_detect, std::ref(color_model),
       std::ref(model_info.class_names), std::ref(source), std::ref(coral_topic),
       std::ref(algae_topic),
-      utils::read_intrinsics(camera::camera_constants[config].intrinsics_path),
-      utils::read_extrinsics(camera::camera_constants[config].extrinsics_path),
+      utils::ReadIntrinsics(camera::camera_constants[config].intrinsics_path),
+      utils::ReadExtrinsics(camera::camera_constants[config].extrinsics_path),
       true);
 
   usb0_gamepiece_thread.join();

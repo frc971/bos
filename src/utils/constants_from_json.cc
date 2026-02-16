@@ -3,7 +3,7 @@
 
 namespace utils {
 template <>
-auto camera_matrix_from_json<frc971::apriltag::CameraMatrix>(
+auto CameraMatrixFromJson<frc971::apriltag::CameraMatrix>(
     nlohmann::json intrinsics) -> frc971::apriltag::CameraMatrix {
   frc971::apriltag::CameraMatrix camera_matrix = {.fx = intrinsics["fx"],
                                                   .cx = intrinsics["cx"],
@@ -13,7 +13,7 @@ auto camera_matrix_from_json<frc971::apriltag::CameraMatrix>(
 }
 
 template <>
-auto distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
+auto DistortionCoefficientsFromJson<frc971::apriltag::DistCoeffs>(
     nlohmann::json intrinsics) -> frc971::apriltag::DistCoeffs {
   frc971::apriltag::DistCoeffs distortion_coefficients = {
       .k1 = intrinsics["k1"],
@@ -26,7 +26,7 @@ auto distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
 }
 
 template <>
-auto camera_matrix_from_json<cv::Mat>(nlohmann::json intrinsics) -> cv::Mat {
+auto CameraMatrixFromJson<cv::Mat>(nlohmann::json intrinsics) -> cv::Mat {
   cv::Mat camera_matrix =
       (cv::Mat_<double>(3, 3) << intrinsics["fx"], 0, intrinsics["cx"], 0,
        intrinsics["fy"], intrinsics["cy"], 0, 0, 1);
@@ -34,7 +34,7 @@ auto camera_matrix_from_json<cv::Mat>(nlohmann::json intrinsics) -> cv::Mat {
 }
 
 template <>
-auto distortion_coefficients_from_json<cv::Mat>(nlohmann::json intrinsics)
+auto DistortionCoefficientsFromJson<cv::Mat>(nlohmann::json intrinsics)
     -> cv::Mat {
   cv::Mat distortion_coefficients =
       (cv::Mat_<double>(1, 5) << intrinsics["k1"], intrinsics["k2"],
@@ -43,7 +43,7 @@ auto distortion_coefficients_from_json<cv::Mat>(nlohmann::json intrinsics)
 }
 
 template <>
-auto camera_matrix_from_json<Eigen::Matrix3d>(nlohmann::json intrinsics)
+auto CameraMatrixFromJson<Eigen::Matrix3d>(nlohmann::json intrinsics)
     -> Eigen::Matrix3d {
   Eigen::Matrix3d K;
   K << intrinsics["fx"], 0, intrinsics["cx"], 0, intrinsics["fy"],

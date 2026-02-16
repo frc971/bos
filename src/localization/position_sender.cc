@@ -15,7 +15,11 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
 
   nt::StructTopic<frc::Pose2d> pose_topic =
       table->GetStructTopic<frc::Pose2d>("Pose");
+  nt::StructTopic<frc::Pose3d> pose3d_topic =
+      table->GetStructTopic<frc::Pose3d>("Pose3d");
+
   pose_publisher_ = pose_topic.Publish();
+  pose3d_publisher_ = pose3d_topic.Publish();
 
   nt::DoubleTopic latency_topic = table->GetDoubleTopic("Latency");
   latency_publisher_ = latency_topic.Publish();
@@ -45,6 +49,8 @@ void PositionSender::Send(
         frc::Pose2d(units::meter_t{detection.pose.X().value()},
                     units::meter_t{detection.pose.Y().value()},
                     units::radian_t{detection.pose.Rotation().Z().value()}));
+
+    pose3d_publisher_.Set(detection.pose);
 
     tag_estimation_publisher_.Set(tag_estimation);
     latency_publisher_.Set(latency);

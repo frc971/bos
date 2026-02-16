@@ -15,6 +15,7 @@ class CVCamera : public ICamera {
 
  private:
   cv::VideoCapture cap_;
+  cv::Mat backup_image_;
 };
 
 }  // namespace camera

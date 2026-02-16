@@ -23,7 +23,7 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
   for (auto& camera_config : camera_constants_) {
     image_to_robot_.insert(
         {camera_config,
-         utils::camera_matrix_from_json<Eigen::Matrix3d>(utils::read_intrinsics(
+         utils::CameraMatrixFromJson<Eigen::Matrix3d>(utils::ReadIntrinsics(
              camera::camera_constants[camera_config].intrinsics_path)) *
              pi *
              utils::ExtrinsicsJsonToCameraToRobot(

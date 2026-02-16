@@ -15,9 +15,9 @@ constexpr auto RadianToDegree(double radian) -> double {
 GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
                                          const nlohmann::json& intrinsics,
                                          bool verbose)
-    : camera_matrix_(utils::camera_matrix_from_json<cv::Mat>(intrinsics)),
+    : camera_matrix_(utils::CameraMatrixFromJson<cv::Mat>(intrinsics)),
       distortion_coefficients_(
-          utils::distortion_coefficients_from_json<cv::Mat>(intrinsics)) {
+          utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics)) {
 
   LOG(INFO) << image_width << " " << image_height;
 
@@ -32,9 +32,8 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
 
   gpu_detector_ = std::make_unique<frc971::apriltag::GpuDetector>(
       image_width, image_height, apriltag_detector_,
-      utils::camera_matrix_from_json<frc971::apriltag::CameraMatrix>(
-          intrinsics),
-      utils::distortion_coefficients_from_json<frc971::apriltag::DistCoeffs>(
+      utils::CameraMatrixFromJson<frc971::apriltag::CameraMatrix>(intrinsics),
+      utils::DistortionCoefficientsFromJson<frc971::apriltag::DistCoeffs>(
           intrinsics));
 }
 auto GPUAprilTagDetector::GetTagDetections(

@@ -13,17 +13,16 @@ namespace localization {
 SquareSolver::SquareSolver(const std::string& intrinsics_path,
                            const std::string& extrinsics_path,
                            frc::AprilTagFieldLayout layout,
-                           std::vector<cv::Point3f> tag_corners)
+                           std::vector<cv::Point3d> tag_corners)
     : layout_(std::move(layout)),
       tag_corners_(std::move(tag_corners)),
-      camera_matrix_(utils::camera_matrix_from_json<cv::Mat>(
-          utils::read_intrinsics(intrinsics_path))),
-      distortion_coefficients_(
-          utils::distortion_coefficients_from_json<cv::Mat>(
-              utils::read_intrinsics(intrinsics_path))),
+      camera_matrix_(utils::CameraMatrixFromJson<cv::Mat>(
+          utils::ReadIntrinsics(intrinsics_path))),
+      distortion_coefficients_(utils::DistortionCoefficientsFromJson<cv::Mat>(
+          utils::ReadIntrinsics(intrinsics_path))),
       camera_to_robot_(
           utils::EigenToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
-                                  utils::read_extrinsics(extrinsics_path))
+                                  utils::ReadExtrinsics(extrinsics_path))
                                   .ToMatrix())) {
   cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, 0, std::numbers::pi);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
@@ -34,7 +33,7 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
 
 SquareSolver::SquareSolver(camera::Camera camera_config,
                            frc::AprilTagFieldLayout layout,
-                           std::vector<cv::Point3f> tag_corners)
+                           std::vector<cv::Point3d> tag_corners)
     : SquareSolver(camera::camera_constants[camera_config].intrinsics_path,
                    camera::camera_constants[camera_config].extrinsics_path,
                    std::move(layout), std::move(tag_corners)) {}
@@ -59,11 +58,6 @@ auto SquareSolver::EstimatePosition(
     utils::ConvertOpencvCoordinateToWpilib(rvec);
 
     cv::Mat camera_to_tag = utils::MakeTransform(rvec, tvec);
-    // cv::Mat camera_to_tag_rotation = utils::MakeTransform(rvec, zero_vec);
-    // cv::Mat camera_to_tag_translation = utils::MakeTransform(zero_vec, tvec);
-    // cv::Mat tag_to_camera_rotation = camera_to_tag_rotation.inv();
-    // cv::Mat tag_to_camera_translation =
-    //     invert_translation_ * camera_to_tag_translation * invert_translation_;
     cv::Mat tag_to_camera = camera_to_tag.inv();
     cv::Mat field_to_tag = utils::EigenToCvMat(
         localization::kapriltag_layout.GetTagPose(detection.tag_id)
@@ -72,9 +66,9 @@ auto SquareSolver::EstimatePosition(
     frc::Pose3d robot_pose(utils::CvMatToEigen(
         ((field_to_tag * rotate_z_) * tag_to_camera) * camera_to_robot_));
 
-    position_estimates.push_back({robot_pose,
-                                  std::hypot(translation_x, translation_y),
-                                  detection.timestamp});
+    position_estimates.push_back(
+        {robot_pose, std::hypot(translation_x, translation_y) / 2.0,
+         detection.timestamp});
   }
 
   return position_estimates;

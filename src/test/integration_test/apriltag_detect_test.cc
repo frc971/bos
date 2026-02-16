@@ -14,11 +14,14 @@
 #include "src/utils/timer.h"
 
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
+ABSL_FLAG(std::optional<bool>, time, std::nullopt, "");                //NOLINT
 
 using json = nlohmann::json;
 
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
+
+  bool time = absl::GetFlag(FLAGS_time).value_or(false);
 
   camera::Camera config =
       camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
@@ -31,7 +34,7 @@ auto main(int argc, char* argv[]) -> int {
 
   localization::GPUAprilTagDetector detector(
       frame.cols, frame.rows,
-      utils::read_intrinsics(camera::camera_constants[config].intrinsics_path));
+      utils::ReadIntrinsics(camera::camera_constants[config].intrinsics_path));
 
   localization::SquareSolver solver(
       camera::camera_constants[config].intrinsics_path,
@@ -39,7 +42,7 @@ auto main(int argc, char* argv[]) -> int {
 
   camera::timestamped_frame_t timestamped_frame;
   while (true) {
-    utils::Timer timer("tag estimator apriltag");
+    utils::Timer timer("tag estimator apriltag", time);
     timestamped_frame = source.Get();
 
     std::vector<localization::tag_detection_t> tag_detections =
@@ -57,6 +60,5 @@ auto main(int argc, char* argv[]) -> int {
     }
 
     streamer.WriteFrame(timestamped_frame.frame);
-    timer.Stop();
   }
 }
