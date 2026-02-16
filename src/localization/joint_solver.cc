@@ -29,46 +29,8 @@ JointSolver::JointSolver(camera::Camera camera_config,
                   layout, tag_size) {}
 
 auto JointSolver::EstimatePosition(
-    const std::vector<tag_detection_t>& detections)
+    const std::vector<std::vector<tag_detection_t>>& detections)
     -> std::vector<position_estimate_t> {
-  if (detections.empty()) {
-    return {};
-  }
-
-  position_estimate_t initial_position_estimate =
-      initial_solver_.EstimatePosition(detections)[0];
-  initial_position_estimate.pose.ToMatrix();
-
-  // initilaize w
-  std::vector<Eigen::MatrixXd> w(detections.size());
-  std::array<Eigen::Vector4d, 4> tag_corners;
-  for (const auto& detection : detections) {
-    auto field_to_tag = layout_.GetTagPose(detection.tag_id)->ToMatrix();
-    w.emplace_back(camera_matrix_ * PI * field_to_tag);
-  }
-  Eigen::Matrix4d A = initial_position_estimate.pose.ToMatrix();
-  for (size_t i = 0; i < detections.size(); i++) {
-    for (int j = 0; j < 4; j++) {
-      Eigen::Vector3d projected_points = w[i] * A * tag_corners[j];
-
-      const double u = projected_points[0];
-      const double v = projected_points[1];
-      const double lambda = projected_points[2];
-
-      const float u_true = detections[i].corners[j].x;
-      const float v_true = detections[i].corners[j].y;
-
-      Eigen::Vector3d dprojected_points(
-          (u / lambda - u_true) / lambda, (v / lambda - v_true) / lambda,
-          -(u / lambda - u_true) / (lambda * lambda) -
-              (v / lambda - v_true) / (lambda * lambda));
-
-      auto dA = w[i] * dprojected_points;
-
-      LOG(INFO) << "projected points " << projected_points;
-      LOG(INFO) << "dA " << dA;
-    }
-  }
   return {};
 }
 

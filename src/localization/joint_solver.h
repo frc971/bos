@@ -9,7 +9,7 @@ using json = nlohmann::json;
 
 namespace localization {
 
-class JointSolver : public IPositionSolver {
+class JointSolver {
  public:
   JointSolver(const std::string& intrinsics_path,
               const std::string& extrinsics_path,
@@ -18,8 +18,9 @@ class JointSolver : public IPositionSolver {
   JointSolver(camera::Camera camera_config,
               const frc::AprilTagFieldLayout& layout = kapriltag_layout,
               double tag_size = ktag_size);
-  auto EstimatePosition(const std::vector<tag_detection_t>& detections)
-      -> std::vector<position_estimate_t> override;
+  auto EstimatePosition(
+      const std::vector<std::vector<tag_detection_t>>& detections)
+      -> std::vector<position_estimate_t>;
 
  private:
   frc::AprilTagFieldLayout layout_;
