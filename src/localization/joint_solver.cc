@@ -72,7 +72,8 @@ auto JointSolver::EstimatePosition(
       const double MSE_derivative =
           std::hypot(projection[0] - detection.image_point[0],
                      projection[1] - detection.image_point[1]);
-      std::cout << MSE_derivative << std::endl;
+      std::cout << "MSE_derivative: " << MSE_derivative << std::endl;
+      std::exit(0);
     }
   }
 

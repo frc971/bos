@@ -21,7 +21,8 @@ const std::vector<Eigen::Vector3d> kapriltag_corners_eigen = {
     {-ktag_size / 2, -ktag_size / 2, 0}};
 
 const frc::AprilTagFieldLayout kapriltag_layout =
-    frc::AprilTagFieldLayout::LoadField(frc::AprilTagField::kDefaultField);
+    frc::AprilTagFieldLayout::LoadField(
+        frc::AprilTagField::k2026RebuiltAndyMark);
 
 // Interface for a class when given a apriltag detections, uses the detections to get the position of the robot
 class IPositionSolver {
