@@ -20,14 +20,15 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
   }
   Eigen::Matrix<double, 3, 4> pi = Eigen::Matrix<double, 3, 4>::Zero();
   pi.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
-  for (auto& camera_config : camera_constants_) {
+  for (const camera::Camera& camera_config : camera_constants_) {
     image_to_robot_.insert(
         {camera_config,
          utils::CameraMatrixFromJson<Eigen::Matrix3d>(utils::ReadIntrinsics(
              camera::camera_constants[camera_config].intrinsics_path)) *
              pi *
              utils::ExtrinsicsJsonToCameraToRobot(
-                 camera::camera_constants[camera_config].extrinsics_path)
+                 utils::ReadExtrinsics(
+                     camera::camera_constants[camera_config].extrinsics_path))
                  .ToMatrix()});  // im_to_cam * 2dcam_to_3dcam * cam2robot
   }
 }
