@@ -78,5 +78,6 @@ TEST(SolverTest, Basic) {
                         flipped_tag.Rotation().Z() +
                             units::radian_t{-std::numbers::pi / 2.0}));
     localization::position_estimate_t expected{flipped_tag, 0, 0};
+    ASSERT_EQ(estimate, expected);
   }
 }
