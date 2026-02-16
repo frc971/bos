@@ -4,7 +4,7 @@
 
 using camera::Camera;
 
-TEST(HelloTest, BasicAssertions) {  // NOLINT
+TEST(MultiTagTest, EqualToSquareSolve) {  // NOLINT
   auto config = camera::Camera::DEV_ORIN;
 
   std::vector<localization::tag_detection_t> detections(
@@ -18,9 +18,8 @@ TEST(HelloTest, BasicAssertions) {  // NOLINT
   localization::MultiTagSolver multi_tag_solver(config);
 
   auto square_solver_solution = square_solver.EstimatePosition(detections)[0];
-  utils::PrintPose3d(square_solver_solution.pose);
-
   auto multi_tag_solution = square_solver.EstimatePosition(detections)[0];
-  utils::PrintPose3d(multi_tag_solution.pose);
 
-}  // NOLINT
+  ASSERT_TRUE(square_solver_solution.pose.ToMatrix() ==
+              multi_tag_solution.pose.ToMatrix());
+}
