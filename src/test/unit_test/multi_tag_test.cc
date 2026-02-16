@@ -22,5 +22,4 @@ TEST(MultiTagTest, EqualToSquareSolve) {  // NOLINT
 
   ASSERT_TRUE(square_solver_solution.pose.ToMatrix() ==
               multi_tag_solution.pose.ToMatrix());
-  ASSERT_TRUE(false);
 }
