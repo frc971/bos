@@ -42,7 +42,7 @@ inline auto operator==(const localization::position_estimate_t& lhs,
 
 constexpr int kimage_tag_width = 20;
 constexpr int kimage_tag_height = 20;
-constexpr std::array<int, 2> ktag_ids = {18};
+const std::vector<int> ktag_ids = {31};
 constexpr int kimage_width = 20;
 constexpr int kimage_height = 20;
 const cv::Point2f tag_center =
