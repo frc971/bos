@@ -1,6 +1,7 @@
 #include "src/utils/transform.h"
 
 namespace utils {
+
 auto MakeTransform(const cv::Mat& rvec, const cv::Mat& tvec) -> cv::Mat {
   CV_Assert(rvec.total() == 3 && tvec.total() == 3);
 
@@ -16,15 +17,6 @@ auto MakeTransform(const cv::Mat& rvec, const cv::Mat& tvec) -> cv::Mat {
   T.at<double>(2, 3) = tvec.at<double>(2);
 
   return T;
-}
-
-template <typename Derived>
-auto EigenToCvMat(const Eigen::MatrixBase<Derived>& mat) -> cv::Mat {
-  cv::Mat cvMat(mat.rows(), mat.cols(), CV_64F);
-  Eigen::Map<
-      Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
-      cvMat.ptr<double>(), mat.rows(), mat.cols()) = mat;
-  return cvMat;
 }
 
 auto CvMatToEigen(const cv::Mat& mat) -> Eigen::Matrix4d {

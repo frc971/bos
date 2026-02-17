@@ -5,12 +5,37 @@
 
 // Helper functions for converting between wpilib, opencv and eigen
 namespace utils {
+enum Basis { WPI_TO_CV, CV_TO_WPI };
+
+const cv::Mat cv_to_wpilib = (cv::Mat_<double>(4, 4) << 0, 0, 1, 0, -1, 0, 0, 0,
+                              0, -1, 0, 0, 0, 0, 0, 1);
+
+const std::map<Basis, cv::Mat> cv_bases = {{WPI_TO_CV, cv_to_wpilib.t()},
+                                           {CV_TO_WPI, cv_to_wpilib}};
+
 auto MakeTransform(const cv::Mat& rvec, const cv::Mat& tvec) -> cv::Mat;
 
 template <typename Derived>
-auto EigenToCvMat(const Eigen::MatrixBase<Derived>& mat) -> cv::Mat;
+auto EigenToCvMat(const Eigen::MatrixBase<Derived>& mat) -> cv::Mat {
+  cv::Mat cvMat(mat.rows(), mat.cols(), CV_64F);
+  Eigen::Map<
+      Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
+      cvMat.ptr<double>(), mat.rows(), mat.cols()) = mat;
+  return cvMat;
+}
 
 auto CvMatToEigen(const cv::Mat& mat) -> Eigen::Matrix4d;
+
+auto inline ChangeBasis(const cv::Mat& mat, Basis basis) -> cv::Mat {
+  const cv::Mat& basis_mat = cv_bases.at(basis);
+  return basis_mat * mat * basis_mat.t();
+}
+
+auto inline ChangeBasis(const Eigen::MatrixXd& mat, Basis basis)
+    -> Eigen::MatrixXd {
+  const Eigen::MatrixXd& basis_mat = CvMatToEigen(cv_bases.at(basis));
+  return basis_mat * mat * basis_mat.transpose();
+}
 
 auto ConvertOpencvCoordinateToWpilib(cv::Mat& vec) -> void;
 

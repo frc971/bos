@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
+#include "src/localization/joint_solver.h"
 #include "src/localization/position.h"
 #include "src/localization/position_solver.h"
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
+#include "src/utils/transform.h"
 
 constexpr double ERROR_MARGIN_TRANSLATION = 0.01;
 constexpr double ERROR_MARGIN_EULER_ANGLE = 0.01745;  // 1 deg
@@ -60,7 +62,9 @@ TEST(SolverTest, Basic) {
   for (const auto& point : image_points) {
     std::cout << point << std::endl;
   }
-  localization::SquareSolver solver(camera::Camera::DUMMY_CAMERA);
+  localization::SquareSolver square_solver(camera::Camera::DUMMY_CAMERA);
+  localization::JointSolver joint_solver(
+      std::vector<camera::Camera>{camera::Camera::DUMMY_CAMERA});
 
   for (const int id : ktag_ids) {
     const localization::tag_detection_t fake_detection{.tag_id = id,
@@ -69,7 +73,7 @@ TEST(SolverTest, Basic) {
         fake_detection};
 
     localization::position_estimate_t estimate =
-        solver.EstimatePosition(fake_detections)[0];
+        square_solver.EstimatePosition(fake_detections)[0];
     frc::Pose3d flipped_tag =
         localization::kapriltag_layout.GetTagPose(id).value();
     flipped_tag = frc::Pose3d(
@@ -79,5 +83,12 @@ TEST(SolverTest, Basic) {
                             units::radian_t{-std::numbers::pi / 2.0}));
     localization::position_estimate_t expected{flipped_tag, 0, 0};
     ASSERT_EQ(estimate, expected);
+    std::map<camera::Camera, std::vector<localization::tag_detection_t>>
+        associated_detections;
+    associated_detections.insert(
+        {camera::Camera::DUMMY_CAMERA, fake_detections});
+    joint_solver.field_to_robot_ = utils::CvMatToEigen(utils::ChangeBasis(
+        square_solver.EstimatePosition(fake_detection), utils::WPI_TO_CV));
+    joint_solver.EstimatePosition(associated_detections);
   }
 }

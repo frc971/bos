@@ -20,7 +20,7 @@ class JointSolver {
 
  private:
   static constexpr double kacceptable_reprojection_error = 0.005;
-  std::map<camera::Camera, Eigen::Matrix<double, 3, 4>> image_to_robot_;
+  std::map<camera::Camera, Eigen::Matrix<double, 3, 4>> robot_to_image_;
   std::array<std::optional<Eigen::Matrix4d>, kmax_tags> tag_poses_;
 };
 }  // namespace localization

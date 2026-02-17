@@ -2,7 +2,6 @@
 #include <opencv2/calib3d.hpp>
 #include <utility>
 #include "Eigen/Dense"
-#include "src/localization/matrices.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/constants_from_json.h"
 #include "src/utils/log.h"
@@ -52,14 +51,14 @@ auto SquareSolver::EstimatePosition(const tag_detection_t& detection)
   cv::Mat camera_to_tag = utils::MakeTransform(rvec, tvec);
   cv::Mat tag_to_camera = camera_to_tag.inv();
   cv::Mat field_to_tag =
-      ChangeBasis(utils::EigenToCvMat(localization::kapriltag_layout
-                                          .GetTagPose(detection.tag_id)
-                                          .value()
-                                          .ToMatrix()),
-                  wpilib_to_cv);
+      utils::ChangeBasis(utils::EigenToCvMat(localization::kapriltag_layout
+                                                 .GetTagPose(detection.tag_id)
+                                                 .value()
+                                                 .ToMatrix()),
+                         utils::WPI_TO_CV);
   cv::Mat robot_pose =
       field_to_tag * rotate_z_ * tag_to_camera * camera_to_robot_;
-  robot_pose = cv_to_wpilib * robot_pose * cv_to_wpilib.t();
+  robot_pose = utils::ChangeBasis(robot_pose, utils::CV_TO_WPI);
   return robot_pose;
 }
 
