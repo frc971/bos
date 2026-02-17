@@ -7,8 +7,6 @@
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 #include "src/pathing/controller.h"
-#include "src/pathing/controller.h"
-#include "src/pathing/controller.h"
 
 using camera::Camera;
 auto main() -> int {
@@ -20,29 +18,11 @@ auto main() -> int {
   auto table = instance.GetTable("Pathing");
   auto enabled_entry = table->GetEntry("Enabled");
 
-  // NT for enabling/disabling pathing controller
-  auto instance = nt::NetworkTableInstance::GetDefault();
-  auto table = instance.GetTable("Pathing");
-  auto enabled_entry = table->GetEntry("Enabled");
-
-<<<<<<< HEAD
-  LOG(INFO) << "Starting cameras with right camera disabled";
+  LOG(INFO) << "Starting cameras";
   camera::CameraSource front_camera = camera::CameraSource(
       "Front",
       std::make_unique<camera::CVCamera>(
           camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]));
-=======
-  // NT for enabling/disabling pathing controller
-  auto instance = nt::NetworkTableInstance::GetDefault();
-  auto table = instance.GetTable("Pathing");
-  auto enabled_entry = table->GetEntry("Enabled");
-
-  LOG(INFO) << "Starting cameras";
-  // camera::CameraSource front_camera = camera::CameraSource(
-  //     "front",
-  //     std::make_unique<camera::CVCamera>(
-  //         camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]));
->>>>>>> dbbebb7 (Integrate into main so that pathing runs whever main gets ran)
 
   camera::CameraSource left_camera = camera::CameraSource(
       "Left",
@@ -98,20 +78,17 @@ auto main() -> int {
 
   LOG(INFO) << "Started estimators";
 
-<<<<<<< HEAD
-  front_thread.join();
-=======
   // Main control loop for pathing controller
   std::unique_ptr<pathing::Controller> controller;
   std::thread controller_thread;
   bool last_enabled = false;
 
-    LOG(INFO) << "Entering main control loop";
+  LOG(INFO) << "Entering main control loop";
+  
+  while (true) {
+    bool enabled = enabled_entry.GetBoolean(false);
     
-    while (true) {
-      bool enabled = enabled_entry.GetBoolean(false);
-      
-      if (enabled && !last_enabled) {
+    if (enabled && !last_enabled) {
       LOG(INFO) << "Starting pathing controller";
       controller = std::make_unique<pathing::Controller>(); 
       controller_thread = std::thread([&controller]() { 
@@ -132,7 +109,4 @@ auto main() -> int {
     last_enabled = enabled;
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
-
-  std::this_thread::sleep_for(std::chrono::hours::max());
->>>>>>> dbbebb7 (Integrate into main so that pathing runs whever main gets ran)
 }
