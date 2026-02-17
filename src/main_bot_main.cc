@@ -7,11 +7,23 @@
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 #include "src/pathing/controller.h"
+#include "src/pathing/controller.h"
+#include "src/pathing/controller.h"
 
 using camera::Camera;
 auto main() -> int {
   utils::StartNetworktables();
   // TODO configure vision bot camera paths
+
+  // NT for enabling/disabling pathing controller
+  auto instance = nt::NetworkTableInstance::GetDefault();
+  auto table = instance.GetTable("Pathing");
+  auto enabled_entry = table->GetEntry("Enabled");
+
+  // NT for enabling/disabling pathing controller
+  auto instance = nt::NetworkTableInstance::GetDefault();
+  auto table = instance.GetTable("Pathing");
+  auto enabled_entry = table->GetEntry("Enabled");
 
 <<<<<<< HEAD
   LOG(INFO) << "Starting cameras with right camera disabled";
