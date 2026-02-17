@@ -17,7 +17,7 @@ int main() {
   while (true) {
     bool enabled = enabled_entry.GetBoolean(false);
     if (enabled && !last) {
-      controller = new pathing::Controller();
+      controller = new pathing::Controller(); 
       worker = std::thread([controller]() { controller->Send(); });
     } else if (!enabled && last) {
       if (controller) {
