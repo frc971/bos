@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <algorithm>
 #include "src/localization/joint_solver.h"
 #include "src/localization/position.h"
 #include "src/localization/position_solver.h"
@@ -42,8 +43,8 @@ inline auto operator==(const localization::position_estimate_t& lhs,
 }
 }  // namespace frc
 
-constexpr int kimage_tag_width = 20;
-constexpr int kimage_tag_height = 20;
+constexpr int kimage_tag_width = 10;
+constexpr int kimage_tag_height = 10;
 const std::vector<int> ktag_ids = {31};
 constexpr int kimage_width = 20;
 constexpr int kimage_height = 20;
@@ -51,13 +52,14 @@ const cv::Point2f tag_center =
     cv::Point2f(kimage_width / 2.0, kimage_height / 2.0);
 const int dx = kimage_tag_width / 2.0;
 const int dy = kimage_tag_height / 2.0;
-const std::array<cv::Point2d, 4> image_points = {
+std::array<cv::Point2d, 4> image_points = {
     cv::Point2f(tag_center.x - dx, tag_center.y - dy),
     cv::Point2f(tag_center.x + dx, tag_center.y - dy),
     cv::Point2f(tag_center.x + dx, tag_center.y + dy),
     cv::Point2f(tag_center.x - dx, tag_center.y + dy)};
 
 TEST(SolverTest, Basic) {
+  std::ranges::reverse(image_points);
   for (const auto& point : image_points) {
     std::cout << point << std::endl;
   }
@@ -81,7 +83,11 @@ TEST(SolverTest, Basic) {
                         flipped_tag.Rotation().Z() +
                             units::radian_t{-std::numbers::pi / 2.0}));
     localization::position_estimate_t expected{flipped_tag, 0, 0};
+    std::cout << "first estimate:\n" << estimate << std::endl;
     ASSERT_EQ(estimate, expected);
+    cv::Mat other_estimate = square_solver.EstimatePosition(fake_detection);
+    utils::PrintTransformationMatrix(other_estimate, "other estimate");
+    std::exit(0);
     std::map<camera::Camera, std::vector<localization::tag_detection_t>>
         associated_detections;
     associated_detections.insert(
