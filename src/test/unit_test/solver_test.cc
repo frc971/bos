@@ -87,8 +87,9 @@ TEST(SolverTest, Basic) {
         associated_detections;
     associated_detections.insert(
         {camera::Camera::DUMMY_CAMERA, fake_detections});
-    joint_solver.field_to_robot_ = utils::CvMatToEigen(utils::ChangeBasis(
-        square_solver.EstimatePosition(fake_detection), utils::WPI_TO_CV));
+    Eigen::Matrix4d square_estimate = estimate.pose.ToMatrix();
+    utils::ChangeBasis(square_estimate, utils::WPI_TO_CV);
+    joint_solver.field_to_robot_ = square_estimate;
     joint_solver.EstimatePosition(associated_detections);
   }
 }

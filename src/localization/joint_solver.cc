@@ -15,7 +15,8 @@ namespace localization {
 using frc::AprilTagFieldLayout;
 
 JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
-                         const AprilTagFieldLayout& layout) {
+                         const AprilTagFieldLayout& layout)
+    : field_to_robot_(Eigen::Matrix4d::Identity()) {
   for (const frc::AprilTag& tag : layout.GetTags()) {
     tag_poses_[tag.ID] = tag.pose.ToMatrix();
   }
@@ -47,39 +48,33 @@ auto JointSolver::EstimatePosition(
   if (all_cam_detections.empty()) {
     return {};
   }
-  field_to_robot_ = Eigen::Matrix4d::Identity();
   std::vector<Detection> detections;
   for (const auto& pair : all_cam_detections) {
     for (const tag_detection_t& detection : pair.second) {
       if (!tag_poses_[detection.tag_id]) {
         continue;
       }
-      const Eigen::Matrix4d field_to_tag_wpi =
-          tag_poses_[detection.tag_id].value();
-      const Eigen::Matrix4d field_to_tag_cv =
-          utils::ChangeBasis(field_to_tag_wpi, utils::WPI_TO_CV);
-      const Eigen::Matrix4d tag_to_field = field_to_tag_cv.inverse();
-      std::cout << "field_to_tag_wpi\n" << field_to_tag_wpi << std::endl;
-      std::cout << "field_to_tag\n" << field_to_tag_cv << std::endl;
-      std::cout << "tag_to_field\n" << tag_to_field << std::endl;
-      utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_tag_wpi),
-                                       "Field to tag wpi");
-      utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_tag_cv),
-                                       "field to tag cv");
-      utils::PrintTransformationMatrix(utils::EigenToCvMat(tag_to_field),
-                                       "tag to field cv");
-      std::exit(0);
+      Eigen::Matrix4d field_to_tag = tag_poses_[detection.tag_id].value();
+      utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);
+      const Eigen::Matrix4d tag_to_field = field_to_tag.inverse();
       for (size_t i = 0; i < detection.corners.size(); i++) {
         Eigen::Vector2d image_point_normalized;
         image_point_normalized << detection.corners[i].x,
             detection.corners[i].y, 0;
         image_point_normalized /= image_point_normalized.maxCoeff();
         std::cout << "Image point:\n" << detection.corners[i] << std::endl;
+        std::cout
+            << "kapriltag\n"
+            << (Eigen::Vector4d() << kapriltag_corners_eigen[i], 1).finished()
+            << std::endl;
+        std::cout << "Tag_to_field\n" << tag_to_field << std::endl;
         Eigen::Vector4d field_relative_tag_corner =
             tag_to_field *
             (Eigen::Vector4d() << kapriltag_corners_eigen[i], 1).finished();
-        std::cout << "field_relative_tag_corner:\n"
-                  << field_relative_tag_corner;
+        std::cout << "Before basis:\n"
+                  << field_relative_tag_corner << std::endl;
+        utils::ChangeBasis(field_relative_tag_corner, utils::WPI_TO_CV);
+        std::cout << "After basis:\n" << field_relative_tag_corner << std::endl;
         detections.push_back(
             Detection{.camera = pair.first,
                       .image_point = image_point_normalized,
@@ -90,20 +85,25 @@ auto JointSolver::EstimatePosition(
   double error = INFINITY;
   while (error > kacceptable_reprojection_error) {
     for (const Detection& detection : detections) {
+      utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot_),
+                                       "Field to robot");
+      std::cout << "Full field to robot\n " << field_to_robot_ << std::endl;
+      std::cout << "Field relative tag corner:\n"
+                << detection.field_relative_tag_corner << std::endl;
       Eigen::Vector3d projection = robot_to_image_.at(detection.camera) *
                                    field_to_robot_ *
                                    detection.field_relative_tag_corner;
-      std::cout << "Projection: " << projection;
-      const double scale_factor = projection.maxCoeff();
+      std::cout << "Projection:\n" << projection << std::endl;
+      const double scale_factor = projection.cwiseAbs().maxCoeff();
       projection /= scale_factor;
-      std::cout << "Projection scaled: " << projection;
-      std::cout << "Image point: " << detection.image_point;
+      std::cout << "Projection scaled:\n" << projection << std::endl;
+      std::cout << "Image point:\n" << detection.image_point << std::endl;
       const double MSE_derivative =
           std::hypot(projection[0] - detection.image_point[0],
                      projection[1] - detection.image_point[1]);
       std::cout << "MSE_derivative: " << MSE_derivative << std::endl;
-      std::exit(0);
     }
+    break;
   }
 
   return {};

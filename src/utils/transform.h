@@ -26,15 +26,21 @@ auto EigenToCvMat(const Eigen::MatrixBase<Derived>& mat) -> cv::Mat {
 
 auto CvMatToEigen(const cv::Mat& mat) -> Eigen::Matrix4d;
 
-auto inline ChangeBasis(const cv::Mat& mat, Basis basis) -> cv::Mat {
+auto inline ChangeBasis(cv::Mat& mat, Basis basis) -> void {
   const cv::Mat& basis_mat = cv_bases.at(basis);
-  return basis_mat * mat * basis_mat.t();
+  mat = basis_mat * mat;
+  if (mat.cols == mat.rows) {
+    mat = mat * basis_mat.t();
+  }
 }
 
-auto inline ChangeBasis(const Eigen::MatrixXd& mat, Basis basis)
-    -> Eigen::MatrixXd {
+template <typename Derived>
+auto inline ChangeBasis(Eigen::MatrixBase<Derived>& mat, Basis basis) -> void {
   const Eigen::MatrixXd& basis_mat = CvMatToEigen(cv_bases.at(basis));
-  return basis_mat * mat * basis_mat.transpose();
+  mat = basis_mat * mat;
+  if (mat.ColsAtCompileTime == mat.RowsAtCompileTime) {
+    mat = mat * basis_mat.transpose();
+  }
 }
 
 auto ConvertOpencvCoordinateToWpilib(cv::Mat& vec) -> void;
