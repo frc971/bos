@@ -79,8 +79,8 @@ auto JointSolver::EstimatePosition(
   while (error > kacceptable_reprojection_error) {
     for (const Detection& detection : detections) {
       utils::PrintTransformationMatrix(utils::EigenToCvMat(robot_to_field_),
-                                       "Field to robot");
-      std::cout << "Full field to robot\n " << robot_to_field_ << std::endl;
+                                       "robot to field");
+      std::cout << "robot to field\n " << robot_to_field_ << std::endl;
       std::cout << "Field relative tag corner:\n"
                 << detection.field_relative_tag_corner << std::endl;
       Eigen::Vector3d projection = image_to_robot_.at(detection.camera) *

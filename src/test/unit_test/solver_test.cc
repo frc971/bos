@@ -51,12 +51,11 @@ const cv::Point2f tag_center =
     cv::Point2f(kimage_width / 2.0, kimage_height / 2.0);
 const int dx = kimage_tag_width / 2.0;
 const int dy = kimage_tag_height / 2.0;
-// bottom left, bottom right, top right, top left
 const std::array<cv::Point2d, 4> image_points = {
-    cv::Point2f(tag_center.x - dx, tag_center.y + dy),
-    cv::Point2f(tag_center.x + dx, tag_center.y + dy),
+    cv::Point2f(tag_center.x - dx, tag_center.y - dy),
     cv::Point2f(tag_center.x + dx, tag_center.y - dy),
-    cv::Point2f(tag_center.x - dx, tag_center.y - dy)};
+    cv::Point2f(tag_center.x + dx, tag_center.y + dy),
+    cv::Point2f(tag_center.x - dx, tag_center.y + dy)};
 
 TEST(SolverTest, Basic) {
   for (const auto& point : image_points) {
@@ -88,7 +87,11 @@ TEST(SolverTest, Basic) {
     associated_detections.insert(
         {camera::Camera::DUMMY_CAMERA, fake_detections});
     Eigen::Matrix4d square_estimate = estimate.pose.ToMatrix();
+    std::cout << "square estimate before:\n" << square_estimate << std::endl;
     utils::ChangeBasis(square_estimate, utils::WPI_TO_CV);
+    std::cout << "square estimate after:\n" << square_estimate << std::endl;
+    std::cout << "square estimate inverse:\n"
+              << square_estimate.inverse() << std::endl;
     joint_solver.robot_to_field_ = square_estimate.inverse();
     joint_solver.EstimatePosition(associated_detections);
   }
