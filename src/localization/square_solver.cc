@@ -25,9 +25,11 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
           utils::EigenToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
                                   utils::ReadExtrinsics(extrinsics_path))
                                   .ToMatrix())) {
-  cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
+  cv::Mat rvec_cv = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
+  cv::Mat rvec_wpi = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
-  rotate_z_ = utils::MakeTransform(rvec, tvec);
+  rotate_yaw_cv_ = utils::MakeTransform(rvec_cv, tvec);
+  rotate_yaw_wpilib_ = utils::MakeTransform(rvec_wpi, tvec);
   invert_translation_ = cv::Mat::eye(4, 4, CV_64F) * -1;
   invert_translation_.at<double>(3, 3) = 1;
 }
@@ -56,7 +58,7 @@ auto SquareSolver::EstimatePosition(const tag_detection_t& detection)
           .ToMatrix());
   utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);
   cv::Mat robot_pose =
-      field_to_tag * rotate_z_ * tag_to_camera * camera_to_robot_;
+      field_to_tag * rotate_yaw_cv_ * tag_to_camera * camera_to_robot_;
   utils::ChangeBasis(robot_pose, utils::CV_TO_WPI);
   return robot_pose;
 }
@@ -64,14 +66,33 @@ auto SquareSolver::EstimatePosition(const tag_detection_t& detection)
 auto SquareSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections)
     -> std::vector<position_estimate_t> {
-  // map?
   std::vector<position_estimate_t> position_estimates;
   position_estimates.reserve(detections.size());
   for (const auto& detection : detections) {
-    frc::Pose3d frc_pose =
-        frc::Pose3d(utils::CvMatToEigen(EstimatePosition(detection)));
+    cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
+    cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
+    cv::solvePnP(tag_corners_, detection.corners, camera_matrix_,
+                 distortion_coefficients_, rvec, tvec, false,
+                 cv::SOLVEPNP_IPPE_SQUARE);
+
+    const double translation_x = tvec.ptr<double>()[2];
+    const double translation_y = tvec.ptr<double>()[0];
+
+    utils::ConvertOpencvCoordinateToWpilib(tvec);
+    utils::ConvertOpencvCoordinateToWpilib(rvec);
+
+    cv::Mat camera_to_tag = utils::MakeTransform(rvec, tvec);
+    cv::Mat tag_to_camera = camera_to_tag.inv();
+    cv::Mat field_to_tag = utils::EigenToCvMat(
+        localization::kapriltag_layout.GetTagPose(detection.tag_id)
+            .value()
+            .ToMatrix());
+    frc::Pose3d robot_pose(utils::CvMatToEigen(
+        ((field_to_tag * rotate_yaw_wpilib_) * tag_to_camera) *
+        camera_to_robot_));
+
     position_estimates.push_back(
-        {frc_pose, std::hypot(frc_pose.X().value(), frc_pose.Y().value()) / 2.0,
+        {robot_pose, std::hypot(translation_x, translation_y) / 2.0,
          detection.timestamp});
   }
 

@@ -16,11 +16,11 @@ class JointSolver {
   auto EstimatePosition(
       const std::map<camera::Camera, std::vector<tag_detection_t>>&
           all_cam_detections) -> position_estimate_t;
-  Eigen::Matrix4d field_to_robot_;
+  Eigen::Matrix4d robot_to_field_;
 
  private:
   static constexpr double kacceptable_reprojection_error = 0.005;
-  std::map<camera::Camera, Eigen::Matrix<double, 3, 4>> robot_to_image_;
+  std::map<camera::Camera, Eigen::Matrix<double, 3, 4>> image_to_robot_;
   std::array<std::optional<Eigen::Matrix4d>, kmax_tags> tag_poses_;
 };
 }  // namespace localization

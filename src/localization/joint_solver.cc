@@ -16,29 +16,29 @@ using frc::AprilTagFieldLayout;
 
 JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
                          const AprilTagFieldLayout& layout)
-    : field_to_robot_(Eigen::Matrix4d::Identity()) {
+    : robot_to_field_(Eigen::Matrix4d::Identity()) {
   for (const frc::AprilTag& tag : layout.GetTags()) {
     tag_poses_[tag.ID] = tag.pose.ToMatrix();
   }
   Eigen::Matrix<double, 3, 4> pi = Eigen::Matrix<double, 3, 4>::Zero();
   pi.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
   for (const camera::Camera& camera_config : camera_constants_) {
-    const Eigen::Matrix3d cam_matrix =
+    const Eigen::Matrix3d camera_matrix =
         utils::CameraMatrixFromJson<Eigen::Matrix3d>(utils::ReadIntrinsics(
             camera::camera_constants[camera_config].intrinsics_path));
-    const Eigen::Matrix<double, 3, 4> cam2im = cam_matrix * pi;
-    const Eigen::Matrix4d robot2cam =
+    const Eigen::Matrix<double, 3, 4> image_to_camera = camera_matrix * pi;
+    const Eigen::Matrix4d camera_to_robot =
         utils::ExtrinsicsJsonToCameraToRobot(
             utils::ReadExtrinsics(
                 camera::camera_constants[camera_config].extrinsics_path))
-            .ToMatrix()
-            .inverse();
-    const Eigen::Matrix<double, 3, 4> robot2im = cam2im * robot2cam;
-    robot_to_image_.insert({camera_config, robot2im});
-    std::cout << "cam_matrix:\n" << cam_matrix << "\n";
-    std::cout << "cam2im:\n" << cam2im << "\n";
-    std::cout << "robot2cam:\n" << robot2cam << "\n";
-    std::cout << "robot2im:\n" << robot2im << "\n";
+            .ToMatrix();
+    const Eigen::Matrix<double, 3, 4> image_to_robot =
+        image_to_camera * camera_to_robot;
+    image_to_robot_.insert({camera_config, image_to_robot});
+    std::cout << "cam_matrix:\n" << camera_matrix << "\n";
+    std::cout << "image_to_camera:\n" << image_to_camera << "\n";
+    std::cout << "camera_to_robot:\n" << camera_to_robot << "\n";
+    std::cout << "image_to_robot:\n" << image_to_robot << "\n";
   }
 }
 
@@ -56,25 +56,18 @@ auto JointSolver::EstimatePosition(
       }
       Eigen::Matrix4d field_to_tag = tag_poses_[detection.tag_id].value();
       utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);
-      const Eigen::Matrix4d tag_to_field = field_to_tag.inverse();
       for (size_t i = 0; i < detection.corners.size(); i++) {
         Eigen::Vector2d image_point_normalized;
         image_point_normalized << detection.corners[i].x,
             detection.corners[i].y, 0;
         image_point_normalized /= image_point_normalized.maxCoeff();
         std::cout << "Image point:\n" << detection.corners[i] << std::endl;
-        std::cout
-            << "kapriltag\n"
-            << (Eigen::Vector4d() << kapriltag_corners_eigen[i], 1).finished()
-            << std::endl;
-        std::cout << "Tag_to_field\n" << tag_to_field << std::endl;
         Eigen::Vector4d field_relative_tag_corner =
-            tag_to_field *
+            field_to_tag *
             (Eigen::Vector4d() << kapriltag_corners_eigen[i], 1).finished();
-        std::cout << "Before basis:\n"
+        std::cout << "field corner:\n"
                   << field_relative_tag_corner << std::endl;
-        utils::ChangeBasis(field_relative_tag_corner, utils::WPI_TO_CV);
-        std::cout << "After basis:\n" << field_relative_tag_corner << std::endl;
+        std::cout << "tag corner:\n" << kapriltag_corners_eigen[i] << std::endl;
         detections.push_back(
             Detection{.camera = pair.first,
                       .image_point = image_point_normalized,
@@ -85,17 +78,18 @@ auto JointSolver::EstimatePosition(
   double error = INFINITY;
   while (error > kacceptable_reprojection_error) {
     for (const Detection& detection : detections) {
-      utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot_),
+      utils::PrintTransformationMatrix(utils::EigenToCvMat(robot_to_field_),
                                        "Field to robot");
-      std::cout << "Full field to robot\n " << field_to_robot_ << std::endl;
+      std::cout << "Full field to robot\n " << robot_to_field_ << std::endl;
       std::cout << "Field relative tag corner:\n"
                 << detection.field_relative_tag_corner << std::endl;
-      Eigen::Vector3d projection = robot_to_image_.at(detection.camera) *
-                                   field_to_robot_ *
+      Eigen::Vector3d projection = image_to_robot_.at(detection.camera) *
+                                   robot_to_field_ *
                                    detection.field_relative_tag_corner;
       std::cout << "Projection:\n" << projection << std::endl;
-      const double scale_factor = projection.cwiseAbs().maxCoeff();
+      const double scale_factor = projection(2);
       projection /= scale_factor;
+      projection /= projection.cwiseAbs().maxCoeff();
       std::cout << "Projection scaled:\n" << projection << std::endl;
       std::cout << "Image point:\n" << detection.image_point << std::endl;
       const double MSE_derivative =
