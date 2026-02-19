@@ -57,20 +57,23 @@ auto JointSolver::EstimatePosition(
       Eigen::Matrix4d field_to_tag = tag_poses_[detection.tag_id].value();
       utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);
       for (size_t i = 0; i < detection.corners.size(); i++) {
-        Eigen::Vector2d image_point_normalized;
-        image_point_normalized << detection.corners[i].x,
-            detection.corners[i].y, 0;
-        image_point_normalized /= image_point_normalized.maxCoeff();
-        std::cout << "Image point:\n" << detection.corners[i] << std::endl;
+        const Eigen::Vector2d image_point =
+            (Eigen::Vector2d() << detection.corners[i].x,
+             detection.corners[i].y)
+                .finished();
+        // std::cout << "Image point:\n" << image_point << std::endl;
         Eigen::Vector4d field_relative_tag_corner =
             field_to_tag *
-            (Eigen::Vector4d() << kapriltag_corners_eigen[i], 1).finished();
-        std::cout << "field corner:\n"
-                  << field_relative_tag_corner << std::endl;
-        std::cout << "tag corner:\n" << kapriltag_corners_eigen[i] << std::endl;
+            (Eigen::Vector4d()
+                 << kapriltag_corners_eigen[kapriltag_corners_eigen.size() - i -
+                                            1],
+             1)
+                .finished();
+        // std::cout << "field corner:\n"
+        // << field_relative_tag_corner << std::endl;
         detections.push_back(
             Detection{.camera = pair.first,
-                      .image_point = image_point_normalized,
+                      .image_point = image_point,
                       .field_relative_tag_corner = field_relative_tag_corner});
       }
     }
@@ -78,9 +81,14 @@ auto JointSolver::EstimatePosition(
   double error = INFINITY;
   while (error > kacceptable_reprojection_error) {
     for (const Detection& detection : detections) {
+      std::cout << detection.image_point << " : "
+                << detection.field_relative_tag_corner << std::endl;
+    }
+    std::exit(0);
+    for (const Detection& detection : detections) {
       utils::PrintTransformationMatrix(utils::EigenToCvMat(robot_to_field_),
                                        "robot to field");
-      std::cout << "robot to field\n " << robot_to_field_ << std::endl;
+      std::cout << "Image point: " << detection.image_point << std::endl;
       std::cout << "Field relative tag corner:\n"
                 << detection.field_relative_tag_corner << std::endl;
       Eigen::Vector3d projection = image_to_robot_.at(detection.camera) *
@@ -89,13 +97,13 @@ auto JointSolver::EstimatePosition(
       std::cout << "Projection:\n" << projection << std::endl;
       const double scale_factor = projection(2);
       projection /= scale_factor;
-      projection /= projection.cwiseAbs().maxCoeff();
       std::cout << "Projection scaled:\n" << projection << std::endl;
       std::cout << "Image point:\n" << detection.image_point << std::endl;
       const double MSE_derivative =
           std::hypot(projection[0] - detection.image_point[0],
                      projection[1] - detection.image_point[1]);
       std::cout << "MSE_derivative: " << MSE_derivative << std::endl;
+      std::exit(0);
     }
     break;
   }

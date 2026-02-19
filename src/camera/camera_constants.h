@@ -177,6 +177,8 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
                 "/bos/constants/misc/dummy_camera_intrinsics.json",
             .extrinsics_path =
                 "/bos/constants/misc/dummy_camera_extrinsics.json",
-            .name = "default_usb0"},
+            .name = "default_usb0",
+            .frame_width = 20,
+            .frame_height = 20},
 };
 }; // namespace camera
