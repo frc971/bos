@@ -58,20 +58,24 @@ std::array<cv::Point2d, 4> simple_image_points = {
     cv::Point2f(tag_center.x + dx, tag_center.y + dy),
     cv::Point2f(tag_center.x - dx, tag_center.y + dy)};
 
-std::array<cv::Point2d, 4> harder_image_points = {
+std::array<cv::Point2d, 4> works = {
+    {cv::Point2d(100.0f, 200.0f), cv::Point2d(100.0f, 100.0f),
+     cv::Point2d(200.0f, 100.0f), cv::Point2d(200.0f, 200.0f)}};
+std::array<cv::Point2d, 4> doesnt_work = {
     {cv::Point2d(100.0f, 100.0f), cv::Point2d(200.0f, 100.0f),
-     cv::Point2d(200.0f, 200.0f), cv::Point2d(100.0f, 200.0f)}};
+     cv::Point2d(100.0f, 200.0f), cv::Point2d(200.0f, 200.0f)}};
 
 TEST(SolverTest, Basic) {
   localization::SquareSolver square_solver(camera::Camera::DUMMY_CAMERA);
   for (const int id : ktag_ids) {
-    const localization::tag_detection_t fake_detection{
-        .tag_id = id, .corners = harder_image_points};
+    const localization::tag_detection_t fake_detection{.tag_id = id,
+                                                       .corners = doesnt_work};
     const std::vector<localization::tag_detection_t> fake_detections{
         fake_detection};
-
     localization::position_estimate_t estimate =
         square_solver.EstimatePosition(fake_detections)[0];
-    std::cout << "hard estimate:\n" << estimate << std::endl;
+    std::cout << estimate << std::endl;
+    utils::PrintTransformationMatrix(
+        utils::EigenToCvMat(estimate.pose.ToMatrix()));
   }
 }
