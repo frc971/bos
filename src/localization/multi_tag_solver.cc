@@ -15,6 +15,17 @@ auto HomogenizePoint3d(cv::Point3d point) -> cv::Mat {
   return (cv::Mat_<double>(4, 1) << point.x, point.y, point.z, 1);  // NOLINT
 }
 
+auto Transform3dToCvMat(frc::Transform3d transform) -> cv::Mat {
+  frc::Pose3d opencv_pose(
+      frc::Translation3d(-units::meter_t{transform.Y().value()},
+                         -units::meter_t{transform.Z().value()},
+                         units::meter_t{transform.X().value()}),
+      frc::Rotation3d(-units::radian_t{transform.Rotation().Y()},
+                      -units::radian_t{transform.Rotation().Z()},
+                      units::radian_t{transform.Rotation().X()}));
+  return utils::EigenToCvMat(opencv_pose.ToMatrix());
+}
+
 MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
                                const std::string& extrinsics_path,
                                const frc::AprilTagFieldLayout& layout,
@@ -23,11 +34,8 @@ MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
           utils::ReadIntrinsics(intrinsics_path))),
       distortion_coefficients_(utils::DistortionCoefficientsFromJson<cv::Mat>(
           utils::ReadIntrinsics(intrinsics_path))),
-      camera_to_robot_(
-          utils::EigenToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
-                                  utils::ReadIntrinsics(extrinsics_path))
-                                  .ToMatrix())) {
-
+      camera_to_robot_(Transform3dToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
+          utils::ReadExtrinsics(extrinsics_path)))) {
   cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
   cv::Mat rotate_z = utils::MakeTransform(rvec, tvec);

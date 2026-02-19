@@ -66,9 +66,9 @@ auto SquareSolver::EstimatePosition(
     frc::Pose3d robot_pose(utils::CvMatToEigen(
         ((field_to_tag * rotate_z_) * tag_to_camera) * camera_to_robot_));
 
-    position_estimates.push_back({robot_pose,
-                                  std::hypot(translation_x, translation_y),
-                                  detection.timestamp});
+    position_estimates.push_back(
+        {robot_pose, std::hypot(translation_x, translation_y) / 2.0,
+         detection.timestamp});
   }
 
   return position_estimates;

@@ -132,7 +132,7 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .frame_width=1920,
             .frame_height=1080,
             .fps=30,
-            .exposure=std::nullopt},
+            .exposure=400},
     [Camera::MAIN_ROBOT_LEFT_CAMERA] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
@@ -144,7 +144,7 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .frame_width=1280,
             .frame_height=720,
             .fps=30,
-            .exposure=std::nullopt},
+            .exposure=400},
     [Camera::MAIN_ROBOT_RIGHT_CAMERA] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
@@ -156,7 +156,7 @@ inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
             .frame_width=1280,
             .frame_height=720,
             .fps=30,
-            .exposure=std::nullopt},
+            .exposure=400},
     [Camera::DEV_ORIN] =
         camera_constant_t{
             .pipeline = "/dev/v4l/by-path/"
