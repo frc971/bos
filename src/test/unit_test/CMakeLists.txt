@@ -8,3 +8,4 @@ target_link_libraries(square_solve_test PRIVATE localization utils GTest::gtest_
 
 include(GoogleTest)
 gtest_discover_tests(multi_tag_test)
+gtest_discover_tests(square_solve_test)
