@@ -11,6 +11,7 @@ auto CameraMatrixFromJson(nlohmann::json intrinsics) -> T;
 template <typename T>
 auto DistortionCoefficientsFromJson(nlohmann::json intrinsics) -> T;
 
+// Returns camera to robot
 auto ExtrinsicsJsonToCameraToRobot(nlohmann::json extrinsics_json)
     -> frc::Transform3d;
 

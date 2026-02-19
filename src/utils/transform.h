@@ -12,11 +12,18 @@ auto EigenToCvMat(const Eigen::MatrixBase<Derived>& mat) -> cv::Mat;
 
 auto CvMatToEigen(const cv::Mat& mat) -> Eigen::Matrix4d;
 
-auto ConvertOpencvCoordinateToWpilib(cv::Mat& vec) -> void;
+auto OpencvCoordinateToWpilib(cv::Mat& vec) -> void;
 
-auto ConvertOpencvTransformationMatrixToWpilibPose(const cv::Mat& matrix)
-    -> frc::Pose3d;
+auto OpencvTransformationMatrixToPose3d(const cv::Mat& matrix) -> frc::Pose3d;
 
 auto Pose3dToCvMat(frc::Pose3d) -> cv::Mat;
+
+auto Transform3dToCvMat(frc::Transform3d transform) -> cv::Mat;
+
+auto Point3dToHomogenizedMat(cv::Point3d point) -> cv::Mat;
+
+auto CvMatToPoint3f(cv::Mat mat) -> cv::Point3d;
+
+auto HomogenizePoint3d(cv::Point3d point) -> cv::Mat;
 
 }  // namespace utils

@@ -7,14 +7,6 @@ static const cv::Mat zero_vec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
 
 namespace localization {
 
-auto CvMatToPoint3f(cv::Mat mat) -> cv::Point3d {
-  return {mat.at<double>(0), mat.at<double>(1), mat.at<double>(2)};
-}
-
-auto HomogenizePoint3d(cv::Point3d point) -> cv::Mat {
-  return (cv::Mat_<double>(4, 1) << point.x, point.y, point.z, 1);  // NOLINT
-}
-
 MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
                                const std::string& extrinsics_path,
                                const frc::AprilTagFieldLayout& layout,
@@ -35,14 +27,14 @@ MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
   for (const frc::AprilTag& tag : layout.GetTags()) {
     cv::Mat field_to_tag = utils::Pose3dToCvMat(tag.pose);
     tag_corners_[tag.ID] = {
-        CvMatToPoint3f(field_to_tag * rotate_z *
-                       HomogenizePoint3d(kapriltag_corners[0])),
-        CvMatToPoint3f(field_to_tag * rotate_z *
-                       HomogenizePoint3d(kapriltag_corners[1])),
-        CvMatToPoint3f(field_to_tag * rotate_z *
-                       HomogenizePoint3d(kapriltag_corners[2])),
-        CvMatToPoint3f(field_to_tag * rotate_z *
-                       HomogenizePoint3d(kapriltag_corners[3])),
+        utils::CvMatToPoint3f(field_to_tag * rotate_z *
+                              utils::HomogenizePoint3d(kapriltag_corners[0])),
+        utils::CvMatToPoint3f(field_to_tag * rotate_z *
+                              utils::HomogenizePoint3d(kapriltag_corners[1])),
+        utils::CvMatToPoint3f(field_to_tag * rotate_z *
+                              utils::HomogenizePoint3d(kapriltag_corners[2])),
+        utils::CvMatToPoint3f(field_to_tag * rotate_z *
+                              utils::HomogenizePoint3d(kapriltag_corners[3])),
     };
   }
 }
@@ -81,8 +73,7 @@ auto MultiTagSolver::EstimatePosition(
   cv::Mat feild_to_robot = feild_to_camera * camera_to_robot_;
 
   return {position_estimate_t{
-      .pose =
-          utils::ConvertOpencvTransformationMatrixToWpilibPose(feild_to_robot),
+      .pose = utils::OpencvTransformationMatrixToPose3d(feild_to_robot),
       .variance = 1,
       .timestamp = detections[0].timestamp}};
 }

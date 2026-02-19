@@ -9,8 +9,8 @@ TEST(MultiTagTest, EqualToSquareSolve) {  // NOLINT
 
   std::vector<localization::tag_detection_t> detections(
       {{.tag_id = 25,
-        .corners = {cv::Point2d(100.0f, 100.0f), cv::Point2d(200.0f, 100.0f),
-                    cv::Point2d(200.0f, 200.0f), cv::Point2d(100.0f, 200.0f)},
+        .corners = {cv::Point2d(100.0f, 200.0f), cv::Point2d(200.0f, 200.0f),
+                    cv::Point2d(200.0f, 100.0f), cv::Point2d(100.0f, 100.0f)},
         .timestamp = 0.0,
         .confidence = 0.0}});
 

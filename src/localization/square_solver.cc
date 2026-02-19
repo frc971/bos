@@ -54,8 +54,8 @@ auto SquareSolver::EstimatePosition(
     const double translation_x = tvec.ptr<double>()[2];
     const double translation_y = tvec.ptr<double>()[0];
 
-    utils::ConvertOpencvCoordinateToWpilib(tvec);
-    utils::ConvertOpencvCoordinateToWpilib(rvec);
+    utils::OpencvCoordinateToWpilib(tvec);
+    utils::OpencvCoordinateToWpilib(rvec);
 
     cv::Mat camera_to_tag = utils::MakeTransform(rvec, tvec);
     cv::Mat tag_to_camera = camera_to_tag.inv();

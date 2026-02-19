@@ -37,7 +37,7 @@ auto CvMatToEigen(const cv::Mat& mat) -> Eigen::Matrix4d {
   return out;
 }
 
-auto ConvertOpencvCoordinateToWpilib(cv::Mat& vec) -> void {
+auto OpencvCoordinateToWpilib(cv::Mat& vec) -> void {
   const double x = vec.ptr<double>()[2];
   const double y = vec.ptr<double>()[0];
   const double z = vec.ptr<double>()[1];
@@ -46,14 +46,14 @@ auto ConvertOpencvCoordinateToWpilib(cv::Mat& vec) -> void {
   vec.ptr<double>()[2] = -z;
 }
 
-auto ConvertOpencvTransformationMatrixToWpilibPose(const cv::Mat& transform)
+auto OpencvTransformationMatrixToPose3d(const cv::Mat& transform)
     -> frc::Pose3d {
   cv::Mat R = transform(cv::Range(0, 3), cv::Range(0, 3)).clone();
   cv::Mat tvec = transform(cv::Range(0, 3), cv::Range(3, 4)).clone();
   cv::Mat rvec;
   cv::Rodrigues(R, rvec);
-  ConvertOpencvCoordinateToWpilib(tvec);
-  ConvertOpencvCoordinateToWpilib(rvec);
+  OpencvCoordinateToWpilib(tvec);
+  OpencvCoordinateToWpilib(rvec);
   cv::Mat wpilib_transform = MakeTransform(rvec, tvec);
   return frc::Pose3d(CvMatToEigen(wpilib_transform));
 }
@@ -67,6 +67,30 @@ auto Pose3dToCvMat(frc::Pose3d pose) -> cv::Mat {
                       -units::radian_t{pose.Rotation().Z()},
                       units::radian_t{pose.Rotation().X()}));
   return utils::EigenToCvMat(opencv_pose.ToMatrix());
+}
+
+auto Transform3dToCvMat(frc::Transform3d transform) -> cv::Mat {
+  frc::Pose3d opencv_pose(
+      frc::Translation3d(-units::meter_t{transform.Y().value()},
+                         -units::meter_t{transform.Z().value()},
+                         units::meter_t{transform.X().value()}),
+      frc::Rotation3d(-units::radian_t{transform.Rotation().Y()},
+                      -units::radian_t{transform.Rotation().Z()},
+                      units::radian_t{transform.Rotation().X()}));
+  return utils::EigenToCvMat(opencv_pose.ToMatrix());
+}
+
+auto Point3dToHomogenizedMat(cv::Point3d point) -> cv::Mat {
+  cv::Mat mat = (cv::Mat_<double>(3, 1) << point.x, point.y, point.z, 1);
+  return mat;
+}
+
+auto CvMatToPoint3f(cv::Mat mat) -> cv::Point3d {
+  return {mat.at<double>(0), mat.at<double>(1), mat.at<double>(2)};
+}
+
+auto HomogenizePoint3d(cv::Point3d point) -> cv::Mat {
+  return (cv::Mat_<double>(4, 1) << point.x, point.y, point.z, 1);  // NOLINT
 }
 
 template cv::Mat utils::EigenToCvMat<Eigen::Matrix<double, 4, 4>>(
