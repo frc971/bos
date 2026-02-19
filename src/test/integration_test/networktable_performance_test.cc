@@ -13,9 +13,25 @@ auto main() -> int {
 
   auto pose_subscriber =
       table->GetStructTopic<frc::Pose2d>("Pose").Subscribe(frc::Pose2d());
+
+  using clock = std::chrono::high_resolution_clock;
+  auto last = clock::now();
+  int iterations = 0;
+
   for (;;) {
-    auto pose = pose_subscriber.GetAtomic();
-    LOG(INFO) << pose.value;
-    LOG(INFO) << pose.time - frc::Timer::GetFPGATimestamp().to<double>();
+    while (pose_subscriber.ReadQueue().empty()) {}
+
+    iterations++;
+    auto now = clock::now();
+    double elapsed_ms =
+        std::chrono::duration<double, std::milli>(now - last).count();
+
+    if (elapsed_ms >= 1000.0) {
+      std::cout << "Frequency: " << iterations / (elapsed_ms / 1000.0)
+                << " Hz\n";
+      std::cout << "Period: " << elapsed_ms / iterations << " ms\n";
+      iterations = 0;
+      last = now;
+    }
   }
 }
