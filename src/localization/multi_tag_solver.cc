@@ -67,10 +67,12 @@ auto MultiTagSolver::EstimatePosition(
     -> std::vector<position_estimate_t> {
   std::vector<cv::Point3d> object_points;
   std::vector<cv::Point2d> image_points;
+  std::vector<int> tag_ids;
   for (const tag_detection_t& detection : detections) {
     if (!tag_corners_[detection.tag_id].has_value()) {
       LOG(WARNING) << "Invalid tag id: " << detection.tag_id;
     }
+    tag_ids.push_back(detection.tag_id);
     image_points.insert(image_points.end(), detection.corners.begin(),
                         detection.corners.end());
     object_points.insert(object_points.end(),
@@ -89,6 +91,7 @@ auto MultiTagSolver::EstimatePosition(
   cv::Mat feild_to_robot = feild_to_camera * camera_to_robot_;
 
   return {position_estimate_t{
+      .tag_ids = std::move(tag_ids),
       .pose =
           utils::ConvertOpencvTransformationMatrixToWpilibPose(feild_to_robot),
       .variance = 1,

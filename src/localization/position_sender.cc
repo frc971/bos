@@ -8,6 +8,8 @@ constexpr auto RadianToDegree(double radian) -> double {
   return radian * (180 / M_PI);
 }
 
+static const int kmax_tags = 50;
+
 PositionSender::PositionSender(const std::string& camera_name, bool verbose)
     : instance_(nt::NetworkTableInstance::GetDefault()), verbose_(verbose) {
   std::shared_ptr<nt::NetworkTable> table =
@@ -28,6 +30,9 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
       table->GetDoubleArrayTopic("TagEstimation");
   tag_estimation_publisher_ = tag_estimation_topic.Publish(
       {.periodic = 0.01, .sendAll = true, .keepDuplicates = true});
+
+  nt::BooleanArrayTopic tag_ids_topic = table->GetBooleanArrayTopic("TagId");
+  tag_ids_publisher_ = tag_ids_topic.Publish();
 }
 
 void PositionSender::Send(
@@ -45,15 +50,22 @@ void PositionSender::Send(
             instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
         latency};
 
+    std::array<int, kmax_tags> tags{};
+    for (int tag_id : detection.tag_ids) {
+      tags[tag_id] = true;
+    }
+
     pose_publisher_.Set(
         frc::Pose2d(units::meter_t{detection.pose.X().value()},
                     units::meter_t{detection.pose.Y().value()},
                     units::radian_t{detection.pose.Rotation().Z().value()}));
-
     pose3d_publisher_.Set(detection.pose);
 
     tag_estimation_publisher_.Set(tag_estimation);
+    tag_ids_publisher_.Set(tags);
+
     latency_publisher_.Set(latency);
+
     if (verbose_) {
       LOG(INFO) << detection;
     }
