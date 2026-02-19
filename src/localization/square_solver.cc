@@ -77,7 +77,9 @@ auto SquareSolver::EstimatePosition(
         ((field_to_tag * rotate_z_) * tag_to_camera) * camera_to_robot_));
 
     position_estimates.push_back(
-        {robot_pose, std::hypot(translation_x, translation_y) / 2.0,
+        {{detection.tag_id},
+         robot_pose,
+         std::hypot(translation_x, translation_y) / 2.0,
          detection.timestamp});
   }
 

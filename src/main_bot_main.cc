@@ -39,7 +39,7 @@ auto main() -> int {
           utils::ReadIntrinsics(
               camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]
                   .intrinsics_path)),
-      std::make_unique<localization::SquareSolver>(
+      std::make_unique<localization::MultiTagSolver>(
           camera::Camera::MAIN_ROBOT_FRONT_CAMERA),
       camera::camera_constants[camera::Camera::MAIN_ROBOT_FRONT_CAMERA]
           .extrinsics_path,
@@ -52,7 +52,7 @@ auto main() -> int {
           utils::ReadIntrinsics(
               camera::camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA]
                   .intrinsics_path)),
-      std::make_unique<localization::SquareSolver>(
+      std::make_unique<localization::MultiTagSolver>(
           Camera::MAIN_ROBOT_LEFT_CAMERA),
       camera::camera_constants[camera::Camera::MAIN_ROBOT_LEFT_CAMERA]
           .extrinsics_path,
@@ -65,12 +65,13 @@ auto main() -> int {
           utils::ReadIntrinsics(
               camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]
                   .intrinsics_path)),
-      std::make_unique<localization::SquareSolver>(
+      std::make_unique<localization::MultiTagSolver>(
           camera::Camera::MAIN_ROBOT_RIGHT_CAMERA),
       camera::camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA].extrinsics_path,
       4973, false);
 
   LOG(INFO) << "Started estimators";
 
-  front_thread.join();
+  std::this_thread::sleep_for(std::chrono::hours::max());
+  left_thread.join();
 }

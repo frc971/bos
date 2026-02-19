@@ -15,6 +15,17 @@ auto HomogenizePoint3d(cv::Point3d point) -> cv::Mat {
   return (cv::Mat_<double>(4, 1) << point.x, point.y, point.z, 1);  // NOLINT
 }
 
+auto Transform3dToCvMat(frc::Transform3d transform) -> cv::Mat {
+  frc::Pose3d opencv_pose(
+      frc::Translation3d(-units::meter_t{transform.Y().value()},
+                         -units::meter_t{transform.Z().value()},
+                         units::meter_t{transform.X().value()}),
+      frc::Rotation3d(-units::radian_t{transform.Rotation().Y()},
+                      -units::radian_t{transform.Rotation().Z()},
+                      units::radian_t{transform.Rotation().X()}));
+  return utils::EigenToCvMat(opencv_pose.ToMatrix());
+}
+
 MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
                                const std::string& extrinsics_path,
                                const frc::AprilTagFieldLayout& layout,
@@ -23,11 +34,8 @@ MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
           utils::ReadIntrinsics(intrinsics_path))),
       distortion_coefficients_(utils::DistortionCoefficientsFromJson<cv::Mat>(
           utils::ReadIntrinsics(intrinsics_path))),
-      camera_to_robot_(
-          utils::EigenToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
-                                  utils::ReadExtrinsics(extrinsics_path))
-                                  .ToMatrix())) {
-
+      camera_to_robot_(Transform3dToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
+          utils::ReadExtrinsics(extrinsics_path)))) {
   cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
   cv::Mat rotate_z = utils::MakeTransform(rvec, tvec);
@@ -59,6 +67,7 @@ auto MultiTagSolver::EstimatePosition(
     -> std::vector<position_estimate_t> {
   std::vector<cv::Point3d> object_points;
   std::vector<cv::Point2d> image_points;
+  std::vector<int> tag_ids;
   for (const tag_detection_t& detection : detections) {
     if (!tag_corners_[detection.tag_id].has_value()) {
       LOG(WARNING) << "Invalid tag id: " << detection.tag_id;
@@ -78,6 +87,7 @@ auto MultiTagSolver::EstimatePosition(
     if (cv::norm(tvec_tag) > 5.0) {
       continue;
     }
+    tag_ids.push_back(detection.tag_id);
     image_points.insert(image_points.end(), detection.corners.begin(),
                         detection.corners.end());
     object_points.insert(object_points.end(),
@@ -96,6 +106,7 @@ auto MultiTagSolver::EstimatePosition(
   cv::Mat feild_to_robot = feild_to_camera * camera_to_robot_;
 
   return {position_estimate_t{
+      .tag_ids = std::move(tag_ids),
       .pose =
           utils::ConvertOpencvTransformationMatrixToWpilibPose(feild_to_robot),
       .variance = 1,
