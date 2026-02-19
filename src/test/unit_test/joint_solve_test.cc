@@ -3,10 +3,9 @@
 #include "src/camera/camera_constants.h"
 #include "src/localization/joint_solver.h"
 #include "src/localization/square_solver.h"
+#include "src/utils/transform.h"
 
 constexpr double ktag_size = 0.1651;
-const frc::AprilTagFieldLayout kapriltag_layout =
-    frc::AprilTagFieldLayout("/bos/constants/2026-rebuilt-andymark.json");
 
 auto GetTagCorners(double tag_size) -> std::vector<cv::Point3f> {
   double half_size = tag_size / 2.0;
@@ -39,6 +38,6 @@ TEST(LocalizationTest, AverageSquareSolveVsJointSolve) {
       cv::Point2f(200.0f, 200.0f), cv::Point2f(100.0f, 200.0f)};
   tag_detections.push_back(detection1);
 
-  // Eigen::Matrix4d res1 = square_solver.EstimatePosition(detection1);
-  // wpi2cv
+  utils::PrintTransformationMatrix(square_solver.EstimatePosition(detection1));
+  std::cout << square_solver.EstimatePosition(tag_detections)[0] << std::endl;
 }

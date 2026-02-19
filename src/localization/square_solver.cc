@@ -26,7 +26,7 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
                                   utils::ReadExtrinsics(extrinsics_path))
                                   .ToMatrix())) {
   cv::Mat rvec_cv = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
-  cv::Mat rvec_wpi = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
+  cv::Mat rvec_wpi = (cv::Mat_<double>(3, 1) << 0, 0, std::numbers::pi);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
   rotate_yaw_cv_ = utils::MakeTransform(rvec_cv, tvec);
   rotate_yaw_wpilib_ = utils::MakeTransform(rvec_wpi, tvec);
