@@ -1,11 +1,50 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/cv_camera.h"
+#include "src/localization/joint_solver.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
+
+using camera::timestamped_frame_t;
+using localization::GPUAprilTagDetector;
+using localization::tag_detection_t;
+using utils::ReadIntrinsics;
+
+void RunLocalizationJointSolve(
+    const std::vector<camera::camera_constant_t>& configs, uint start_port) {
+
+  localization::JointSolver solver(configs);
+
+  std::vector<camera::ICamera> sources;
+  std::vector<localization::GPUAprilTagDetector> detectors;
+  sources.reserve(configs.size());
+  detectors.reserve(configs.size());
+  for (const auto& config : configs) {
+    sources.push_back(camera::CVCamera(config.pipeline));
+    auto frame = sources[sources.size() - 1].GetFrame();
+    detectors.emplace_back(frame.frame.cols, frame.frame.rows,
+                           ReadIntrinsics(config.intrinsics_path));
+  }
+  std::vector<timestamped_frame_t> synced_frames;
+  synced_frames.reserve(configs.size());
+  std::vector<std::vector<tag_detection_t>> detections;
+  while (true) {
+    for (camera::ICamera& source : sources) {
+      synced_frames.push_back(source.GetFrame());
+    }
+    for (size_t i = 0; i < configs.size(); i++) {
+      detections.push_back(detectors[i].GetTagDetections(synced_frames[i]));
+    }
+
+    solver.EstimatePosition(detections, {});
+    synced_frames.clear();
+    detections.clear();
+    detections.clear();
+  }
+}
 
 using camera::Camera;
 auto main() -> int {

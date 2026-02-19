@@ -14,7 +14,7 @@ namespace localization {
 
 class JointSolver {
  public:
-  JointSolver(const std::vector<camera::Camera>& camera_config,
+  JointSolver(const std::vector<camera::camera_constant_t>& camera_config,
               frc::AprilTagFieldLayout layout = kapriltag_layout,
               double tag_size = ktag_size);
   auto EstimatePosition(

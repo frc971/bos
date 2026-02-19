@@ -19,8 +19,9 @@ auto constexpr square(double value) -> double {
   return value * value;
 }
 
-JointSolver::JointSolver(const std::vector<camera::Camera>& camera_configs,
-                         AprilTagFieldLayout layout, double tag_size)
+JointSolver::JointSolver(
+    const std::vector<camera::camera_constant_t>& camera_configs,
+    AprilTagFieldLayout layout, double tag_size)
     : layout_(std::move(layout)) {
 
   cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
@@ -36,9 +37,7 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_configs,
   camera_to_robot_.reserve(camera_configs.size());
   camera_matrix_.reserve(camera_configs.size());
   distortion_coefficients_.reserve(camera_configs.size());
-  for (const camera::Camera& camera_config : camera_configs) {
-    camera::camera_constant_t camera_constant =
-        camera::camera_constants[camera_config];
+  for (const camera::camera_constant_t& camera_constant : camera_configs) {
     cv::Mat camera_to_robot =
         utils::Transform3dToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
             utils::ReadExtrinsics(camera_constant.extrinsics_path)));

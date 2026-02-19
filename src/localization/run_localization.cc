@@ -1,11 +1,14 @@
 #include "src/localization/run_localization.h"
 #include <utility>
 #include "src/camera/cscore_streamer.h"
+#include "src/camera/cv_camera.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/position_sender.h"
 #include "src/localization/position_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/timer.h"
+
+using camera::timestamped_frame_t;
 
 namespace localization {
 

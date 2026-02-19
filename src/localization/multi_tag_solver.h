@@ -4,8 +4,6 @@
 #include "src/camera/camera_constants.h"
 #include "src/localization/position_solver.h"
 
-static const uint kmax_tags = 50;
-
 using json = nlohmann::json;
 
 namespace localization {
@@ -27,6 +25,7 @@ class MultiTagSolver : public IPositionSolver {
   cv::Mat camera_matrix_;
   cv::Mat distortion_coefficients_;
   cv::Mat camera_to_robot_;
-  std::array<std::optional<std::array<cv::Point3d, 4>>, kmax_tags> tag_corners_;
+  std::array<std::optional<std::array<cv::Point3d, 4>>, 50>
+      tag_corners_;  // TODO kmaxtags
 };
 }  // namespace localization
