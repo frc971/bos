@@ -8,4 +8,5 @@ namespace utils {
 void PrintPose3d(const frc::Pose3d& pose);
 void PrintTransform3d(const frc::Transform3d& transform);
 void PrintTransformationMatrix(const cv::Mat& mat);
+void PrintPose2d(const frc::Pose2d& pose);
 }  // namespace utils

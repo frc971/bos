@@ -26,6 +26,19 @@ void PrintPose3d(const frc::Pose3d& pose) {
             << "°" << std::endl;
 }
 
+void PrintPose2d(const frc::Pose2d& pose) {
+  // Extract translation (in meters)
+  double x = pose.X().value();
+  double y = pose.Y().value();
+
+  // Extract rotation (in degrees)
+  double angle = pose.Rotation().Degrees().value();
+
+  std::cout << std::fixed << std::setprecision(3);
+  std::cout << "Pose2d -> X: " << x << " m, Y: " << y << ", Angle: " << angle
+            << std::endl;
+}
+
 void PrintTransform3d(const frc::Transform3d& transform) {
   const auto& tr = transform.Translation();
   const auto& r = transform.Rotation();
