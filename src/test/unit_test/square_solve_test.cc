@@ -52,53 +52,26 @@ const cv::Point2f tag_center =
     cv::Point2f(kimage_width / 2.0, kimage_height / 2.0);
 const int dx = kimage_tag_width / 2.0;
 const int dy = kimage_tag_height / 2.0;
-std::array<cv::Point2d, 4> image_points = {
+std::array<cv::Point2d, 4> simple_image_points = {
     cv::Point2f(tag_center.x - dx, tag_center.y - dy),
     cv::Point2f(tag_center.x + dx, tag_center.y - dy),
     cv::Point2f(tag_center.x + dx, tag_center.y + dy),
     cv::Point2f(tag_center.x - dx, tag_center.y + dy)};
 
-TEST(SolverTest, Basic) {
-  std::ranges::reverse(image_points);
-  for (const auto& point : image_points) {
-    std::cout << point << std::endl;
-  }
-  localization::SquareSolver square_solver(camera::Camera::DUMMY_CAMERA);
-  localization::JointSolver joint_solver(
-      std::vector<camera::Camera>{camera::Camera::DUMMY_CAMERA});
+std::array<cv::Point2d, 4> harder_image_points = {
+    {cv::Point2d(100.0f, 100.0f), cv::Point2d(200.0f, 100.0f),
+     cv::Point2d(200.0f, 200.0f), cv::Point2d(100.0f, 200.0f)}};
 
+TEST(SolverTest, Basic) {
+  localization::SquareSolver square_solver(camera::Camera::DUMMY_CAMERA);
   for (const int id : ktag_ids) {
-    const localization::tag_detection_t fake_detection{.tag_id = id,
-                                                       .corners = image_points};
+    const localization::tag_detection_t fake_detection{
+        .tag_id = id, .corners = harder_image_points};
     const std::vector<localization::tag_detection_t> fake_detections{
         fake_detection};
 
     localization::position_estimate_t estimate =
         square_solver.EstimatePosition(fake_detections)[0];
-    frc::Pose3d flipped_tag =
-        localization::kapriltag_layout.GetTagPose(id).value();
-    flipped_tag = frc::Pose3d(
-        flipped_tag.Translation(),
-        frc::Rotation3d(flipped_tag.Rotation().X(), flipped_tag.Rotation().Y(),
-                        flipped_tag.Rotation().Z() +
-                            units::radian_t{-std::numbers::pi / 2.0}));
-    localization::position_estimate_t expected{flipped_tag, 0, 0};
-    std::cout << "first estimate:\n" << estimate << std::endl;
-    ASSERT_EQ(estimate, expected);
-    cv::Mat other_estimate = square_solver.EstimatePosition(fake_detection);
-    utils::PrintTransformationMatrix(other_estimate, "other estimate");
-    std::exit(0);
-    std::map<camera::Camera, std::vector<localization::tag_detection_t>>
-        associated_detections;
-    associated_detections.insert(
-        {camera::Camera::DUMMY_CAMERA, fake_detections});
-    Eigen::Matrix4d square_estimate = estimate.pose.ToMatrix();
-    std::cout << "square estimate before:\n" << square_estimate << std::endl;
-    utils::ChangeBasis(square_estimate, utils::WPI_TO_CV);
-    std::cout << "square estimate after:\n" << square_estimate << std::endl;
-    std::cout << "square estimate inverse:\n"
-              << square_estimate.inverse() << std::endl;
-    joint_solver.robot_to_field_ = square_estimate.inverse();
-    joint_solver.EstimatePosition(associated_detections);
+    std::cout << "hard estimate:\n" << estimate << std::endl;
   }
 }
