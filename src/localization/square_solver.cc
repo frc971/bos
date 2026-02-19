@@ -76,11 +76,12 @@ auto SquareSolver::EstimatePosition(
     frc::Pose3d robot_pose(utils::CvMatToEigen(
         ((field_to_tag * rotate_z_) * tag_to_camera) * camera_to_robot_));
 
-    position_estimates.push_back(
-        {{detection.tag_id},
-         robot_pose,
-         std::hypot(translation_x, translation_y) / 2.0,
-         detection.timestamp});
+    position_estimates.push_back(position_estimate_t{
+        .tag_ids = {detection.tag_id},
+        .rejected_tag_ids = {},  // TODO
+        .variance = std::hypot(translation_x, translation_y),
+        .timestamp = detection.timestamp,
+    });
   }
 
   return position_estimates;

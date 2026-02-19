@@ -33,6 +33,10 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
 
   nt::BooleanArrayTopic tag_ids_topic = table->GetBooleanArrayTopic("TagId");
   tag_ids_publisher_ = tag_ids_topic.Publish();
+
+  nt::BooleanArrayTopic rejected_tag_ids_topic =
+      table->GetBooleanArrayTopic("RejectedTagId");
+  rejected_tag_ids_publisher_ = rejected_tag_ids_topic.Publish();
 }
 
 void PositionSender::Send(
@@ -55,6 +59,11 @@ void PositionSender::Send(
       tags[tag_id] = true;
     }
 
+    std::array<int, kmax_tags> rejected_tags{};
+    for (int tag_id : detection.rejected_tag_ids) {
+      rejected_tags[tag_id] = true;
+    }
+
     pose_publisher_.Set(
         frc::Pose2d(units::meter_t{detection.pose.X().value()},
                     units::meter_t{detection.pose.Y().value()},
@@ -62,7 +71,9 @@ void PositionSender::Send(
     pose3d_publisher_.Set(detection.pose);
 
     tag_estimation_publisher_.Set(tag_estimation);
+
     tag_ids_publisher_.Set(tags);
+    rejected_tag_ids_publisher_.Set(rejected_tags);
 
     latency_publisher_.Set(latency);
 
