@@ -27,6 +27,7 @@ class PositionSender {
   nt::DoublePublisher latency_publisher_;
   nt::DoubleArrayPublisher tag_estimation_publisher_;
   nt::BooleanArrayPublisher tag_ids_publisher_;
+  nt::BooleanArrayPublisher rejected_tag_ids_publisher_;
 
   std::mutex mutex_;
   bool verbose_;
