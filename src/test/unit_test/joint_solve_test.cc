@@ -28,7 +28,6 @@ TEST(LocalizationTest, AverageSquareSolveVsJointSolve) {
       square_solver.EstimatePosition(tag_detections)[0];
   cv::Mat square_estimate2 = square_solver.EstimatePosition(detection1);
   std::cout << square_estimate << std::endl;
-  utils::PrintTransformationMatrix(square_estimate2, "Square estimate 2");
 
   std::map<camera::Camera, std::vector<localization::tag_detection_t>>
       associated_detections;

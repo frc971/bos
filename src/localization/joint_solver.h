@@ -8,7 +8,12 @@
 using json = nlohmann::json;
 
 namespace localization {
-static constexpr int kmax_tags = 50;
+struct CameraMatrices {
+  Eigen::Matrix<double, 3, 4> image_to_robot;
+  cv::Mat distortion_coefficients;
+  cv::Mat camera_matrix;
+};
+static constexpr int kmax_tags = 32;
 class JointSolver {
  public:
   JointSolver(const std::vector<camera::Camera>& camera_constants_,
@@ -20,7 +25,7 @@ class JointSolver {
 
  private:
   static constexpr double kacceptable_reprojection_error = 0.005;
-  std::map<camera::Camera, Eigen::Matrix<double, 3, 4>> image_to_robot_;
-  std::array<std::optional<Eigen::Matrix4d>, kmax_tags> tag_poses_;
+  std::map<camera::Camera, CameraMatrices> camera_matrices_;
+  std::array<std::array<Eigen::Vector4d, 4>, kmax_tags> tag_corners_;
 };
 }  // namespace localization

@@ -50,4 +50,16 @@ auto ConvertOpencvTransformationMatrixToWpilibPose(const cv::Mat& matrix)
 
 auto Pose3dToCvMat(frc::Pose3d) -> cv::Mat;
 
+auto inline Homogenize(const Eigen::Vector2d point) -> Eigen::Vector3d {
+  Eigen::Vector3d homogenized_point;
+  homogenized_point << point, 1;
+  return homogenized_point;
+}
+
+auto inline Homogenize(const Eigen::Vector3d point) -> Eigen::Vector4d {
+  Eigen::Vector4d homogenized_point;
+  homogenized_point << point, 1;
+  return homogenized_point;
+}
+
 }  // namespace utils

@@ -61,6 +61,10 @@ auto Pose3dToCvMat(frc::Pose3d pose) -> cv::Mat {
   return utils::EigenToCvMat(opencv_pose.ToMatrix());
 }
 
+auto HomogenizePoint3d(cv::Point3d point) -> cv::Mat {
+  return (cv::Mat_<double>(4, 1) << point.x, point.y, point.z, 1);  // NOLINT
+}
+
 template cv::Mat utils::EigenToCvMat<Eigen::Matrix<double, 4, 4>>(
     const Eigen::MatrixBase<Eigen::Matrix<double, 4, 4>>&);
 }  // namespace utils
