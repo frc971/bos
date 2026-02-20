@@ -24,6 +24,7 @@ class DiskCamera : ICamera {
  public:
   DiskCamera(std::string image_folder_path);
   auto GetFrame() -> timestamped_frame_t override;
+  auto Restart() -> void override;
 
  private:
   std::string image_folder_path_;

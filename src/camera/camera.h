@@ -10,6 +10,7 @@ using timestamped_frame_t = struct TimestampedFrame {
 class ICamera {
  public:
   virtual auto GetFrame() -> timestamped_frame_t = 0;
+  virtual auto Restart() -> void = 0;
   virtual ~ICamera() = default;
 };
 }  // namespace camera

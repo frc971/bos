@@ -36,7 +36,7 @@ CVCamera::CVCamera(const CameraConstant& c)
 }
 
 CVCamera::CVCamera(const std::string& pipeline)
-    : cap_(cv::VideoCapture(pipeline)) {}
+    : cap_(cv::VideoCapture(pipeline)), pipeline_(pipeline) {}
 
 auto CVCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t timestamped_frame;
@@ -47,6 +47,11 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
     timestamped_frame.frame = backup_image_;
   }
   return timestamped_frame;
+}
+
+auto CVCamera::Restart() -> void {
+  cap_.release();
+  cap_ = cv::VideoCapture(pipeline_);
 }
 
 }  // namespace camera
