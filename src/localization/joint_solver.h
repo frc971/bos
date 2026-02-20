@@ -13,7 +13,7 @@ struct CameraMatrices {
   cv::Mat distortion_coefficients;
   cv::Mat camera_matrix;
 };
-static constexpr int kmax_tags = 32;
+static constexpr int kmax_tags = 50;
 class JointSolver {
  public:
   JointSolver(const std::vector<camera::Camera>& camera_constants_,
