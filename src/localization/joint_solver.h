@@ -26,6 +26,7 @@ class JointSolver {
  private:
   static constexpr double kacceptable_reprojection_error = 0.005;
   std::map<camera::Camera, CameraMatrices> camera_matrices_;
-  std::array<std::array<Eigen::Vector4d, 4>, kmax_tags> tag_corners_;
+  std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
+      tag_corners_;
 };
 }  // namespace localization

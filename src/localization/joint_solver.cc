@@ -80,7 +80,7 @@ auto JointSolver::EstimatePosition(
             .undistorted_point = undistorted_image_point,
             .source = pair.first,
             .field_to_tag_corner_homogenous =
-                tag_corners_[detection.tag_id][i]};
+                tag_corners_[detection.tag_id].value()[i]};
         data_points.push_back(datapoint);
       }
     }
