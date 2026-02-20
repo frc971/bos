@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include "src/utils/pch.h"
 namespace camera {
 
@@ -12,27 +13,29 @@ using camera_constant_t = struct CameraConstant {
   std::optional<double> frame_width = std::nullopt;
   std::optional<double> frame_height = std::nullopt;
   std::optional<double> fps = std::nullopt;
-  std::optional<double> exposure = std::nullopt; // Nullopt = auto exposure
+  std::optional<double> exposure = std::nullopt;  // Nullopt = auto exposure
   std::optional<double> brightness = std::nullopt;
   std::optional<double> sharpness = std::nullopt;
 
-  friend auto operator<<(std::ostream& os, const CameraConstant& c) -> std::ostream& {
+  friend auto operator<<(std::ostream& os, const CameraConstant& c)
+      -> std::ostream& {
     os << "pipeline: " << c.pipeline
        << "\tintrinsics_path: " << c.intrinsics_path
-       << "\textrinsics_path: " << c.extrinsics_path
-       << "\tname: " << c.name << '\n';
+       << "\textrinsics_path: " << c.extrinsics_path << "\tname: " << c.name
+       << '\n';
 
     const auto print = [&](std::string_view label, const auto& opt) {
-      if (opt) os << '\t' << label << ": " << *opt;
+      if (opt)
+        os << '\t' << label << ": " << *opt;
     };
 
-    print("Backlight",    c.backlight);
-    print("Frame Width",  c.frame_width);
+    print("Backlight", c.backlight);
+    print("Frame Width", c.frame_width);
     print("Frame Height", c.frame_height);
-    print("Fps",          c.fps);
-    print("Exposure",     c.exposure);
-    print("Brightness",   c.brightness);
-    print("Sharpness",    c.sharpness);
+    print("Fps", c.fps);
+    print("Exposure", c.exposure);
+    print("Brightness", c.brightness);
+    print("Sharpness", c.sharpness);
     os << std::endl;
 
     return os;
@@ -54,120 +57,60 @@ enum Camera {
   MAIN_ROBOT_RIGHT_CAMERA,
 
   DEV_ORIN,
-  DUMMY_CAMERA, // For tests such as solver_test.cc
+  DUMMY_CAMERA,  // For tests such as solver_test.cc
   CAMERA_LENGTH,
 };
 
-inline const camera_constant_t camera_constants[CAMERA_LENGTH] = {
-    [Camera::IMX296_0] =
-        camera_constant_t{
-            .pipeline =
-                "nvarguscamerasrc sensor-id=0 "
-                "aelock=true exposuretimerange=\"100000 "
-                "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
-                "video/x-raw(memory:NVMM), width=1456, height=1088, "
-                "framerate=30/1, "
-                "format=NV12 ! "
-                "nvvidconv ! "
-                "video/x-raw, format=BGRx ! "
-                "queue ! "
-                "appsink",
-            .intrinsics_path = "/bos/constants/imx296_camera0_intrinsics.json",
-            .extrinsics_path = "/bos/constants/imx296_camera0_extrinsics.json",
-            .name = "mipi0"},
-    [Camera::IMX296_1] =
-        camera_constant_t{
-            .pipeline =
-                "nvarguscamerasrc sensor-id=1 "
-                "aelock=true exposuretimerange=\"100000 "
-                "200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! "
-                "video/x-raw(memory:NVMM), width=1456, height=1088, "
-                "framerate=30/1, "
-                "format=NV12 ! "
-                "nvvidconv ! "
-                "video/x-raw, format=BGRx ! "
-                "queue ! "
-                "appsink",
-            .intrinsics_path = "/bos/constants/imx296_camera1_intrinsics.json",
-            .extrinsics_path = "/bos/constants/imx296_camera1_extrinsics.json", 
-            .name = "mipi1"},
-    [Camera::FIDDLER_USB0] =
-        camera_constant_t{
-            .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.1:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/fiddler/usb_camera0_intrinsics.json",
-            .extrinsics_path = "/bos/constants/fiddler/usb_camera0_extrinsics.json", 
-            .name = "fiddler_usb0"},
-    [Camera::FIDDLER_USB1] =
-        camera_constant_t{
-            .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/fiddler/usb_camera1_intrinsics.json",
-            .extrinsics_path = "/bos/constants/fiddler/usb_camera1_extrinsics.json", 
-            .name = "fiddler_usb1"},
-    [Camera::TURRET_BOT_FRONT_RIGHT] =
-        camera_constant_t{
-            .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:1.3:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/turret_bot/front_right_intrinsics.json",
-            .extrinsics_path = "/bos/constants/turret_bot/front_right_extrinsics.json", 
-            .name = "turret_bot_front_right",
-            .backlight = 0.0},
-    [Camera::TURRET_BOT_FRONT_LEFT] =
-        camera_constant_t{
-            .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:1.4:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/turret_bot/front_left_intrinsics.json",
-            .extrinsics_path = "/bos/constants/turret_bot/front_left_extrinsics.json", 
-            .name = "turret_bot_front_left",
-            .backlight = 0.0},
-    [Camera::MAIN_ROBOT_FRONT_CAMERA] =
-        camera_constant_t{
-            .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.4:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/main_bot/front_intrinsics.json",
-            .extrinsics_path = "/bos/constants/main_bot/front_extrinsics.json", 
-            .name = "main_bot_front"},
-    [Camera::MAIN_ROBOT_LEFT_CAMERA] =
-        camera_constant_t{
-            .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:1.3:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/main_bot/left_intrinsics.json",
-            .extrinsics_path = "/bos/constants/main_bot/left_extrinsics.json", 
-            .name = "main_bot_left",
-            .backlight = 0.0,
-            .frame_width=1280,
-            .frame_height=720,
-            .fps=30,
-            .exposure=400},
-    [Camera::MAIN_ROBOT_RIGHT_CAMERA] =
-        camera_constant_t{
-            .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:1.2:1.0-video-index0",
-            .intrinsics_path = "/bos/constants/main_bot/right_intrinsics.json",
-            .extrinsics_path = "/bos/constants/main_bot/right_extrinsics.json", 
-            .name = "main_bot_right",
-            .backlight = 0.0,
-            .frame_width=1280,
-            .frame_height=720,
-            .fps=30,
-            .exposure=400},
-    [Camera::DEV_ORIN] =
-        camera_constant_t{
-            .pipeline = "/dev/v4l/by-path/"
-                        "platform-3610000.usb-usb-0:2.1:1.0-video-index0",
-            .intrinsics_path =
-                "/bos/constants/misc/dev_orin_intrinsics.json",
-            .extrinsics_path =
-                "/bos/constants/misc/dev_orin_extrinsics.json",
-            .name = "dev_orin"},
-  [Camera::DUMMY_CAMERA] =
-        camera_constant_t{
-            .pipeline = "",
-            .intrinsics_path =
-                "/bos/constants/misc/dummy_camera_intrinsics.json",
-            .extrinsics_path =
-                "/bos/constants/misc/dummy_camera_extrinsics.json",
-            .name = "default_usb0"},
-};
-}; // namespace camera
+inline const std::array<camera_constant_t, CAMERA_LENGTH> camera_constants =
+    []() {
+      std::array<camera_constant_t, CAMERA_LENGTH> arr{};
+      const std::string path = "/bos/constants/camera_constants.json";
+      std::ifstream f(path);
+      if (!f) {
+        std::cerr << "camera_constants: failed to open " << path << std::endl;
+        return arr;
+      }
+
+      try {
+        nlohmann::json j;
+        f >> j;
+        const auto& cams = j.at("cameras");
+        for (size_t i = 0; i < cams.size() && i < CAMERA_LENGTH; ++i) {
+          const auto& cj = cams.at(i);
+          auto& c = arr[i];
+          c.pipeline = cj.value("pipeline", std::string{});
+          c.intrinsics_path = cj.value("intrinsics_path", std::string{});
+          c.extrinsics_path = cj.value("extrinsics_path", std::string{});
+          c.name = cj.value("name", std::string{});
+          if (cj.contains("backlight") && !cj["backlight"].is_null())
+            c.backlight = cj["backlight"].get<double>();
+          if (cj.contains("frame_width") && !cj["frame_width"].is_null())
+            c.frame_width = cj["frame_width"].get<double>();
+          if (cj.contains("frame_height") && !cj["frame_height"].is_null())
+            c.frame_height = cj["frame_height"].get<double>();
+          if (cj.contains("fps") && !cj["fps"].is_null())
+            c.fps = cj["fps"].get<double>();
+          if (cj.contains("exposure") && !cj["exposure"].is_null())
+            c.exposure = cj["exposure"].get<double>();
+          if (cj.contains("brightness") && !cj["brightness"].is_null())
+            c.brightness = cj["brightness"].get<double>();
+          if (cj.contains("sharpness") && !cj["sharpness"].is_null())
+            c.sharpness = cj["sharpness"].get<double>();
+        }
+      } catch (const std::exception& e) {
+        std::cerr << "camera_constants: json parse error: " << e.what()
+                  << std::endl;
+      }
+
+      return arr;
+    }();
+
+inline auto GetCameraConstants()
+    -> const std::array<camera_constant_t, CAMERA_LENGTH>& {
+  return camera_constants;
+}
+inline auto GetCameraConstant(Camera c) -> const camera_constant_t& {
+  return camera_constants[static_cast<size_t>(c)];
+}
+
+}  // namespace camera
