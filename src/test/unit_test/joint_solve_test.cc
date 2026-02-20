@@ -1,41 +1,37 @@
 #include <gtest/gtest.h>
-#include <opencv2/opencv.hpp>
-#include "src/camera/camera_constants.h"
 #include "src/localization/joint_solver.h"
 #include "src/localization/square_solver.h"
-#include "src/utils/transform.h"
+#include "src/utils/camera_utils.h"
+#include "src/utils/constants_from_json.h"
 
-TEST(LocalizationTest, AverageSquareSolveVsJointSolve) {
-  camera::Camera config = camera::Camera::DUMMY_CAMERA;
+using camera::Camera;
 
+const auto config = camera::Camera::DEV_ORIN;
+
+std::vector<localization::tag_detection_t> detections(
+    {{.tag_id = 25,
+      .corners = {cv::Point2d(100.0, 200.0), cv::Point2d(200.0, 200.0),
+                  cv::Point2d(200.0, 100.0), cv::Point2d(100.0, 100.0)},
+      .timestamp = 0.0,
+      .confidence = 0.0}});
+
+TEST(JointSolveTest, EstimatePosition) {  // NOLINT
+  localization::JointSolver joint_solver({config});
   localization::SquareSolver square_solver(config);
-  LOG(INFO) << "init square solver";
 
-  localization::JointSolver joint_solver(std::vector<camera::Camera>{config});
-  LOG(INFO) << "init joint solver";
+  auto square_solver_solution = square_solver.EstimatePosition(detections)[0];
 
-  std::vector<localization::tag_detection_t> tag_detections;
+  frc::Transform3d noise(
+      frc::Translation3d(units::meter_t{0.067}, units::meter_t{0.1},
+                         units::meter_t{-0.1}),
+      {});
 
-  localization::tag_detection_t detection1;
-  detection1.tag_id = 31;
-  detection1.timestamp = 0.0;
-  detection1.corners = {cv::Point2f(5.0f, 5.0f), cv::Point2f(15.0f, 5.0f),
-                        cv::Point2f(5.0f, 15.0f), cv::Point2f(15.0f, 15.0f)};
-  tag_detections.push_back(detection1);
-
-  utils::PrintTransformationMatrix(square_solver.EstimatePosition(detection1));
-  localization::position_estimate_t square_estimate =
-      square_solver.EstimatePosition(tag_detections)[0];
-  cv::Mat square_estimate2 = square_solver.EstimatePosition(detection1);
-  std::cout << square_estimate << std::endl;
+  square_solver_solution.pose = square_solver_solution.pose.TransformBy(noise);
 
   std::map<camera::Camera, std::vector<localization::tag_detection_t>>
       associated_detections;
-  associated_detections.insert(
-      {camera::Camera::DUMMY_CAMERA,
-       std::vector<localization::tag_detection_t>{detection1}});
-  Eigen::Matrix4d square_estimate_mat = square_estimate.pose.ToMatrix();
-  utils::ChangeBasis(square_estimate_mat, utils::WPI_TO_CV);
-  joint_solver.robot_to_field_ = square_estimate_mat.inverse();
-  joint_solver.EstimatePosition(associated_detections);
+  associated_detections.insert({config, detections});
+  auto joint_solver_solution = joint_solver.EstimatePosition(
+      associated_detections, square_solver_solution.pose);
+  std::cout << joint_solver_solution << std::endl;
 }

@@ -20,7 +20,8 @@ class JointSolver {
               const frc::AprilTagFieldLayout& layout = kapriltag_layout);
   auto EstimatePosition(
       const std::map<camera::Camera, std::vector<tag_detection_t>>&
-          all_cam_detections) -> position_estimate_t;
+          all_cam_detections,
+      const frc::Pose3d& starting_pose) -> position_estimate_t;
   Eigen::Matrix4d robot_to_field_;
 
  private:

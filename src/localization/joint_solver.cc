@@ -5,13 +5,18 @@
 #include "src/utils/constants_from_json.h"
 #include "src/utils/transform.h"
 
+namespace localization {
+
 using data_point_t = struct DataPoint {
   Eigen::Vector2d undistorted_point;
   camera::Camera source;
   Eigen::Vector4d field_to_tag_corner_homogenous;
 };
 
-namespace localization {
+constexpr auto sq(double num) -> double {
+  return num * num;
+}
+
 using frc::AprilTagFieldLayout;
 
 JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
@@ -60,10 +65,13 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
 
 auto JointSolver::EstimatePosition(
     const std::map<camera::Camera, std::vector<tag_detection_t>>&
-        all_cam_detections) -> position_estimate_t {
+        all_cam_detections,
+    const frc::Pose3d& starting_pose) -> position_estimate_t {
   if (all_cam_detections.empty()) {
     return {};
   }
+  robot_to_field_ = starting_pose.ToMatrix();
+  utils::ChangeBasis(robot_to_field_, utils::WPI_TO_CV);
   std::vector<data_point_t> data_points;
   for (const auto& pair : all_cam_detections) {
     const CameraMatrices& camera_mats = camera_matrices_.at(pair.first);
@@ -91,13 +99,31 @@ auto JointSolver::EstimatePosition(
       Eigen::Vector3d projection =
           camera_matrices_.at(data_point.source).image_to_robot *
           robot_to_field_ * data_point.field_to_tag_corner_homogenous;
-      const double scale_factor = projection(2);
-      projection /= scale_factor;
-      const Eigen::Vector2d MSE_derivative =
-          projection.head<2>() - data_point.undistorted_point;
-      std::cout << "MSE_derivative: " << MSE_derivative << std::endl;
+      const double lambda = projection(2);
+      projection /= lambda;
+      const Eigen::Vector2d projection_error =
+          (Eigen::Vector2d()
+               << projection.x() - data_point.undistorted_point.x(),
+           projection.y() - data_point.undistorted_point.y())
+              .finished();
+      error = projection_error.norm();
+      std::cout << "error: " << error << std::endl;
+      std::exit(0);
+      const Eigen::Vector3d d_projection_d_loss =
+          (Eigen::Vector3d() << projection_error.x() / lambda,
+           projection_error.y() / lambda,
+           -projection_error.x() * projection.x() / sq(lambda) -
+               projection_error.y() * projection.y() / sq(lambda))
+              .finished();
+      const Eigen::Vector4d d_image_to_field_d_loss =
+          camera_matrices_.at(data_point.source).image_to_robot.transpose() *
+          d_projection_d_loss;
+      const Eigen::Matrix4d d_robot_to_field_d_loss =
+          d_image_to_field_d_loss *
+          data_point.field_to_tag_corner_homogenous.transpose();
+      robot_to_field_.block<3, 1>(0, 3) -=
+          d_robot_to_field_d_loss.block<3, 1>(0, 3);
     }
-    break;
   }
 
   return {};
