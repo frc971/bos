@@ -11,6 +11,7 @@ class RealSenseCamera : public ICamera {
   auto GetFrame() -> timestamped_frame_t override;
   void GetFrame(cv::Mat& color_mat, cv::Mat& depth_mat);
   static void showDevices();
+  auto Restart() -> void override;
 
  private:
   rs2::pipeline pipe_;

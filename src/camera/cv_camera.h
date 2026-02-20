@@ -12,9 +12,11 @@ class CVCamera : public ICamera {
   CVCamera(const CameraConstant& camera_constants);
   CVCamera(const std::string& pipeline);
   auto GetFrame() -> timestamped_frame_t override;
+  auto Restart() -> void override;
 
  private:
   cv::VideoCapture cap_;
+  std::string pipeline_;
   cv::Mat backup_image_;
 };
 

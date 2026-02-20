@@ -73,5 +73,5 @@ auto main() -> int {
   LOG(INFO) << "Started estimators";
 
   std::this_thread::sleep_for(std::chrono::hours::max());
-  left_thread.join();
+  front_thread.join();
 }

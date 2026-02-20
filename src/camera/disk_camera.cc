@@ -35,4 +35,7 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
   }
   return timestamped_frame;
 }
+
+auto DiskCamera::Restart() -> void {}
+
 }  // namespace camera
