@@ -3,6 +3,7 @@
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/constants_from_json.h"
+#include "src/utils/transform.h"
 
 using camera::Camera;
 
@@ -20,13 +21,16 @@ TEST(JointSolveTest, EstimatePosition) {  // NOLINT
   localization::SquareSolver square_solver(config);
 
   auto square_solver_solution = square_solver.EstimatePosition(detections)[0];
+  utils::PrintTransformationMatrix(
+      utils::EigenToCvMat(square_solver_solution.pose.ToMatrix()));
+  std::cout << square_solver_solution.pose.ToMatrix() << std::endl;
 
-  frc::Transform3d noise(
-      frc::Translation3d(units::meter_t{0.067}, units::meter_t{0.1},
-                         units::meter_t{-0.1}),
-      {});
+  // frc::Transform3d noise(
+  //     frc::Translation3d(units::meter_t{0.067}, units::meter_t{0.1},
+  //                        units::meter_t{-0.1}),
+  //     {});
 
-  square_solver_solution.pose = square_solver_solution.pose.TransformBy(noise);
+  // square_solver_solution.pose = square_solver_solution.pose.TransformBy(noise);
 
   std::map<camera::Camera, std::vector<localization::tag_detection_t>>
       associated_detections;

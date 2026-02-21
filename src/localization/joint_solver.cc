@@ -25,8 +25,8 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
   // clang-format off
   const Eigen::Matrix4d rotate_yaw_cv = (Eigen::Matrix4d() <<
       -1, 0, 0, 0,
-      0, -1, 0, 0,
-      0, 0, 1, 0,
+      0, 1, 0, 0,
+      0, 0, -1, 0,
       0, 0, 0, 1).finished();
   // clang-format on
   for (const frc::AprilTag& tag : layout.GetTags()) {
@@ -70,8 +70,12 @@ auto JointSolver::EstimatePosition(
   if (all_cam_detections.empty()) {
     return {};
   }
+  std::cout << "Field to robot:\n" << starting_pose.ToMatrix() << std::endl;
   robot_to_field_ = starting_pose.ToMatrix().inverse();
+  std::cout << "Robot to field (f2r inverted)\n"
+            << robot_to_field_ << std::endl;
   utils::ChangeBasis(robot_to_field_, utils::WPI_TO_CV);
+  std::cout << "Robot to field CV\n" << robot_to_field_ << std::endl;
   std::vector<data_point_t> data_points;
   for (const auto& pair : all_cam_detections) {
     const CameraMatrices& camera_mats = camera_matrices_.at(pair.first);
@@ -107,6 +111,7 @@ auto JointSolver::EstimatePosition(
           camera_matrices_.at(data_point.source).image_to_robot *
           robot_to_field_ * data_point.field_to_tag_corner_homogenous;
       std::cout << "Proj point:\n" << projection << std::endl;
+      std::exit(0);
       const double lambda = projection(2);
       projection /= lambda;
       const Eigen::Vector2d projection_error =
@@ -116,7 +121,6 @@ auto JointSolver::EstimatePosition(
               .finished();
       error = projection_error.norm();
       std::cout << "error: " << error << std::endl;
-      std::exit(0);
       const Eigen::Vector3d d_projection_d_loss =
           (Eigen::Vector3d() << projection_error.x() / lambda,
            projection_error.y() / lambda,
@@ -130,7 +134,7 @@ auto JointSolver::EstimatePosition(
           d_image_to_field_d_loss *
           data_point.field_to_tag_corner_homogenous.transpose();
       robot_to_field_.block<3, 1>(0, 3) -=
-          d_robot_to_field_d_loss.block<3, 1>(0, 3);
+          d_robot_to_field_d_loss.block<3, 1>(0, 3) / 1000000;
     }
   }
 
