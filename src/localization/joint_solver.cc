@@ -70,12 +70,8 @@ auto JointSolver::EstimatePosition(
   if (all_cam_detections.empty()) {
     return {};
   }
-  std::cout << "Field to robot:\n" << starting_pose.ToMatrix() << std::endl;
   robot_to_field_ = starting_pose.ToMatrix().inverse();
-  std::cout << "Robot to field (f2r inverted)\n"
-            << robot_to_field_ << std::endl;
   utils::ChangeBasis(robot_to_field_, utils::WPI_TO_CV);
-  std::cout << "Robot to field CV\n" << robot_to_field_ << std::endl;
   std::vector<data_point_t> data_points;
   for (const auto& pair : all_cam_detections) {
     const CameraMatrices& camera_mats = camera_matrices_.at(pair.first);
@@ -100,18 +96,9 @@ auto JointSolver::EstimatePosition(
   double error = INFINITY;
   while (error > kacceptable_reprojection_error) {
     for (const data_point_t& data_point : data_points) {
-      std::cout << "A:\n"
-                << camera_matrices_.at(data_point.source).image_to_robot
-                << std::endl;
-      utils::PrintTransformationMatrix(utils::EigenToCvMat(robot_to_field_),
-                                       "robot to field");
-      std::cout << "C:\n"
-                << data_point.field_to_tag_corner_homogenous << std::endl;
       Eigen::Vector3d projection =
           camera_matrices_.at(data_point.source).image_to_robot *
           robot_to_field_ * data_point.field_to_tag_corner_homogenous;
-      std::cout << "Proj point:\n" << projection << std::endl;
-      std::exit(0);
       const double lambda = projection(2);
       projection /= lambda;
       const Eigen::Vector2d projection_error =
@@ -120,7 +107,6 @@ auto JointSolver::EstimatePosition(
            projection.y() - data_point.undistorted_point.y())
               .finished();
       error = projection_error.norm();
-      std::cout << "error: " << error << std::endl;
       const Eigen::Vector3d d_projection_d_loss =
           (Eigen::Vector3d() << projection_error.x() / lambda,
            projection_error.y() / lambda,

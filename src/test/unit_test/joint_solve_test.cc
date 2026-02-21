@@ -25,12 +25,12 @@ TEST(JointSolveTest, EstimatePosition) {  // NOLINT
       utils::EigenToCvMat(square_solver_solution.pose.ToMatrix()));
   std::cout << square_solver_solution.pose.ToMatrix() << std::endl;
 
-  // frc::Transform3d noise(
-  //     frc::Translation3d(units::meter_t{0.067}, units::meter_t{0.1},
-  //                        units::meter_t{-0.1}),
-  //     {});
+  frc::Transform3d noise(
+      frc::Translation3d(units::meter_t{0.067}, units::meter_t{0.1},
+                         units::meter_t{-0.1}),
+      {});
 
-  // square_solver_solution.pose = square_solver_solution.pose.TransformBy(noise);
+  square_solver_solution.pose = square_solver_solution.pose.TransformBy(noise);
 
   std::map<camera::Camera, std::vector<localization::tag_detection_t>>
       associated_detections;
