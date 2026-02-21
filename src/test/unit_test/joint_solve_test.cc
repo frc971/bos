@@ -37,5 +37,7 @@ TEST(JointSolveTest, EstimatePosition) {  // NOLINT
   associated_detections.insert({config, detections});
   auto joint_solver_solution = joint_solver.EstimatePosition(
       associated_detections, square_solver_solution.pose);
-  std::cout << joint_solver_solution << std::endl;
+  std::cout << "Joint solver solution: " << joint_solver_solution << std::endl;
+  std::cout << "Square solver solution: " << square_solver_solution
+            << std::endl;
 }

@@ -93,38 +93,91 @@ auto JointSolver::EstimatePosition(
       }
     }
   }
-  double error = INFINITY;
-  while (error > kacceptable_reprojection_error) {
+
+  double total_loss = std::numeric_limits<double>::infinity();
+  int counter = 0;
+
+  const double step = 1e-8;  // single consistent step
+
+  while (total_loss > kacceptable_reprojection_error && counter < 100000) {
+    counter++;
+
+    total_loss = 0.0;
+    Eigen::Matrix4d total_grad = Eigen::Matrix4d::Zero();
+
     for (const data_point_t& data_point : data_points) {
-      Eigen::Vector3d projection =
-          camera_matrices_.at(data_point.source).image_to_robot *
-          robot_to_field_ * data_point.field_to_tag_corner_homogenous;
+      const auto& camera_mats = camera_matrices_.at(data_point.source);
+
+      Eigen::Vector3d projection = camera_mats.image_to_robot *
+                                   robot_to_field_ *
+                                   data_point.field_to_tag_corner_homogenous;
+
       const double lambda = projection(2);
       projection /= lambda;
-      const Eigen::Vector2d projection_error =
-          (Eigen::Vector2d()
-               << projection.x() - data_point.undistorted_point.x(),
-           projection.y() - data_point.undistorted_point.y())
-              .finished();
-      error = projection_error.norm();
-      const Eigen::Vector3d d_projection_d_loss =
-          (Eigen::Vector3d() << projection_error.x() / lambda,
-           projection_error.y() / lambda,
-           -projection_error.x() * projection.x() / sq(lambda) -
-               projection_error.y() * projection.y() / sq(lambda))
-              .finished();
-      const Eigen::Vector4d d_image_to_field_d_loss =
-          camera_matrices_.at(data_point.source).image_to_robot.transpose() *
-          d_projection_d_loss;
-      const Eigen::Matrix4d d_robot_to_field_d_loss =
-          d_image_to_field_d_loss *
+
+      Eigen::Vector2d error_vec;
+      error_vec << projection.x() - data_point.undistorted_point.x(),
+          projection.y() - data_point.undistorted_point.y();
+
+      // ----- squared loss -----
+      total_loss += 0.5 * error_vec.squaredNorm();
+
+      // ----- dL / d projection (before divide) -----
+      Eigen::Vector3d dL_dproj;
+      dL_dproj << error_vec.x() / lambda, error_vec.y() / lambda,
+          -error_vec.x() * projection.x() / lambda -
+              error_vec.y() * projection.y() / lambda;
+
+      // ----- chain rule -----
+      Eigen::Vector4d dL_dimage_to_field =
+          camera_mats.image_to_robot.transpose() * dL_dproj;
+
+      Eigen::Matrix4d dL_dT =
+          dL_dimage_to_field *
           data_point.field_to_tag_corner_homogenous.transpose();
-      robot_to_field_.block<3, 1>(0, 3) -=
-          d_robot_to_field_d_loss.block<3, 1>(0, 3) / 1000000;
+
+      total_grad += dL_dT;
+    }
+
+    // ----- Apply translation update -----
+    robot_to_field_.block<3, 1>(0, 3) -= step * total_grad.block<3, 1>(0, 3);
+
+    // ----- Apply rotation update -----
+    Eigen::Matrix3d dR = total_grad.block<3, 3>(0, 0);
+    Eigen::Matrix3d R = robot_to_field_.block<3, 3>(0, 0);
+
+    Eigen::Matrix3d skew = 0.5 * (R.transpose() * dR - dR.transpose() * R);
+
+    Eigen::Vector3d omega;
+    omega << skew(2, 1), skew(0, 2), skew(1, 0);
+
+    Eigen::Vector3d delta = -step * omega;
+
+    Eigen::Matrix3d delta_skew;
+    delta_skew << 0, -delta(2), delta(1), delta(2), 0, -delta(0), -delta(1),
+        delta(0), 0;
+
+    Eigen::Matrix3d dR_exp = Eigen::Matrix3d::Identity() + delta_skew;
+
+    R = dR_exp * R;
+
+    // re-orthogonalize
+    Eigen::JacobiSVD<Eigen::Matrix3d> svd(
+        R, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+    R = svd.matrixU() * svd.matrixV().transpose();
+
+    robot_to_field_.block<3, 3>(0, 0) = R;
+
+    if (counter % 1000 == 0) {
+      std::cout << "iter " << counter << " loss: " << total_loss << std::endl;
     }
   }
 
-  return {};
+  Eigen::Matrix4d field_to_robot = robot_to_field_.inverse();
+  utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
+
+  return {.pose = frc::Pose3d(field_to_robot), .variance = 0, .timestamp = 0};
 }
 
 }  // namespace localization
