@@ -10,7 +10,7 @@ using camera::Camera;
 const auto config = camera::Camera::DEV_ORIN;
 
 std::vector<localization::tag_detection_t> detections(
-    {{.tag_id = 25,
+    {{.tag_id = 31,
       .corners = {cv::Point2d(100.0, 200.0), cv::Point2d(200.0, 200.0),
                   cv::Point2d(200.0, 100.0), cv::Point2d(100.0, 100.0)},
       .timestamp = 0.0,
