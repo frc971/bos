@@ -18,6 +18,9 @@ class OpenCVAprilTagDetector : public IAprilTagDetector {
   // Undistortion is applied to the detected corners before they are returned so
   // that downstream solvers receive undistorted image coordinates, consistent
   // with the behaviour of GPUAprilTagDetector.
+
+  OpenCVAprilTagDetector(int image_width, int image_height,
+                         const nlohmann::json& intrinsics);
   explicit OpenCVAprilTagDetector(const nlohmann::json& intrinsics);
 
   auto GetTagDetections(camera::timestamped_frame_t& frame)
