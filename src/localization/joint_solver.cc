@@ -94,16 +94,13 @@ auto JointSolver::EstimatePosition(
     }
   }
 
-  double total_loss = std::numeric_limits<double>::infinity();
+  double loss = std::numeric_limits<double>::infinity();
   int counter = 0;
 
-  const double step = 1e-8;  // single consistent step
+  const double step = 1e-6;
 
-  while (total_loss > kacceptable_reprojection_error && counter < 100000) {
+  while (loss > kacceptable_reprojection_error && counter < 100000) {
     counter++;
-
-    total_loss = 0.0;
-    Eigen::Matrix4d total_grad = Eigen::Matrix4d::Zero();
 
     for (const data_point_t& data_point : data_points) {
       const auto& camera_mats = camera_matrices_.at(data_point.source);
@@ -114,63 +111,6 @@ auto JointSolver::EstimatePosition(
 
       const double lambda = projection(2);
       projection /= lambda;
-
-      Eigen::Vector2d error_vec;
-      error_vec << projection.x() - data_point.undistorted_point.x(),
-          projection.y() - data_point.undistorted_point.y();
-
-      // ----- squared loss -----
-      total_loss += 0.5 * error_vec.squaredNorm();
-
-      // ----- dL / d projection (before divide) -----
-      Eigen::Vector3d dL_dproj;
-      dL_dproj << error_vec.x() / lambda, error_vec.y() / lambda,
-          -error_vec.x() * projection.x() / lambda -
-              error_vec.y() * projection.y() / lambda;
-
-      // ----- chain rule -----
-      Eigen::Vector4d dL_dimage_to_field =
-          camera_mats.image_to_robot.transpose() * dL_dproj;
-
-      Eigen::Matrix4d dL_dT =
-          dL_dimage_to_field *
-          data_point.field_to_tag_corner_homogenous.transpose();
-
-      total_grad += dL_dT;
-    }
-
-    // ----- Apply translation update -----
-    robot_to_field_.block<3, 1>(0, 3) -= step * total_grad.block<3, 1>(0, 3);
-
-    // ----- Apply rotation update -----
-    Eigen::Matrix3d dR = total_grad.block<3, 3>(0, 0);
-    Eigen::Matrix3d R = robot_to_field_.block<3, 3>(0, 0);
-
-    Eigen::Matrix3d skew = 0.5 * (R.transpose() * dR - dR.transpose() * R);
-
-    Eigen::Vector3d omega;
-    omega << skew(2, 1), skew(0, 2), skew(1, 0);
-
-    Eigen::Vector3d delta = -step * omega;
-
-    Eigen::Matrix3d delta_skew;
-    delta_skew << 0, -delta(2), delta(1), delta(2), 0, -delta(0), -delta(1),
-        delta(0), 0;
-
-    Eigen::Matrix3d dR_exp = Eigen::Matrix3d::Identity() + delta_skew;
-
-    R = dR_exp * R;
-
-    // re-orthogonalize
-    Eigen::JacobiSVD<Eigen::Matrix3d> svd(
-        R, Eigen::ComputeFullU | Eigen::ComputeFullV);
-
-    R = svd.matrixU() * svd.matrixV().transpose();
-
-    robot_to_field_.block<3, 3>(0, 0) = R;
-
-    if (counter % 1000 == 0) {
-      std::cout << "iter " << counter << " loss: " << total_loss << std::endl;
     }
   }
 
