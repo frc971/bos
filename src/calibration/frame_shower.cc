@@ -8,13 +8,18 @@
 
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
 ABSL_FLAG(std::optional<int>, port, std::nullopt, "");                 //NOLINT
+ABSL_FLAG(std::optional<std::string>, log_path, std::nullopt, "");     //NOLINT
+
+using camera::camera_constants;
 
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
   camera::Camera config =
       camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
-  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
+
+  camera::CVCamera camera(camera_constants[config],
+                          absl::GetFlag(FLAGS_log_path));
 
   camera::CscoreStreamer streamer(
       "frame_shower", absl::GetFlag(FLAGS_port).value_or(4971), 30, 1080, 1080);
@@ -22,7 +27,7 @@ auto main(int argc, char* argv[]) -> int {
   LOG(INFO) << "Camera opened successfully" << std::endl;
 
   while (true) {
-    cv::Mat frame = camera->GetFrame().frame;
+    cv::Mat frame = camera.GetFrame().frame;
     streamer.WriteFrame(frame);
   }
   cv::destroyAllWindows();
