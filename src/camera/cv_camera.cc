@@ -3,6 +3,7 @@
 #include <utility>
 #include "src/camera/write_frame.h"
 #include "src/utils/log.h"
+#include "src/utils/timer.h"
 
 namespace camera {
 
@@ -51,6 +52,7 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
     timestamped_frame.frame = backup_image_;
   }
   if (log_path_.has_value()) {
+    utils::Timer timer("write img to frame");
     WriteFrame(log_path_.value(), timestamped_frame);
   }
   return timestamped_frame;

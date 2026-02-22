@@ -23,11 +23,13 @@ auto main() -> int {
 
   camera::CameraSource left_camera = camera::CameraSource(
       "Left", std::make_unique<camera::CVCamera>(
-                  camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA]));
+                  camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA],
+                  fmt::format("{}/left_camera", log_path)));
 
   camera::CameraSource right_camera = camera::CameraSource(
       "Right", std::make_unique<camera::CVCamera>(
-                   camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]));
+                   camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA],
+                   fmt::format("{}/right_camera", log_path)));
 
   LOG(INFO) << "Started cameras";
   std::this_thread::sleep_for(std::chrono::seconds(2));
