@@ -39,11 +39,11 @@ TEST(JointSolveTest, EstimatePosition) {  // NOLINT
   std::cout << decomp.x << " " << decomp.y << " " << decomp.z << " "
             << decomp.rx << " " << decomp.ry << " " << decomp.rz << " "
             << std::endl;
-  const std::array<Eigen::Matrix4d, 4> decomped =
+  const utils::TransformDecomposition decomped =
       utils::SeparateTranslationAndRotationMatrices(decomp);
   utils::PrintTransformationMatrix(utils::EigenToCvMat(transform), "original");
   utils::PrintTransformationMatrix(
-      utils::EigenToCvMat(decomped[0] * decomped[1] * decomped[2] *
-                          decomped[3]),
+      utils::EigenToCvMat(decomped.translation * decomped.rz * decomped.ry *
+                          decomped.rx),
       "new");
 }

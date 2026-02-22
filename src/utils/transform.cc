@@ -97,34 +97,29 @@ auto ExtractTranslationAndRotation(const Eigen::Matrix4d& transform_mat)
 }
 
 auto SeparateTranslationAndRotationMatrices(
-    const TransformValues& decomposition) -> std::array<Eigen::Matrix4d, 4> {
-  std::array<Eigen::Matrix4d, 4> output;
-
-  for (int i = 0; i < output.size(); i++) {
-    output[i] = Eigen::Matrix4d::Identity();
-  }
-
+    const TransformValues& decomposition) -> TransformDecomposition {
   // clang-format off
-  const Eigen::Matrix3d Rx = (Eigen::Matrix3d() << 
-      1, 0, 0,
-      0, cos(decomposition.rx), -sin(decomposition.rx),
-      0, sin(decomposition.rx), cos(decomposition.rx)).finished();
-  const Eigen::Matrix3d Ry = (Eigen::Matrix3d() << 
-      cos(decomposition.ry), 0, sin(decomposition.ry),
-      0, 1, 0,
-      -sin(decomposition.ry), 0, cos(decomposition.ry)).finished();
-  const Eigen::Matrix3d Rz = (Eigen::Matrix3d() << 
-      cos(decomposition.rz), -sin(decomposition.rz), 0,
-      sin(decomposition.rz), cos(decomposition.rz), 0,
-      0, 0, 1).finished();
-  // clang-format on
-  output[0](0, 3) = decomposition.x;
-  output[0](1, 3) = decomposition.y;
-  output[0](2, 3) = decomposition.z;
-  output[1].block<3, 3>(0, 0) = Rz;
-  output[2].block<3, 3>(0, 0) = Ry;
-  output[3].block<3, 3>(0, 0) = Rx;
+  const Eigen::Matrix4d Rx = (Eigen::Matrix4d() << 
+      1, 0, 0, 0,
+      0, cos(decomposition.rx), -sin(decomposition.rx), 0,
+      0, sin(decomposition.rx), cos(decomposition.rx), 0,
+      0, 0, 0, 1).finished();
+  const Eigen::Matrix4d Ry = (Eigen::Matrix4d() << 
+      cos(decomposition.ry), 0, sin(decomposition.ry), 0,
+      0, 1, 0, 0,
+      -sin(decomposition.ry), 0, cos(decomposition.ry), 0,
+      0, 0, 0, 1).finished();
+  const Eigen::Matrix4d Rz = (Eigen::Matrix4d() << 
+      cos(decomposition.rz), -sin(decomposition.rz), 0, 0,
+      sin(decomposition.rz), cos(decomposition.rz), 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1).finished();
 
-  return output;
+  // clang-format on
+  Eigen::Matrix4d translation = Eigen::Matrix4d::Identity();
+  translation(0, 3) = decomposition.x;
+  translation(1, 3) = decomposition.y;
+  translation(2, 3) = decomposition.z;
+  return {translation, Rx, Ry, Rz};
 }
 }  // namespace utils

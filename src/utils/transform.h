@@ -71,10 +71,17 @@ struct TransformValues {
   double rz;
 };
 
+struct TransformDecomposition {
+  Eigen::Matrix4d translation;
+  Eigen::Matrix4d rx;
+  Eigen::Matrix4d ry;
+  Eigen::Matrix4d rz;
+};
+
 auto ExtractTranslationAndRotation(const Eigen::Matrix4d& transform_mat)
     -> TransformValues;
 
 auto SeparateTranslationAndRotationMatrices(const TransformValues& combined)
-    -> std::array<Eigen::Matrix4d, 4>;
+    -> TransformDecomposition;
 
 }  // namespace utils
