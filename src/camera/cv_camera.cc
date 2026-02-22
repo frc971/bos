@@ -1,14 +1,27 @@
 #include "cv_camera.h"
 
+#include <filesystem>
 #include <utility>
 #include "src/camera/write_frame.h"
 #include "src/utils/log.h"
 #include "src/utils/timer.h"
 
+namespace fs = std::filesystem;
+
 namespace camera {
+
+auto FileSystemAlmostFull() {
+  fs::space_info info = fs::space("/");
+  return static_cast<float>(info.capacity) / static_cast<float>(info.free) >
+         0.2;
+}
 
 CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
     : cap_(cv::VideoCapture(c.pipeline)), log_path_(std::move(log_path)) {
+  if (FileSystemAlmostFull()) {
+    log_path_ = std::nullopt;
+    LOG(WARNING) << "Filesystem almost full! Not logging any frames";
+  }
   LOG(INFO) << c.pipeline;
 
   backup_image_ = cv::imread("/bos/constants/dont_worry_about_it.jpg");
