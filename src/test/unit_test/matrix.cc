@@ -43,7 +43,7 @@ TEST(JointSolveTest, EstimatePosition) {  // NOLINT
       utils::SeparateTranslationAndRotationMatrices(decomp);
   utils::PrintTransformationMatrix(utils::EigenToCvMat(transform), "original");
   utils::PrintTransformationMatrix(
-      utils::EigenToCvMat(decomped.translation * decomped.rz * decomped.ry *
-                          decomped.rx),
+      utils::EigenToCvMat(decomped.translation * decomped.Rz * decomped.Ry *
+                          decomped.Rx),
       "new");
 }

@@ -105,21 +105,21 @@ auto JointSolver::EstimatePosition(
 
   while (loss > kacceptable_reprojection_error && counter < 100000) {
     counter++;
+    bool printed = false;
     for (const data_point_t& data_point : data_points) {
       // TODO accumulate gradients across all points per epoch and then apply at the same time for better batching
       decomposed_robot_to_field = utils::SeparateTranslationAndRotationMatrices(
           translation_and_rotation);
-      const auto& camera_mats = camera_matrices_.at(data_point.source);
+      const Eigen::Matrix<double, 3, 4>& image_to_robot =
+          camera_matrices_.at(data_point.source).image_to_robot;
 
-      Eigen::Vector4d rx_activation = decomposed_robot_to_field.rx *
+      Eigen::Vector4d Rx_activation = decomposed_robot_to_field.Rx *
                                       data_point.field_to_tag_corner_homogenous;
-      Eigen::Vector4d ry_activation =
-          decomposed_robot_to_field.ry * rx_activation;
-      Eigen::Vector4d rz_activation =
-          decomposed_robot_to_field.rz * ry_activation;
-      Eigen::Vector3d projection = camera_mats.image_to_robot *
-                                   decomposed_robot_to_field.translation *
-                                   rz_activation;
+      Eigen::Vector4d Ry_activation =
+          decomposed_robot_to_field.Ry * Rx_activation;
+      Eigen::Vector4d Rz_activation =
+          decomposed_robot_to_field.Rz * Ry_activation;
+      Eigen::Vector3d projection = image_to_robot * Rz_activation;
 
       const double lambda = projection(2);
       projection /= lambda;
@@ -129,35 +129,69 @@ auto JointSolver::EstimatePosition(
            projection.y() - data_point.undistorted_point.y())
               .finished();
       loss = 0.5 * projection_error.squaredNorm();
+      if (counter % 1000 == 0 && !printed) {
+        printed = true;
+        std::cout << "loss: " << loss << std::endl;
+      }
       const Eigen::Vector3d d_projection =
           (Eigen::Vector3d() << projection_error.x() / lambda,
            projection_error.y() / lambda,
            -projection_error.x() * projection.x() / lambda -
                projection_error.y() * projection.y() / lambda)
               .finished();
-      const Eigen::Vector4d d_image_to_field =
-          camera_matrices_.at(data_point.source).image_to_robot.transpose() *
-          d_projection;
-      Eigen::Matrix4d accumulated_gradient =
-          d_image_to_field.transpose() * d_projection;
-      Eigen::Matrix4d d_translation =
-          accumulated_gradient * rz_activation.transpose();
-      accumulated_gradient *= d_translation.transpose();
-      Eigen::Matrix4d d_rz = accumulated_gradient * ry_activation.transpose();
-      accumulated_gradient *= decomposed_robot_to_field.rz.transpose();
-      Eigen::Matrix4d d_ry = accumulated_gradient * rx_activation.transpose();
-      accumulated_gradient *= decomposed_robot_to_field.rz.transpose();
-      Eigen::Matrix4d d_rx =
+      Eigen::Vector4d accumulated_gradient =
+          image_to_robot.transpose() * d_projection;
+      const Eigen::Matrix4d d_translation =
+          accumulated_gradient * Rz_activation.transpose();
+      accumulated_gradient = decomposed_robot_to_field.translation.transpose() *
+                             accumulated_gradient;
+      const Eigen::Matrix4d d_Rz =
+          accumulated_gradient * Ry_activation.transpose();
+      accumulated_gradient =
+          decomposed_robot_to_field.Rz.transpose() * accumulated_gradient;
+      const Eigen::Matrix4d d_Ry =
+          accumulated_gradient * Rx_activation.transpose();
+      accumulated_gradient =
+          decomposed_robot_to_field.Ry.transpose() * accumulated_gradient;
+      const Eigen::Matrix4d d_Rx =
           accumulated_gradient *
           data_point.field_to_tag_corner_homogenous.transpose();
 
-      translation_and_rotation.x -= d_translation(0, 3);
-      translation_and_rotation.y -= d_translation(1, 3);
-      translation_and_rotation.z -= d_translation(2, 3);
+      // clang-format off
+      const Eigen::Matrix4d d_Rz_d_rz = (Eigen::Matrix4d() << 
+        -sin(translation_and_rotation.rz), -cos(translation_and_rotation.rz), 0, 0, 
+        cos(translation_and_rotation.rz), -sin(translation_and_rotation.rz), 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0).finished();
+      const Eigen::Matrix4d d_Ry_d_ry = (Eigen::Matrix4d() << 
+        -sin(translation_and_rotation.ry), 0, -cos(translation_and_rotation.ry), 0, 
+        0, 0, 0, 0,
+        cos(translation_and_rotation.ry), 0, -sin(translation_and_rotation.ry), 0,
+        0, 0, 0, 0).finished();
+      const Eigen::Matrix4d d_Rx_d_rx = (Eigen::Matrix4d() << 
+        0, 0, 0, 0,
+        0, -sin(translation_and_rotation.rx), -cos(translation_and_rotation.rx), 0, 0, 
+        0, cos(translation_and_rotation.rx), -sin(translation_and_rotation.rx), 0, 0,
+        0, 0, 0, 0).finished();
+      // clang-format on
+
+      translation_and_rotation.rx -= d_Rx.cwiseProduct(d_Rx_d_rx).sum() * step;
+      translation_and_rotation.ry -= d_Ry.cwiseProduct(d_Ry_d_ry).sum() * step;
+      translation_and_rotation.rz -= d_Rz.cwiseProduct(d_Rz_d_rz).sum() * step;
+
+      translation_and_rotation.x -= d_translation(0, 3) * step;
+      translation_and_rotation.y -= d_translation(1, 3) * step;
+      translation_and_rotation.z -= d_translation(2, 3) * step;
+
+      decomposed_robot_to_field = utils::SeparateTranslationAndRotationMatrices(
+          translation_and_rotation);
     }
   }
 
-  Eigen::Matrix4d field_to_robot = robot_to_field_.inverse();
+  Eigen::Matrix4d field_to_robot =
+      (decomposed_robot_to_field.translation * decomposed_robot_to_field.Rz *
+       decomposed_robot_to_field.Ry * decomposed_robot_to_field.Rx)
+          .inverse();
   utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
 
   return {.pose = frc::Pose3d(field_to_robot), .variance = 0, .timestamp = 0};

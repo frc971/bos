@@ -73,9 +73,9 @@ struct TransformValues {
 
 struct TransformDecomposition {
   Eigen::Matrix4d translation;
-  Eigen::Matrix4d rx;
-  Eigen::Matrix4d ry;
-  Eigen::Matrix4d rz;
+  Eigen::Matrix4d Rx;
+  Eigen::Matrix4d Ry;
+  Eigen::Matrix4d Rz;
 };
 
 auto ExtractTranslationAndRotation(const Eigen::Matrix4d& transform_mat)
