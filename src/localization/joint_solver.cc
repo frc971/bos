@@ -99,6 +99,10 @@ auto JointSolver::EstimatePosition(
 
   const double step = 1e-6;
 
+  double x = robot_to_field_(0, 3);
+  double y = robot_to_field_(1, 3);
+  double z = robot_to_field_(2, 3);
+
   while (loss > kacceptable_reprojection_error && counter < 100000) {
     counter++;
 
@@ -111,6 +115,26 @@ auto JointSolver::EstimatePosition(
 
       const double lambda = projection(2);
       projection /= lambda;
+      const Eigen::Vector2d projection_error =
+          (Eigen::Vector2d()
+               << projection.x() - data_point.undistorted_point.x(),
+           projection.y() - data_point.undistorted_point.y())
+              .finished();
+      loss = 0.5 * projection_error.squaredNorm();
+      const Eigen::Vector3d d_projection_d_loss =
+          (Eigen::Vector3d() << projection_error.x() / lambda,
+           projection_error.y() / lambda,
+           -projection_error.x() * projection.x() / lambda -
+               projection_error.y() * projection.y() / lambda)
+              .finished();
+      const Eigen::Vector4d d_image_to_field_d_loss =
+          camera_matrices_.at(data_point.source).image_to_robot.transpose() *
+          d_projection_d_loss;
+      const Eigen::Matrix4d d_robot_to_field_d_loss =
+          d_image_to_field_d_loss *
+          data_point.field_to_tag_corner_homogenous.transpose();
+      robot_to_field_.block<3, 1>(0, 3) -=
+          d_robot_to_field_d_loss.block<3, 1>(0, 3) / 1000000;
     }
   }
 

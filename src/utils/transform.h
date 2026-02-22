@@ -62,4 +62,19 @@ auto inline Homogenize(const Eigen::Vector3d point) -> Eigen::Vector4d {
   return homogenized_point;
 }
 
+struct TransformValues {
+  double x;
+  double y;
+  double z;
+  double rx;
+  double ry;
+  double rz;
+};
+
+auto ExtractTranslationAndRotation(const Eigen::Matrix4d& transform_mat)
+    -> TransformValues;
+
+auto SeparateTranslationAndRotationMatrices(const TransformValues& combined)
+    -> std::array<Eigen::Matrix4d, 4>;
+
 }  // namespace utils

@@ -67,4 +67,64 @@ auto HomogenizePoint3d(cv::Point3d point) -> cv::Mat {
 
 template cv::Mat utils::EigenToCvMat<Eigen::Matrix<double, 4, 4>>(
     const Eigen::MatrixBase<Eigen::Matrix<double, 4, 4>>&);
+
+auto ExtractTranslationAndRotation(const Eigen::Matrix4d& transform_mat)
+    -> TransformValues {
+  double x = transform_mat(0, 3);
+  double y = transform_mat(1, 3);
+  double z = transform_mat(2, 3);
+
+  const Eigen::Matrix3d& R = transform_mat.block<3, 3>(0, 0);
+
+  double sy = std::hypot(R(0, 0), R(1, 0));
+
+  bool singular = sy < 1e-6;
+
+  double roll, pitch, yaw;
+
+  if (!singular) {
+    roll = std::atan2(R(2, 1), R(2, 2));
+    pitch = std::atan2(-R(2, 0), sy);
+    yaw = std::atan2(R(1, 0), R(0, 0));
+  } else {
+    // Gimbal lock
+    roll = std::atan2(-R(1, 2), R(1, 1));
+    pitch = std::atan2(-R(2, 0), sy);
+    yaw = 0.0;
+  }
+
+  return {x, y, z, roll, pitch, yaw};
+}
+
+auto SeparateTranslationAndRotationMatrices(
+    const TransformValues& decomposition) -> std::array<Eigen::Matrix4d, 4> {
+  std::array<Eigen::Matrix4d, 4> output;
+
+  for (int i = 0; i < output.size(); i++) {
+    output[i] = Eigen::Matrix4d::Identity();
+  }
+
+  // clang-format off
+  const Eigen::Matrix3d Rx = (Eigen::Matrix3d() << 
+      1, 0, 0,
+      0, cos(decomposition.rx), -sin(decomposition.rx),
+      0, sin(decomposition.rx), cos(decomposition.rx)).finished();
+  const Eigen::Matrix3d Ry = (Eigen::Matrix3d() << 
+      cos(decomposition.ry), 0, sin(decomposition.ry),
+      0, 1, 0,
+      -sin(decomposition.ry), 0, cos(decomposition.ry)).finished();
+  const Eigen::Matrix3d Rz = (Eigen::Matrix3d() << 
+      cos(decomposition.rz), -sin(decomposition.rz), 0,
+      sin(decomposition.rz), cos(decomposition.rz), 0,
+      0, 0, 1).finished();
+  // clang-format on
+  output[0](0, 3) = decomposition.x;
+  output[0](1, 3) = decomposition.y;
+  output[0](2, 3) = decomposition.z;
+  output[1].block<3, 3>(0, 0) = Rz;
+  output[2].block<3, 3>(0, 0) = Ry;
+  output[3].block<3, 3>(0, 0) = Rx;
+
+  return output;
+}
 }  // namespace utils
