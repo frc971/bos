@@ -9,14 +9,15 @@ namespace camera {
 // Wrap opencv's camera into the ICamera interface
 class CVCamera : public ICamera {
  public:
-  CVCamera(const CameraConstant& camera_constants);
-  CVCamera(const std::string& pipeline);
+  CVCamera(const CameraConstant& camera_constant,
+           std::optional<std::string> log_path = std::nullopt);
   auto GetFrame() -> timestamped_frame_t override;
   auto Restart() -> void override;
 
  private:
   cv::VideoCapture cap_;
   std::string pipeline_;
+  std::optional<std::string> log_path_;
   cv::Mat backup_image_;
 };
 

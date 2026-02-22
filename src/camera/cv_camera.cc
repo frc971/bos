@@ -1,10 +1,27 @@
 #include "cv_camera.h"
+
+#include <filesystem>
+#include <utility>
+#include "src/camera/write_frame.h"
 #include "src/utils/log.h"
+#include "src/utils/timer.h"
+
+namespace fs = std::filesystem;
 
 namespace camera {
 
-CVCamera::CVCamera(const CameraConstant& c)
-    : cap_(cv::VideoCapture(c.pipeline)) {
+auto FileSystemAlmostFull() {
+  fs::space_info info = fs::space("/");
+  return static_cast<float>(info.capacity) / static_cast<float>(info.free) <
+         0.2;
+}
+
+CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
+    : cap_(cv::VideoCapture(c.pipeline)), log_path_(std::move(log_path)) {
+  if (FileSystemAlmostFull()) {
+    log_path_ = std::nullopt;
+    LOG(WARNING) << "Filesystem almost full! Not logging any frames";
+  }
   LOG(INFO) << c.pipeline;
 
   backup_image_ = cv::imread("/bos/constants/dont_worry_about_it.jpg");
@@ -33,10 +50,11 @@ CVCamera::CVCamera(const CameraConstant& c)
   } else {
     cap_.set(cv::CAP_PROP_AUTO_EXPOSURE, 3);
   }
+  if (log_path_.has_value()) {
+    LOG(INFO) << "Creating log folder " << log_path_.value() << ": "
+              << std::filesystem::create_directory(log_path_.value());
+  }
 }
-
-CVCamera::CVCamera(const std::string& pipeline)
-    : cap_(cv::VideoCapture(pipeline)), pipeline_(pipeline) {}
 
 auto CVCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t timestamped_frame;
@@ -45,6 +63,9 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
   cap_.retrieve(timestamped_frame.frame);
   if (timestamped_frame.frame.empty()) {
     timestamped_frame.frame = backup_image_;
+  }
+  if (log_path_.has_value()) {
+    WriteFrame(log_path_.value(), timestamped_frame);
   }
   return timestamped_frame;
 }
