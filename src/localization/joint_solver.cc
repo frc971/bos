@@ -97,14 +97,13 @@ auto JointSolver::EstimatePosition(
   double loss = std::numeric_limits<double>::infinity();
   int counter = 0;
 
-  const double step = 1e-6;
+  const double step = 1e-8;
 
   utils::TransformValues translation_and_rotation =
       utils::ExtractTranslationAndRotation(robot_to_field_);
   utils::TransformDecomposition decomposed_robot_to_field;
 
-  while (loss > kacceptable_reprojection_error && counter < 100000) {
-    counter++;
+  while (loss > kacceptable_reprojection_error && counter < 1000) {
     bool printed = false;
     for (const data_point_t& data_point : data_points) {
       // TODO accumulate gradients across all points per epoch and then apply at the same time for better batching
@@ -113,14 +112,16 @@ auto JointSolver::EstimatePosition(
       const Eigen::Matrix<double, 3, 4>& image_to_robot =
           camera_matrices_.at(data_point.source).image_to_robot;
 
-      Eigen::Vector4d Rx_activation = decomposed_robot_to_field.Rx *
-                                      data_point.field_to_tag_corner_homogenous;
-      Eigen::Vector4d Ry_activation =
+      const Eigen::Vector4d Rx_activation =
+          decomposed_robot_to_field.Rx *
+          data_point.field_to_tag_corner_homogenous;
+      const Eigen::Vector4d Ry_activation =
           decomposed_robot_to_field.Ry * Rx_activation;
-      Eigen::Vector4d Rz_activation =
+      const Eigen::Vector4d Rz_activation =
           decomposed_robot_to_field.Rz * Ry_activation;
-      Eigen::Vector3d projection = image_to_robot * Rz_activation;
-
+      Eigen::Vector3d projection = image_to_robot *
+                                   decomposed_robot_to_field.translation *
+                                   Rz_activation;
       const double lambda = projection(2);
       projection /= lambda;
       const Eigen::Vector2d projection_error =
@@ -129,7 +130,7 @@ auto JointSolver::EstimatePosition(
            projection.y() - data_point.undistorted_point.y())
               .finished();
       loss = 0.5 * projection_error.squaredNorm();
-      if (counter % 1000 == 0 && !printed) {
+      if (counter % 10 == 0 && !printed) {
         printed = true;
         std::cout << "loss: " << loss << std::endl;
       }
@@ -175,17 +176,18 @@ auto JointSolver::EstimatePosition(
         0, 0, 0, 0).finished();
       // clang-format on
 
-      translation_and_rotation.rx -= d_Rx.cwiseProduct(d_Rx_d_rx).sum() * step;
-      translation_and_rotation.ry -= d_Ry.cwiseProduct(d_Ry_d_ry).sum() * step;
-      translation_and_rotation.rz -= d_Rz.cwiseProduct(d_Rz_d_rz).sum() * step;
+      // translation_and_rotation.rx -= d_Rx.cwiseProduct(d_Rx_d_rx).sum() * step;
+      // translation_and_rotation.ry -= d_Ry.cwiseProduct(d_Ry_d_ry).sum() * step;
+      // translation_and_rotation.rz -= d_Rz.cwiseProduct(d_Rz_d_rz).sum() * step;
+      translation_and_rotation.rx -= (d_Rx_d_rx.transpose() * d_Rx).trace();
+      translation_and_rotation.ry -= (d_Ry_d_ry.transpose() * d_Ry).trace();
+      translation_and_rotation.rz -= (d_Rz_d_rz.transpose() * d_Rz).trace();
 
       translation_and_rotation.x -= d_translation(0, 3) * step;
       translation_and_rotation.y -= d_translation(1, 3) * step;
       translation_and_rotation.z -= d_translation(2, 3) * step;
-
-      decomposed_robot_to_field = utils::SeparateTranslationAndRotationMatrices(
-          translation_and_rotation);
     }
+    counter++;
   }
 
   Eigen::Matrix4d field_to_robot =
