@@ -52,7 +52,6 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
     timestamped_frame.frame = backup_image_;
   }
   if (log_path_.has_value()) {
-    utils::Timer timer("write img to frame");
     WriteFrame(log_path_.value(), timestamped_frame);
   }
   return timestamped_frame;
