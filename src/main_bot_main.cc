@@ -2,6 +2,7 @@
 #include "src/camera/camera_source.h"
 #include "src/camera/cv_camera.h"
 #include "src/localization/multi_tag_solver.h"
+#include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
@@ -72,6 +73,5 @@ auto main() -> int {
 
   LOG(INFO) << "Started estimators";
 
-  std::this_thread::sleep_for(std::chrono::hours::max());
   front_thread.join();
 }
