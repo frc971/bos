@@ -11,5 +11,5 @@ fi
 
 ./scripts/copy_to_bin.sh
 
-rsync -avz bin "$HOST":/bos
+rsync -avz --delete bin "$HOST":/bos
 rsync -avz constants "$HOST":/bos

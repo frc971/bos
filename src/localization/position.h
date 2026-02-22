@@ -18,6 +18,8 @@ using tag_detection_t = struct TagDetection {
 };
 
 using position_estimate_t = struct PositionEstimate {
+  std::vector<int> tag_ids;
+  std::vector<int> rejected_tag_ids;
   frc::Pose3d pose;
   double variance;
   double timestamp;

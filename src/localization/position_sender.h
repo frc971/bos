@@ -1,6 +1,7 @@
 #pragma once
 
 #include <frc/geometry/Pose2d.h>
+#include <networktables/BooleanArrayTopic.h>
 #include <networktables/BooleanTopic.h>
 #include <networktables/DoubleArrayTopic.h>
 #include <networktables/DoubleTopic.h>
@@ -25,6 +26,8 @@ class PositionSender {
   nt::StructPublisher<frc::Pose3d> pose3d_publisher_;
   nt::DoublePublisher latency_publisher_;
   nt::DoubleArrayPublisher tag_estimation_publisher_;
+  nt::BooleanArrayPublisher tag_ids_publisher_;
+  nt::BooleanArrayPublisher rejected_tag_ids_publisher_;
 
   std::mutex mutex_;
   bool verbose_;

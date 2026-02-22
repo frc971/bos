@@ -111,4 +111,6 @@ void RealSenseCamera::showDevices() {
     }
   }
 }
+
+auto RealSenseCamera::Restart() -> void {}
 }  // namespace camera
