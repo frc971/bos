@@ -99,19 +99,27 @@ auto JointSolver::EstimatePosition(
 
   const double step = 1e-6;
 
-  double x = robot_to_field_(0, 3);
-  double y = robot_to_field_(1, 3);
-  double z = robot_to_field_(2, 3);
+  utils::TransformValues translation_and_rotation =
+      utils::ExtractTranslationAndRotation(robot_to_field_);
+  utils::TransformDecomposition decomposed_robot_to_field;
 
   while (loss > kacceptable_reprojection_error && counter < 100000) {
     counter++;
-
     for (const data_point_t& data_point : data_points) {
+      // TODO accumulate gradients across all points per epoch and then apply at the same time for better batching
+      decomposed_robot_to_field = utils::SeparateTranslationAndRotationMatrices(
+          translation_and_rotation);
       const auto& camera_mats = camera_matrices_.at(data_point.source);
 
+      Eigen::Vector4d rx_activation = decomposed_robot_to_field.rx *
+                                      data_point.field_to_tag_corner_homogenous;
+      Eigen::Vector4d ry_activation =
+          decomposed_robot_to_field.ry * rx_activation;
+      Eigen::Vector4d rz_activation =
+          decomposed_robot_to_field.rz * ry_activation;
       Eigen::Vector3d projection = camera_mats.image_to_robot *
-                                   robot_to_field_ *
-                                   data_point.field_to_tag_corner_homogenous;
+                                   decomposed_robot_to_field.translation *
+                                   rz_activation;
 
       const double lambda = projection(2);
       projection /= lambda;
@@ -121,20 +129,31 @@ auto JointSolver::EstimatePosition(
            projection.y() - data_point.undistorted_point.y())
               .finished();
       loss = 0.5 * projection_error.squaredNorm();
-      const Eigen::Vector3d d_projection_d_loss =
+      const Eigen::Vector3d d_projection =
           (Eigen::Vector3d() << projection_error.x() / lambda,
            projection_error.y() / lambda,
            -projection_error.x() * projection.x() / lambda -
                projection_error.y() * projection.y() / lambda)
               .finished();
-      const Eigen::Vector4d d_image_to_field_d_loss =
+      const Eigen::Vector4d d_image_to_field =
           camera_matrices_.at(data_point.source).image_to_robot.transpose() *
-          d_projection_d_loss;
-      const Eigen::Matrix4d d_robot_to_field_d_loss =
-          d_image_to_field_d_loss *
+          d_projection;
+      Eigen::Matrix4d accumulated_gradient =
+          d_image_to_field.transpose() * d_projection;
+      Eigen::Matrix4d d_translation =
+          accumulated_gradient * rz_activation.transpose();
+      accumulated_gradient *= d_translation.transpose();
+      Eigen::Matrix4d d_rz = accumulated_gradient * ry_activation.transpose();
+      accumulated_gradient *= decomposed_robot_to_field.rz.transpose();
+      Eigen::Matrix4d d_ry = accumulated_gradient * rx_activation.transpose();
+      accumulated_gradient *= decomposed_robot_to_field.rz.transpose();
+      Eigen::Matrix4d d_rx =
+          accumulated_gradient *
           data_point.field_to_tag_corner_homogenous.transpose();
-      robot_to_field_.block<3, 1>(0, 3) -=
-          d_robot_to_field_d_loss.block<3, 1>(0, 3) / 1000000;
+
+      translation_and_rotation.x -= d_translation(0, 3);
+      translation_and_rotation.y -= d_translation(1, 3);
+      translation_and_rotation.z -= d_translation(2, 3);
     }
   }
 
