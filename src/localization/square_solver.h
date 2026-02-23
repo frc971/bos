@@ -20,6 +20,7 @@ class SquareSolver : public IPositionSolver {
                std::vector<cv::Point3d> tag_corners = kapriltag_corners);
   auto EstimatePosition(const std::vector<tag_detection_t>& detections)
       -> std::vector<position_estimate_t> override;
+  auto EstimatePosition(const tag_detection_t& detection) -> cv::Mat;
 
  private:
   frc::AprilTagFieldLayout layout_;
@@ -28,6 +29,7 @@ class SquareSolver : public IPositionSolver {
   cv::Mat distortion_coefficients_;
   cv::Mat camera_to_robot_;
   cv::Mat invert_translation_;
-  cv::Mat rotate_z_;
+  cv::Mat rotate_yaw_wpilib_;
+  cv::Mat rotate_yaw_cv_;
 };
 }  // namespace localization

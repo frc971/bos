@@ -40,6 +40,10 @@ using camera_constant_t = struct CameraConstant {
 
     return os;
   }
+
+  auto operator<(const CameraConstant& other) const -> bool {
+    return name < other.name;
+  }
 };
 
 enum Camera {

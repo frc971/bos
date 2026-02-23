@@ -8,22 +8,26 @@
 using json = nlohmann::json;
 
 namespace localization {
-
-class JointSolver : public IPositionSolver {
+struct CameraMatrices {
+  Eigen::Matrix<double, 3, 4> image_to_robot;
+  cv::Mat distortion_coefficients;
+  cv::Mat camera_matrix;
+};
+static constexpr int kmax_tags = 50;
+class JointSolver {
  public:
-  JointSolver(const std::string& intrinsics_path,
-              const std::string& extrinsics_path,
-              frc::AprilTagFieldLayout layout = kapriltag_layout,
-              double tag_size = ktag_size);
-  JointSolver(camera::Camera camera_config,
-              const frc::AprilTagFieldLayout& layout = kapriltag_layout,
-              double tag_size = ktag_size);
-  auto EstimatePosition(const std::vector<tag_detection_t>& detections)
-      -> std::vector<position_estimate_t> override;
+  JointSolver(const std::vector<camera::Camera>& camera_constants_,
+              const frc::AprilTagFieldLayout& layout = kapriltag_layout);
+  auto EstimatePosition(
+      const std::map<camera::Camera, std::vector<tag_detection_t>>&
+          all_cam_detections,
+      const frc::Pose3d& starting_pose) -> position_estimate_t;
+  Eigen::Matrix4d robot_to_field_;
 
  private:
-  frc::AprilTagFieldLayout layout_;
-  Eigen::MatrixXd camera_matrix_;
-  SquareSolver initial_solver_;
+  static constexpr double kacceptable_reprojection_error = 0.005;
+  std::map<camera::Camera, CameraMatrices> camera_matrices_;
+  std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
+      tag_corners_;
 };
 }  // namespace localization

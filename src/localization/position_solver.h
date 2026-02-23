@@ -15,6 +15,12 @@ const std::vector<cv::Point3d> kapriltag_corners = {
     {ktag_size / 2, -ktag_size / 2, 0},
     {-ktag_size / 2, -ktag_size / 2, 0}};
 
+const std::vector<Eigen::Vector3d> kapriltag_corners_eigen = {
+    {-ktag_size / 2, ktag_size / 2, 0},
+    {ktag_size / 2, ktag_size / 2, 0},
+    {ktag_size / 2, -ktag_size / 2, 0},
+    {-ktag_size / 2, -ktag_size / 2, 0}};
+
 const frc::AprilTagFieldLayout kapriltag_layout =
     frc::AprilTagFieldLayout::LoadField(
         frc::AprilTagField::k2026RebuiltAndyMark);

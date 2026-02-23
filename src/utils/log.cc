@@ -51,7 +51,8 @@ void PrintTransform3d(const frc::Transform3d& transform) {
       units::degree_t{r.X()}.value(), units::degree_t{r.Y()}.value(),
       units::degree_t{r.Z()}.value());
 }
-void PrintTransformationMatrix(const cv::Mat& T) {
+void PrintTransformationMatrix(const cv::Mat& T,
+                               const std::optional<std::string>& name) {
 
   CV_Assert(T.rows == 4 && T.cols == 4);
   CV_Assert(T.type() == CV_64F || T.type() == CV_32F);
@@ -88,7 +89,7 @@ void PrintTransformationMatrix(const cv::Mat& T) {
   pitch *= 180.0 / CV_PI;
   yaw *= 180.0 / CV_PI;
 
-  std::cout << "Transformation Matrix-> "
+  std::cout << name.value_or("Transformation Matrix") << "->"
             << "X: " << x << " m, "
             << "Y: " << y << " m, "
             << "Z: " << z << " m, "
