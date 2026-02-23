@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include "src/utils/log.h"
 #include "src/utils/pch.h"
 namespace camera {
 

@@ -26,10 +26,11 @@ auto main(int argc, char* argv[]) -> int {
 
   LOG(INFO) << "Camera opened successfully" << std::endl;
 
+  cv::Mat frame = camera.GetFrame().frame;
+  LOG(INFO) << "Size of frame" << frame.size;
   while (true) {
-    cv::Mat frame = camera.GetFrame().frame;
+    frame = camera.GetFrame().frame;
     streamer.WriteFrame(frame);
   }
-  cv::destroyAllWindows();
   return 0;
 }
