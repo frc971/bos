@@ -3,8 +3,8 @@
 #include <frc/geometry/Pose2d.h>
 #include <networktables/NetworkTableInstance.h>
 #include <networktables/StructTopic.h>
-#include <cstdint>
 #include <atomic>
+#include <cstdint>
 
 namespace pathing {
 class Controller {

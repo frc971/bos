@@ -1,9 +1,9 @@
 #include "src/pathing/velocity_sender.h"
+#include <frc/Timer.h>
 #include <networktables/DoubleTopic.h>
 #include <networktables/StructTopic.h>
 #include <units/angle.h>
 #include "frc/DataLogManager.h"
-#include <frc/Timer.h>
 
 namespace pathing {
 
