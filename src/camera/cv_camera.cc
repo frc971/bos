@@ -76,6 +76,7 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
 auto CVCamera::Restart() -> void {
   cap_.release();
   cap_ = cv::VideoCapture(pipeline_);
+  std::this_thread::sleep_for(std::chrono::seconds(3));
 }
 
 }  // namespace camera
