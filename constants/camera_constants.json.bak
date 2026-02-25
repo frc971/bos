@@ -54,7 +54,7 @@
       "exposure": null
     },
     {
-      "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.3:1.0-video-index0",
+      "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:1.4:1.0-video-index0",
       "intrinsics_path": "/bos/constants/main_bot/left_intrinsics.json",
       "extrinsics_path": "/bos/constants/main_bot/left_extrinsics.json",
       "name": "main_bot_left",
@@ -65,7 +65,7 @@
       "exposure": null
     },
     {
-      "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.1:1.0-video-index0",
+      "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:1.2:1.0-video-index0",
       "intrinsics_path": "/bos/constants/main_bot/right_intrinsics.json",
       "extrinsics_path": "/bos/constants/main_bot/right_extrinsics.json",
       "name": "main_bot_right",
