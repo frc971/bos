@@ -5,10 +5,9 @@
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
+#include "src/pathing/controller.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
-#include "src/pathing/controller.h"
-#include "src/pathing/controller.h"
 
 using camera::Camera;
 using camera::camera_constants;
@@ -76,24 +75,23 @@ auto main() -> int {
 
   LOG(INFO) << "Started estimators";
 
+  left_thread.join();
+
   // Main control loop for pathing controller
   std::unique_ptr<pathing::Controller> controller;
   std::thread controller_thread;
   bool last_enabled = false;
 
-    LOG(INFO) << "Entering main control loop";
-    
-    while (true) {
-      bool enabled = enabled_entry.GetBoolean(false);
-      
-      if (enabled && !last_enabled) {
+  LOG(INFO) << "Entering main control loop";
+
+  while (true) {
+    bool enabled = enabled_entry.GetBoolean(false);
+
+    if (enabled && !last_enabled) {
       LOG(INFO) << "Starting pathing controller";
-      controller = std::make_unique<pathing::Controller>(); 
-      controller_thread = std::thread([&controller]() { 
-        controller->Send(); 
-      });
-    } 
-    else if (!enabled && last_enabled) {
+      controller = std::make_unique<pathing::Controller>();
+      controller_thread = std::thread([&controller]() { controller->Send(); });
+    } else if (!enabled && last_enabled) {
       LOG(INFO) << "Stopping pathing controller";
       if (controller) {
         controller->Stop();
@@ -103,7 +101,7 @@ auto main() -> int {
         controller.reset();
       }
     }
-    
+
     last_enabled = enabled;
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }

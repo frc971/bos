@@ -1,5 +1,4 @@
 #include "src/pathing/controller.h"
-#include <frc/Timer.h>
 #include <chrono>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -115,7 +114,8 @@ void Controller::Send() {
 
     if (mag < 1e-6) {
       sender.Send(0, 0);
-      if (!running_) break;
+      if (!running_)
+        break;
       continue;
     }
 
@@ -128,6 +128,8 @@ void Controller::Send() {
   }
 }
 
-void Controller::Stop() { running_.store(false); }
+void Controller::Stop() {
+  running_.store(false);
+}
 
 }  // namespace pathing
