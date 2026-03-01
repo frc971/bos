@@ -12,7 +12,7 @@ namespace camera {
 
 auto FileSystemAlmostFull() {
   fs::space_info info = fs::space("/");
-  return static_cast<float>(info.capacity) / static_cast<float>(info.free) >
+  return static_cast<float>(info.capacity) / static_cast<float>(info.free) <
          0.2;
 }
 
@@ -58,7 +58,10 @@ CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
 
 auto CVCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t timestamped_frame;
-  cap_.grab();
+  if (!cap_.grab()) {
+    Restart();
+    LOG(WARNING) << "Restarting camera";
+  }
   timestamped_frame.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   cap_.retrieve(timestamped_frame.frame);
   if (timestamped_frame.frame.empty()) {
@@ -73,6 +76,7 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
 auto CVCamera::Restart() -> void {
   cap_.release();
   cap_ = cv::VideoCapture(pipeline_);
+  std::this_thread::sleep_for(std::chrono::seconds(3));
 }
 
 }  // namespace camera

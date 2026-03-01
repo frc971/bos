@@ -7,8 +7,13 @@
 namespace utils {
 enum Basis { WPI_TO_CV, CV_TO_WPI };
 
-const cv::Mat cv_to_wpilib = (cv::Mat_<double>(4, 4) << 0, 0, 1, 0, -1, 0, 0, 0,
-                              0, -1, 0, 0, 0, 0, 0, 1);
+// clang-format off
+const cv::Mat cv_to_wpilib = (cv::Mat_<double>(4, 4) << 
+  0, 0, 1, 0,
+  -1, 0, 0, 0,
+  0, -1, 0, 0,
+  0, 0, 0, 1);
+// clang-format on
 
 const std::map<Basis, cv::Mat> cv_bases = {{WPI_TO_CV, cv_to_wpilib.t()},
                                            {CV_TO_WPI, cv_to_wpilib}};
