@@ -29,7 +29,8 @@ TEST(JointSolveTest, EstimatePosition) {  // NOLINT
   frc::Transform3d noise(
       frc::Translation3d(units::meter_t{0.4}, units::meter_t{0.3},
                          units::meter_t{-0.1}),
-      {});
+      frc::Rotation3d(units::degree_t{1.0}, units::degree_t{1.0},
+                      units::degree_t{1.0}));
   std::cout << "Square solver solution: " << square_solver_solution
             << std::endl;
 

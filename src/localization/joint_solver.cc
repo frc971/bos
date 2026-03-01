@@ -227,7 +227,7 @@ auto JointSolver::EstimatePosition(
   std::cout << "Initial loss: " << net_loss
             << " initial step: " << step * step_size << std::endl;
 
-  for (size_t i = 0; i < 10000 && net_loss > kacceptable_reprojection_error;
+  for (size_t i = 0; i < 1e5 && net_loss > kacceptable_reprojection_error;
        i++) {
     translation_and_rotation += step * step_size;
     double new_loss;
@@ -274,8 +274,24 @@ auto JointSolver::EstimatePosition(
   utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
   utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
                                    "Field to robot wpi");
+  std::cout << "Field to robot:\n" << field_to_robot << std::endl;
+  // Graham-Schmidt normalization because wpilib is very picky and floating-point precision sometimes makes the matrix not orthogonal
+  // https://www.khanacademy.org/math/linear-algebra/alternate-bases/orthonormal-basis/v/linear-algebra-the-gram-schmidt-process
+  Eigen::Matrix3d R = field_to_robot.block<3, 3>(0, 0);
+  Eigen::Vector3d x = R.col(0).normalized();
+  Eigen::Vector3d y = (R.col(1) - x * x.dot(R.col(1))).normalized();
+  Eigen::Vector3d z = x.cross(y);
 
-  return {.pose = frc::Pose3d(field_to_robot), .variance = 0, .timestamp = 0};
+  Eigen::Matrix3d R_normalized;
+  R_normalized.col(0) = x;
+  R_normalized.col(1) = y;
+  R_normalized.col(2) = z;
+
+  return {
+      .pose = frc::Pose3d(frc::Translation3d(field_to_robot.block<3, 1>(0, 3)),
+                          frc::Rotation3d(R_normalized)),
+      .variance = 0,
+      .timestamp = 0};
 }
 
 }  // namespace localization
