@@ -20,7 +20,8 @@ TEST(JointSolveTest, EstimatePosition) {  // NOLINT
   localization::JointSolver joint_solver({config});
   localization::SquareSolver square_solver(config);
 
-  auto square_solver_solution = square_solver.EstimatePosition(detections)[0];
+  auto square_solver_solution =
+      square_solver.EstimatePosition(detections, false)[0];
   utils::PrintTransformationMatrix(
       utils::EigenToCvMat(square_solver_solution.pose.ToMatrix()));
   std::cout << square_solver_solution.pose.ToMatrix() << std::endl;

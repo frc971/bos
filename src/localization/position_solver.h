@@ -28,7 +28,8 @@ const frc::AprilTagFieldLayout kapriltag_layout =
 // Interface for a class when given a apriltag detections, uses the detections to get the position of the robot
 class IPositionSolver {
  public:
-  virtual auto EstimatePosition(const std::vector<tag_detection_t>& detections)
+  virtual auto EstimatePosition(const std::vector<tag_detection_t>& detections,
+                                bool reject_far_tags = true)
       -> std::vector<position_estimate_t> = 0;
   virtual ~IPositionSolver() = default;
 };
