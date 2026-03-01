@@ -63,7 +63,7 @@ MultiTagSolver::MultiTagSolver(camera::Camera camera_config,
                      layout, tag_corners) {}
 
 auto MultiTagSolver::EstimatePosition(
-    const std::vector<tag_detection_t>& detections, bool reject_far_tags)
+    const std::vector<tag_detection_t>& detections, const bool reject_far_tags)
     -> std::vector<position_estimate_t> {
   std::vector<cv::Point3d> object_points;
   std::vector<cv::Point2d> image_points;
