@@ -68,5 +68,6 @@ class JointSolver {
   std::map<camera::Camera, CameraMatrices> camera_matrices_;
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;
+  static const Eigen::Matrix4d rotate_yaw_cv_;
 };
 }  // namespace localization

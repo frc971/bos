@@ -7,28 +7,24 @@
 
 namespace localization {
 
-constexpr auto sq(double num) -> double {
-  return num * num;
-}
-
 using frc::AprilTagFieldLayout;
-
-JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
-                         const AprilTagFieldLayout& layout)
-    : robot_to_field_(Eigen::Matrix4d::Identity()) {
-  // clang-format off
-  const Eigen::Matrix4d rotate_yaw_cv = (Eigen::Matrix4d() <<
+// clang-format off
+const Eigen::Matrix4d JointSolver::rotate_yaw_cv_ = (Eigen::Matrix4d() <<
       -1, 0, 0, 0,
       0, 1, 0, 0,
       0, 0, -1, 0,
       0, 0, 0, 1).finished();
-  // clang-format on
+// clang-format on
+
+JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
+                         const AprilTagFieldLayout& layout)
+    : robot_to_field_(Eigen::Matrix4d::Identity()) {
   for (const frc::AprilTag& tag : layout.GetTags()) {
     Eigen::Matrix4d field_to_tag = tag.pose.ToMatrix();
     utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);
     std::array<Eigen::Vector4d, 4> field_relative_corners;
     for (size_t i = 0; i < kapriltag_corners_eigen.size(); i++) {
-      field_relative_corners[i] = field_to_tag * rotate_yaw_cv *
+      field_relative_corners[i] = field_to_tag * rotate_yaw_cv_ *
                                   utils::Homogenize(kapriltag_corners_eigen[i]);
     }
     tag_corners_[tag.ID] = field_relative_corners;
