@@ -57,11 +57,29 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
   }
 }
 
+auto JointSolver::Forward(const utils::TransformDecomposition& current_estimate,
+                          std::vector<Eigen::Vector4d>& Rx_activations,
+                          std::vector<Eigen::Vector4d>& Ry_activations,
+                          std::vector<Eigen::Vector4d>& Rz_activations,
+                          std::vector<Eigen::Vector3d>& projections,
+                          std::vector<Eigen::Vector2d>& projection_errors,
+                          const std::vector<data_point_t>& data_points)
+    -> double {
+  double net_loss = 0;
+  for (int i = 0; i < data_points.size(); i++) {
+    net_loss += Forward(current_estimate, Rx_activations[i], Ry_activations[i],
+                        Rz_activations[i], projections[i], projection_errors[i],
+                        data_points[i]);
+  }
+  return net_loss;
+}
+
 auto JointSolver::Forward(
     const utils::TransformDecomposition& position_estimate,
     Eigen::Vector4d& Rx_activation, Eigen::Vector4d& Ry_activation,
     Eigen::Vector4d& Rz_activation, Eigen::Vector3d& projection,
-    const data_point_t& data_point) -> void {
+    Eigen::Vector2d& projection_error, const data_point_t& data_point)
+    -> double {
   const Eigen::Matrix<double, 3, 4>& image_to_robot =
       camera_matrices_.at(data_point.source).image_to_robot;
 
@@ -71,6 +89,97 @@ auto JointSolver::Forward(
   Rz_activation = position_estimate.Rz * Ry_activation;
 
   projection = image_to_robot * position_estimate.translation * Rz_activation;
+  projection_error = Eigen::Vector2d(
+      projection.x() / projection[2] - data_point.undistorted_point.x(),
+      projection.y() / projection[2] - data_point.undistorted_point.y());
+  return 0.5 * projection_error.squaredNorm();
+}
+
+auto JointSolver::ComputeStep(
+    const utils::TransformValues translation_and_rotation,
+    const utils::TransformDecomposition& current_estimate,
+    const Eigen::Vector4d& Rx_activation, const Eigen::Vector4d& Ry_activation,
+    const Eigen::Vector4d& Rz_activation, const Eigen::Vector3d& projection,
+    const Eigen::Vector2d& projection_error, const data_point_t& data_point)
+    -> utils::TransformValues {
+  const double lambda = projection(2);
+  const Eigen::Vector3d normalized_projection = projection / lambda;
+
+  const Eigen::Vector3d d_projection = Eigen::Vector3d(
+      projection_error.x() / lambda, projection_error.y() / lambda,
+      -(projection_error.x() * normalized_projection.x() +
+        projection_error.y() * normalized_projection.y()) /
+          lambda);
+
+  const Eigen::Matrix<double, 3, 4>& image_to_robot =
+      camera_matrices_.at(data_point.source).image_to_robot;
+  Eigen::Vector4d accumulated_gradient =
+      image_to_robot.transpose() * d_projection;
+
+  const Eigen::Matrix4d d_translation =
+      accumulated_gradient * Rz_activation.transpose();
+
+  accumulated_gradient =
+      current_estimate.translation.transpose() * accumulated_gradient;
+  const Eigen::Matrix4d d_Rz = accumulated_gradient * Ry_activation.transpose();
+
+  accumulated_gradient = current_estimate.Rz.transpose() * accumulated_gradient;
+  const Eigen::Matrix4d d_Ry = accumulated_gradient * Rx_activation.transpose();
+
+  accumulated_gradient = current_estimate.Ry.transpose() * accumulated_gradient;
+  const Eigen::Matrix4d d_Rx =
+      accumulated_gradient *
+      data_point.field_to_tag_corner_homogenous.transpose();
+
+  // clang-format off
+      const Eigen::Matrix4d d_Rz_d_rz =
+          (Eigen::Matrix4d() << 
+        -sin(translation_and_rotation.rz), -cos(translation_and_rotation.rz), 0, 0,
+        cos(translation_and_rotation.rz), -sin(translation_and_rotation.rz), 0, 0, 
+        0, 0, 0, 0,
+        0, 0, 0, 0).finished();
+      const Eigen::Matrix4d d_Ry_d_ry =
+          (Eigen::Matrix4d() << 
+        -sin(translation_and_rotation.ry), 0, cos(translation_and_rotation.ry), 0,
+        0, 0, 0, 0,
+        -cos(translation_and_rotation.ry), 0, -sin(translation_and_rotation.ry), 0,
+        0, 0, 0, 0).finished();
+      const Eigen::Matrix4d d_Rx_d_rx =
+        (Eigen::Matrix4d() << 
+        0, 0, 0, 0, 
+        0, -sin(translation_and_rotation.rx), -cos(translation_and_rotation.rx), 0,
+        0, cos(translation_and_rotation.rx), -sin(translation_and_rotation.rx), 0,
+        0, 0, 0, 0).finished();
+  // clang-format on
+
+  return {.x = -d_translation(0, 3),
+          .y = -d_translation(1, 3),
+          .z = -d_translation(2, 3),
+          .rx = -(d_Rx_d_rx.transpose() * d_Rx).trace() *
+                krotation_adjustment_slowdown_scalar,
+          .ry = -(d_Ry_d_ry.transpose() * d_Ry).trace() *
+                krotation_adjustment_slowdown_scalar,
+          .rz = -(d_Rz_d_rz.transpose() * d_Rz).trace() *
+                krotation_adjustment_slowdown_scalar};
+}
+
+auto JointSolver::ComputeNetStep(
+    const utils::TransformValues translation_and_rotation,
+    const utils::TransformDecomposition& position_decomposition,
+    const std::vector<Eigen::Vector4d>& Rx_activations,
+    const std::vector<Eigen::Vector4d>& Ry_activations,
+    const std::vector<Eigen::Vector4d>& Rz_activations,
+    const std::vector<Eigen::Vector3d>& projections,
+    const std::vector<Eigen::Vector2d>& projection_errors,
+    const std::vector<data_point_t>& data_points) -> utils::TransformValues {
+  utils::TransformValues net_step{};
+  for (int i = 0; i < data_points.size(); i++) {
+    net_step +=
+        ComputeStep(translation_and_rotation, position_decomposition,
+                    Rx_activations[i], Ry_activations[i], Rz_activations[i],
+                    projections[i], projection_errors[i], data_points[i]);
+  }
+  return net_step;
 }
 
 auto JointSolver::EstimatePosition(
@@ -104,125 +213,60 @@ auto JointSolver::EstimatePosition(
     }
   }
 
-  int counter = 0;
-
-  double step_size = 2e-8;
-  constexpr double translation_step_multiplier = 100.0;
-
   utils::TransformValues translation_and_rotation =
       utils::ExtractTranslationAndRotation(robot_to_field_);
-  utils::TransformValues step;
   utils::TransformDecomposition decomposed_robot_to_field =
       utils::SeparateTranslationAndRotationMatrices(translation_and_rotation);
-  std::vector<Eigen::Vector4d> Rx_activations, Ry_activations, Rz_activations;
-  std::vector<Eigen::Vector3d> projection;
-  double loss = 0;
+  std::vector<Eigen::Vector4d> Rx_activations(data_points.size()),
+      Ry_activations(data_points.size()), Rz_activations(data_points.size());
+  std::vector<Eigen::Vector3d> projections(data_points.size());
+  std::vector<Eigen::Vector2d> projection_errors(data_points.size());
+  double net_loss =
+      Forward(decomposed_robot_to_field, Rx_activations, Ry_activations,
+              Rz_activations, projections, projection_errors, data_points);
+  utils::TransformValues step =
+      ComputeNetStep(translation_and_rotation, decomposed_robot_to_field,
+                     Rx_activations, Ry_activations, Rz_activations,
+                     projections, projection_errors, data_points);
+  std::cout << "Initial loss: " << net_loss
+            << " initial step: " << step * step_size << std::endl;
 
-  while (loss > kacceptable_reprojection_error && counter < 1000000) {
-    bool printed = false;
-    utils::TransformValues new_step{};
-    for (int i = 0; i < data_points.size(); i++) {
-
-      Forward(decomposed_robot_to_field, Rx_activations[i], Ry_activations[i],
-              Rz_activations[i], projection[i], data_points[i]);
-      const double lambda = projection[i](2);
-      projection[i] /= lambda;
-
-      const Eigen::Vector2d projection_error(
-          projection[i].x() - data_points[i].undistorted_point.x(),
-          projection[i].y() - data_points[i].undistorted_point.y());
-      const Eigen::Vector3d d_projection = Eigen::Vector3d(
-          projection_error.x() / lambda, projection_error.y() / lambda,
-          -(projection_error.x() * projection[i].x() +
-            projection_error.y() * projection[i].y()) /
-              lambda);
-
-      const Eigen::Matrix<double, 3, 4>& image_to_robot =
-          camera_matrices_.at(data_points[i].source).image_to_robot;
-      Eigen::Vector4d accumulated_gradient =
-          image_to_robot.transpose() * d_projection;
-
-      const Eigen::Matrix4d d_translation =
-          accumulated_gradient * Rz_activations[i].transpose();
-
-      accumulated_gradient = decomposed_robot_to_field.translation.transpose() *
-                             accumulated_gradient;
-      const Eigen::Matrix4d d_Rz =
-          accumulated_gradient * Ry_activations[i].transpose();
-
-      accumulated_gradient =
-          decomposed_robot_to_field.Rz.transpose() * accumulated_gradient;
-      const Eigen::Matrix4d d_Ry =
-          accumulated_gradient * Rx_activations[i].transpose();
-
-      accumulated_gradient =
-          decomposed_robot_to_field.Ry.transpose() * accumulated_gradient;
-      const Eigen::Matrix4d d_Rx =
-          accumulated_gradient *
-          data_points[i].field_to_tag_corner_homogenous.transpose();
-
-      // clang-format off
-      const Eigen::Matrix4d d_Rz_d_rz =
-          (Eigen::Matrix4d() << 
-        -sin(translation_and_rotation.rz), -cos(translation_and_rotation.rz), 0, 0,
-        cos(translation_and_rotation.rz), -sin(translation_and_rotation.rz), 0, 0, 
-        0, 0, 0, 0,
-        0, 0, 0, 0).finished();
-      const Eigen::Matrix4d d_Ry_d_ry =
-          (Eigen::Matrix4d() << 
-        -sin(translation_and_rotation.ry), 0, cos(translation_and_rotation.ry), 0,
-        0, 0, 0, 0,
-        -cos(translation_and_rotation.ry), 0, -sin(translation_and_rotation.ry), 0,
-        0, 0, 0, 0).finished();
-      const Eigen::Matrix4d d_Rx_d_rx =
-        (Eigen::Matrix4d() << 
-        0, 0, 0, 0, 
-        0, -sin(translation_and_rotation.rx), -cos(translation_and_rotation.rx), 0,
-        0, cos(translation_and_rotation.rx), -sin(translation_and_rotation.rx), 0,
-        0, 0, 0, 0).finished();
-      // clang-format on
-
-      new_step.rx += -step_size * (d_Rx_d_rx.transpose() * d_Rx).trace();
-      new_step.ry += -step_size * (d_Ry_d_ry.transpose() * d_Ry).trace();
-      new_step.rz += -step_size * (d_Rz_d_rz.transpose() * d_Rz).trace();
-
-      new_step.x +=
-          -step_size * translation_step_multiplier * d_translation(0, 3);
-      new_step.y +=
-          -step_size * translation_step_multiplier * d_translation(1, 3);
-      new_step.z +=
-          -step_size * translation_step_multiplier * d_translation(2, 3);
+  for (size_t i = 0; i < 10000 && net_loss > kacceptable_reprojection_error;
+       i++) {
+    translation_and_rotation += step * step_size;
+    double new_loss;
+    do {
+      decomposed_robot_to_field = utils::SeparateTranslationAndRotationMatrices(
+          translation_and_rotation);
+      new_loss =
+          Forward(decomposed_robot_to_field, Rx_activations, Ry_activations,
+                  Rz_activations, projections, projection_errors, data_points);
+      if (new_loss > net_loss) {
+        step_size /= 2.0;
+        translation_and_rotation -= step * step_size;
+        // std::cout << "Stepping down learning rate, current estimation: "
+        //           << translation_and_rotation << std::endl;
+        continue;
+      } else {
+        step_size *= 2.0;
+        // std::cout << "Stepping up learning rate" << std::endl;
+        break;
+      }
+    } while (true);
+    net_loss =
+        Forward(decomposed_robot_to_field, Rx_activations, Ry_activations,
+                Rz_activations, projections, projection_errors, data_points);
+    step = ComputeNetStep(translation_and_rotation, decomposed_robot_to_field,
+                          Rx_activations, Ry_activations, Rz_activations,
+                          projections, projection_errors, data_points);
+    if (i % 1000 == 0) {
+      std::cout << "Step size: " << step_size << " new net loss: " << net_loss
+                << " new step: " << step * step_size << std::endl;
     }
-    translation_and_rotation += new_step;
-    const utils::TransformDecomposition new_estimate =
-        utils::SeparateTranslationAndRotationMatrices(translation_and_rotation);
-    double new_loss = 0;
-    for (int i = 0; i < data_points.size(); i++) {
-      Forward(new_estimate, Rx_activations[i], Ry_activations[i],
-              Rz_activations[i], projection[i], data_points[i]);
-      const Eigen::Vector2d projection_error(
-          projection[i].x() - data_points[i].undistorted_point.x(),
-          projection[i].y() - data_points[i].undistorted_point.y());
-      new_loss += 0.5 * projection_error.squaredNorm();
-    }
-    if (new_loss > loss) {
-      translation_and_rotation -= new_step;
-      step_size /= 2.0;
-    } else {
-      loss = new_loss;
-      step_size *= 2.0;
-    }
-    if (counter % 10000 == 0 && !printed) {
-      printed = true;
-      std::cout << "new_loss: " << new_loss << "\told_loss: " << loss
-                << "\tstep size: " << step_size << "\tstep: " << new_step
-                << std::endl;
-    }
-    counter++;
   }
 
   std::cout << "Final step: " << step << std::endl;
-  std::cout << "Final loss: " << loss << std::endl;
+  std::cout << "Final loss: " << net_loss << std::endl;
 
   Eigen::Matrix4d field_to_robot =
       (decomposed_robot_to_field.translation * decomposed_robot_to_field.Rz *

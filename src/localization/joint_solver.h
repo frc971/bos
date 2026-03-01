@@ -29,7 +29,32 @@ class JointSolver {
   auto Forward(const utils::TransformDecomposition& current_estimate,
                Eigen::Vector4d& Rx_activation, Eigen::Vector4d& Ry_activation,
                Eigen::Vector4d& Rz_activation, Eigen::Vector3d& projection,
-               const data_point_t& data_point) -> void;
+               Eigen::Vector2d& projection_error,
+               const data_point_t& data_point) -> double;
+  auto Forward(const utils::TransformDecomposition& current_estimate,
+               std::vector<Eigen::Vector4d>& Rx_activations,
+               std::vector<Eigen::Vector4d>& Ry_activations,
+               std::vector<Eigen::Vector4d>& Rz_activations,
+               std::vector<Eigen::Vector3d>& projections,
+               std::vector<Eigen::Vector2d>& projection_errors,
+               const std::vector<data_point_t>& data_points) -> double;
+  auto ComputeStep(const utils::TransformValues translation_and_rotation,
+                   const utils::TransformDecomposition& position_decomposition,
+                   const Eigen::Vector4d& Rx_activation,
+                   const Eigen::Vector4d& Ry_activation,
+                   const Eigen::Vector4d& Rz_activation,
+                   const Eigen::Vector3d& projection,
+                   const Eigen::Vector2d& projection_error,
+                   const data_point_t& data_point) -> utils::TransformValues;
+  auto ComputeNetStep(
+      const utils::TransformValues translation_and_rotation,
+      const utils::TransformDecomposition& position_decomposition,
+      const std::vector<Eigen::Vector4d>& Rx_activations,
+      const std::vector<Eigen::Vector4d>& Ry_activations,
+      const std::vector<Eigen::Vector4d>& Rz_activations,
+      const std::vector<Eigen::Vector3d>& projections,
+      const std::vector<Eigen::Vector2d>& projection_errors,
+      const std::vector<data_point_t>& data_points) -> utils::TransformValues;
   auto EstimatePosition(
       const std::map<camera::Camera, std::vector<tag_detection_t>>&
           all_cam_detections,
@@ -38,6 +63,8 @@ class JointSolver {
 
  private:
   static constexpr double kacceptable_reprojection_error = 0.005;
+  double step_size = 1e-4;
+  static constexpr double krotation_adjustment_slowdown_scalar = 1e-3;
   std::map<camera::Camera, CameraMatrices> camera_matrices_;
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;

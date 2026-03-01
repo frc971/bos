@@ -97,6 +97,18 @@ struct TransformValues {
     left.rz /= right;
   }
 
+  friend auto operator*(TransformValues& left, const double right)
+      -> TransformValues {
+    return {
+        .x = left.x * right,
+        .y = left.y * right,
+        .z = left.z * right,
+        .rx = left.rx * right,
+        .ry = left.ry * right,
+        .rz = left.rz * right,
+    };
+  }
+
   friend auto operator<<(std::ostream& os, const TransformValues& p)
       -> std::ostream& {
     os << "x: " << p.x << "\ty: " << p.y << "\tz: " << p.z << "\tz: " << p.rx
