@@ -26,18 +26,18 @@ TEST(JointSolveTest, EstimatePosition) {  // NOLINT
   std::cout << square_solver_solution.pose.ToMatrix() << std::endl;
 
   frc::Transform3d noise(
-      frc::Translation3d(units::meter_t{0.067}, units::meter_t{0.1},
+      frc::Translation3d(units::meter_t{0.4}, units::meter_t{0.3},
                          units::meter_t{-0.1}),
       {});
+  std::cout << "Square solver solution: " << square_solver_solution
+            << std::endl;
 
-  square_solver_solution.pose = square_solver_solution.pose.TransformBy(noise);
+  frc::Pose3d noisy_pose = square_solver_solution.pose.TransformBy(noise);
 
   std::map<camera::Camera, std::vector<localization::tag_detection_t>>
       associated_detections;
   associated_detections.insert({config, detections});
-  auto joint_solver_solution = joint_solver.EstimatePosition(
-      associated_detections, square_solver_solution.pose);
+  auto joint_solver_solution =
+      joint_solver.EstimatePosition(associated_detections, noisy_pose);
   std::cout << "Joint solver solution: " << joint_solver_solution << std::endl;
-  std::cout << "Square solver solution: " << square_solver_solution
-            << std::endl;
 }

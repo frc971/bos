@@ -69,6 +69,40 @@ struct TransformValues {
   double rx;
   double ry;
   double rz;
+
+  friend void operator+=(TransformValues& left, const TransformValues& right) {
+    left.x += right.x;
+    left.y += right.y;
+    left.z += right.z;
+    left.rx += right.rx;
+    left.ry += right.ry;
+    left.rz += right.rz;
+  }
+
+  friend void operator-=(TransformValues& left, const TransformValues& right) {
+    left.x -= right.x;
+    left.y -= right.y;
+    left.z -= right.z;
+    left.rx -= right.rx;
+    left.ry -= right.ry;
+    left.rz -= right.rz;
+  }
+
+  friend void operator/=(TransformValues& left, const double right) {
+    left.x /= right;
+    left.y /= right;
+    left.z /= right;
+    left.rx /= right;
+    left.ry /= right;
+    left.rz /= right;
+  }
+
+  friend auto operator<<(std::ostream& os, const TransformValues& p)
+      -> std::ostream& {
+    os << "x: " << p.x << "\ty: " << p.y << "\tz: " << p.z << "\tz: " << p.rx
+       << "\try: " << p.ry << "\tz: " << p.rz << std::endl;
+    return os;
+  }
 };
 
 struct TransformDecomposition {

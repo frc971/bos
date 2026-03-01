@@ -94,16 +94,18 @@ auto JointSolver::EstimatePosition(
     }
   }
 
-  double loss = std::numeric_limits<double>::infinity();
+  double loss;
   int counter = 0;
 
-  const double step = 1e-7;
+  double step_size = 2e-8;
+  constexpr double translation_step_multiplier = 10000.0;
 
   utils::TransformValues translation_and_rotation =
       utils::ExtractTranslationAndRotation(robot_to_field_);
+  utils::TransformValues step;
   utils::TransformDecomposition decomposed_robot_to_field;
 
-  while (loss > kacceptable_reprojection_error && counter < 1000000) {
+  while (loss > kacceptable_reprojection_error && counter < 100) {
     bool printed = false;
     for (const data_point_t& data_point : data_points) {
       decomposed_robot_to_field = utils::SeparateTranslationAndRotationMatrices(
@@ -128,11 +130,23 @@ auto JointSolver::EstimatePosition(
       const Eigen::Vector2d projection_error(
           projection.x() - data_point.undistorted_point.x(),
           projection.y() - data_point.undistorted_point.y());
-      loss = 0.5 * projection_error.squaredNorm();
+      double new_loss = 0.5 * projection_error.squaredNorm();
 
-      if (counter % 10000 == 0 && !printed) {
+      if (counter % 1 == 0 && !printed) {
         printed = true;
-        std::cout << "loss: " << loss << std::endl;
+        std::cout << "new_loss: " << new_loss << "\told_loss: " << loss
+                  << "\tstep size: " << step_size << "\tstep: " << step
+                  << std::endl;
+      }
+
+      if (new_loss > loss) {
+        translation_and_rotation -= step;
+        step_size /= 2.0;
+        // std::cout << "skipping, decreased step_size: " << step_size
+        //           << std::endl;
+        break;
+      } else {
+        loss = new_loss;
       }
 
       const Eigen::Vector3d d_projection(
@@ -184,19 +198,22 @@ auto JointSolver::EstimatePosition(
         0, 0, 0, 0).finished();
       // clang-format on
 
-      translation_and_rotation.rx -=
-          step * (d_Rx_d_rx.transpose() * d_Rx).trace();
-      translation_and_rotation.ry -=
-          step * (d_Ry_d_ry.transpose() * d_Ry).trace();
-      translation_and_rotation.rz -=
-          step * (d_Rz_d_rz.transpose() * d_Rz).trace();
+      step.rx = -step_size * (d_Rx_d_rx.transpose() * d_Rx).trace();
+      step.ry = -step_size * (d_Ry_d_ry.transpose() * d_Ry).trace();
+      step.rz = -step_size * (d_Rz_d_rz.transpose() * d_Rz).trace();
 
-      translation_and_rotation.x -= step * d_translation(0, 3);
-      translation_and_rotation.y -= step * d_translation(1, 3);
-      translation_and_rotation.z -= step * d_translation(2, 3);
+      step.x = -step_size * translation_step_multiplier * d_translation(0, 3);
+      step.y = -step_size * translation_step_multiplier * d_translation(1, 3);
+      step.z = -step_size * translation_step_multiplier * d_translation(2, 3);
+
+      translation_and_rotation += step;
+      step_size *= 2.0;
     }
     counter++;
   }
+
+  std::cout << "Final step: " << step << std::endl;
+  std::cout << "Final loss: " << loss << std::endl;
 
   Eigen::Matrix4d field_to_robot =
       (decomposed_robot_to_field.translation * decomposed_robot_to_field.Rz *
