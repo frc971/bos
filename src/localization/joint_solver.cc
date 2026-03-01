@@ -7,12 +7,6 @@
 
 namespace localization {
 
-using data_point_t = struct DataPoint {
-  Eigen::Vector2d undistorted_point;
-  camera::Camera source;
-  Eigen::Vector4d field_to_tag_corner_homogenous;
-};
-
 constexpr auto sq(double num) -> double {
   return num * num;
 }
@@ -63,6 +57,22 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
   }
 }
 
+auto JointSolver::Forward(
+    const utils::TransformDecomposition& position_estimate,
+    Eigen::Vector4d& Rx_activation, Eigen::Vector4d& Ry_activation,
+    Eigen::Vector4d& Rz_activation, Eigen::Vector3d& projection,
+    const data_point_t& data_point) -> void {
+  const Eigen::Matrix<double, 3, 4>& image_to_robot =
+      camera_matrices_.at(data_point.source).image_to_robot;
+
+  Rx_activation =
+      position_estimate.Rx * data_point.field_to_tag_corner_homogenous;
+  Ry_activation = position_estimate.Ry * Rx_activation;
+  Rz_activation = position_estimate.Rz * Ry_activation;
+
+  projection = image_to_robot * position_estimate.translation * Rz_activation;
+}
+
 auto JointSolver::EstimatePosition(
     const std::map<camera::Camera, std::vector<tag_detection_t>>&
         all_cam_detections,
@@ -94,88 +104,62 @@ auto JointSolver::EstimatePosition(
     }
   }
 
-  double loss;
   int counter = 0;
 
   double step_size = 2e-8;
-  constexpr double translation_step_multiplier = 10000.0;
+  constexpr double translation_step_multiplier = 100.0;
 
   utils::TransformValues translation_and_rotation =
       utils::ExtractTranslationAndRotation(robot_to_field_);
   utils::TransformValues step;
-  utils::TransformDecomposition decomposed_robot_to_field;
+  utils::TransformDecomposition decomposed_robot_to_field =
+      utils::SeparateTranslationAndRotationMatrices(translation_and_rotation);
+  std::vector<Eigen::Vector4d> Rx_activations, Ry_activations, Rz_activations;
+  std::vector<Eigen::Vector3d> projection;
+  double loss = 0;
 
-  while (loss > kacceptable_reprojection_error && counter < 100) {
+  while (loss > kacceptable_reprojection_error && counter < 1000000) {
     bool printed = false;
-    for (const data_point_t& data_point : data_points) {
-      decomposed_robot_to_field = utils::SeparateTranslationAndRotationMatrices(
-          translation_and_rotation);
-      const Eigen::Matrix<double, 3, 4>& image_to_robot =
-          camera_matrices_.at(data_point.source).image_to_robot;
+    utils::TransformValues new_step{};
+    for (int i = 0; i < data_points.size(); i++) {
 
-      const Eigen::Vector4d Rx_activation =
-          decomposed_robot_to_field.Rx *
-          data_point.field_to_tag_corner_homogenous;
-      const Eigen::Vector4d Ry_activation =
-          decomposed_robot_to_field.Ry * Rx_activation;
-      const Eigen::Vector4d Rz_activation =
-          decomposed_robot_to_field.Rz * Ry_activation;
-
-      Eigen::Vector3d projection = image_to_robot *
-                                   decomposed_robot_to_field.translation *
-                                   Rz_activation;
-      const double lambda = projection(2);
-      projection /= lambda;
+      Forward(decomposed_robot_to_field, Rx_activations[i], Ry_activations[i],
+              Rz_activations[i], projection[i], data_points[i]);
+      const double lambda = projection[i](2);
+      projection[i] /= lambda;
 
       const Eigen::Vector2d projection_error(
-          projection.x() - data_point.undistorted_point.x(),
-          projection.y() - data_point.undistorted_point.y());
-      double new_loss = 0.5 * projection_error.squaredNorm();
-
-      if (counter % 1 == 0 && !printed) {
-        printed = true;
-        std::cout << "new_loss: " << new_loss << "\told_loss: " << loss
-                  << "\tstep size: " << step_size << "\tstep: " << step
-                  << std::endl;
-      }
-
-      if (new_loss > loss) {
-        translation_and_rotation -= step;
-        step_size /= 2.0;
-        // std::cout << "skipping, decreased step_size: " << step_size
-        //           << std::endl;
-        break;
-      } else {
-        loss = new_loss;
-      }
-
-      const Eigen::Vector3d d_projection(
+          projection[i].x() - data_points[i].undistorted_point.x(),
+          projection[i].y() - data_points[i].undistorted_point.y());
+      const Eigen::Vector3d d_projection = Eigen::Vector3d(
           projection_error.x() / lambda, projection_error.y() / lambda,
-          -(projection_error.x() * projection.x() +
-            projection_error.y() * projection.y()) /
+          -(projection_error.x() * projection[i].x() +
+            projection_error.y() * projection[i].y()) /
               lambda);
 
+      const Eigen::Matrix<double, 3, 4>& image_to_robot =
+          camera_matrices_.at(data_points[i].source).image_to_robot;
       Eigen::Vector4d accumulated_gradient =
           image_to_robot.transpose() * d_projection;
 
       const Eigen::Matrix4d d_translation =
-          accumulated_gradient * Rz_activation.transpose();
+          accumulated_gradient * Rz_activations[i].transpose();
 
       accumulated_gradient = decomposed_robot_to_field.translation.transpose() *
                              accumulated_gradient;
       const Eigen::Matrix4d d_Rz =
-          accumulated_gradient * Ry_activation.transpose();
+          accumulated_gradient * Ry_activations[i].transpose();
 
       accumulated_gradient =
           decomposed_robot_to_field.Rz.transpose() * accumulated_gradient;
       const Eigen::Matrix4d d_Ry =
-          accumulated_gradient * Rx_activation.transpose();
+          accumulated_gradient * Rx_activations[i].transpose();
 
       accumulated_gradient =
           decomposed_robot_to_field.Ry.transpose() * accumulated_gradient;
       const Eigen::Matrix4d d_Rx =
           accumulated_gradient *
-          data_point.field_to_tag_corner_homogenous.transpose();
+          data_points[i].field_to_tag_corner_homogenous.transpose();
 
       // clang-format off
       const Eigen::Matrix4d d_Rz_d_rz =
@@ -198,16 +182,41 @@ auto JointSolver::EstimatePosition(
         0, 0, 0, 0).finished();
       // clang-format on
 
-      step.rx = -step_size * (d_Rx_d_rx.transpose() * d_Rx).trace();
-      step.ry = -step_size * (d_Ry_d_ry.transpose() * d_Ry).trace();
-      step.rz = -step_size * (d_Rz_d_rz.transpose() * d_Rz).trace();
+      new_step.rx += -step_size * (d_Rx_d_rx.transpose() * d_Rx).trace();
+      new_step.ry += -step_size * (d_Ry_d_ry.transpose() * d_Ry).trace();
+      new_step.rz += -step_size * (d_Rz_d_rz.transpose() * d_Rz).trace();
 
-      step.x = -step_size * translation_step_multiplier * d_translation(0, 3);
-      step.y = -step_size * translation_step_multiplier * d_translation(1, 3);
-      step.z = -step_size * translation_step_multiplier * d_translation(2, 3);
-
-      translation_and_rotation += step;
+      new_step.x +=
+          -step_size * translation_step_multiplier * d_translation(0, 3);
+      new_step.y +=
+          -step_size * translation_step_multiplier * d_translation(1, 3);
+      new_step.z +=
+          -step_size * translation_step_multiplier * d_translation(2, 3);
+    }
+    translation_and_rotation += new_step;
+    const utils::TransformDecomposition new_estimate =
+        utils::SeparateTranslationAndRotationMatrices(translation_and_rotation);
+    double new_loss = 0;
+    for (int i = 0; i < data_points.size(); i++) {
+      Forward(new_estimate, Rx_activations[i], Ry_activations[i],
+              Rz_activations[i], projection[i], data_points[i]);
+      const Eigen::Vector2d projection_error(
+          projection[i].x() - data_points[i].undistorted_point.x(),
+          projection[i].y() - data_points[i].undistorted_point.y());
+      new_loss += 0.5 * projection_error.squaredNorm();
+    }
+    if (new_loss > loss) {
+      translation_and_rotation -= new_step;
+      step_size /= 2.0;
+    } else {
+      loss = new_loss;
       step_size *= 2.0;
+    }
+    if (counter % 10000 == 0 && !printed) {
+      printed = true;
+      std::cout << "new_loss: " << new_loss << "\told_loss: " << loss
+                << "\tstep size: " << step_size << "\tstep: " << new_step
+                << std::endl;
     }
     counter++;
   }
