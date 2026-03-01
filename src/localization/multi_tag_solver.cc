@@ -63,7 +63,7 @@ MultiTagSolver::MultiTagSolver(camera::Camera camera_config,
                      layout, tag_corners) {}
 
 auto MultiTagSolver::EstimatePosition(
-    const std::vector<tag_detection_t>& detections)
+    const std::vector<tag_detection_t>& detections, const bool reject_far_tags)
     -> std::vector<position_estimate_t> {
   std::vector<cv::Point3d> object_points;
   std::vector<cv::Point2d> image_points;
@@ -74,19 +74,21 @@ auto MultiTagSolver::EstimatePosition(
       LOG(WARNING) << "Invalid tag id: " << detection.tag_id;
       continue;
     }
-    const auto& c = detection.corners;
-    const double area = 0.5 * std::abs((c[0].x - c[2].x) * (c[1].y - c[3].y) -
-                                       (c[1].x - c[3].x) * (c[0].y - c[2].y));
-    if (area < kmin_tag_area_pixels) {
-      rejected_tag_ids.push_back(detection.tag_id);
-      continue;
+    if (reject_far_tags) {
+      const auto& c = detection.corners;
+      const double area = 0.5 * std::abs((c[0].x - c[2].x) * (c[1].y - c[3].y) -
+                                         (c[1].x - c[3].x) * (c[0].y - c[2].y));
+      if (area < kmin_tag_area_pixels) {
+        rejected_tag_ids.push_back(detection.tag_id);
+        continue;
+      }
     }
     cv::Mat rvec_tag = cv::Mat::zeros(3, 1, CV_64FC1);
     cv::Mat tvec_tag = cv::Mat::zeros(3, 1, CV_64FC1);
     cv::solvePnP(kapriltag_corners, detection.corners, camera_matrix_,
                  distortion_coefficients_, rvec_tag, tvec_tag, false,
                  cv::SOLVEPNP_IPPE_SQUARE);
-    if (cv::norm(tvec_tag) > 5.0) {
+    if (reject_far_tags && cv::norm(tvec_tag) > 5.0) {
       rejected_tag_ids.push_back(detection.tag_id);
       continue;
     }
