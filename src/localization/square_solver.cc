@@ -82,10 +82,8 @@ auto SquareSolver::EstimatePosition(
                  distortion_coefficients_, rvec, tvec, false,
                  cv::SOLVEPNP_IPPE_SQUARE);
 
-    if (reject_far_tags) {
-      if (cv::norm(tvec) > 5.0) {
-        continue;
-      }
+    if (reject_far_tags && cv::norm(tvec) > 5.0) {
+      continue;
     }
 
     const double translation_x = tvec.ptr<double>()[2];
