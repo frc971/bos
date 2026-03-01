@@ -62,7 +62,7 @@ auto JointSolver::Forward(const utils::TransformDecomposition& current_estimate,
                           const std::vector<data_point_t>& data_points)
     -> double {
   double net_loss = 0;
-  for (int i = 0; i < data_points.size(); i++) {
+  for (size_t i = 0; i < data_points.size(); i++) {
     net_loss += Forward(current_estimate, Rx_activations[i], Ry_activations[i],
                         Rz_activations[i], projections[i], projection_errors[i],
                         data_points[i]);
@@ -169,7 +169,7 @@ auto JointSolver::ComputeNetStep(
     const std::vector<Eigen::Vector2d>& projection_errors,
     const std::vector<data_point_t>& data_points) -> utils::TransformValues {
   utils::TransformValues net_step{};
-  for (int i = 0; i < data_points.size(); i++) {
+  for (size_t i = 0; i < data_points.size(); i++) {
     net_step +=
         ComputeStep(translation_and_rotation, position_decomposition,
                     Rx_activations[i], Ry_activations[i], Rz_activations[i],
