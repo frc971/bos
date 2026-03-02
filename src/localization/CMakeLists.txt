@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
 
+find_package(VPI REQUIRED)
 add_library(localization position_sender.cc  gpu_apriltag_detector.cc opencv_apriltag_detector.cc run_localization.cc nvidia_apriltag_detector.cc square_solver.cc joint_solver.cc multi_tag_solver.cc position_receiver.cc)
-target_link_libraries(localization PUBLIC ${OpenCV_LIBS} 971apriltag ntcore apriltag nlohmann_json::nlohmann_json wpilibc utils camera)
+target_link_libraries(localization PUBLIC ${OpenCV_LIBS} 971apriltag ntcore apriltag nlohmann_json::nlohmann_json wpilibc utils camera vpi)

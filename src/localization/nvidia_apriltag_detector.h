@@ -13,10 +13,12 @@ namespace localization {
 // VPA and CPU are both slower than GPU we learned through benchmarks, but they can be used to offload some computation from the GPU
 class NvidiaAprilTagDetector : IAprilTagDetector {
  public:
-  NvidiaAprilTagDetector(int image_width, int image_height,
-                         nlohmann::json intrinsics,
-                         VPIAprilTagDecodeParams params, VPIBackend backend,
-                         int max_detections = 16, bool verbose = false);
+  NvidiaAprilTagDetector(
+      int image_width, int image_height, nlohmann::json intrinsics,
+      VPIAprilTagDecodeParams params = {nullptr, 0, 1,
+                                        VPIAprilTagFamily::VPI_APRILTAG_36H11},
+      VPIBackend backend = VPIBackend::VPI_BACKEND_PVA, int max_detections = 16,
+      bool verbose = false);
   ~NvidiaAprilTagDetector() override;
   auto GetTagDetections(camera::timestamped_frame_t& frame)
       -> std::vector<tag_detection_t> override;

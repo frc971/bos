@@ -46,13 +46,13 @@ NvidiaAprilTagDetector::NvidiaAprilTagDetector(int image_width,
   intrinsics_[1][1] = intrinsics["fy"];
   intrinsics_[1][2] = intrinsics["cy"];
 
-  (vpiCreateAprilTagDetector(backend_, image_width, image_height, &params_,
-                             &payload_));
+  CHECK(vpiCreateAprilTagDetector(backend_, image_width, image_height, &params_,
+                                  &payload_));
 
-  (vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_APRILTAG_DETECTION, 0,
-                  &detections_));
-  (vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_POSE, 0, &poses_));
-  (vpiStreamCreate(0, &stream_));
+  CHECK(vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_APRILTAG_DETECTION, 0,
+                       &detections_));
+  CHECK(vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_POSE, 0, &poses_));
+  CHECK(vpiStreamCreate(0, &stream_));
 }
 
 auto NvidiaAprilTagDetector::GetTagDetections(
@@ -90,13 +90,15 @@ auto NvidiaAprilTagDetector::GetTagDetections(
     tag_detection_t detection;
     detection.tag_id = detections[i].id;
     detection.timestamp = timestamped_frame.timestamp;
-    detection.confidence = detections[i].decisionMargin;
+    detection.confidence = 1;
 
     // Extract corners from VPI detection
     for (int j = 0; j < 4; ++j) {
       detection.corners[j] =
           cv::Point2f(detections[i].corners[j].x, detections[i].corners[j].y);
+      LOG(INFO) << detection.corners[j];
     }
+    LOG(INFO) << "-----------------------------------\n";
 
     tag_detections.push_back(detection);
   }
