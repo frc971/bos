@@ -1,6 +1,3 @@
-Here is your content with **only the math reformatted**, replacing `*` with the matrix multiplication dot `·`. Wording is unchanged.
-
-```markdown
 # Localization Module
 
 We use AprilTags for localization.
