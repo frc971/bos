@@ -23,11 +23,13 @@ auto main() -> int {
 
   camera::CameraSource left_camera = camera::CameraSource(
       "Left", std::make_unique<camera::CVCamera>(
-                  camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA]));
+                  camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA],
+                  fmt::format("{}/left", log_path)));
 
   camera::CameraSource right_camera = camera::CameraSource(
       "Right", std::make_unique<camera::CVCamera>(
-                   camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]));
+                   camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA],
+                   fmt::format("{}/right", log_path)));
 
   LOG(INFO) << "Started cameras";
   std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -47,7 +49,7 @@ auto main() -> int {
 
   std::thread left_thread(
       localization::RunLocalization, std::ref(left_camera),
-      std::make_unique<localization::GPUAprilTagDetector>(
+      std::make_unique<localization::OpenCVAprilTagDetector>(
           left_camera.GetFrame().cols, left_camera.GetFrame().rows,
           utils::ReadIntrinsics(camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA]
                                     .intrinsics_path)),
@@ -58,7 +60,7 @@ auto main() -> int {
 
   std::thread right_thread(
       localization::RunLocalization, std::ref(right_camera),
-      std::make_unique<localization::GPUAprilTagDetector>(
+      std::make_unique<localization::OpenCVAprilTagDetector>(
           right_camera.GetFrame().cols, right_camera.GetFrame().rows,
           utils::ReadIntrinsics(
               camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]
