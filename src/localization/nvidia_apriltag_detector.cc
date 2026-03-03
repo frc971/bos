@@ -3,7 +3,6 @@
 #include <vpi/Array.h>
 #include <vpi/Stream.h>
 #include <Eigen/Geometry>
-#include <opencv2/calib3d.hpp>
 #include <vpi/OpenCVInterop.hpp>
 #include "src/localization/position.h"
 #include "src/utils/log.h"
@@ -99,10 +98,7 @@ auto NvidiaAprilTagDetector::GetTagDetections(
           cv::Point2f(detections[i].corners[j].x, detections[i].corners[j].y);
     }
 
-    std::array<cv::Point2f, 4> undistorted_corners;
-    cv::undistortImagePoints(detections[i].corners, undistorted_corners, )
-
-        tag_detections.push_back(detection);
+    tag_detections.push_back(detection);
   }
 
   vpiArrayUnlock(detections_);

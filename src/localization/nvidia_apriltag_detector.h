@@ -22,8 +22,6 @@ class NvidiaAprilTagDetector : IAprilTagDetector {
       -> std::vector<tag_detection_t> override;
 
  private:
-  cv::Mat camera_matrix_;
-  cv::Mat distortion_coefficients_;
   VPIAprilTagDecodeParams params_;
   VPIBackend backend_;
   int max_detections_;
