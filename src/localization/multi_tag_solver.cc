@@ -113,9 +113,9 @@ auto MultiTagSolver::EstimatePosition(
   cv::Mat feild_to_camera = utils::MakeTransform(rvec, tvec).inv();
   cv::Mat feild_to_robot = feild_to_camera * camera_to_robot_;
 
-  double variance = std::pow(avg_distance, -static_cast<int>(tag_ids.size())) *
-                        kvariance_scalar_ +
-                    kvariance_min_;
+  double variance =
+      avg_distance / std::pow(2, tag_ids.size() - 1) * kvariance_scalar_ +
+      kvariance_min_;
 
   return {position_estimate_t{
       .tag_ids = std::move(tag_ids),
