@@ -29,6 +29,7 @@ class MultiTagSolver : public IPositionSolver {
   cv::Mat distortion_coefficients_;
   cv::Mat camera_to_robot_;
   std::array<std::optional<std::array<cv::Point3d, 4>>, kmax_tags> tag_corners_;
-  static constexpr double kconfidence_scalar_ = 1.0;
+  static constexpr double kvariance_scalar_ = 5.0;
+  static constexpr double kvariance_min_ = 1.0;
 };
 }  // namespace localization

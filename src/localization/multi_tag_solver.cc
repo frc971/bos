@@ -113,12 +113,16 @@ auto MultiTagSolver::EstimatePosition(
   cv::Mat feild_to_camera = utils::MakeTransform(rvec, tvec).inv();
   cv::Mat feild_to_robot = feild_to_camera * camera_to_robot_;
 
+  double variance = std::pow(avg_distance, -static_cast<int>(tag_ids.size())) *
+                        kvariance_scalar_ +
+                    kvariance_min_;
+
   return {position_estimate_t{
       .tag_ids = std::move(tag_ids),
       .rejected_tag_ids = std::move(rejected_tag_ids),
       .pose =
           utils::ConvertOpencvTransformationMatrixToWpilibPose(feild_to_robot),
-      .variance = std::pow(avg_distance, -tag_ids.size()) * kconfidence_scalar_,
+      .variance = variance,
       .timestamp = detections[0].timestamp}};
 }
 
