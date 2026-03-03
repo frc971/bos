@@ -118,7 +118,7 @@ auto MultiTagSolver::EstimatePosition(
       .rejected_tag_ids = std::move(rejected_tag_ids),
       .pose =
           utils::ConvertOpencvTransformationMatrixToWpilibPose(feild_to_robot),
-      .variance = std::pow(avg_distance, -tag_ids.size()),
+      .variance = std::pow(avg_distance, -tag_ids.size()) * kconfidence_scalar_,
       .timestamp = detections[0].timestamp}};
 }
 
