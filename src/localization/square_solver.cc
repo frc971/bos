@@ -107,7 +107,8 @@ auto SquareSolver::EstimatePosition(
         .tag_ids = {detection.tag_id},
         .rejected_tag_ids = {},  // TODO
         .pose = robot_pose,
-        .variance = std::hypot(translation_x, translation_y),
+        .variance = Variance(1, std::hypot(translation_x, translation_y),
+                             kvariance_min_, kvariance_scalar_),
         .timestamp = detection.timestamp,
         .num_tags = 1,
     });
