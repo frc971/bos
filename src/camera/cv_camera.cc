@@ -17,7 +17,9 @@ auto FileSystemAlmostFull() {
 }
 
 CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
-    : cap_(cv::VideoCapture(c.pipeline)), log_path_(std::move(log_path)) {
+    : cap_(cv::VideoCapture(c.pipeline)),
+      pipeline_(c.pipeline),
+      log_path_(std::move(log_path)) {
   if (FileSystemAlmostFull()) {
     log_path_ = std::nullopt;
     LOG(WARNING) << "Filesystem almost full! Not logging any frames";
@@ -75,8 +77,9 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
 
 auto CVCamera::Restart() -> void {
   cap_.release();
-  cap_ = cv::VideoCapture(pipeline_);
   std::this_thread::sleep_for(std::chrono::seconds(3));
+  LOG(INFO) << "Pipeline: " << pipeline_;
+  cap_ = cv::VideoCapture(pipeline_);
 }
 
 }  // namespace camera
