@@ -109,6 +109,7 @@ auto SquareSolver::EstimatePosition(
         .pose = robot_pose,
         .variance = std::hypot(translation_x, translation_y),
         .timestamp = detection.timestamp,
+        .num_tags = 1,
     });
   }
 
