@@ -89,13 +89,10 @@ auto NvidiaAprilTagDetector::GetTagDetections(
     detection.timestamp = timestamped_frame.timestamp;
     detection.confidence = 1;
 
-    // Extract corners from VPI detection
     for (int j = 0; j < 4; ++j) {
       detection.corners[j] =
           cv::Point2f(detections[i].corners[j].x, detections[i].corners[j].y);
-      // LOG(INFO) << detection.corners[j];
     }
-    // LOG(INFO) << "-----------------------------------\n";
 
     tag_detections.push_back(detection);
   }
