@@ -18,6 +18,7 @@ using data_point_t = struct DataPoint {
 
 struct CameraMatrices {
   Eigen::Matrix<double, 3, 4> image_to_robot;
+  frc::Transform3d camera_to_robot;
   cv::Mat distortion_coefficients;
   cv::Mat camera_matrix;
 };
@@ -69,5 +70,6 @@ class JointSolver {
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;
   static const Eigen::Matrix4d rotate_yaw_cv_;
+  const frc::AprilTagFieldLayout layout_;
 };
 }  // namespace localization

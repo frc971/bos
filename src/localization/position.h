@@ -31,10 +31,11 @@ using position_estimate_t = struct PositionEstimate {
     fmt::print(os,
                "Transform3d: "
                "translation (x={:.3f} m, y={:.3f} m, z={:.3f} m), "
-               "rotation (roll={:.2f} deg, pitch={:.2f} deg, yaw={:.2f} deg)\n",
+               "rotation (roll={:.2f} deg, pitch={:.2f} deg, yaw={:.2f} deg), "
+               "variance: {:.3f}\n",
                tr.X().value(), tr.Y().value(), tr.Z().value(),
                units::degree_t{r.X()}.value(), units::degree_t{r.Y()}.value(),
-               units::degree_t{r.Z()}.value());
+               units::degree_t{r.Z()}.value(), t.variance);
     return os;
   }
 

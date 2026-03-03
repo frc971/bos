@@ -82,6 +82,7 @@ auto SquareSolver::EstimatePosition(
                  distortion_coefficients_, rvec, tvec, false,
                  cv::SOLVEPNP_IPPE_SQUARE);
 
+    std::cout << "DISTANCE: " << cv::norm(tvec) << std::endl;
     if (reject_far_tags && cv::norm(tvec) > 5.0) {
       continue;
     }

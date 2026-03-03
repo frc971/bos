@@ -18,7 +18,7 @@ const Eigen::Matrix4d JointSolver::rotate_yaw_cv_ = (Eigen::Matrix4d() <<
 
 JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
                          const AprilTagFieldLayout& layout)
-    : robot_to_field_(Eigen::Matrix4d::Identity()) {
+    : robot_to_field_(Eigen::Matrix4d::Identity()), layout_(layout) {
   for (const frc::AprilTag& tag : layout.GetTags()) {
     Eigen::Matrix4d field_to_tag = tag.pose.ToMatrix();
     utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);
@@ -37,16 +37,20 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
     const Eigen::Matrix3d camera_matrix =
         utils::CameraMatrixFromJson<Eigen::Matrix3d>(intrinsics_json);
     const Eigen::Matrix<double, 3, 4> image_to_camera = camera_matrix * pi;
-    const Eigen::Matrix4d camera_to_robot =
+    Eigen::Matrix4d camera_to_robot =
         utils::ExtrinsicsJsonToCameraToRobot(
             utils::ReadExtrinsics(
                 camera::camera_constants[camera_config].extrinsics_path))
             .ToMatrix();
+    const frc::Transform3d camera_to_robot_transform =
+        frc::Transform3d(camera_to_robot);
+    utils::ChangeBasis(camera_to_robot, utils::WPI_TO_CV);
     const Eigen::Matrix<double, 3, 4> image_to_robot =
         image_to_camera * camera_to_robot;
     camera_matrices_.insert(
         {camera_config,
          {.image_to_robot = image_to_robot,
+          .camera_to_robot = camera_to_robot_transform,
           .distortion_coefficients =
               utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics_json),
           .camera_matrix = utils::EigenToCvMat(camera_matrix)}});
@@ -274,24 +278,34 @@ auto JointSolver::EstimatePosition(
   utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
   utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
                                    "Field to robot wpi");
+  field_to_robot(3, 0) = 0;
+  field_to_robot(3, 1) = 0;
+  field_to_robot(3, 2) = 0;
+  field_to_robot(3, 3) = 1;
   std::cout << "Field to robot:\n" << field_to_robot << std::endl;
-  // Graham-Schmidt normalization because wpilib is very picky and floating-point precision sometimes makes the matrix not orthogonal
-  // https://www.khanacademy.org/math/linear-algebra/alternate-bases/orthonormal-basis/v/linear-algebra-the-gram-schmidt-process
-  Eigen::Matrix3d R = field_to_robot.block<3, 3>(0, 0);
-  Eigen::Vector3d x = R.col(0).normalized();
-  Eigen::Vector3d y = (R.col(1) - x * x.dot(R.col(1))).normalized();
-  Eigen::Vector3d z = x.cross(y);
+  const frc::Pose3d robot_pose = frc::Pose3d(field_to_robot);
 
-  Eigen::Matrix3d R_normalized;
-  R_normalized.col(0) = x;
-  R_normalized.col(1) = y;
-  R_normalized.col(2) = z;
+  double avg_distance = 0.0;
+  size_t num_detections = 0;
+  for (const auto& pair : all_cam_detections) {
+    num_detections += pair.second.size();
+    const CameraMatrices& camera_mats = camera_matrices_.at(pair.first);
+    const frc::Pose3d field_relative_camera_pose =
+        robot_pose.TransformBy(camera_mats.camera_to_robot);
+    for (const tag_detection_t& detection : pair.second) {
+      const frc::Pose3d tag_pose = layout_.GetTagPose(detection.tag_id).value();
+      utils::PrintPose3d(tag_pose);
+      utils::PrintPose3d(field_relative_camera_pose);
+      const double dist =
+          tag_pose.Translation()
+              .Distance(field_relative_camera_pose.Translation())
+              .value();
+      avg_distance += dist;
+    }
+  }
+  avg_distance /= num_detections;
 
-  return {
-      .pose = frc::Pose3d(frc::Translation3d(field_to_robot.block<3, 1>(0, 3)),
-                          frc::Rotation3d(R_normalized)),
-      .variance = 0,
-      .timestamp = 0};
+  return {.pose = robot_pose, .variance = avg_distance, .timestamp = 0};
 }
 
 }  // namespace localization
