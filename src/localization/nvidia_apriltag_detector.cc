@@ -2,6 +2,7 @@
 #include <fmt/chrono.h>
 #include <vpi/Array.h>
 #include <vpi/Stream.h>
+#include <vpi/algo/ConvertImageFormat.h>
 #include <Eigen/Geometry>
 #include <vpi/OpenCVInterop.hpp>
 #include "src/localization/position.h"
@@ -40,19 +41,14 @@ NvidiaAprilTagDetector::NvidiaAprilTagDetector(int image_width,
       backend_(backend),
       max_detections_(max_detections),
       input_(nullptr) {
+  backend_ = VPI_BACKEND_CPU;
 
-  intrinsics_[0][0] = intrinsics["fx"];
-  intrinsics_[0][2] = intrinsics["cx"];
-  intrinsics_[1][1] = intrinsics["fy"];
-  intrinsics_[1][2] = intrinsics["cy"];
+  CHECK(!vpiCreateAprilTagDetector(backend_, image_width, image_height,
+                                   &params_, &payload_));
 
-  CHECK(vpiCreateAprilTagDetector(backend_, image_width, image_height, &params_,
-                                  &payload_));
-
-  CHECK(vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_APRILTAG_DETECTION, 0,
-                       &detections_));
-  CHECK(vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_POSE, 0, &poses_));
-  CHECK(vpiStreamCreate(0, &stream_));
+  CHECK(!vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_APRILTAG_DETECTION,
+                        VPI_BACKEND_CPU, &detections_));
+  CHECK(!vpiStreamCreate(0, &stream_));
 }
 
 auto NvidiaAprilTagDetector::GetTagDetections(
@@ -67,24 +63,25 @@ auto NvidiaAprilTagDetector::GetTagDetections(
   }
 
   if (input_ == nullptr) {
-    (vpiImageCreateWrapperOpenCVMat(gray, 0, &input_));
+    CHECK(!vpiImageCreateWrapperOpenCVMat(gray, VPI_BACKEND_CPU, &input_));
   } else {
-    (vpiImageSetWrappedOpenCVMat(input_, gray));
+    CHECK(!vpiImageSetWrappedOpenCVMat(input_, gray));
   }
 
-  (vpiSubmitAprilTagDetector(stream_, backend_, payload_, max_detections_,
-                             input_, detections_));
+  CHECK(!vpiSubmitAprilTagDetector(stream_, backend_, payload_, max_detections_,
+                                   input_, detections_));
 
-  vpiStreamSync(stream_);
+  CHECK(!vpiStreamSync(stream_));
 
   VPIArrayData detections_data{};
-  vpiArrayLockData(detections_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
-                   &detections_data);
+  CHECK(!vpiArrayLockData(detections_, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS,
+                          &detections_data));
 
   std::vector<tag_detection_t> tag_detections;
   auto* detections =
       static_cast<VPIAprilTagDetection*>(detections_data.buffer.aos.data);
   int num_detections = *detections_data.buffer.aos.sizePointer;
+  LOG(INFO) << num_detections;
 
   for (int i = 0; i < num_detections; ++i) {
     tag_detection_t detection;
@@ -96,21 +93,20 @@ auto NvidiaAprilTagDetector::GetTagDetections(
     for (int j = 0; j < 4; ++j) {
       detection.corners[j] =
           cv::Point2f(detections[i].corners[j].x, detections[i].corners[j].y);
-      LOG(INFO) << detection.corners[j];
+      // LOG(INFO) << detection.corners[j];
     }
-    LOG(INFO) << "-----------------------------------\n";
+    // LOG(INFO) << "-----------------------------------\n";
 
     tag_detections.push_back(detection);
   }
 
-  vpiArrayUnlock(detections_);
+  CHECK(!vpiArrayUnlock(detections_));
   return tag_detections;
 }
 
 NvidiaAprilTagDetector::~NvidiaAprilTagDetector() {
   vpiStreamDestroy(stream_);
   vpiArrayDestroy(detections_);
-  vpiArrayDestroy(poses_);
   vpiPayloadDestroy(payload_);
 }
 }  // namespace localization

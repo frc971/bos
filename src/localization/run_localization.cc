@@ -23,6 +23,7 @@ void RunLocalization(camera::CameraSource& source,
     streamer.WriteFrame(timestamped_frame.frame);
     std::vector<localization::tag_detection_t> tag_detections =
         detector->GetTagDetections(timestamped_frame);
+    LOG(INFO) << tag_detections.size();
     std::vector<position_estimate_t> position_estimates =
         solver->EstimatePosition(tag_detections, false);
     position_sender.Send(position_estimates, timer.Stop());
