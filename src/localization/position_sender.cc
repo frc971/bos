@@ -26,6 +26,9 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
   nt::DoubleTopic latency_topic = table->GetDoubleTopic("Latency");
   latency_publisher_ = latency_topic.Publish();
 
+  nt::IntegerTopic num_tags_topic = table->GetIntegerTopic("NumTags");
+  num_tags_publisher_ = num_tags_topic.Publish();
+
   nt::DoubleArrayTopic tag_estimation_topic =
       table->GetDoubleArrayTopic("TagEstimation");
   tag_estimation_publisher_ = tag_estimation_topic.Publish(
@@ -76,6 +79,7 @@ void PositionSender::Send(
     rejected_tag_ids_publisher_.Set(rejected_tags);
 
     latency_publisher_.Set(latency);
+    num_tags_publisher_.Set(detection.num_tags);
 
     if (verbose_) {
       LOG(INFO) << detection;

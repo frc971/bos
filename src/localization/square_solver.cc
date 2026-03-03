@@ -110,6 +110,7 @@ auto SquareSolver::EstimatePosition(
         .variance = Variance(1, std::hypot(translation_x, translation_y),
                              kvariance_min_, kvariance_scalar_),
         .timestamp = detection.timestamp,
+        .num_tags = 1,
     });
   }
 
