@@ -69,6 +69,7 @@ auto MultiTagSolver::EstimatePosition(
   std::vector<cv::Point2d> image_points;
   std::vector<int> tag_ids;
   std::vector<int> rejected_tag_ids;
+  double avg_distance = 0.0;
   for (const tag_detection_t& detection : detections) {
     if (!tag_corners_[detection.tag_id].has_value()) {
       LOG(WARNING) << "Invalid tag id: " << detection.tag_id;
@@ -92,6 +93,7 @@ auto MultiTagSolver::EstimatePosition(
       rejected_tag_ids.push_back(detection.tag_id);
       continue;
     }
+    avg_distance += cv::norm(tvec_tag);
     tag_ids.push_back(detection.tag_id);
     image_points.insert(image_points.end(), detection.corners.begin(),
                         detection.corners.end());
@@ -102,6 +104,7 @@ auto MultiTagSolver::EstimatePosition(
   if (image_points.size() == 0 || object_points.size() == 0) {
     return {};
   }
+  avg_distance /= tag_ids.size();
   cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
   cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);
   cv::solvePnP(object_points, image_points, camera_matrix_,
@@ -115,7 +118,7 @@ auto MultiTagSolver::EstimatePosition(
       .rejected_tag_ids = std::move(rejected_tag_ids),
       .pose =
           utils::ConvertOpencvTransformationMatrixToWpilibPose(feild_to_robot),
-      .variance = 1,
+      .variance = std::pow(avg_distance, -tag_ids.size()),
       .timestamp = detections[0].timestamp}};
 }
 
