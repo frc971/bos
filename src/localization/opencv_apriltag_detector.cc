@@ -86,15 +86,15 @@ auto OpenCVAprilTagDetector::GetTagDetections(
     for (int j = 0; j < 4; ++j) {
       corners_array[j] = cv::Point2d(corners[i][j].x, corners[i][j].y);
     }
+    std::swap(corners_array[0], corners_array[1]);
+    std::swap(corners_array[2], corners_array[3]);
     std::array<cv::Point2d, 4> undistorted_corners;
     cv::undistortImagePoints(corners_array, undistorted_corners, camera_matrix_,
                              distortion_coefficients_);
-    std::swap(corners_array[0], corners_array[1]);
-    std::swap(corners_array[2], corners_array[3]);
 
     tag_detection_t detection{
         .tag_id = ids[i],
-        .corners = corners_array,
+        .corners = undistorted_corners,
         .timestamp = timestamped_frame.timestamp,
         .confidence = 1.0,
     };
