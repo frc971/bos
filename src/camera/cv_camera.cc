@@ -69,6 +69,10 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
   if (timestamped_frame.frame.empty()) {
     timestamped_frame.frame = backup_image_;
   }
+  if (timestamped_frame.frame.channels() == 4) {
+    cv::cvtColor(timestamped_frame.frame, timestamped_frame.frame,
+                 cv::COLOR_BGRA2BGR);
+  }
   if (log_path_.has_value()) {
     WriteFrame(log_path_.value(), timestamped_frame);
   }
