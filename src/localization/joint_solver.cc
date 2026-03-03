@@ -305,7 +305,10 @@ auto JointSolver::EstimatePosition(
   }
   avg_distance /= num_detections;
 
-  return {.pose = robot_pose, .variance = avg_distance, .timestamp = 0};
+  return {.pose = robot_pose,
+          .variance = Variance(num_detections, avg_distance, kvariance_scalar_,
+                               kvariance_scalar_),
+          .timestamp = 0};
 }
 
 }  // namespace localization

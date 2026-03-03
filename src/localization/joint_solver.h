@@ -71,5 +71,7 @@ class JointSolver {
       tag_corners_;
   static const Eigen::Matrix4d rotate_yaw_cv_;
   const frc::AprilTagFieldLayout layout_;
+  static constexpr double kvariance_scalar_ = 0.5;
+  static constexpr double kvariance_min_ = 1.0;
 };
 }  // namespace localization
