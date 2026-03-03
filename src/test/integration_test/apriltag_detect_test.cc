@@ -9,6 +9,7 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/select_camera.h"
 #include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/timer.h"
@@ -32,7 +33,7 @@ auto main(int argc, char* argv[]) -> int {
   camera::CscoreStreamer streamer("tag_estimator_test", 4971, 30, frame.rows,
                                   frame.cols);
 
-  localization::GPUAprilTagDetector detector(
+  localization::OpenCVAprilTagDetector detector(
       frame.cols, frame.rows,
       utils::ReadIntrinsics(camera::camera_constants[config].intrinsics_path));
 

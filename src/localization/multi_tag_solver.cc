@@ -63,12 +63,13 @@ MultiTagSolver::MultiTagSolver(camera::Camera camera_config,
                      layout, tag_corners) {}
 
 auto MultiTagSolver::EstimatePosition(
-    const std::vector<tag_detection_t>& detections, const bool reject_far_tags)
+    const std::vector<tag_detection_t>& detections, bool reject_far_tags)
     -> std::vector<position_estimate_t> {
   std::vector<cv::Point3d> object_points;
   std::vector<cv::Point2d> image_points;
   std::vector<int> tag_ids;
   std::vector<int> rejected_tag_ids;
+  double avg_distance = 0.0;
   for (const tag_detection_t& detection : detections) {
     if (!tag_corners_[detection.tag_id].has_value()) {
       LOG(WARNING) << "Invalid tag id: " << detection.tag_id;
@@ -92,6 +93,7 @@ auto MultiTagSolver::EstimatePosition(
       rejected_tag_ids.push_back(detection.tag_id);
       continue;
     }
+    avg_distance += cv::norm(tvec_tag);
     tag_ids.push_back(detection.tag_id);
     image_points.insert(image_points.end(), detection.corners.begin(),
                         detection.corners.end());
@@ -102,6 +104,7 @@ auto MultiTagSolver::EstimatePosition(
   if (image_points.size() == 0 || object_points.size() == 0) {
     return {};
   }
+  avg_distance /= tag_ids.size();
   cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
   cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);
   cv::solvePnP(object_points, image_points, camera_matrix_,
@@ -110,12 +113,16 @@ auto MultiTagSolver::EstimatePosition(
   cv::Mat feild_to_camera = utils::MakeTransform(rvec, tvec).inv();
   cv::Mat feild_to_robot = feild_to_camera * camera_to_robot_;
 
+  double variance =
+      avg_distance / std::pow(2, tag_ids.size() - 1) * kvariance_scalar_ +
+      kvariance_min_;
+
   return {position_estimate_t{
       .tag_ids = std::move(tag_ids),
       .rejected_tag_ids = std::move(rejected_tag_ids),
       .pose =
           utils::ConvertOpencvTransformationMatrixToWpilibPose(feild_to_robot),
-      .variance = 1,
+      .variance = variance,
       .timestamp = detections[0].timestamp}};
 }
 
