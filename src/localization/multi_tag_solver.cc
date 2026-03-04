@@ -113,17 +113,17 @@ auto MultiTagSolver::EstimatePosition(
   cv::Mat feild_to_camera = utils::MakeTransform(rvec, tvec).inv();
   cv::Mat feild_to_robot = feild_to_camera * camera_to_robot_;
 
-  double variance = std::pow(avg_distance, -static_cast<int>(tag_ids.size())) *
-                        kvariance_scalar_ +
-                    kvariance_min_;
-
+  int num_tags = tag_ids.size();
   return {position_estimate_t{
       .tag_ids = std::move(tag_ids),
       .rejected_tag_ids = std::move(rejected_tag_ids),
       .pose =
           utils::ConvertOpencvTransformationMatrixToWpilibPose(feild_to_robot),
-      .variance = variance,
-      .timestamp = detections[0].timestamp}};
+      .variance = Variance(tag_ids.size(), avg_distance, kvariance_min_,
+                           kvariance_scalar_),
+      .timestamp = detections[0].timestamp,
+      .num_tags = num_tags,
+      .avg_tag_dist = avg_distance}};
 }
 
 }  // namespace localization
