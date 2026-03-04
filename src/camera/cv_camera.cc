@@ -60,12 +60,17 @@ CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
 
 auto CVCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t timestamped_frame;
+  cv::Mat raw_image;
   if (!cap_.grab()) {
     Restart();
     LOG(WARNING) << "Restarting camera";
   }
   timestamped_frame.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
-  cap_.retrieve(timestamped_frame.frame);
+  cap_.retrieve(raw_image);
+  LOG(INFO) << cap_.get(cv::CAP_PROP_BACKEND) << "1800 = gstreamer";
+
+  raw_image.copyTo(timestamped_frame.frame);
+
   if (timestamped_frame.frame.empty()) {
     timestamped_frame.frame = backup_image_;
   }

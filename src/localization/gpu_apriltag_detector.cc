@@ -39,15 +39,20 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
 auto GPUAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame)
     -> std::vector<tag_detection_t> {
-  if (timestamped_frame.frame.channels() == 1) {
-    gpu_detector_->DetectGrayHost(
-        (unsigned char*)timestamped_frame.frame.ptr());
-  } else if (timestamped_frame.frame.channels() == 3) {
-    cv::Mat gray;
-    cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
-    gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
-  } else {
-    LOG(ERROR) << "Unknown frame type";
+  try {
+    if (timestamped_frame.frame.channels() == 1) {
+      gpu_detector_->DetectGrayHost(
+          (unsigned char*)timestamped_frame.frame.ptr());
+    } else if (timestamped_frame.frame.channels() == 3) {
+      cv::Mat gray;
+      cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
+      gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
+    } else {
+      LOG(ERROR) << "Unknown frame type";
+    }
+  } catch (const std::exception& e) {
+    LOG(WARNING) << "Caught exception: " << e.what();
+    return {};
   }
   const zarray_t* raw_detections = gpu_detector_->Detections();
   std::vector<tag_detection_t> tag_detections;
