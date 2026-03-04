@@ -52,9 +52,9 @@ void PositionSender::Send(
         detection.pose.Y().value(),
         detection.pose.Rotation().Z().value(),
         detection.variance,
-        static_cast<double>(detection.num_tags),
         detection.timestamp +
             instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
+        static_cast<double>(detection.num_tags),
         latency,
         detection.avg_tag_dist};
 
