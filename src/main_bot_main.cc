@@ -17,9 +17,9 @@ auto main() -> int {
   std::string log_path = frc::DataLogManager::GetLogDir();
 
   LOG(INFO) << "Starting cameras with right camera disabled";
-  camera::CameraSource front_camera = camera::CameraSource(
-      "Front", std::make_unique<camera::CVCamera>(
-                   camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA]));
+  // camera::CameraSource front_camera = camera::CameraSource(
+  //     "Front", std::make_unique<camera::CVCamera>(
+  //                  camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA]));
 
   camera::CameraSource left_camera = camera::CameraSource(
       "Left", std::make_unique<camera::CVCamera>(
@@ -35,17 +35,17 @@ auto main() -> int {
   std::this_thread::sleep_for(std::chrono::seconds(2));
   LOG(INFO) << "Starting estimators";
 
-  std::thread front_thread(
-      localization::RunLocalization, std::ref(front_camera),
-      std::make_unique<localization::GPUAprilTagDetector>(
-          front_camera.GetFrame().cols, front_camera.GetFrame().rows,
-          utils::ReadIntrinsics(
-              camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA]
-                  .intrinsics_path)),
-      std::make_unique<localization::MultiTagSolver>(
-          Camera::MAIN_ROBOT_FRONT_CAMERA),
-      camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA].extrinsics_path, 4971,
-      false);
+  // std::thread front_thread(
+  //     localization::RunLocalization, std::ref(front_camera),
+  //     std::make_unique<localization::GPUAprilTagDetector>(
+  //         front_camera.GetFrame().cols, front_camera.GetFrame().rows,
+  //         utils::ReadIntrinsics(
+  //             camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA]
+  //                 .intrinsics_path)),
+  //     std::make_unique<localization::MultiTagSolver>(
+  //         Camera::MAIN_ROBOT_FRONT_CAMERA),
+  //     camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA].extrinsics_path, 4971,
+  //     false);
 
   std::thread left_thread(
       localization::RunLocalization, std::ref(left_camera),
