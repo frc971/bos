@@ -28,7 +28,9 @@ const frc::AprilTagFieldLayout kapriltag_layout =
 inline auto Variance(const size_t num_tags_detected, const double distance,
                      const double min_variance, const double scalar)
     -> double {  // distance can be avg
-  return distance * scalar / std::pow(2, num_tags_detected - 1) + min_variance;
+  return distance * scalar /
+             std::pow(2, static_cast<double>(num_tags_detected) - 1.0) +
+         min_variance;
 }
 
 // Interface for a class when given a apriltag detections, uses the detections to get the position of the robot

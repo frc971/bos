@@ -47,15 +47,16 @@ void PositionSender::Send(
     double latency) {
   mutex_.lock();
   for (auto& detection : detections) {
-    double variance = detection.variance;
-    std::array<double, 7> tag_estimation{
+    std::array<double, 8> tag_estimation{
         detection.pose.X().value(),
         detection.pose.Y().value(),
         detection.pose.Rotation().Z().value(),
-        variance,
+        detection.variance,
+        static_cast<double>(detection.num_tags),
         detection.timestamp +
             instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
-        latency};
+        latency,
+        detection.avg_tag_dist};
 
     std::array<int, kmax_tags> tags{};
     for (int tag_id : detection.tag_ids) {

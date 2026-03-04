@@ -103,15 +103,16 @@ auto SquareSolver::EstimatePosition(
         ((field_to_tag * rotate_yaw_wpilib_) * tag_to_camera) *
         camera_to_robot_));
 
+    const double distance = std::hypot(translation_x, translation_y);
+
     position_estimates.push_back(position_estimate_t{
         .tag_ids = {detection.tag_id},
         .rejected_tag_ids = {},  // TODO
         .pose = robot_pose,
-        .variance = Variance(1, std::hypot(translation_x, translation_y),
-                             kvariance_min_, kvariance_scalar_),
+        .variance = Variance(1, distance, kvariance_min_, kvariance_scalar_),
         .timestamp = detection.timestamp,
         .num_tags = 1,
-    });
+        .avg_tag_dist = distance});
   }
 
   return position_estimates;
