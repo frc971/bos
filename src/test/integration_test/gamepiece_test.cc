@@ -7,8 +7,8 @@
 
 auto main() -> int {
   camera::Camera config = camera::SelectCameraConfig();
-  camera::CameraSource source = camera::CameraSource(
-      "nvidia_apriltag_test", camera::GetCameraStream(config));
+  camera::CameraSource source =
+      camera::CameraSource(config, camera::GetCameraStream(config));
   camera::CscoreStreamer streamer("yolo_test", 4971, 30, 1080, 1080);
 
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();

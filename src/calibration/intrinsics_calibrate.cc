@@ -75,7 +75,7 @@ auto main(int argc, char* argv[]) -> int {
   camera::Camera config =
       camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
   std::unique_ptr<camera::ICamera> camera_ = camera::GetCameraStream(config);
-  camera::CameraSource source("camera", std::move(camera_));
+  camera::CameraSource source(config, std::move(camera_));
 
   cv::Mat frame = source.GetFrame();
   cv::Size frame_size = frame.size();

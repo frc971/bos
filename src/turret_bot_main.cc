@@ -10,45 +10,45 @@
 auto main() -> int {
   utils::StartNetworktables(9972);
 
-  camera::CameraSource front_right_camera = camera::CameraSource(
-      "FrontRight",
-      std::make_unique<camera::CVCamera>(
-          camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]));
+  // camera::CameraSource front_right_camera = camera::CameraSource(
+  //     "FrontRight",
+  //     std::make_unique<camera::CVCamera>(
+  //         camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]));
+  //
+  // camera::CameraSource front_left_camera = camera::CameraSource(
+  //     "FrontLeft",
+  //     std::make_unique<camera::CVCamera>(
+  //         camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]));
+  //
+  // std::this_thread::sleep_for(std::chrono::seconds(1));
+  //
+  // LOG(INFO) << "Starting estimators";
+  // std::thread front_right_thread(
+  //     localization::RunLocalization, std::ref(front_right_camera),
+  //     std::make_unique<localization::GPUAprilTagDetector>(
+  //         front_right_camera.GetFrame().cols,
+  //         front_right_camera.GetFrame().rows,
+  //         utils::ReadIntrinsics(
+  //             camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
+  //                 .intrinsics_path)),
+  //     std::make_unique<localization::SquareSolver>(
+  //         camera::Camera::TURRET_BOT_FRONT_RIGHT),
+  //     camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
+  //         .extrinsics_path,
+  //     4971, false);
+  //
+  // std::thread front_left_thread(
+  //     localization::RunLocalization, std::ref(front_left_camera),
+  //     std::make_unique<localization::GPUAprilTagDetector>(
+  //         front_left_camera.GetFrame().cols, front_left_camera.GetFrame().rows,
+  //         utils::ReadIntrinsics(
+  //             camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]
+  //                 .intrinsics_path)),
+  //     std::make_unique<localization::SquareSolver>(
+  //         camera::Camera::TURRET_BOT_FRONT_LEFT),
+  //     camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]
+  //         .extrinsics_path,
+  //     4972, false);
 
-  camera::CameraSource front_left_camera = camera::CameraSource(
-      "FrontLeft",
-      std::make_unique<camera::CVCamera>(
-          camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]));
-
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-
-  LOG(INFO) << "Starting estimators";
-  std::thread front_right_thread(
-      localization::RunLocalization, std::ref(front_right_camera),
-      std::make_unique<localization::GPUAprilTagDetector>(
-          front_right_camera.GetFrame().cols,
-          front_right_camera.GetFrame().rows,
-          utils::ReadIntrinsics(
-              camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
-                  .intrinsics_path)),
-      std::make_unique<localization::SquareSolver>(
-          camera::Camera::TURRET_BOT_FRONT_RIGHT),
-      camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
-          .extrinsics_path,
-      4971, false);
-
-  std::thread front_left_thread(
-      localization::RunLocalization, std::ref(front_left_camera),
-      std::make_unique<localization::GPUAprilTagDetector>(
-          front_left_camera.GetFrame().cols, front_left_camera.GetFrame().rows,
-          utils::ReadIntrinsics(
-              camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]
-                  .intrinsics_path)),
-      std::make_unique<localization::SquareSolver>(
-          camera::Camera::TURRET_BOT_FRONT_LEFT),
-      camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_LEFT]
-          .extrinsics_path,
-      4972, false);
-
-  front_left_thread.join();
+  // front_left_thread.join();
 }

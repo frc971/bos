@@ -22,24 +22,24 @@ using json = nlohmann::json;
 auto main() -> int {
   utils::StartNetworktables();
 
-  camera::CameraSource back_right_camera = camera::CameraSource(
-      "back_right",
-      std::make_unique<camera::CVCamera>(
-          camera::camera_constants[camera::Camera::FIDDLER_USB1]));
-
-  std::thread usb1_thread(
-      localization::RunLocalization, std::ref(back_right_camera),
-      std::make_unique<localization::GPUAprilTagDetector>(
-          1280, 720,
-          utils::ReadIntrinsics(
-              camera::camera_constants[camera::Camera::FIDDLER_USB1]
-                  .intrinsics_path)),
-      std::make_unique<localization::SquareSolver>(
-          camera::Camera::FIDDLER_USB1),
-      camera::camera_constants[camera::Camera::FIDDLER_USB1].extrinsics_path,
-      4972, false);
-
-  usb1_thread.join();
+  // camera::CameraSource back_right_camera = camera::CameraSource(
+  //     "back_right",
+  //     std::make_unique<camera::CVCamera>(
+  //         camera::camera_constants[camera::Camera::FIDDLER_USB1]));
+  //
+  // std::thread usb1_thread(
+  //     localization::RunLocalization, std::ref(back_right_camera),
+  //     std::make_unique<localization::GPUAprilTagDetector>(
+  //         1280, 720,
+  //         utils::ReadIntrinsics(
+  //             camera::camera_constants[camera::Camera::FIDDLER_USB1]
+  //                 .intrinsics_path)),
+  //     std::make_unique<localization::SquareSolver>(
+  //         camera::Camera::FIDDLER_USB1),
+  //     camera::camera_constants[camera::Camera::FIDDLER_USB1].extrinsics_path,
+  //     4972, false);
+  //
+  // usb1_thread.join();
 
   return 0;
 }

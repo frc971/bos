@@ -1,4 +1,5 @@
 #pragma once
+#include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/localization/apriltag_detector.h"
 #include "src/localization/gpu_apriltag_detector.h"
@@ -23,5 +24,8 @@ namespace localization {
 void RunLocalization(camera::CameraSource& source,
                      std::unique_ptr<localization::IAprilTagDetector> detector,
                      std::unique_ptr<localization::IPositionSolver> solver,
-                     const std::string& extrinsics, uint port, bool verbose);
+                     uint port, bool verbose);
+void RunJointSolve(std::vector<camera::Camera>& sources,
+                   std::unique_ptr<localization::IAprilTagDetector> detector,
+                   uint port, bool verbose);
 }  // namespace localization
