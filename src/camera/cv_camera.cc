@@ -67,7 +67,6 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
   }
   timestamped_frame.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   cap_.retrieve(raw_image);
-  LOG(INFO) << cap_.get(cv::CAP_PROP_BACKEND) << "1800 = gstreamer";
 
   raw_image.copyTo(timestamped_frame.frame);
 
