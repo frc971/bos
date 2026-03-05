@@ -37,6 +37,9 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
   nt::BooleanArrayTopic tag_ids_topic = table->GetBooleanArrayTopic("TagId");
   tag_ids_publisher_ = tag_ids_topic.Publish();
 
+  nt::DoubleTopic varience_topic = table->GetDoubleTopic("Varience");
+  varience_publisher_ = varience_topic.Publish();
+
   nt::BooleanArrayTopic rejected_tag_ids_topic =
       table->GetBooleanArrayTopic("RejectedTagId");
   rejected_tag_ids_publisher_ = rejected_tag_ids_topic.Publish();
@@ -78,6 +81,7 @@ void PositionSender::Send(
 
     tag_ids_publisher_.Set(tags);
     rejected_tag_ids_publisher_.Set(rejected_tags);
+    varience_publisher_.Set(detection.variance);
 
     latency_publisher_.Set(latency);
     num_tags_publisher_.Set(detection.num_tags);
