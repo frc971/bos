@@ -39,7 +39,7 @@ auto main(int argc, char* argv[]) -> int {
       localization::RunLocalization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
           frame.cols, frame.rows,
-          utils::ReadIntrinsics(
+          utils::GetJson(
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
@@ -51,7 +51,7 @@ auto main(int argc, char* argv[]) -> int {
       localization::RunLocalization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
           frame.cols, frame.rows,
-          utils::ReadIntrinsics(
+          utils::GetJson(
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
@@ -63,7 +63,7 @@ auto main(int argc, char* argv[]) -> int {
       localization::RunLocalization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
           frame.cols, frame.rows,
-          utils::ReadIntrinsics(
+          utils::GetJson(
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
@@ -75,7 +75,7 @@ auto main(int argc, char* argv[]) -> int {
       localization::RunLocalization, std::ref(source),
       std::make_unique<localization::GPUAprilTagDetector>(
           frame.cols, frame.rows,
-          utils::ReadIntrinsics(
+          utils::GetJson(
               camera::camera_constants[camera::Camera::FIDDLER_USB0]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(

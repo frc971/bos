@@ -1,28 +1,22 @@
 #include "src/utils/camera_utils.h"
 #include <fstream>
-#include <iostream>
-#include "src/utils/log.h"
-namespace utils {
-auto ReadIntrinsics(const std::string& path) -> nlohmann::json {
-  nlohmann::json intrinsics;
+#include <unordered_map>
 
-  std::ifstream intrinsics_file(path);
-  if (!intrinsics_file.is_open()) {
-    LOG(FATAL) << "Error: Cannot open intrinsics file: " << path << std::endl;
-  } else {
-    intrinsics_file >> intrinsics;
-  }
-  return intrinsics;
+namespace utils {
+namespace {
+std::unordered_map<std::string, nlohmann::json> json_cache;
 }
 
-auto ReadExtrinsics(const std::string& path) -> nlohmann::json {
-  nlohmann::json extrinsics;
-  std::ifstream extrinsics_file(path);
-  if (!extrinsics_file.is_open()) {
-    LOG(FATAL) << "Error: Cannot open extrinsics file: " << path << std::endl;
-  } else {
-    extrinsics_file >> extrinsics;
+auto GetJson(const std::string& path) -> nlohmann::json {
+  auto [it, inserted] = json_cache.emplace(path, nlohmann::json{});
+  if (inserted) {
+    std::ifstream f(path);
+    if (f) f >> it->second;
   }
-  return extrinsics;
+  return it->second;
+}
+
+auto GetJsonCache() -> const std::unordered_map<std::string, nlohmann::json>& {
+  return json_cache;
 }
 }  // namespace utils

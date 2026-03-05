@@ -31,7 +31,7 @@ auto main() -> int {
       localization::RunLocalization, std::ref(back_right_camera),
       std::make_unique<localization::GPUAprilTagDetector>(
           1280, 720,
-          utils::ReadIntrinsics(
+          utils::GetJson(
               camera::camera_constants[camera::Camera::FIDDLER_USB1]
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(

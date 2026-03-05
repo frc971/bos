@@ -18,12 +18,12 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
     : layout_(std::move(layout)),
       tag_corners_(std::move(tag_corners)),
       camera_matrix_(utils::CameraMatrixFromJson<cv::Mat>(
-          utils::ReadIntrinsics(intrinsics_path))),
+          utils::GetJson(intrinsics_path))),
       distortion_coefficients_(utils::DistortionCoefficientsFromJson<cv::Mat>(
-          utils::ReadIntrinsics(intrinsics_path))),
+          utils::GetJson(intrinsics_path))),
       camera_to_robot_(
           utils::EigenToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
-                                  utils::ReadExtrinsics(extrinsics_path))
+                                  utils::GetJson(extrinsics_path))
                                   .ToMatrix())) {
   cv::Mat rvec_cv = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
   cv::Mat rvec_wpi = (cv::Mat_<double>(3, 1) << 0, 0, std::numbers::pi);

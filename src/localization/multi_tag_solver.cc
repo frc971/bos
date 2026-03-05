@@ -31,11 +31,11 @@ MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
                                const frc::AprilTagFieldLayout& layout,
                                const std::vector<cv::Point3d>& tag_corners)
     : camera_matrix_(utils::CameraMatrixFromJson<cv::Mat>(
-          utils::ReadIntrinsics(intrinsics_path))),
+          utils::GetJson(intrinsics_path))),
       distortion_coefficients_(utils::DistortionCoefficientsFromJson<cv::Mat>(
-          utils::ReadIntrinsics(intrinsics_path))),
+          utils::GetJson(intrinsics_path))),
       camera_to_robot_(Transform3dToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
-          utils::ReadExtrinsics(extrinsics_path)))) {
+          utils::GetJson(extrinsics_path)))) {
   cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
   cv::Mat rotate_z = utils::MakeTransform(rvec, tvec);

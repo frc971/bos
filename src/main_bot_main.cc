@@ -37,7 +37,7 @@ auto main() -> int {
   //     localization::RunLocalization, std::ref(front_camera),
   //     std::make_unique<localization::GPUAprilTagDetector>(
   //         front_camera.GetFrame().cols, front_camera.GetFrame().rows,
-  //         utils::ReadIntrinsics(
+  //         utils::GetJson(
   //             camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA]
   //                 .intrinsics_path)),
   //     std::make_unique<localization::MultiTagSolver>(
@@ -49,7 +49,7 @@ auto main() -> int {
       localization::RunLocalization, std::ref(left_camera),
       std::make_unique<localization::GPUAprilTagDetector>(
           left_camera.GetFrame().cols, left_camera.GetFrame().rows,
-          utils::ReadIntrinsics(camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA]
+          utils::GetJson(camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA]
                                     .intrinsics_path)),
       std::make_unique<localization::MultiTagSolver>(
           Camera::MAIN_ROBOT_LEFT_CAMERA),
@@ -60,7 +60,7 @@ auto main() -> int {
       localization::RunLocalization, std::ref(right_camera),
       std::make_unique<localization::GPUAprilTagDetector>(
           right_camera.GetFrame().cols, right_camera.GetFrame().rows,
-          utils::ReadIntrinsics(
+          utils::GetJson(
               camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]
                   .intrinsics_path)),
       std::make_unique<localization::MultiTagSolver>(

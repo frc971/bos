@@ -42,14 +42,14 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
   Eigen::Matrix<double, 3, 4> pi = Eigen::Matrix<double, 3, 4>::Zero();
   pi.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
   for (const camera::Camera& camera_config : camera_constants_) {
-    const nlohmann::json intrinsics_json = utils::ReadIntrinsics(
+    const nlohmann::json intrinsics_json = utils::GetJson(
         camera::camera_constants[camera_config].intrinsics_path);
     const Eigen::Matrix3d camera_matrix =
         utils::CameraMatrixFromJson<Eigen::Matrix3d>(intrinsics_json);
     const Eigen::Matrix<double, 3, 4> image_to_camera = camera_matrix * pi;
     const Eigen::Matrix4d camera_to_robot =
         utils::ExtrinsicsJsonToCameraToRobot(
-            utils::ReadExtrinsics(
+            utils::GetJson(
                 camera::camera_constants[camera_config].extrinsics_path))
             .ToMatrix();
     const Eigen::Matrix<double, 3, 4> image_to_robot =
