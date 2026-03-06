@@ -28,5 +28,5 @@ static const frc::Transform3d joint_solve_input_noise(
     frc::Rotation3d(units::degree_t{deg2rad(3)}, units::degree_t{deg2rad(3)},
                     units::degree_t{deg2rad(3)}));
 static constexpr double ERROR_MARGIN_TRANSLATION = 0.01;
-static constexpr double ERROR_MARGIN_EULER_ANGLE = 0.01745;  // 1 deg
+static constexpr double ERROR_MARGIN_EULER_ANGLE = deg2rad(1.0);  // 1 deg
 }  // namespace test_utils
