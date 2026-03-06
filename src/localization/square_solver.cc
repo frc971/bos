@@ -64,26 +64,28 @@ auto SquareSolver::EstimatePosition(const tag_detection_t& detection)
 }
 
 auto SquareSolver::EstimatePosition(
-    const std::vector<tag_detection_t>& detections)
+    const std::vector<tag_detection_t>& detections, const bool reject_far_tags)
     -> std::vector<position_estimate_t> {
   std::vector<position_estimate_t> position_estimates;
   position_estimates.reserve(detections.size());
   for (const auto& detection : detections) {
-    // const auto& c = detection.corners;
-    // const double area = 0.5 * std::abs((c[0].x - c[2].x) * (c[1].y - c[3].y) -
-    //                                    (c[1].x - c[3].x) * (c[0].y - c[2].y));
-    // if (area < kmin_tag_area_pixels) {
-    //   continue;
-    // }
+    if (reject_far_tags) {
+      const auto& c = detection.corners;
+      const double area = 0.5 * std::abs((c[0].x - c[2].x) * (c[1].y - c[3].y) -
+                                         (c[1].x - c[3].x) * (c[0].y - c[2].y));
+      if (area < kmin_tag_area_pixels) {
+        continue;
+      }
+    }
     cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
     cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
     cv::solvePnP(tag_corners_, detection.corners, camera_matrix_,
                  distortion_coefficients_, rvec, tvec, false,
                  cv::SOLVEPNP_IPPE_SQUARE);
 
-    // if (cv::norm(tvec) > 5.0) {
-    //   continue;
-    // }
+    if (reject_far_tags && cv::norm(tvec) > 5.0) {
+      continue;
+    }
 
     const double translation_x = tvec.ptr<double>()[2];
     const double translation_y = tvec.ptr<double>()[0];
@@ -101,13 +103,16 @@ auto SquareSolver::EstimatePosition(
         ((field_to_tag * rotate_yaw_wpilib_) * tag_to_camera) *
         camera_to_robot_));
 
+    const double distance = std::hypot(translation_x, translation_y);
+
     position_estimates.push_back(position_estimate_t{
         .tag_ids = {detection.tag_id},
         .rejected_tag_ids = {},  // TODO
         .pose = robot_pose,
-        .variance = std::hypot(translation_x, translation_y),
+        .variance = Variance(1, distance, kvariance_min_, kvariance_scalar_),
         .timestamp = detection.timestamp,
-    });
+        .num_tags = 1,
+        .avg_tag_dist = distance});
   }
 
   return position_estimates;

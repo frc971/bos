@@ -17,7 +17,11 @@ auto FileSystemAlmostFull() {
 }
 
 CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
-    : cap_(cv::VideoCapture(c.pipeline)), log_path_(std::move(log_path)) {
+    : cap_(cv::VideoCapture(c.pipeline)),
+      pipeline_(c.pipeline),
+      log_path_(std::move(log_path)) {
+  cap_.release();
+  cap_ = cv::VideoCapture(pipeline_);
   if (FileSystemAlmostFull()) {
     log_path_ = std::nullopt;
     LOG(WARNING) << "Filesystem almost full! Not logging any frames";
@@ -58,14 +62,22 @@ CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
 
 auto CVCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t timestamped_frame;
+  cv::Mat raw_image;
   if (!cap_.grab()) {
     Restart();
     LOG(WARNING) << "Restarting camera";
   }
   timestamped_frame.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
-  cap_.retrieve(timestamped_frame.frame);
+  cap_.retrieve(raw_image);
+
+  raw_image.copyTo(timestamped_frame.frame);
+
   if (timestamped_frame.frame.empty()) {
     timestamped_frame.frame = backup_image_;
+  }
+  if (timestamped_frame.frame.channels() == 4) {
+    cv::cvtColor(timestamped_frame.frame, timestamped_frame.frame,
+                 cv::COLOR_BGRA2BGR);
   }
   if (log_path_.has_value()) {
     WriteFrame(log_path_.value(), timestamped_frame);
@@ -75,8 +87,9 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
 
 auto CVCamera::Restart() -> void {
   cap_.release();
-  cap_ = cv::VideoCapture(pipeline_);
   std::this_thread::sleep_for(std::chrono::seconds(3));
+  LOG(INFO) << "Pipeline: " << pipeline_;
+  cap_ = cv::VideoCapture(pipeline_);
 }
 
 }  // namespace camera
