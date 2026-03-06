@@ -21,6 +21,9 @@ class SquareSolver : public IPositionSolver {
   auto EstimatePosition(const std::vector<tag_detection_t>& detection,
                         bool reject_far_tags = true)
       -> std::vector<position_estimate_t> override;
+  auto EstimatePositionOld(const std::vector<tag_detection_t>& detection,
+                           bool reject_far_tags = true)
+      -> std::vector<position_estimate_t>;
 
  private:
   frc::AprilTagFieldLayout layout_;

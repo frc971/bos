@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include "src/localization/joint_solver.h"
+#include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/position.h"
 #include "src/localization/position_solver.h"
 #include "src/localization/square_solver.h"
@@ -57,4 +58,20 @@ TEST(SolverTest, Basic) {
   localization::position_estimate_t estimate =
       square_solver.EstimatePosition(fake_detections)[0];
   std::cout << "hard estimate:\n" << estimate << std::endl;
+}
+
+TEST(SolverTest, RealImage) {
+  localization::SquareSolver square_solver(camera::Camera::DUMMY_CAMERA);
+  localization::OpenCVAprilTagDetector detector(utils::ReadIntrinsics(
+      camera::camera_constants[camera::DUMMY_CAMERA].intrinsics_path));
+  const cv::Mat image = cv::imread("/bos/src/test/unit_test/apriltag.jpg");
+  camera::timestamped_frame_t frame{.frame = image, .timestamp = 0.0};
+  const std::vector<localization::tag_detection_t> detections =
+      detector.GetTagDetections(frame);
+  const localization::position_estimate_t pose_estimate =
+      square_solver.EstimatePosition(detections)[0];
+  std::cout << pose_estimate << std::endl;
+  const localization::position_estimate_t old_pose_estimate =
+      square_solver.EstimatePosition(detections)[0];
+  std::cout << old_pose_estimate << std::endl;
 }
