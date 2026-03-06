@@ -104,6 +104,7 @@ auto JointSolver::EstimatePosition(
   utils::TransformDecomposition decomposed_robot_to_field;
 
   while (loss > kacceptable_reprojection_error && counter < 1000000) {
+    std::cout << "Hallo: " << loss << std::endl;
     bool printed = false;
     for (const data_point_t& data_point : data_points) {
       decomposed_robot_to_field = utils::SeparateTranslationAndRotationMatrices(
