@@ -41,7 +41,7 @@ SquareSolver::SquareSolver(camera::Camera camera_config,
                    camera::camera_constants[camera_config].extrinsics_path,
                    std::move(layout), std::move(tag_corners)) {}
 
-auto SquareSolver::EstimatePositionOld(
+auto SquareSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections, const bool reject_far_tags)
     -> std::vector<position_estimate_t> {
   std::vector<position_estimate_t> position_estimates;
@@ -96,7 +96,7 @@ auto SquareSolver::EstimatePositionOld(
   return position_estimates;
 }
 
-auto SquareSolver::EstimatePosition(
+auto SquareSolver::EstimatePositionNew(
     const std::vector<tag_detection_t>& detections, const bool reject_far_tags)
     -> std::vector<position_estimate_t> {
   std::vector<position_estimate_t> position_estimates;

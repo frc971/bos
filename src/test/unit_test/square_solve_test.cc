@@ -23,11 +23,8 @@ class SquareSolverTest : public ::testing::Test {
 };
 
 TEST_F(SquareSolverTest, Basic) {
-  const localization::position_estimate_t new_estimate =
-      square_solver.EstimatePosition(test_utils::fake_detections)[0];
-  EXPECT_NEAR(new_estimate.pose.Rotation().Angle().value(), M_PI, ERROR_MARGIN);
   const localization::position_estimate_t old_estimate =
-      square_solver.EstimatePositionOld(test_utils::fake_detections)[0];
+      square_solver.EstimatePosition(test_utils::fake_detections)[0];
   EXPECT_NEAR(old_estimate.pose.Rotation().Angle().value(), M_PI, ERROR_MARGIN);
 }
 
@@ -37,8 +34,8 @@ TEST_F(SquareSolverTest, Math) {
   const std::vector<localization::tag_detection_t> detections =
       detector.GetTagDetections(frame);
   const localization::position_estimate_t new_estimate =
-      square_solver.EstimatePosition(test_utils::fake_detections)[0];
+      square_solver.EstimatePositionNew(test_utils::fake_detections)[0];
   const localization::position_estimate_t old_estimate =
-      square_solver.EstimatePositionOld(test_utils::fake_detections)[0];
+      square_solver.EstimatePosition(test_utils::fake_detections)[0];
   EXPECT_EQ(new_estimate, old_estimate);
 }
