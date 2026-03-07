@@ -26,6 +26,8 @@ class SquareSolver : public IPositionSolver {
       -> std::vector<position_estimate_t>;
 
  private:
+  static constexpr double kvariance_scalar_ = 1.0;
+  static constexpr double kvariance_min_ = 0.0;
   frc::AprilTagFieldLayout layout_;
   std::vector<cv::Point3d> tag_corners_;
   cv::Mat camera_matrix_;

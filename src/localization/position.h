@@ -34,6 +34,8 @@ using position_estimate_t = struct PositionEstimate {
   frc::Pose3d pose;
   double variance;
   double timestamp;
+  int num_tags;
+  double avg_tag_dist;
   friend auto operator<<(std::ostream& os, const PositionEstimate& t)
       -> std::ostream& {
     const auto& tr = t.pose.Translation();
