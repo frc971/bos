@@ -18,7 +18,7 @@ class SquareSolver : public IPositionSolver {
   SquareSolver(camera::Camera camera_config,
                frc::AprilTagFieldLayout layout = kapriltag_layout,
                std::vector<cv::Point3d> tag_corners = kapriltag_corners);
-  auto EstimatePosition(const std::vector<tag_detection_t>& detection,
+  auto EstimatePosition(const std::vector<tag_detection_t>& detections,
                         bool reject_far_tags = true)
       -> std::vector<position_estimate_t> override;
   auto EstimatePositionNew(const std::vector<tag_detection_t>& detection,
