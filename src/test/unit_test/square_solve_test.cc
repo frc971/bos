@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include "src/localization/joint_solver.h"
-#include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/position.h"
 #include "src/localization/position_solver.h"
 #include "src/localization/square_solver.h"
@@ -44,34 +43,35 @@ inline auto operator==(const localization::position_estimate_t& lhs,
 }
 }  // namespace frc
 
-const localization::tag_detection_t detection{
-    .tag_id = 31,
-    .corners = {cv::Point2d(100.0, 200.0), cv::Point2d(200.0, 200.0),
-                cv::Point2d(200.0, 100.0), cv::Point2d(100.0, 100.0)},
-    .timestamp = 0.0,
-    .confidence = 0.0};
+constexpr int kimage_tag_width = 10;
+constexpr int kimage_tag_height = 10;
+const std::vector<int> ktag_ids = {31};
+constexpr int kimage_width = 20;
+constexpr int kimage_height = 20;
+const cv::Point2f tag_center =
+    cv::Point2f(kimage_width / 2.0, kimage_height / 2.0);
+const int dx = kimage_tag_width / 2.0;
+const int dy = kimage_tag_height / 2.0;
+std::array<cv::Point2d, 4> simple_image_points = {
+    cv::Point2f(tag_center.x - dx, tag_center.y - dy),
+    cv::Point2f(tag_center.x + dx, tag_center.y - dy),
+    cv::Point2f(tag_center.x + dx, tag_center.y + dy),
+    cv::Point2f(tag_center.x - dx, tag_center.y + dy)};
+
+std::array<cv::Point2d, 4> harder_image_points = {
+    {cv::Point2d(100.0f, 100.0f), cv::Point2d(200.0f, 100.0f),
+     cv::Point2d(200.0f, 200.0f), cv::Point2d(100.0f, 200.0f)}};
 
 TEST(SolverTest, Basic) {
   localization::SquareSolver square_solver(camera::Camera::DUMMY_CAMERA);
-  const std::vector<localization::tag_detection_t> fake_detections{detection};
+  for (const int id : ktag_ids) {
+    const localization::tag_detection_t fake_detection{
+        .tag_id = id, .corners = harder_image_points};
+    const std::vector<localization::tag_detection_t> fake_detections{
+        fake_detection};
 
-  localization::position_estimate_t estimate =
-      square_solver.EstimatePosition(fake_detections)[0];
-  std::cout << "hard estimate:\n" << estimate << std::endl;
-}
-
-TEST(SolverTest, RealImage) {
-  localization::SquareSolver square_solver(camera::Camera::DUMMY_CAMERA);
-  localization::OpenCVAprilTagDetector detector(utils::ReadIntrinsics(
-      camera::camera_constants[camera::DUMMY_CAMERA].intrinsics_path));
-  const cv::Mat image = cv::imread("/bos/src/test/unit_test/apriltag.jpg");
-  camera::timestamped_frame_t frame{.frame = image, .timestamp = 0.0};
-  const std::vector<localization::tag_detection_t> detections =
-      detector.GetTagDetections(frame);
-  const localization::position_estimate_t pose_estimate =
-      square_solver.EstimatePosition(detections)[0];
-  std::cout << pose_estimate << std::endl;
-  const localization::position_estimate_t old_pose_estimate =
-      square_solver.EstimatePositionOld(detections)[0];
-  std::cout << old_pose_estimate << std::endl;
+    localization::position_estimate_t estimate =
+        square_solver.EstimatePosition(fake_detections)[0];
+    std::cout << "hard estimate:\n" << estimate << std::endl;
+  }
 }
