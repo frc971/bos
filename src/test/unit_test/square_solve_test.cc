@@ -72,6 +72,6 @@ TEST(SolverTest, RealImage) {
       square_solver.EstimatePosition(detections)[0];
   std::cout << pose_estimate << std::endl;
   const localization::position_estimate_t old_pose_estimate =
-      square_solver.EstimatePosition(detections)[0];
+      square_solver.EstimatePositionOld(detections)[0];
   std::cout << old_pose_estimate << std::endl;
 }
