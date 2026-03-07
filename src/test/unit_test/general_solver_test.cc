@@ -24,14 +24,10 @@ class GeneralSolverTest : public ::testing::Test {
 };
 
 TEST_F(GeneralSolverTest, Basic) {
-  const localization::tag_detection_t fake_detection{
-      .tag_id = 31, .corners = test_utils::fake_image_points};
-  const std::vector<localization::tag_detection_t> fake_detections{
-      fake_detection};
   const localization::position_estimate_t square_solve_estimate =
-      square_solver.EstimatePosition(fake_detections)[0];
+      square_solver.EstimatePosition(test_utils::fake_detections)[0];
   const localization::position_estimate_t multitag_solve_estimate =
-      multitag_solver.EstimatePosition(fake_detections)[0];
+      multitag_solver.EstimatePosition(test_utils::fake_detections)[0];
   EXPECT_EQ(square_solve_estimate, multitag_solve_estimate);
 }
 
