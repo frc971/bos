@@ -19,6 +19,7 @@ const Eigen::Matrix4d JointSolver::rotate_yaw_cv_ = (Eigen::Matrix4d() <<
 JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
                          const AprilTagFieldLayout& layout)
     : robot_to_field_(Eigen::Matrix4d::Identity()), layout_(layout) {
+  std::cout << "Config: " << camera_constants_[0] << std::endl;
   for (const frc::AprilTag& tag : layout.GetTags()) {
     Eigen::Matrix4d field_to_tag = tag.pose.ToMatrix();
     utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);

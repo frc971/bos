@@ -2,6 +2,7 @@
 
 #include <frc/geometry/Pose3d.h>
 #include <ostream>
+#include "src/camera/camera_constants.h"
 #include "src/localization/position.h"
 
 namespace frc {
@@ -28,11 +29,8 @@ static const std::vector<localization::tag_detection_t> fake_detections(
       .timestamp = 0.0,
       .confidence = 0.0}});
 
-static const frc::Transform3d joint_solve_input_noise(
-    frc::Translation3d(units::meter_t{0.4}, units::meter_t{0.5},
-                       units::meter_t{0.2}),
-    frc::Rotation3d(units::degree_t{deg2rad(3)}, units::degree_t{deg2rad(3)},
-                    units::degree_t{deg2rad(3)}));
+static const std::vector<camera::Camera> joint_solve_cameras =
+    std::vector<camera::Camera>{camera::DEV_ORIN};
 static constexpr double ERROR_MARGIN_TRANSLATION = 0.01;
 static constexpr double ERROR_MARGIN_EULER_ANGLE = deg2rad(1.0);  // 1 deg
 }  // namespace test_utils
