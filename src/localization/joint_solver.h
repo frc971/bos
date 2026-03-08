@@ -55,11 +55,13 @@ class JointSolver {
       const std::vector<Eigen::Vector4d>& Rz_activations,
       const std::vector<Eigen::Vector3d>& projections,
       const std::vector<Eigen::Vector2d>& projection_errors,
-      const std::vector<data_point_t>& data_points) -> utils::TransformValues;
+      const std::vector<data_point_t>& data_points, bool yaw_only)
+      -> utils::TransformValues;
   auto EstimatePosition(
       const std::map<camera::Camera, std::vector<tag_detection_t>>&
           all_cam_detections,
-      const frc::Pose3d& starting_pose) -> position_estimate_t;
+      const frc::Pose3d& starting_pose, bool yaw_only,
+      const bool verbose = false) -> position_estimate_t;
   Eigen::Matrix4d robot_to_field_;
 
  private:

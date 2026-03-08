@@ -19,7 +19,6 @@ const Eigen::Matrix4d JointSolver::rotate_yaw_cv_ = (Eigen::Matrix4d() <<
 JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
                          const AprilTagFieldLayout& layout)
     : robot_to_field_(Eigen::Matrix4d::Identity()), layout_(layout) {
-  std::cout << "Config: " << camera_constants_[0] << std::endl;
   for (const frc::AprilTag& tag : layout.GetTags()) {
     Eigen::Matrix4d field_to_tag = tag.pose.ToMatrix();
     utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);
@@ -172,7 +171,8 @@ auto JointSolver::ComputeNetStep(
     const std::vector<Eigen::Vector4d>& Rz_activations,
     const std::vector<Eigen::Vector3d>& projections,
     const std::vector<Eigen::Vector2d>& projection_errors,
-    const std::vector<data_point_t>& data_points) -> utils::TransformValues {
+    const std::vector<data_point_t>& data_points, const bool yaw_only)
+    -> utils::TransformValues {
   utils::TransformValues net_step{};
   for (size_t i = 0; i < data_points.size(); i++) {
     net_step +=
@@ -180,13 +180,18 @@ auto JointSolver::ComputeNetStep(
                     Rx_activations[i], Ry_activations[i], Rz_activations[i],
                     projections[i], projection_errors[i], data_points[i]);
   }
+  if (yaw_only) {
+    net_step.rx = 0;
+    net_step.rz = 0;
+  }
   return net_step;
 }
 
 auto JointSolver::EstimatePosition(
     const std::map<camera::Camera, std::vector<tag_detection_t>>&
         all_cam_detections,
-    const frc::Pose3d& starting_pose) -> position_estimate_t {
+    const frc::Pose3d& starting_pose, const bool yaw_only, const bool verbose)
+    -> position_estimate_t {
   if (all_cam_detections.empty()) {
     return {};
   }
@@ -228,9 +233,11 @@ auto JointSolver::EstimatePosition(
   utils::TransformValues step =
       ComputeNetStep(translation_and_rotation, decomposed_robot_to_field,
                      Rx_activations, Ry_activations, Rz_activations,
-                     projections, projection_errors, data_points);
-  std::cout << "Initial loss: " << net_loss
-            << " initial step: " << step * step_size << std::endl;
+                     projections, projection_errors, data_points, yaw_only);
+  if (verbose) {
+    std::cout << "Initial loss: " << net_loss
+              << " initial step: " << step * step_size << std::endl;
+  }
 
   for (size_t i = 0; i < 1e5 && net_loss > kacceptable_reprojection_error;
        i++) {
@@ -245,45 +252,48 @@ auto JointSolver::EstimatePosition(
       if (new_loss > net_loss) {
         step_size /= 2.0;
         translation_and_rotation -= step * step_size;
-        // std::cout << "Stepping down learning rate, current estimation: "
-        //           << translation_and_rotation << std::endl;
         continue;
       } else {
         step_size *= 2.0;
-        // std::cout << "Stepping up learning rate" << std::endl;
         break;
       }
     } while (true);
     net_loss =
         Forward(decomposed_robot_to_field, Rx_activations, Ry_activations,
                 Rz_activations, projections, projection_errors, data_points);
-    step = ComputeNetStep(translation_and_rotation, decomposed_robot_to_field,
-                          Rx_activations, Ry_activations, Rz_activations,
-                          projections, projection_errors, data_points);
-    if (i % 1000 == 0) {
+    step =
+        ComputeNetStep(translation_and_rotation, decomposed_robot_to_field,
+                       Rx_activations, Ry_activations, Rz_activations,
+                       projections, projection_errors, data_points, yaw_only);
+    if (verbose && i % 1000 == 0) {
       std::cout << "Step size: " << step_size << " new net loss: " << net_loss
                 << " new step: " << step * step_size << std::endl;
     }
   }
 
-  std::cout << "Final step: " << step << std::endl;
-  std::cout << "Final loss: " << net_loss << std::endl;
+  if (verbose) {
+    std::cout << "Final step: " << step << std::endl;
+    std::cout << "Final loss: " << net_loss << std::endl;
+  }
 
   Eigen::Matrix4d field_to_robot =
       (decomposed_robot_to_field.translation * decomposed_robot_to_field.Rz *
        decomposed_robot_to_field.Ry * decomposed_robot_to_field.Rx)
           .inverse();
 
-  utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
-                                   "Field to robot cv");
+  if (verbose)
+    utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
+                                     "Field to robot cv");
   utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
-  utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
-                                   "Field to robot wpi");
+  if (verbose)
+    utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
+                                     "Field to robot wpi");
   field_to_robot(3, 0) = 0;
   field_to_robot(3, 1) = 0;
   field_to_robot(3, 2) = 0;
   field_to_robot(3, 3) = 1;
-  std::cout << "Field to robot:\n" << field_to_robot << std::endl;
+  if (verbose)
+    std::cout << "Field to robot:\n" << field_to_robot << std::endl;
   const frc::Pose3d robot_pose = frc::Pose3d(field_to_robot);
 
   double avg_distance = 0.0;
@@ -295,8 +305,10 @@ auto JointSolver::EstimatePosition(
         robot_pose.TransformBy(camera_mats.camera_to_robot);
     for (const tag_detection_t& detection : pair.second) {
       const frc::Pose3d tag_pose = layout_.GetTagPose(detection.tag_id).value();
-      utils::PrintPose3d(tag_pose);
-      utils::PrintPose3d(field_relative_camera_pose);
+      if (verbose) {
+        utils::PrintPose3d(tag_pose);
+        utils::PrintPose3d(field_relative_camera_pose);
+      }
       const double dist =
           tag_pose.Translation()
               .Distance(field_relative_camera_pose.Translation())

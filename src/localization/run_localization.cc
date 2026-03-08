@@ -65,7 +65,7 @@ void RunJointSolve(std::vector<camera::CameraSource>& sources,
       tag_detections.insert({camera_constants[i], detections});
     }
     position_estimate_t position_estimate =
-        solver.EstimatePosition(tag_detections, position_receiver.Get());
+        solver.EstimatePosition(tag_detections, position_receiver.Get(), true);
     position_sender.Send(std::vector<position_estimate_t>{position_estimate},
                          timer.Stop());
   }
