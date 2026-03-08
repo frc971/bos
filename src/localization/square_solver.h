@@ -21,7 +21,9 @@ class SquareSolver : public IPositionSolver {
   auto EstimatePosition(const std::vector<tag_detection_t>& detections,
                         bool reject_far_tags = true)
       -> std::vector<position_estimate_t> override;
-  auto EstimatePosition(const tag_detection_t& detection) -> cv::Mat;
+  auto EstimatePositionNew(const std::vector<tag_detection_t>& detection,
+                           bool reject_far_tags = true)
+      -> std::vector<position_estimate_t>;
 
  private:
   static constexpr double kvariance_scalar_ = 1.0;
