@@ -116,8 +116,8 @@ struct TransformValues {
 
   friend auto operator<<(std::ostream& os, const TransformValues& p)
       -> std::ostream& {
-    os << "x: " << p.x << "\ty: " << p.y << "\tz: " << p.z << "\tz: " << p.rx
-       << "\try: " << p.ry << "\tz: " << p.rz << std::endl;
+    os << "x: " << p.x << "\ty: " << p.y << "\tz: " << p.z << "\trx: " << p.rx
+       << "\try: " << p.ry << "\trz: " << p.rz << std::endl;
     return os;
   }
 };
