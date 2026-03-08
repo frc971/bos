@@ -12,25 +12,6 @@
 
 namespace localization {
 
-auto Transform3dFromMatrix(float matrix[3][4]) -> frc::Pose3d {  // NOLINT
-  // Need to convert to wpilib coordinates
-  const float x_translation = matrix[2][3];
-  const float y_translation = matrix[0][3];
-  const float z_translation = matrix[1][3];
-
-  Eigen::Matrix3d rotation_matrix{{matrix[2][2], matrix[2][0], matrix[2][1]},
-                                  {matrix[0][2], matrix[0][0], matrix[0][1]},
-                                  {matrix[1][2], matrix[1][0], matrix[1][1]}};
-
-  // Converting to quaternion because wpilib fails to directly convert from matrix
-  Eigen::Quaterniond quaternion(rotation_matrix);
-  return {frc::Translation3d(units::meter_t{x_translation},
-                             units::meter_t{y_translation},
-                             units::meter_t{z_translation}),
-          frc::Rotation3d(frc::Quaternion(quaternion.w(), quaternion.x(),
-                                          quaternion.y(), quaternion.z()))};
-}
-
 NvidiaAprilTagDetector::NvidiaAprilTagDetector(int image_width,
                                                int image_height,
                                                nlohmann::json intrinsics,
