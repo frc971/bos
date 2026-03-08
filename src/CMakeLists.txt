@@ -21,9 +21,6 @@ add_subdirectory(yolo)
 add_subdirectory(test)
 add_subdirectory(pathing)
 
-add_executable(turret_bot_main turret_bot_main.cc)
-target_link_libraries(turret_bot_main PRIVATE ${OpenCV_LIBS} apriltag ntcore camera nlohmann_json::nlohmann_json Eigen3::Eigen localization utils yolo gamepiece)
-
 add_executable(main_bot_main main_bot_main.cc)
 target_link_libraries(main_bot_main PRIVATE ${OpenCV_LIBS} apriltag ntcore camera nlohmann_json::nlohmann_json Eigen3::Eigen localization utils)
 
