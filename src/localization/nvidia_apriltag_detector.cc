@@ -27,8 +27,8 @@ NvidiaAprilTagDetector::NvidiaAprilTagDetector(int image_width,
   CHECK(!vpiCreateAprilTagDetector(backend_, image_width, image_height,
                                    &params_, &payload_));
 
-  CHECK(!vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_APRILTAG_DETECTION,
-                        VPI_BACKEND_CPU, &detections_));
+  CHECK(!vpiArrayCreate(max_detections_, VPI_ARRAY_TYPE_APRILTAG_DETECTION, 0,
+                        &detections_));
   CHECK(!vpiStreamCreate(0, &stream_));
 }
 
@@ -44,7 +44,7 @@ auto NvidiaAprilTagDetector::GetTagDetections(
   }
 
   if (input_ == nullptr) {
-    CHECK(!vpiImageCreateWrapperOpenCVMat(gray, VPI_BACKEND_CPU, &input_));
+    CHECK(!vpiImageCreateWrapperOpenCVMat(gray, 0, &input_));
   } else {
     CHECK(!vpiImageSetWrappedOpenCVMat(input_, gray));
   }
@@ -85,6 +85,7 @@ auto NvidiaAprilTagDetector::GetTagDetections(
 NvidiaAprilTagDetector::~NvidiaAprilTagDetector() {
   vpiStreamDestroy(stream_);
   vpiArrayDestroy(detections_);
+  vpiImageDestroy(input_);
   vpiPayloadDestroy(payload_);
 }
 }  // namespace localization
