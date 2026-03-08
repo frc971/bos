@@ -20,9 +20,10 @@ namespace test_utils {
 constexpr auto deg2rad(double degrees) -> double {
   return degrees * M_PI / 180;
 }
+// bottom-left, bottom-right, top-right, top-left
 static const std::array<cv::Point2d, 4> fake_image_points = {
-    {cv::Point2d(100.0f, 100.0f), cv::Point2d(200.0f, 100.0f),
-     cv::Point2d(200.0f, 200.0f), cv::Point2d(100.0f, 200.0f)}};
+    {cv::Point2d(100.0f, 200.0f), cv::Point2d(200.0f, 200.0f),
+     cv::Point2d(200.0f, 100.0f), cv::Point2d(100.0f, 100.0f)}};
 static const std::vector<localization::tag_detection_t> fake_detections(
     {{.tag_id = 31,
       .corners = fake_image_points,
