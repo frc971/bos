@@ -44,7 +44,7 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
   for (const camera::Camera& camera_config : camera_constants_) {
     const nlohmann::json intrinsics_json = utils::GetJson(
         camera::camera_constants[camera_config].intrinsics_path);
-    const Eigen::Matrix3d camera_matrix =
+    const auto camera_matrix =
         utils::CameraMatrixFromJson<Eigen::Matrix3d>(intrinsics_json);
     const Eigen::Matrix<double, 3, 4> image_to_camera = camera_matrix * pi;
     const Eigen::Matrix4d camera_to_robot =

@@ -5,6 +5,7 @@
 #include <networktables/BooleanTopic.h>
 #include <networktables/DoubleArrayTopic.h>
 #include <networktables/DoubleTopic.h>
+#include <networktables/IntegerTopic.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
 #include <networktables/StructTopic.h>
@@ -25,6 +26,8 @@ class PositionSender {
   nt::StructPublisher<frc::Pose2d> pose_publisher_;
   nt::StructPublisher<frc::Pose3d> pose3d_publisher_;
   nt::DoublePublisher latency_publisher_;
+  nt::IntegerPublisher num_tags_publisher_;
+  nt::DoublePublisher varience_publisher_;
   nt::DoubleArrayPublisher tag_estimation_publisher_;
   nt::BooleanArrayPublisher tag_ids_publisher_;
   nt::BooleanArrayPublisher rejected_tag_ids_publisher_;

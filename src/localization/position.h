@@ -15,6 +15,17 @@ using tag_detection_t = struct TagDetection {
   std::array<cv::Point2d, 4> corners;  // Image coordinates of tag corners
   double timestamp;
   double confidence;
+
+  friend auto operator<<(std::ostream& os, const TagDetection& t)
+      -> std::ostream& {
+    os << "ID: " << t.tag_id << "\nCorners:\n";
+    for (const cv::Point2d& corner : t.corners) {
+      os << corner << "\n";
+    }
+    os << "Timestamp: " << t.timestamp << "\nConfidence: " << t.confidence
+       << std::endl;
+    return os;
+  }
 };
 
 using position_estimate_t = struct PositionEstimate {
@@ -23,6 +34,8 @@ using position_estimate_t = struct PositionEstimate {
   frc::Pose3d pose;
   double variance;
   double timestamp;
+  int num_tags;
+  double avg_tag_dist;
   friend auto operator<<(std::ostream& os, const PositionEstimate& t)
       -> std::ostream& {
     const auto& tr = t.pose.Translation();

@@ -26,6 +26,9 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
   nt::DoubleTopic latency_topic = table->GetDoubleTopic("Latency");
   latency_publisher_ = latency_topic.Publish();
 
+  nt::IntegerTopic num_tags_topic = table->GetIntegerTopic("NumTags");
+  num_tags_publisher_ = num_tags_topic.Publish();
+
   nt::DoubleArrayTopic tag_estimation_topic =
       table->GetDoubleArrayTopic("TagEstimation");
   tag_estimation_publisher_ = tag_estimation_topic.Publish(
@@ -33,6 +36,9 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
 
   nt::BooleanArrayTopic tag_ids_topic = table->GetBooleanArrayTopic("TagId");
   tag_ids_publisher_ = tag_ids_topic.Publish();
+
+  nt::DoubleTopic varience_topic = table->GetDoubleTopic("Varience");
+  varience_publisher_ = varience_topic.Publish();
 
   nt::BooleanArrayTopic rejected_tag_ids_topic =
       table->GetBooleanArrayTopic("RejectedTagId");
@@ -44,15 +50,16 @@ void PositionSender::Send(
     double latency) {
   mutex_.lock();
   for (auto& detection : detections) {
-    double variance = detection.variance;
-    std::array<double, 7> tag_estimation{
+    std::array<double, 8> tag_estimation{
         detection.pose.X().value(),
         detection.pose.Y().value(),
         detection.pose.Rotation().Z().value(),
-        variance,
+        detection.variance,
         detection.timestamp +
             instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
-        latency};
+        static_cast<double>(detection.num_tags),
+        latency,
+        detection.avg_tag_dist};
 
     std::array<int, kmax_tags> tags{};
     for (int tag_id : detection.tag_ids) {
@@ -74,8 +81,10 @@ void PositionSender::Send(
 
     tag_ids_publisher_.Set(tags);
     rejected_tag_ids_publisher_.Set(rejected_tags);
+    varience_publisher_.Set(detection.variance);
 
     latency_publisher_.Set(latency);
+    num_tags_publisher_.Set(detection.num_tags);
 
     if (verbose_) {
       LOG(INFO) << detection;
