@@ -12,15 +12,21 @@ namespace localization {
 void RunLocalization(camera::CameraSource& source,
                      std::unique_ptr<localization::IAprilTagDetector> detector,
                      std::unique_ptr<localization::IPositionSolver> solver,
-                     const std::string& extrinsics, uint port, bool verbose) {
+                     const std::string& extrinsics, std::optional<uint> port,
+                     bool verbose) {
   localization::PositionSender position_sender(source.GetName(), verbose);
 
-  camera::CscoreStreamer streamer(source.GetName(), port, 30, 1080, 1080);
+  std::optional<camera::CscoreStreamer> streamer =
+      port.has_value() ? std::make_optional(camera::CscoreStreamer(
+                             source.GetName(), port.value(), 30, 1080, 1080))
+                       : std::nullopt;
 
   while (true) {
     utils::Timer timer(source.GetName(), verbose);
     camera::timestamped_frame_t timestamped_frame = source.Get();
-    streamer.WriteFrame(timestamped_frame.frame);
+    if (streamer.has_value()) {
+      streamer->WriteFrame(timestamped_frame.frame);
+    }
     std::vector<localization::tag_detection_t> tag_detections =
         detector->GetTagDetections(timestamped_frame);
     std::vector<position_estimate_t> position_estimates =
