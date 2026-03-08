@@ -22,7 +22,6 @@ NvidiaAprilTagDetector::NvidiaAprilTagDetector(int image_width,
       backend_(backend),
       max_detections_(max_detections),
       input_(nullptr) {
-  backend_ = VPI_BACKEND_CPU;
 
   CHECK(!vpiCreateAprilTagDetector(backend_, image_width, image_height,
                                    &params_, &payload_));
@@ -62,7 +61,6 @@ auto NvidiaAprilTagDetector::GetTagDetections(
   auto* detections =
       static_cast<VPIAprilTagDetection*>(detections_data.buffer.aos.data);
   int num_detections = *detections_data.buffer.aos.sizePointer;
-  LOG(INFO) << num_detections;
 
   for (int i = 0; i < num_detections; ++i) {
     tag_detection_t detection;

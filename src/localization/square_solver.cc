@@ -47,6 +47,11 @@ auto SquareSolver::EstimatePosition(
   std::vector<position_estimate_t> position_estimates;
   position_estimates.reserve(detections.size());
   for (const auto& detection : detections) {
+    if (!localization::kapriltag_layout.GetTagPose(detection.tag_id)
+             .has_value()) {
+      LOG(WARNING) << "Got invalid tag";
+      continue;
+    }
     if (reject_far_tags) {
       const auto& c = detection.corners;
       const double area = 0.5 * std::abs((c[0].x - c[2].x) * (c[1].y - c[3].y) -
