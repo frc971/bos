@@ -6,9 +6,11 @@
 #include "src/yolo/yolo.h"
 
 auto main() -> int {
-  camera::Camera config = camera::SelectCameraConfig();
-  camera::CameraSource source = camera::CameraSource(
-      "nvidia_apriltag_test", camera::GetCameraStream(config));
+  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
+      camera::GetCameraConstants("/bos/constants/camera_constants.json"));
+  camera::CameraSource source =
+      camera::CameraSource("nvidia_apriltag_test",
+                           std::make_unique<camera::CVCamera>(camera_constant));
   camera::CscoreStreamer streamer("yolo_test", 4971, 30, 1080, 1080);
 
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
@@ -27,9 +29,8 @@ auto main() -> int {
       gamepiece::run_gamepiece_detect, std::ref(color_model),
       std::ref(model_info.class_names), std::ref(source), std::ref(coral_topic),
       std::ref(algae_topic),
-      utils::ReadIntrinsics(camera::camera_constants[config].intrinsics_path),
-      utils::ReadExtrinsics(camera::camera_constants[config].extrinsics_path),
-      true);
+      utils::ReadIntrinsics(camera_constant.intrinsics_path.value()),
+      utils::ReadExtrinsics(camera_constant.extrinsics_path.value()), true);
 
   usb0_gamepiece_thread.join();
 }

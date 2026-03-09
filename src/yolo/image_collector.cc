@@ -9,8 +9,13 @@
 auto main() -> int {
   std::string img_dir = "/bos/logs/collected_imgs/";
   std::filesystem::create_directories(img_dir);
-  camera::Camera config = camera::SelectCameraConfig();
-  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
+  camera::camera_constants_t camera_constants =
+      camera::GetCameraConstants("/bos/constants/camera_constants.json");
+  camera::camera_constant_t camera_constant =
+      camera::SelectCameraConfig(camera_constants);
+  std::unique_ptr<camera::ICamera> camera =
+      std::make_unique<camera::CVCamera>(camera_constant);
+
   while (true) {
     cv::Mat frame;
     frame = camera->GetFrame().frame;

@@ -10,16 +10,14 @@ ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
 ABSL_FLAG(std::optional<int>, port, std::nullopt, "");                 //NOLINT
 ABSL_FLAG(std::optional<std::string>, log_path, std::nullopt, "");     //NOLINT
 
-using camera::camera_constants;
-
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  camera::Camera config =
-      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
+  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
+      absl::GetFlag(FLAGS_camera_name),
+      camera::GetCameraConstants("/bos/constants/camera_constants.json"));
 
-  camera::CVCamera camera(camera_constants[config],
-                          absl::GetFlag(FLAGS_log_path));
+  camera::CVCamera camera(camera_constant, absl::GetFlag(FLAGS_log_path));
 
   camera::CscoreStreamer streamer(
       "frame_shower", absl::GetFlag(FLAGS_port).value_or(4971), 30, 1080, 1080);

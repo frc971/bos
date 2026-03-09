@@ -72,9 +72,13 @@ auto main(int argc, char* argv[]) -> int {
                                   absl::GetFlag(FLAGS_port).value_or(4971), 30,
                                   1080, 1080);
 
-  camera::Camera config =
-      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
-  std::unique_ptr<camera::ICamera> camera_ = camera::GetCameraStream(config);
+  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
+      absl::GetFlag(FLAGS_camera_name),
+      camera::GetCameraConstants("/bos/constants/camera_constants.json"));
+
+  std::unique_ptr<camera::ICamera> camera_ =
+      std::make_unique<camera::CVCamera>(camera_constant);
+
   camera::CameraSource source("camera", std::move(camera_));
 
   cv::Mat frame = source.GetFrame();

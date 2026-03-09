@@ -38,14 +38,18 @@ void warmupCamera(const std::string& pipeline) {
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  camera::Camera config =
-      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
-  camera::CameraSource source("stress_test_camera",
-                              camera::GetCameraStream(config));
+  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
+      absl::GetFlag(FLAGS_camera_name),
+      camera::GetCameraConstants("/bos/constants/camera_constants.json"));
+
+  PCHECK(camera_constant.intrinsics_path.has_value())
+      << "No intrinsics path in camera constant";
+  camera::CameraSource source(
+      camera_constant.name,
+      std::make_unique<camera::CVCamera>(camera_constant));
   cv::Mat frame = source.GetFrame();
 
-  std::ifstream intrinsics_file(
-      camera::camera_constants[config].intrinsics_path);
+  std::ifstream intrinsics_file(camera_constant.intrinsics_path.value());
   json intrinsics;
   intrinsics_file >> intrinsics;
 
