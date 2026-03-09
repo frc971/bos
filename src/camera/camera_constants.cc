@@ -60,7 +60,7 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
     }
     if (camera_config.contains("brightness") &&
         !camera_config["brightness"].is_null()) {
-      camera_constant.sharpness = camera_config["brightness"];
+      camera_constant.brightness = camera_config["brightness"];
     }
     if (camera_config.contains("sharpness") &&
         !camera_config["sharpness"].is_null()) {
