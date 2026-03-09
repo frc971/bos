@@ -2,7 +2,7 @@
 namespace camera {
 
 auto GetCameraConstants(const std::string& path) -> camera_constants_t {
-  std::map<std::string, camera_constant_t> camera_constants;
+  camera_constants_t camera_constants;
   std::ifstream f(path);
   PCHECK(f) << "Failed to read camera constants json: " << path;
 

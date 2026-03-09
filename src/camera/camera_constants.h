@@ -47,7 +47,7 @@ using camera_constant_t = struct CameraConstant {
   }
 };
 
-using camera_constants_t = std::map<std::string, camera_constant_t>;
+using camera_constants_t = std::unordered_map<std::string, camera_constant_t>;
 
 auto GetCameraConstants(const std::string& path) -> camera_constants_t;
 
