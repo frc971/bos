@@ -29,7 +29,7 @@ TEST_F(SquareSolverTest, Basic) {
 }
 
 TEST_F(SquareSolverTest, Math) {
-  const cv::Mat image = cv::imread("/bos/src/test/unit_test/apriltag.jpg");
+  const cv::Mat image = cv::imread("/bos/constants/misc/apriltag.jpg");
   camera::timestamped_frame_t frame{.frame = image, .timestamp = 0.0};
   const std::vector<localization::tag_detection_t> detections =
       detector.GetTagDetections(frame);
