@@ -38,7 +38,7 @@ auto main() -> int {
 
   std::thread front_thread(
       localization::RunLocalization, std::ref(front_camera),
-      std::make_unique<localization::NvidiaAprilTagDetector>(
+      std::make_unique<localization::OpenCVAprilTagDetector>(
           front_camera.GetFrame().cols, front_camera.GetFrame().rows,
           utils::ReadIntrinsics(
               camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA]
@@ -50,7 +50,7 @@ auto main() -> int {
 
   std::thread left_thread(
       localization::RunLocalization, std::ref(left_camera),
-      std::make_unique<localization::NvidiaAprilTagDetector>(
+      std::make_unique<localization::OpenCVAprilTagDetector>(
           left_camera.GetFrame().cols, left_camera.GetFrame().rows,
           utils::ReadIntrinsics(camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA]
                                     .intrinsics_path)),
@@ -61,7 +61,7 @@ auto main() -> int {
 
   std::thread right_thread(
       localization::RunLocalization, std::ref(right_camera),
-      std::make_unique<localization::NvidiaAprilTagDetector>(
+      std::make_unique<localization::OpenCVAprilTagDetector>(
           right_camera.GetFrame().cols, right_camera.GetFrame().rows,
           utils::ReadIntrinsics(
               camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]
