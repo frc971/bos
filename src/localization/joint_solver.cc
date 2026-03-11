@@ -239,7 +239,8 @@ auto JointSolver::EstimatePosition(
               << " initial step: " << step * step_size << std::endl;
   }
 
-  for (size_t i = 0; i < 1e5 && net_loss > kacceptable_reprojection_error;
+  for (size_t i = 0; i < (yaw_only ? 1 : 10) * kmax_iters &&
+                     net_loss > kacceptable_reprojection_error;
        i++) {
     translation_and_rotation += step * step_size;
     double new_loss;
@@ -265,7 +266,7 @@ auto JointSolver::EstimatePosition(
         ComputeNetStep(translation_and_rotation, decomposed_robot_to_field,
                        Rx_activations, Ry_activations, Rz_activations,
                        projections, projection_errors, data_points, yaw_only);
-    if (verbose && i % 1000 == 0) {
+    if (verbose && i % (kmax_iters / 10) == 0) {
       std::cout << "Step size: " << step_size << " new net loss: " << net_loss
                 << " new step: " << step * step_size << std::endl;
     }
