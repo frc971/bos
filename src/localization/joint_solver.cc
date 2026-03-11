@@ -271,19 +271,16 @@ auto JointSolver::EstimatePosition(
     }
   }
 
-  if (verbose) {
-    std::cout << "Final step: " << step << std::endl;
-    std::cout << "Final loss: " << net_loss << std::endl;
-  }
-
   Eigen::Matrix4d field_to_robot =
       (decomposed_robot_to_field.translation * decomposed_robot_to_field.Rz *
        decomposed_robot_to_field.Ry * decomposed_robot_to_field.Rx)
           .inverse();
 
   if (verbose)
-    utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
-                                     "Field to robot cv");
+    std::cout << "Final step: " << step << std::endl;
+  std::cout << "Final loss: " << net_loss << std::endl;
+  utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
+                                   "Field to robot cv");
   utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
   if (verbose)
     utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
