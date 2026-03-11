@@ -27,5 +27,8 @@ void RunLocalization(camera::CameraSource& source,
                      uint port, bool verbose);
 void RunJointSolve(std::vector<camera::Camera>& sources,
                    std::unique_ptr<localization::IAprilTagDetector> detector,
-                   uint port, bool verbose);
+                   uint port, bool square_solve_start, bool verbose);
+auto GetSquareSolveEstimates(
+    std::vector<camera::CameraSource>& sources,
+    std::unique_ptr<localization::IAprilTagDetector>& detector) -> frc::Pose3d;
 }  // namespace localization

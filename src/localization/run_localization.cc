@@ -1,9 +1,9 @@
 #include "src/localization/run_localization.h"
 #include <utility>
+#include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/joint_solver.h"
-#include "src/localization/position_receiver.h"
 #include "src/localization/position_sender.h"
 #include "src/localization/position_solver.h"
 #include "src/utils/camera_utils.h"
@@ -35,7 +35,7 @@ void RunLocalization(camera::CameraSource& source,
 
 void RunJointSolve(std::vector<camera::CameraSource>& sources,
                    std::unique_ptr<localization::IAprilTagDetector> detector,
-                   uint port, bool verbose) {
+                   uint port, bool square_solve_start, bool verbose) {
   std::string name = "";
   std::vector<camera::Camera> camera_constants;
   std::vector<camera::CscoreStreamer> streamers;
@@ -48,7 +48,8 @@ void RunJointSolve(std::vector<camera::CameraSource>& sources,
     camera_constants.push_back(camera.GetCameraConfig());
   }
   localization::PositionSender position_sender(name, verbose);
-  localization::PositionReceiver position_receiver;
+  // TODO do this with position receiver
+  frc::Pose3d prev_estimate = GetSquareSolveEstimates(sources, detector);
   JointSolver solver(camera_constants);
   while (true) {
     utils::Timer timer(name, verbose);
@@ -65,9 +66,43 @@ void RunJointSolve(std::vector<camera::CameraSource>& sources,
       tag_detections.insert({camera_constants[i], detections});
     }
     position_estimate_t position_estimate =
-        solver.EstimatePosition(tag_detections, position_receiver.Get(), true);
+        solver.EstimatePosition(tag_detections, prev_estimate, true);
+    prev_estimate = position_estimate.pose;
     position_sender.Send(std::vector<position_estimate_t>{position_estimate},
                          timer.Stop());
   }
+}
+
+auto GetSquareSolveEstimates(
+    std::vector<camera::CameraSource>& sources,
+    std::unique_ptr<localization::IAprilTagDetector>& detector) -> frc::Pose3d {
+  double x = 0, y = 0, z = 0, roll = 0, pitch = 0, yaw = 0;
+  int num_estimates = 0;
+  for (camera::CameraSource& source : sources) {
+    localization::SquareSolver square_solver(source.GetCameraConfig());
+    camera::timestamped_frame_t frame = source.Get();
+    const std::vector<localization::position_estimate_t> estimates =
+        square_solver.EstimatePosition(detector->GetTagDetections(frame));
+    for (const localization::position_estimate_t& estimate : estimates) {
+      num_estimates++;
+      x += estimate.pose.X().value();
+      y += estimate.pose.Y().value();
+      z += estimate.pose.Z().value();
+      roll += estimate.pose.Rotation().X().value();
+      pitch += estimate.pose.Rotation().Y().value();
+      yaw += estimate.pose.Rotation().Z().value();
+    }
+  }
+  x /= num_estimates;
+  y /= num_estimates;
+  z /= num_estimates;
+  roll /= num_estimates;
+  pitch /= num_estimates;
+  yaw /= num_estimates;
+  return frc::Pose3d{
+      frc::Translation3d{units::meter_t{x}, units::meter_t{y},
+                         units::meter_t{z}},
+      frc::Rotation3d{units::radian_t{roll}, units::radian_t{pitch},
+                      units::radian_t{yaw}}};
 }
 }  // namespace localization
