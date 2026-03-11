@@ -15,7 +15,8 @@ void RunLocalization(camera::CameraSource& source,
                      const std::string& extrinsics, uint port, bool verbose) {
   localization::PositionSender position_sender(source.GetName(), verbose);
 
-  camera::CscoreStreamer streamer(source.GetName(), port, 30, 1080, 1080);
+  camera::CscoreStreamer streamer(source.GetName(), port, 30, source.GetFrame(),
+                                  0.5);
 
   while (true) {
     utils::Timer timer(source.GetName(), verbose);
