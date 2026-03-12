@@ -26,11 +26,11 @@ auto main(int argc, char* argv[]) -> int {
 
   camera::Camera config =
       camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
-  camera::CameraSource source(config, camera::GetCameraStream(config));
+  camera::CameraSource source("stress_test_camera",
+                              camera::GetCameraStream(config));
   cv::Mat frame = source.GetFrame();
 
-  camera::CscoreStreamer streamer("tag_estimator_test", 4971, 30, frame.rows,
-                                  frame.cols);
+  camera::CscoreStreamer streamer("tag_estimator_test", 5801, 30, frame);
 
   localization::OpenCVAprilTagDetector detector(
       frame.cols, frame.rows,

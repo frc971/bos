@@ -20,15 +20,19 @@ namespace localization {
 //         camera::Camera::TURRET_BOT_FRONT_RIGHT),
 //     camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
 //         .extrinsics_path,
-//     4971, false);
+//     5801, false);
 void RunLocalization(camera::CameraSource& source,
                      std::unique_ptr<localization::IAprilTagDetector> detector,
                      std::unique_ptr<localization::IPositionSolver> solver,
-                     uint port, bool verbose);
-void RunJointSolve(std::vector<camera::Camera>& sources,
+                     const std::string& extrinsics,
+                     std::optional<uint> port = std::nullopt,
+                     bool verbose = false);
+void RunJointSolve(std::vector<std::pair<camera::Camera, camera::CameraSource>>&
+                       camera_sources,
                    std::unique_ptr<localization::IAprilTagDetector> detector,
                    uint port, bool square_solve_start, bool verbose);
 auto GetSquareSolveEstimates(
-    std::vector<camera::CameraSource>& sources,
+    std::vector<std::pair<camera::Camera, camera::CameraSource>>&
+        camera_sources,
     std::unique_ptr<localization::IAprilTagDetector>& detector) -> frc::Pose3d;
 }  // namespace localization

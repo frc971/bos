@@ -30,7 +30,8 @@ auto main(int argc, char* argv[]) -> int {
   utils::StartNetworktables();
 
   camera::Camera config = camera::SelectCameraConfig();
-  camera::CameraSource source(config, camera::GetCameraStream(config));
+  camera::CameraSource source("stress_test_camera",
+                              camera::GetCameraStream(config));
   cv::Mat frame = source.GetFrame();
 
   // std::bind?
@@ -43,7 +44,8 @@ auto main(int argc, char* argv[]) -> int {
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
           camera::Camera::FIDDLER_USB0),
-      4971, false);
+      camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
+      5801, false);
 
   std::thread usb1_thread(
       localization::RunLocalization, std::ref(source),
@@ -54,7 +56,8 @@ auto main(int argc, char* argv[]) -> int {
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
           camera::Camera::FIDDLER_USB0),
-      4972, false);
+      camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
+      5802, false);
 
   std::thread usb2_thread(
       localization::RunLocalization, std::ref(source),
@@ -65,7 +68,8 @@ auto main(int argc, char* argv[]) -> int {
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
           camera::Camera::FIDDLER_USB0),
-      4973, false);
+      camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
+      5803, false);
 
   std::thread usb3_thread(
       localization::RunLocalization, std::ref(source),
@@ -76,6 +80,7 @@ auto main(int argc, char* argv[]) -> int {
                   .intrinsics_path)),
       std::make_unique<localization::SquareSolver>(
           camera::Camera::FIDDLER_USB0),
+      camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
       4974, false);
 
   usb0_thread.join();
