@@ -74,32 +74,39 @@ struct TransformValues {
   double rx;
   double ry;
   double rz;
+  bool yaw_only = false;
 
   friend void operator+=(TransformValues& left, const TransformValues& right) {
     left.x += right.x;
     left.y += right.y;
     left.z += right.z;
-    left.rx += right.rx;
     left.ry += right.ry;
-    left.rz += right.rz;
+    if (!left.yaw_only) {
+      left.rx += right.rx;
+      left.rz += right.rz;
+    }
   }
 
   friend void operator-=(TransformValues& left, const TransformValues& right) {
     left.x -= right.x;
     left.y -= right.y;
     left.z -= right.z;
-    left.rx -= right.rx;
     left.ry -= right.ry;
-    left.rz -= right.rz;
+    if (!left.yaw_only) {
+      left.rx -= right.rx;
+      left.rz -= right.rz;
+    }
   }
 
   friend void operator/=(TransformValues& left, const double right) {
     left.x /= right;
     left.y /= right;
     left.z /= right;
-    left.rx /= right;
     left.ry /= right;
-    left.rz /= right;
+    if (!left.yaw_only) {
+      left.rx /= right;
+      left.rz /= right;
+    }
   }
 
   friend auto operator*(TransformValues& left, const double right)

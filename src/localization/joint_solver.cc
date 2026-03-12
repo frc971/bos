@@ -100,8 +100,8 @@ auto JointSolver::ComputeStep(
     const utils::TransformDecomposition& current_estimate,
     const Eigen::Vector4d& Rx_activation, const Eigen::Vector4d& Ry_activation,
     const Eigen::Vector4d& Rz_activation, const Eigen::Vector3d& projection,
-    const Eigen::Vector2d& projection_error, const data_point_t& data_point)
-    -> utils::TransformValues {
+    const Eigen::Vector2d& projection_error, const data_point_t& data_point,
+    const bool yaw_only) -> utils::TransformValues {
   const double lambda = projection(2);
   const Eigen::Vector3d normalized_projection = projection / lambda;
 
@@ -157,7 +157,8 @@ auto JointSolver::ComputeStep(
           .z = -d_translation(2, 3),
           .rx = -(d_Rx_d_rx.transpose() * d_Rx).trace(),
           .ry = -(d_Ry_d_ry.transpose() * d_Ry).trace(),
-          .rz = -(d_Rz_d_rz.transpose() * d_Rz).trace()};
+          .rz = -(d_Rz_d_rz.transpose() * d_Rz).trace(),
+          .yaw_only = yaw_only};
 }
 
 auto JointSolver::ComputeNetStep(
@@ -170,12 +171,12 @@ auto JointSolver::ComputeNetStep(
     const std::vector<Eigen::Vector2d>& projection_errors,
     const std::vector<data_point_t>& data_points, const bool yaw_only)
     -> utils::TransformValues {
-  utils::TransformValues net_step{};
+  utils::TransformValues net_step{.yaw_only = yaw_only};
   for (size_t i = 0; i < data_points.size(); i++) {
-    net_step +=
-        ComputeStep(translation_and_rotation, position_decomposition,
-                    Rx_activations[i], Ry_activations[i], Rz_activations[i],
-                    projections[i], projection_errors[i], data_points[i]);
+    net_step += ComputeStep(translation_and_rotation, position_decomposition,
+                            Rx_activations[i], Ry_activations[i],
+                            Rz_activations[i], projections[i],
+                            projection_errors[i], data_points[i], yaw_only);
   }
   if (yaw_only) {
     net_step.rx = 0;

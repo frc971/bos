@@ -46,7 +46,8 @@ class JointSolver {
                    const Eigen::Vector4d& Rz_activation,
                    const Eigen::Vector3d& projection,
                    const Eigen::Vector2d& projection_error,
-                   const data_point_t& data_point) -> utils::TransformValues;
+                   const data_point_t& data_point, bool yaw_only)
+      -> utils::TransformValues;
   auto ComputeNetStep(
       const utils::TransformValues translation_and_rotation,
       const utils::TransformDecomposition& position_decomposition,
