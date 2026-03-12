@@ -53,9 +53,9 @@ auto main(int argc, char* argv[]) -> int {
   cv::Mat distortion_coefficients =
       distortion_coefficients_from_json(intrinsics);
 
-  camera::CscoreStreamer raw_streamer("raw_stream", 4971, 30, 1080, 1080);
-  camera::CscoreStreamer undistorted_streamer("undistorted_stream", 4972, 30,
-                                              1080, 1080);
+  camera::CscoreStreamer raw_streamer("raw_stream", 5801, 30, frame);
+  camera::CscoreStreamer undistorted_streamer("undistorted_stream", 5802, 30,
+                                              frame);
 
   while (true) {
     frame = source.GetFrame();
