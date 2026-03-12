@@ -7,9 +7,9 @@ namespace camera {
 
 using camera_constant_t = struct CameraConstant {
   std::string name;
-  std::optional<std::string> pipeline = "";
-  std::optional<std::string> intrinsics_path = "";
-  std::optional<std::string> extrinsics_path = "";
+  std::optional<std::string> pipeline = std::nullopt;
+  std::optional<std::string> intrinsics_path = std::nullopt;
+  std::optional<std::string> extrinsics_path = std::nullopt;
   std::optional<double> backlight = std::nullopt;
   std::optional<double> frame_width = std::nullopt;
   std::optional<double> frame_height = std::nullopt;
