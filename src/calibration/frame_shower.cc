@@ -21,8 +21,9 @@ auto main(int argc, char* argv[]) -> int {
   camera::CVCamera camera(camera_constants[config],
                           absl::GetFlag(FLAGS_log_path));
 
-  camera::CscoreStreamer streamer(
-      "frame_shower", absl::GetFlag(FLAGS_port).value_or(4971), 30, 1080, 1080);
+  camera::CscoreStreamer streamer("frame_shower",
+                                  absl::GetFlag(FLAGS_port).value_or(4971), 30,
+                                  camera.GetFrame().frame);
 
   LOG(INFO) << "Camera opened successfully" << std::endl;
 
