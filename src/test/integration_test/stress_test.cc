@@ -45,7 +45,7 @@ auto main(int argc, char* argv[]) -> int {
       std::make_unique<localization::SquareSolver>(
           camera::Camera::FIDDLER_USB0),
       camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
-      4971, false);
+      5801, false);
 
   std::thread usb1_thread(
       localization::RunLocalization, std::ref(source),
@@ -57,7 +57,7 @@ auto main(int argc, char* argv[]) -> int {
       std::make_unique<localization::SquareSolver>(
           camera::Camera::FIDDLER_USB0),
       camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
-      4972, false);
+      5802, false);
 
   std::thread usb2_thread(
       localization::RunLocalization, std::ref(source),
@@ -69,7 +69,7 @@ auto main(int argc, char* argv[]) -> int {
       std::make_unique<localization::SquareSolver>(
           camera::Camera::FIDDLER_USB0),
       camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
-      4973, false);
+      5803, false);
 
   std::thread usb3_thread(
       localization::RunLocalization, std::ref(source),

@@ -14,5 +14,6 @@ void run_gamepiece_detect(yolo::Yolo& model,
                           nlohmann::json intrinsics, nlohmann::json extrinsics,
                           bool debug);
 
-void run_gamepiece_detect_no_img(yolo::Yolo& model, const std::vector<std::string>& class_names);
+void run_gamepiece_detect_no_img(yolo::Yolo& model,
+                                 const std::vector<std::string>& class_names);
 }  // namespace gamepiece
