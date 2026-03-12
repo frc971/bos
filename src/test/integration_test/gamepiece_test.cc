@@ -11,8 +11,6 @@ auto main() -> int {
   camera::CameraSource source =
       camera::CameraSource("nvidia_apriltag_test",
                            std::make_unique<camera::CVCamera>(camera_constant));
-  camera::CscoreStreamer streamer("yolo_test", 4971, 30, 1080, 1080);
-
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   std::shared_ptr<nt::NetworkTable> coral_table =
       inst.GetTable("Orin/Gamepiece/coral");

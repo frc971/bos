@@ -11,9 +11,17 @@ class CscoreStreamer {
  public:
   CscoreStreamer(const std::string& name, uint port, uint fps, uint width,
                  uint height, bool verbose = false);
+
+  // The resulting size of the streamed image is ratio * frame.width, ration * frame.height
+  CscoreStreamer(const std::string& name, uint port, uint fps,
+                 const cv::Mat& frame, float ratio = 1.0f,
+                 bool verbose = false);
+
   void WriteFrame(cv::Mat& mat);
 
  private:
+  uint width_;
+  uint height_;
   cs::CvSource source_;
   cs::MjpegServer server_;
 };
