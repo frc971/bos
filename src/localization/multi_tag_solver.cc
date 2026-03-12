@@ -107,9 +107,16 @@ auto MultiTagSolver::EstimatePosition(
   avg_distance /= tag_ids.size();
   cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
   cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);
-  cv::solvePnP(object_points, image_points, camera_matrix_,
-               distortion_coefficients_, rvec, tvec, false, cv::SOLVEPNP_SQPNP);
-
+  if (detections.size() == 4) {
+    LOG(INFO) << "single tag";
+    cv::solvePnP(object_points, image_points, camera_matrix_,
+                 distortion_coefficients_, rvec, tvec, false,
+                 cv::SOLVEPNP_IPPE_SQUARE);
+  } else {
+    cv::solvePnP(object_points, image_points, camera_matrix_,
+                 distortion_coefficients_, rvec, tvec, false,
+                 cv::SOLVEPNP_SQPNP);
+  }
   cv::Mat feild_to_camera = utils::MakeTransform(rvec, tvec).inv();
   cv::Mat feild_to_robot = feild_to_camera * camera_to_robot_;
 
