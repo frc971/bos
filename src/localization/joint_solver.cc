@@ -236,6 +236,10 @@ auto JointSolver::EstimatePosition(
               << " initial step: " << step * step_size << std::endl;
   }
 
+  size_t stepdowns_first = 0;
+  size_t stepups_first = 0;
+  size_t stepdowns_second = 0;
+  size_t stepups_second = 0;
   for (size_t i = 0; i < (yaw_only ? 1 : 10) * kmax_iters &&
                      net_loss > kacceptable_reprojection_error;
        i++) {
@@ -257,7 +261,16 @@ auto JointSolver::EstimatePosition(
                   Rz_activations, projections, projection_errors, data_points);
       if (new_loss > net_loss) {
         step_size /= 2.0;
+        stepdowns_first++;
+        if (stepdowns_first >= kmax_iters) {
+          std::cout << "Insane number of stepdowns, failed at iter: " << i
+                    << " with step size " << step_size << " and transform "
+                    << translation_and_rotation << std::endl;
+          break;
+        }
         translation_and_rotation -= step * step_size;
+        // std::cout << "Translation&Rotation: " << translation_and_rotation
+        //           << std::endl;
         continue;
       } else {
         step_size *= 2.0;
@@ -285,6 +298,10 @@ auto JointSolver::EstimatePosition(
   if (verbose) {
     std::cout << "Final step: " << step << std::endl;
     std::cout << "Final loss: " << net_loss << std::endl;
+    std::cout << "Stepups first: " << stepups_first << std::endl;
+    std::cout << "Stepdowns first: " << stepdowns_first << std::endl;
+    std::cout << "Stepups second: " << stepups_second << std::endl;
+    std::cout << "Stepdowns second: " << stepdowns_second << std::endl;
     utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
                                      "Field to robot cv");
   }
