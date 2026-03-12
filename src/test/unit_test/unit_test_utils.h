@@ -50,8 +50,6 @@ auto operator==(const PositionEstimate& left, const PositionEstimate& right)
   const double euler_diff = wrap_compare(rot_diff.X().value()) +
                             wrap_compare(rot_diff.Y().value()) +
                             wrap_compare(rot_diff.Z().value());
-  std::cout << "I am here!" << std::endl;
-
   return euler_diff < test_utils::ERROR_MARGIN_EULER_ANGLE;
 }
 }  // namespace localization

@@ -155,12 +155,9 @@ auto JointSolver::ComputeStep(
   return {.x = -d_translation(0, 3),
           .y = -d_translation(1, 3),
           .z = -d_translation(2, 3),
-          .rx = -(d_Rx_d_rx.transpose() * d_Rx).trace() *
-                krotation_adjustment_slowdown_scalar,
-          .ry = -(d_Ry_d_ry.transpose() * d_Ry).trace() *
-                krotation_adjustment_slowdown_scalar,
-          .rz = -(d_Rz_d_rz.transpose() * d_Rz).trace() *
-                krotation_adjustment_slowdown_scalar};
+          .rx = -(d_Rx_d_rx.transpose() * d_Rx).trace(),
+          .ry = -(d_Ry_d_ry.transpose() * d_Ry).trace(),
+          .rz = -(d_Rz_d_rz.transpose() * d_Rz).trace()};
 }
 
 auto JointSolver::ComputeNetStep(
@@ -242,6 +239,14 @@ auto JointSolver::EstimatePosition(
   for (size_t i = 0; i < (yaw_only ? 1 : 10) * kmax_iters &&
                      net_loss > kacceptable_reprojection_error;
        i++) {
+    if (yaw_only) {
+      step.rx *= krotation_step_scalar;
+      step.ry *= krotation_step_scalar;
+      step.rz *= krotation_step_scalar;
+    } else {
+      step.rx *= kyaw_prioritization;
+      step.ry *= kyaw_prioritization;
+    }
     translation_and_rotation += step * step_size;
     double new_loss;
     do {
@@ -277,15 +282,17 @@ auto JointSolver::EstimatePosition(
        decomposed_robot_to_field.Ry * decomposed_robot_to_field.Rx)
           .inverse();
 
-  if (verbose)
+  if (verbose) {
     std::cout << "Final step: " << step << std::endl;
-  std::cout << "Final loss: " << net_loss << std::endl;
-  utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
-                                   "Field to robot cv");
+    std::cout << "Final loss: " << net_loss << std::endl;
+    utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
+                                     "Field to robot cv");
+  }
   utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
-  if (verbose)
+  if (verbose) {
     utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
                                      "Field to robot wpi");
+  }
   field_to_robot(3, 0) = 0;
   field_to_robot(3, 1) = 0;
   field_to_robot(3, 2) = 0;
