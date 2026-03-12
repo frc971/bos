@@ -107,8 +107,7 @@ auto MultiTagSolver::EstimatePosition(
   avg_distance /= tag_ids.size();
   cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
   cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);
-  if (detections.size() == 4) {
-    LOG(INFO) << "single tag";
+  if (detections.size() == 1) {
     cv::solvePnP(object_points, image_points, camera_matrix_,
                  distortion_coefficients_, rvec, tvec, false,
                  cv::SOLVEPNP_IPPE_SQUARE);
