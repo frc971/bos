@@ -2,9 +2,8 @@
 #include "src/utils/log.h"
 
 namespace camera {
-CameraSource::CameraSource(camera::Camera camera_config,
-                           std::unique_ptr<ICamera> camera)
-    : camera_config_(camera_config), camera_(std::move(camera)) {
+CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera)
+    : name_(std::move(name)), camera_(std::move(camera)) {
   timestamped_frame_ = camera_->GetFrame();
   thread_ = std::thread([this] {
     while (true) {
