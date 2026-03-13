@@ -17,60 +17,41 @@ auto main() -> int {
   std::string log_path = frc::DataLogManager::GetLogDir();
 
   LOG(INFO) << "Starting cameras with right camera disabled";
-  camera::CameraSource front_camera = camera::CameraSource(
-      "Front", std::make_unique<camera::CVCamera>(
-                   camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA]));
+  std::unique_ptr<camera::CameraSource> front_camera =
+      std::make_unique<camera::CameraSource>(
+          "Front", std::make_unique<camera::CVCamera>(
+                       camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA]));
 
-  camera::CameraSource left_camera = camera::CameraSource(
-      "Left", std::make_unique<camera::CVCamera>(
-                  camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA],
-                  fmt::format("{}/left", log_path)));
+  std::unique_ptr<camera::CameraSource> left_camera =
+      std::make_unique<camera::CameraSource>(
+          "Left", std::make_unique<camera::CVCamera>(
+                      camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA],
+                      fmt::format("{}/left", log_path)));
 
-  camera::CameraSource right_camera = camera::CameraSource(
-      "Right", std::make_unique<camera::CVCamera>(
-                   camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA],
-                   fmt::format("{}/right", log_path)));
+  std::unique_ptr<camera::CameraSource> right_camera =
+      std::make_unique<camera::CameraSource>(
+          "Right", std::make_unique<camera::CVCamera>(
+                       camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA],
+                       fmt::format("{}/right", log_path)));
 
   LOG(INFO) << "Started cameras";
   std::this_thread::sleep_for(std::chrono::seconds(2));
   LOG(INFO) << "Starting estimators";
-
-  std::thread front_thread(
-      localization::RunLocalization, std::ref(front_camera),
+  std::vector<std::pair<camera::Camera, std::unique_ptr<camera::CameraSource>>>
+      camera_sources;
+  camera_sources.emplace_back(camera::MAIN_ROBOT_FRONT_CAMERA,
+                              std::move(front_camera));
+  camera_sources.emplace_back(camera::MAIN_ROBOT_LEFT_CAMERA,
+                              std::move(left_camera));
+  camera_sources.emplace_back(camera::MAIN_ROBOT_RIGHT_CAMERA,
+                              std::move(right_camera));
+  std::thread joint_solve_thread(
+      localization::RunJointSolve, std::ref(camera_sources),
       std::make_unique<localization::OpenCVAprilTagDetector>(
-          front_camera.GetFrame().cols, front_camera.GetFrame().rows,
-          utils::ReadIntrinsics(
-              camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA]
-                  .intrinsics_path)),
-      std::make_unique<localization::MultiTagSolver>(
-          Camera::MAIN_ROBOT_FRONT_CAMERA),
-      camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA].extrinsics_path, 5801,
-      false);
-
-  std::thread left_thread(
-      localization::RunLocalization, std::ref(left_camera),
-      std::make_unique<localization::OpenCVAprilTagDetector>(
-          left_camera.GetFrame().cols, left_camera.GetFrame().rows,
-          utils::ReadIntrinsics(camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA]
-                                    .intrinsics_path)),
-      std::make_unique<localization::MultiTagSolver>(
-          Camera::MAIN_ROBOT_LEFT_CAMERA),
-      camera::camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA].extrinsics_path,
-      5802, false);
-
-  std::thread right_thread(
-      localization::RunLocalization, std::ref(right_camera),
-      std::make_unique<localization::OpenCVAprilTagDetector>(
-          right_camera.GetFrame().cols, right_camera.GetFrame().rows,
+          right_camera->GetFrame().cols, right_camera->GetFrame().rows,
           utils::ReadIntrinsics(
               camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA]
                   .intrinsics_path)),
-      std::make_unique<localization::MultiTagSolver>(
-          Camera::MAIN_ROBOT_RIGHT_CAMERA),
-      camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA].extrinsics_path, 5803,
-      false);
-
+      5801, false, false);
   LOG(INFO) << "Started estimators";
-
-  left_thread.join();
 }
