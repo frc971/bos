@@ -1,64 +1,68 @@
+#include <src/camera/cv_camera.h>
+#include <iomanip>
+#include <iostream>
 #include <nlohmann/json.hpp>
-#include <opencv2/imgproc.hpp>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/opencv.hpp>
 #include <sstream>
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/select_camera.h"
-#include "src/localization/gpu_apriltag_detector.h"
-#include "src/localization/opencv_apriltag_detector.h"
-#include "src/localization/square_solver.h"
-#include "src/utils/camera_utils.h"
-#include "src/utils/timer.h"
 
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
-ABSL_FLAG(std::optional<bool>, time, std::nullopt, "");                //NOLINT
 
 using json = nlohmann::json;
+
+auto camera_matrix_from_json(json intrinsics) -> cv::Mat {
+  cv::Mat camera_matrix =
+      (cv::Mat_<double>(3, 3) << intrinsics["fx"], 0, intrinsics["cx"], 0,
+       intrinsics["fy"], intrinsics["cy"], 0, 0, 1);
+
+  return camera_matrix;
+}
+
+auto distortion_coefficients_from_json(json intrinsics) -> cv::Mat {
+  cv::Mat distortion_coefficients =
+      (cv::Mat_<double>(1, 5) << intrinsics["k1"], intrinsics["k2"],
+       intrinsics["p1"], intrinsics["p2"], intrinsics["k3"]);
+  return distortion_coefficients;
+}
+
+void warmupCamera(const std::string& pipeline) {
+  cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
+}
 
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  bool time = absl::GetFlag(FLAGS_time).value_or(false);
-
   camera::Camera config =
       camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
-  camera::CameraSource source("stress_test_camera",
-                              camera::GetCameraStream(config));
+  camera::CameraSource source(config, camera::GetCameraStream(config));
   cv::Mat frame = source.GetFrame();
 
-  camera::CscoreStreamer streamer("tag_estimator_test", 5801, 30, frame);
+  std::ifstream intrinsics_file(
+      camera::camera_constants[config].intrinsics_path);
+  json intrinsics;
+  intrinsics_file >> intrinsics;
 
-  localization::OpenCVAprilTagDetector detector(
-      frame.cols, frame.rows,
-      utils::ReadIntrinsics(camera::camera_constants[config].intrinsics_path));
+  cv::Mat camera_matrix = camera_matrix_from_json(intrinsics);
+  cv::Mat distortion_coefficients =
+      distortion_coefficients_from_json(intrinsics);
 
-  localization::SquareSolver solver(
-      camera::camera_constants[config].intrinsics_path,
-      camera::camera_constants[config].extrinsics_path);
+  camera::CscoreStreamer raw_streamer("raw_stream", 4971, 30, 1080, 1080);
+  camera::CscoreStreamer undistorted_streamer("undistorted_stream", 4972, 30,
+                                              1080, 1080);
 
-  camera::timestamped_frame_t timestamped_frame;
   while (true) {
-    utils::Timer timer("tag estimator apriltag", time);
-    timestamped_frame = source.Get();
+    frame = source.GetFrame();
+    raw_streamer.WriteFrame(frame);
 
-    std::vector<localization::tag_detection_t> tag_detections =
-        detector.GetTagDetections(timestamped_frame);
-    std::vector<localization::position_estimate_t> position_estimates =
-        solver.EstimatePosition(tag_detections);
-    for (auto& position_estimate : position_estimates) {
-      LOG(INFO) << position_estimate;
-    }
+    cv::Mat undistorted;
+    cv::undistort(frame, undistorted, camera_matrix, distortion_coefficients);
 
-    for (auto& tag_detection : tag_detections) {
-      for (auto& corner : tag_detection.corners) {
-        cv::circle(timestamped_frame.frame, corner, 10, cv::Scalar(0, 0, 255));
-      }
-    }
-
-    streamer.WriteFrame(timestamped_frame.frame);
+    undistorted_streamer.WriteFrame(undistorted);
   }
 }

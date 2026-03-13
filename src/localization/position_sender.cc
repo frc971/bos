@@ -32,7 +32,7 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
   nt::DoubleArrayTopic tag_estimation_topic =
       table->GetDoubleArrayTopic("TagEstimation");
   tag_estimation_publisher_ = tag_estimation_topic.Publish(
-      {.pollStorage = 200, .sendAll = true, .keepDuplicates = true});
+      {.periodic = 0.01, .sendAll = true, .keepDuplicates = true});
 
   nt::BooleanArrayTopic tag_ids_topic = table->GetBooleanArrayTopic("TagId");
   tag_ids_publisher_ = tag_ids_topic.Publish();
@@ -77,9 +77,6 @@ void PositionSender::Send(
                     units::radian_t{detection.pose.Rotation().Z().value()}));
     pose3d_publisher_.Set(detection.pose);
 
-    tag_estimation_publisher_.Set(tag_estimation);
-    tag_estimation_publisher_.Set(tag_estimation);
-    tag_estimation_publisher_.Set(tag_estimation);
     tag_estimation_publisher_.Set(tag_estimation);
 
     tag_ids_publisher_.Set(tags);

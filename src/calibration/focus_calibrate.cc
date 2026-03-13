@@ -8,8 +8,7 @@ auto main(int argc, char* argv[]) -> int {
   camera::Camera config = camera::SelectCameraConfig();
   std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
 
-  camera::CscoreStreamer streamer("focus_calibrate", 5801, 30,
-                                  camera->GetFrame().frame);
+  camera::CscoreStreamer streamer("focus_calibrate", 4971, 30, 1080, 1080);
 
   cv::Mat frame, gray, laplace;
   while (true) {

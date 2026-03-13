@@ -2,8 +2,7 @@
 namespace camera {
 
 CscoreStreamer::CscoreStreamer(const std::string& name, uint port, uint fps,
-                               uint width, uint height, bool verbose)
-    : width_(width), height_(height) {
+                               uint width, uint height, bool verbose) {
   if (verbose) {
     std::cout << "Initializing CscoreStreamer with the following parameters:"
               << std::endl;
@@ -19,17 +18,10 @@ CscoreStreamer::CscoreStreamer(const std::string& name, uint port, uint fps,
   server_.SetSource(source_);
 }
 
-CscoreStreamer::CscoreStreamer(const std::string& name, uint port, uint fps,
-                               const cv::Mat& frame, float ratio, bool verbose)
-    : CscoreStreamer(name, port, fps, frame.cols * ratio, frame.rows * ratio,
-                     verbose) {}
-
 void CscoreStreamer::WriteFrame(cv::Mat& mat) {
   cv::Mat frame;
-  cv::resize(mat, frame, cv::Size(width_, height_));
-  if (frame.channels() == 4) {
-    cv::cvtColor(frame, frame, cv::COLOR_BGRA2BGR);
-  }
+  cv::resize(mat, frame, cv::Size(1080, 1080));
+  cv::cvtColor(frame, frame, cv::COLOR_BGRA2BGR);
   source_.PutFrame(frame);
 }
 }  // namespace camera

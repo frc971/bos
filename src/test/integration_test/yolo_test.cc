@@ -19,8 +19,7 @@ auto main() -> int {
   camera::Camera config = camera::SelectCameraConfig();
   std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
 
-  camera::CscoreStreamer streamer("yolo_test", 5801, 30,
-                                  camera->GetFrame().frame);
+  camera::CscoreStreamer streamer("yolo_test", 4971, 30, 1080, 1080);
 
   std::vector<cv::Rect> bboxes(MAX_DETECTIONS);
   std::vector<float> confidences(MAX_DETECTIONS);
