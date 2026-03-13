@@ -35,7 +35,4 @@ auto SelectCameraConfig(std::optional<std::string> choice,
              : SelectCameraConfig(camera_constants);
 }
 
-// auto GetCameraStream(Camera camera) -> std::unique_ptr<ICamera> {
-//   return std::make_unique<camera::CVCamera>(camera_constants[camera]);
-// }
 }  // namespace camera
