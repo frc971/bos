@@ -37,14 +37,15 @@ auto main() -> int {
 
   std::thread front_thread(
       localization::RunLocalization, std::ref(front_camera),
-      std::make_unique<localization::GPUAprilTagDetector>(
+      std::make_unique<localization::OpenCVAprilTagDetector>(
           front_camera.GetFrame().cols, front_camera.GetFrame().rows,
           utils::ReadIntrinsics(
               camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA]
                   .intrinsics_path)),
       std::make_unique<localization::MultiTagSolver>(
           Camera::MAIN_ROBOT_FRONT_CAMERA),
-      camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA].extrinsics_path, 5801, false);
+      camera_constants[Camera::MAIN_ROBOT_FRONT_CAMERA].extrinsics_path, 5801,
+      false);
 
   std::thread left_thread(
       localization::RunLocalization, std::ref(left_camera),
@@ -54,7 +55,8 @@ auto main() -> int {
                                     .intrinsics_path)),
       std::make_unique<localization::MultiTagSolver>(
           Camera::MAIN_ROBOT_LEFT_CAMERA),
-      camera::camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA].extrinsics_path, 5802, false);
+      camera::camera_constants[Camera::MAIN_ROBOT_LEFT_CAMERA].extrinsics_path,
+      5802, false);
 
   std::thread right_thread(
       localization::RunLocalization, std::ref(right_camera),
@@ -65,7 +67,8 @@ auto main() -> int {
                   .intrinsics_path)),
       std::make_unique<localization::MultiTagSolver>(
           Camera::MAIN_ROBOT_RIGHT_CAMERA),
-      camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA].extrinsics_path, 5803, false);
+      camera_constants[Camera::MAIN_ROBOT_RIGHT_CAMERA].extrinsics_path, 5803,
+      false);
 
   LOG(INFO) << "Started estimators";
 

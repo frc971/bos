@@ -32,7 +32,7 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
   nt::DoubleArrayTopic tag_estimation_topic =
       table->GetDoubleArrayTopic("TagEstimation");
   tag_estimation_publisher_ = tag_estimation_topic.Publish(
-      {.periodic = 0.01, .sendAll = true, .keepDuplicates = true});
+      {.pollStorage = 200, .sendAll = true, .keepDuplicates = true});
 
   nt::BooleanArrayTopic tag_ids_topic = table->GetBooleanArrayTopic("TagId");
   tag_ids_publisher_ = tag_ids_topic.Publish();
