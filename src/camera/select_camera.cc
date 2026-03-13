@@ -9,7 +9,11 @@ namespace camera {
 
 auto SelectCameraConfig(const camera_constants_t& camera_constants)
     -> camera_constant_t {
-  std::cout << "Please select a camera" << std::endl;
+  std::cout << "Available cameras:" << std::endl;
+  for (const auto& entry : camera_constants) {
+    std::cout << "  - " << entry.first << std::endl;
+  }
+  std::cout << "Please select a camera: " << std::flush;
   std::string choice;
   std::cin >> choice;
   return SelectCameraConfig(choice, camera_constants);
