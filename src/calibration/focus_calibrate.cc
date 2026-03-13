@@ -10,7 +10,7 @@ auto main(int argc, char* argv[]) -> int {
   std::unique_ptr<camera::ICamera> camera =
       std::make_unique<camera::CVCamera>(camera_constant);
 
-  camera::CscoreStreamer streamer("focus_calibrate", 4971, 30,
+  camera::CscoreStreamer streamer("focus_calibrate", 5801, 30,
                                   camera->GetFrame().frame);
 
   cv::Mat frame, gray, laplace;

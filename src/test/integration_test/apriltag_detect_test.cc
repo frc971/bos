@@ -32,7 +32,7 @@ auto main(int argc, char* argv[]) -> int {
       std::make_unique<camera::CVCamera>(camera_constant));
   cv::Mat frame = source.GetFrame();
 
-  camera::CscoreStreamer streamer("tag_estimator_test", 4971, 30, frame);
+  camera::CscoreStreamer streamer("tag_estimator_test", 5801, 30, frame);
 
   localization::OpenCVAprilTagDetector detector(
       frame.cols, frame.rows,

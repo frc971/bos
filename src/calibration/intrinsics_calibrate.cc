@@ -77,7 +77,7 @@ auto main(int argc, char* argv[]) -> int {
 
   camera::CameraSource source("camera", std::move(camera));
   camera::CscoreStreamer streamer("intrinsics_calibrate",
-                                  absl::GetFlag(FLAGS_port).value_or(4971), 30,
+                                  absl::GetFlag(FLAGS_port).value_or(5801), 30,
                                   source.GetFrame());
 
   cv::Mat frame = source.GetFrame();

@@ -8,7 +8,6 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
-#include "src/camera/realsense_camera.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 #include "src/yolo/model_constants.h"
@@ -118,7 +117,8 @@ void run_gamepiece_detect(yolo::Yolo& model,
   }
 }
 
-void run_gamepiece_detect_no_img(yolo::Yolo& model, const std::vector<std::string>& class_names) {
+void run_gamepiece_detect_no_img(yolo::Yolo& model,
+                                 const std::vector<std::string>& class_names) {
   std::vector<cv::Rect> bboxes(MAX_DETECTIONS);
   std::vector<float> confidences(MAX_DETECTIONS);
   std::vector<int> class_ids(MAX_DETECTIONS);
@@ -127,7 +127,7 @@ void run_gamepiece_detect_no_img(yolo::Yolo& model, const std::vector<std::strin
   model.Postprocess(color.rows, color.cols, model.RunModel(color), bboxes,
                     confidences, class_ids);
   mutex.unlock();
-    
+
   for (size_t i = 0; i < MAX_DETECTIONS; i++) {
     if (bboxes[i].empty()) {
       if (i == 0) {

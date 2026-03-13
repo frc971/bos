@@ -21,7 +21,7 @@ auto main() -> int {
   std::unique_ptr<camera::ICamera> camera =
       std::make_unique<camera::CVCamera>(camera_constant);
 
-  camera::CscoreStreamer streamer("yolo_test", 4971, 30,
+  camera::CscoreStreamer streamer("yolo_test", 5801, 30,
                                   camera->GetFrame().frame);
 
   std::vector<cv::Rect> bboxes(MAX_DETECTIONS);
