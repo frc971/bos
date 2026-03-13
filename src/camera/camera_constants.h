@@ -51,4 +51,6 @@ using camera_constants_t = std::unordered_map<std::string, camera_constant_t>;
 
 auto GetCameraConstants(const std::string& path) -> camera_constants_t;
 
+auto GetCameraConstants() -> camera_constants_t;
+
 }  // namespace camera

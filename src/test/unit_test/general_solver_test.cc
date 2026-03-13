@@ -17,9 +17,7 @@ class GeneralSolverTest : public ::testing::Test {
   localization::SquareSolver square_solver;
   localization::OpenCVAprilTagDetector detector;
   GeneralSolverTest()
-      : camera_constant(
-            camera::GetCameraConstants("/bos/constants/camera_constants.json")
-                .at("dev_orin")),
+      : camera_constant(camera::GetCameraConstants().at("dev_orin")),
         multitag_solver(camera_constant),
         square_solver(camera_constant),
         detector(

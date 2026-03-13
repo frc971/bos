@@ -1,5 +1,16 @@
 #include "src/camera/camera_constants.h"
+#include <optional>
+#include "absl/flags/flag.h"
+
+ABSL_FLAG(std::string, camera_constants_path,            // NOLINT
+          "/bos/constants/camera_constants.json",        // NOTLINT
+          "Path to the json file of camera constants");  //NOLINT
+
 namespace camera {
+
+auto GetCameraConstants() -> camera_constants_t {
+  return GetCameraConstants(absl::GetFlag(FLAGS_camera_constants_path));
+}
 
 auto GetCameraConstants(const std::string& path) -> camera_constants_t {
   camera_constants_t camera_constants;

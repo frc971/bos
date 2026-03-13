@@ -69,8 +69,7 @@ auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
   camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
-      absl::GetFlag(FLAGS_camera_name),
-      camera::GetCameraConstants("/bos/constants/camera_constants.json"));
+      absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
 
   std::unique_ptr<camera::ICamera> camera =
       std::make_unique<camera::CVCamera>(camera_constant);

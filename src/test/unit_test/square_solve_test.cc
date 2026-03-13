@@ -18,9 +18,7 @@ class SquareSolverTest : public ::testing::Test {
   localization::SquareSolver square_solver;
   localization::OpenCVAprilTagDetector detector;
   SquareSolverTest()
-      : camera_constant(
-            camera::GetCameraConstants("/bos/constants/camera_constants.json")
-                .at("dev_orin")),
+      : camera_constant(camera::GetCameraConstants().at("dev_orin")),
         square_solver(camera_constant),
         detector(
             utils::ReadIntrinsics(camera_constant.intrinsics_path.value())) {}

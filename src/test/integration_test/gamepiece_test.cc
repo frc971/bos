@@ -6,8 +6,8 @@
 #include "src/yolo/yolo.h"
 
 auto main() -> int {
-  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
-      camera::GetCameraConstants("/bos/constants/camera_constants.json"));
+  camera::camera_constant_t camera_constant =
+      camera::SelectCameraConfig(camera::GetCameraConstants());
   camera::CameraSource source =
       camera::CameraSource("nvidia_apriltag_test",
                            std::make_unique<camera::CVCamera>(camera_constant));

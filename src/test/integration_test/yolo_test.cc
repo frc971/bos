@@ -16,8 +16,8 @@ const int MAX_DETECTIONS = 10;
 auto main() -> int {
   yolo::ModelInfo model_info = yolo::models[yolo::Model::COLOR];
   yolo::Yolo model(model_info.path, model_info.color, true);
-  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
-      camera::GetCameraConstants("/bos/constants/camera_constants.json"));
+  camera::camera_constant_t camera_constant =
+      camera::SelectCameraConfig(camera::GetCameraConstants());
   std::unique_ptr<camera::ICamera> camera =
       std::make_unique<camera::CVCamera>(camera_constant);
 

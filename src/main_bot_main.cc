@@ -14,8 +14,7 @@ auto main() -> int {
   // TODO configure vision bot camera paths
 
   std::string log_path = frc::DataLogManager::GetLogDir();
-  camera_constants_t camera_constants =
-      camera::GetCameraConstants("/bos/constants/camera_constants.json");
+  camera_constants_t camera_constants = camera::GetCameraConstants();
 
   LOG(INFO) << "Starting cameras";
   camera::CameraSource front_camera =

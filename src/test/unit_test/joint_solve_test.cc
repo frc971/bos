@@ -14,8 +14,7 @@ std::vector<localization::tag_detection_t> detections(
 
 TEST(JointSolveTest, EstimatePosition) {  // NOLINT
   camera::camera_constant_t camera_constant =
-      camera::GetCameraConstants("/bos/constants/camera_constants.json")
-          .at("dev_orin");
+      camera::GetCameraConstants().at("dev_orin");
   localization::JointSolver joint_solver({camera_constant});
   localization::SquareSolver square_solver(camera_constant);
 

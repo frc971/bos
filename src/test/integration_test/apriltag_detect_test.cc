@@ -25,8 +25,7 @@ auto main(int argc, char* argv[]) -> int {
   bool time = absl::GetFlag(FLAGS_time).value_or(false);
 
   camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
-      absl::GetFlag(FLAGS_camera_name),
-      camera::GetCameraConstants("/bos/constants/camera_constants.json"));
+      absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
   camera::CameraSource source(
       "stress_test_camera",
       std::make_unique<camera::CVCamera>(camera_constant));

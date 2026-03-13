@@ -39,8 +39,7 @@ auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
   camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
-      absl::GetFlag(FLAGS_camera_name),
-      camera::GetCameraConstants("/bos/constants/camera_constants.json"));
+      absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
 
   PCHECK(camera_constant.intrinsics_path.has_value())
       << "No intrinsics path in camera constant";
