@@ -47,7 +47,7 @@ auto main() -> int {
                   .intrinsics_path)),
       std::make_unique<localization::MultiTagSolver>(
           Camera::MAIN_ROBOT_FRONT_CAMERA),
-      4971, false);
+      5801, false);
 
   std::thread left_thread(
       localization::RunLocalization, std::ref(left_camera),
@@ -57,7 +57,7 @@ auto main() -> int {
                                     .intrinsics_path)),
       std::make_unique<localization::MultiTagSolver>(
           Camera::MAIN_ROBOT_LEFT_CAMERA),
-      4972, false);
+      5802, false);
 
   std::thread right_thread(
       localization::RunLocalization, std::ref(right_camera),
@@ -68,7 +68,7 @@ auto main() -> int {
                   .intrinsics_path)),
       std::make_unique<localization::MultiTagSolver>(
           Camera::MAIN_ROBOT_RIGHT_CAMERA),
-      4973, false);
+      5803, false);
 
   LOG(INFO) << "Started estimators";
 
