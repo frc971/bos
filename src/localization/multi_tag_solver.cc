@@ -112,7 +112,7 @@ auto MultiTagSolver::EstimatePosition(
     cv::solvePnP(object_points, image_points, camera_matrix_,
                  distortion_coefficients_, rvec, tvec, false,
                  cv::SOLVEPNP_SQPNP);
-  } catch (std::exception& e) {
+  } catch (const std::exception& e) {
     LOG(WARNING) << "Caught solve pnp exception:\n" << e.what();
     return {};
   }
