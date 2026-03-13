@@ -1,7 +1,6 @@
 #include "src/camera/select_camera.h"
 #include "cv_camera.h"
 #include "src/camera/camera_constants.h"
-#include "src/camera/realsense_camera.h"
 #include "src/utils/log.h"
 
 namespace camera {
