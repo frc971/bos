@@ -20,16 +20,21 @@ ABSL_FLAG(std::string, image_folder, "",  //NOLINT
           "Path to folder of test images");
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt,  //NOLINT
           "Camera name");
-ABSL_FLAG(int, port, 5801, "Port");                            //NOLINT
-ABSL_FLAG(std::optional<std::string>, log_path, std::nullopt,  //NOLINT
-          "Log path");
+ABSL_FLAG(int, port, 5801, "Port");              //NOLINT
+ABSL_FLAG(std::optional<std::string>, log_path,  //NOLINT
+          frc::DataLogManager::GetLogDir(), "Log path");
 
 auto main(int argc, char** argv) -> int {
 
-  // TODO: Should I use the log path here or just the DataLogManager's default log directory
-  std::string log_path = frc::DataLogManager::GetLogDir();
-
   absl::ParseCommandLine(argc, argv);
+
+  const std::string image_folder = absl::GetFlag(FLAGS_image_folder);
+  const std::filesystem::path image_path(image_folder);
+  if (image_folder.empty() || !std::filesystem::exists(image_path) ||
+      !std::filesystem::is_directory(image_path)) {
+    LOG(FATAL) << "Folder empty or doesn't exist";
+    return 1;
+  }
 
   camera::CameraSource camera("disk", std::make_unique<camera::DiskCamera>(
                                           absl::GetFlag(FLAGS_image_folder)));
@@ -43,7 +48,8 @@ auto main(int argc, char** argv) -> int {
       camera,
       std::make_unique<localization::OpenCVAprilTagDetector>(
           frame.cols, frame.rows,
-          utils::GetJson(camera::camera_constants[config].intrinsics_path)),
+          utils::ReadIntrinsics(
+              camera::camera_constants[config].intrinsics_path)),
       std::make_unique<localization::MultiTagSolver>(config),
       camera::camera_constants[config].extrinsics_path,
       absl::GetFlag(FLAGS_port), false);
