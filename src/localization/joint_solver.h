@@ -69,8 +69,8 @@ class JointSolver {
   static constexpr double kacceptable_reprojection_error = 0.005;
   double step_size = 1e-1;
   static constexpr double kyaw_prioritization = 1e-1;
-  static constexpr double krotation_step_scalar = 3e-0;
-  static constexpr size_t kmax_iters = 1e6;
+  static constexpr double krotation_step_scalar = 3e-1;
+  static constexpr size_t kmax_iters = 5e4;
   std::map<camera::CameraConstant, CameraMatrices> camera_matrices_;
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;

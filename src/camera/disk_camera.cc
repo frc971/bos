@@ -26,13 +26,13 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
       .timestamp = image_paths_.top().timestamp};
   image_paths_.pop();
 
-  auto timestamp = timer_.Get().value();
-  while (timestamp < image_paths_.top().timestamp) {
-    const double time_diff = image_paths_.top().timestamp - timestamp;
-    std::this_thread::sleep_for(
-        std::chrono::duration<double>(time_diff / 50.0));
-    timestamp += time_diff;
-  }
+  // auto timestamp = timer_.Get().value();
+  // while (timestamp < image_paths_.top().timestamp) {
+  //   const double time_diff = image_paths_.top().timestamp - timestamp;
+  //   std::this_thread::sleep_for(
+  //       std::chrono::duration<double>(time_diff / 50.0));
+  //   timer_.AdvanceIfElapsed(units::second_t{time_diff});
+  // }
   return timestamped_frame;
 }
 

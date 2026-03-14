@@ -3,6 +3,7 @@
 #include "src/camera/camera_source.h"
 #include "src/localization/apriltag_detector.h"
 #include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/position_solver.h"
 #include "src/utils/pch.h"
 
@@ -31,11 +32,11 @@ void RunJointSolve(
     std::vector<std::pair<camera::CameraConstant,
                           std::unique_ptr<camera::CameraSource>>>&
         camera_sources,
-    std::unique_ptr<localization::IAprilTagDetector> detector, uint port,
-    bool square_solve_start, bool verbose);
+    uint port, bool square_solve_start, bool verbose);
 auto GetSquareSolveEstimates(
     std::vector<std::pair<camera::CameraConstant,
                           std::unique_ptr<camera::CameraSource>>>&
         camera_sources,
-    std::unique_ptr<localization::IAprilTagDetector>& detector) -> frc::Pose3d;
+    std::vector<localization::OpenCVAprilTagDetector>& detectors)
+    -> frc::Pose3d;
 }  // namespace localization

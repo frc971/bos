@@ -62,15 +62,14 @@ TEST_F(JointSolverTest, IncreasingDistanceYawOnly) {  // NOLINT
   double xDiff = rand();
   double yDiff = rand();
   double zDiff = rand();
-  const double translationMax = std::hypot(xDiff, yDiff, zDiff) * 20.0;
+  const double translationMax = std::hypot(xDiff, yDiff, zDiff) * 4.0;
   xDiff /= translationMax;
   yDiff /= translationMax;
   zDiff /= translationMax;
   double rollDiff = rand();
   double pitchDiff = rand();
   double yawDiff = rand();
-  const double rotationDivider =
-      std::hypot(rollDiff, pitchDiff, yawDiff) / 32.0;
+  const double rotationDivider = std::hypot(rollDiff, pitchDiff, yawDiff) / 4.0;
   // rollDiff /= rotationDivider;
   // pitchDiff /= rotationDivider;
   rollDiff = 0;
