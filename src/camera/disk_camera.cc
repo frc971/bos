@@ -14,6 +14,18 @@ DiskCamera::DiskCamera(std::string image_folder_path)
         .timestamp = std::stod(entry_name.erase(entry_name.size() - 4, 4))});
   }
   timer_.Reset();
+
+  auto offset = image_paths_.top().timestamp;
+  std::priority_queue<TimestampedFramePath, std::vector<TimestampedFramePath>,
+                      CompareTimestampedFramePath>
+      normalized;
+  while (!image_paths_.empty()) {
+    auto entry = image_paths_.top();
+    image_paths_.pop();
+    entry.timestamp -= offset;
+    normalized.push(entry);
+  }
+  image_paths_ = std::move(normalized);
 }
 auto DiskCamera::GetFrame() -> timestamped_frame_t {
   if (image_paths_.empty()) {
@@ -25,17 +37,6 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
       .frame = cv::imread(image_paths_.top().path),
       .timestamp = image_paths_.top().timestamp};
   image_paths_.pop();
-
-  auto timestamp = timer_.Get().value();
-  std::cout << "FPGA timestamp: " << timestamp << std::endl;
-  while (timestamp < image_paths_.top().timestamp) {
-    std::cout << "Frame Timestamp: " << image_paths_.top().timestamp
-              << std::endl;
-    std::this_thread::sleep_for(std::chrono::duration<double>(
-        image_paths_.top().timestamp - timestamp));
-    image_paths_.pop();
-    timestamp = timer_.Get().value();
-  }
   return timestamped_frame;
 }
 
