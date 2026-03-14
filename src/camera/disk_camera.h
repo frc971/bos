@@ -20,7 +20,7 @@ struct CompareTimestampedFramePath {
 
 // Replays log of camera feed into ICamera. Frames are "captured" at the same time that the real camera capptured them according to wpilib GetFGPATimestamp() time.
 // Can be used to testing
-class DiskCamera : ICamera {
+class DiskCamera : public ICamera {
  public:
   DiskCamera(std::string image_folder_path);
   auto GetFrame() -> timestamped_frame_t override;
