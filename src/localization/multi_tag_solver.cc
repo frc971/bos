@@ -130,7 +130,7 @@ auto MultiTagSolver::EstimatePosition(
                            kvariance_scalar_),
       .timestamp = detections[0].timestamp,
       .num_tags = num_tags,
-      .avg_tag_dist = avg_distance}};
+      .avg_tag_dist = num_tags == 1 ? 50 : avg_distance}};
 }
 
 }  // namespace localization
