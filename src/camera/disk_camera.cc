@@ -27,12 +27,9 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
   image_paths_.pop();
 
   auto timestamp = timer_.Get().value();
-  std::cout << "FPGA timestamp: " << timestamp << std::endl;
   while (timestamp < image_paths_.top().timestamp) {
-    std::cout << "Frame Timestamp: " << image_paths_.top().timestamp
-              << std::endl;
     std::this_thread::sleep_for(std::chrono::duration<double>(
-        image_paths_.top().timestamp - timestamp));
+        (image_paths_.top().timestamp - timestamp) / 50.0));
     image_paths_.pop();
     timestamp = timer_.Get().value();
   }

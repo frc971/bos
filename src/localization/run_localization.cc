@@ -46,14 +46,14 @@ void RunJointSolve(
     bool square_solve_start, bool verbose) {
   std::vector<camera::CameraConstant> camera_configs;
   std::string name = "";
-  std::vector<camera::CscoreStreamer> streamers;
-  streamers.reserve(camera_sources.size());
+  // std::vector<camera::CscoreStreamer> streamers;
+  // streamers.reserve(camera_sources.size());
   for (const auto& camera : camera_sources) {
     name += ", " + camera.second->GetName();
     camera_configs.push_back(camera.first);
-    streamers.emplace_back(camera.second->GetName(), port, 30, 1080, 1080);
+    // streamers.emplace_back(camera.second->GetName(), port, 30, 1080, 1080);
   }
-  localization::PositionSender position_sender(name, verbose);
+  // localization::PositionSender position_sender(name, verbose);
   // TODO do this with position receiver
   frc::Pose3d prev_estimate = GetSquareSolveEstimates(camera_sources, detector);
   camera_configs.reserve(camera_sources.size());
@@ -65,7 +65,7 @@ void RunJointSolve(
     for (int i = 0; i < camera_sources.size(); i++) {
       camera::timestamped_frame_t timestamped_frame =
           camera_sources[i].second->Get();
-      streamers[i].WriteFrame(timestamped_frame.frame);
+      // streamers[i].WriteFrame(timestamped_frame.frame);
       std::vector<tag_detection_t> detections;
       for (tag_detection_t& detection :
            detector->GetTagDetections(timestamped_frame)) {
@@ -76,8 +76,10 @@ void RunJointSolve(
     position_estimate_t position_estimate =
         solver.EstimatePosition(tag_detections, prev_estimate, true);
     prev_estimate = position_estimate.pose;
-    position_sender.Send(std::vector<position_estimate_t>{position_estimate},
-                         timer.Stop());
+    // std::cout << "New pose: " << std::endl;
+    // utils::PrintPose3d(prev_estimate);
+    // position_sender.Send(std::vector<position_estimate_t>{position_estimate},
+    //                      timer.Stop());
   }
 }
 

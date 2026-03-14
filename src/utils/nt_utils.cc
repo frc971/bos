@@ -17,15 +17,15 @@ void StartNetworktables(int team_number) {
   inst.StartClient4("orin_localization");
   inst.SetServerTeam(team_number);
   inst.StartDSClient();
-  std::string log_path = GetNewLogPath();
-  LOG(INFO) << "Log path: " << log_path;
-  frc::DataLogManager::Start(log_path);
+  // std::string log_path = GetNewLogPath();
+  // LOG(INFO) << "Log path: " << log_path;
+  // frc::DataLogManager::Start(log_path);
 
   LOG(INFO) << "Team number: " << team_number;
   LOG(INFO) << "Waiting for connection";
-  while (!inst.IsConnected()) {
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-  }
+  // while (!inst.IsConnected()) {
+  //   std::this_thread::sleep_for(std::chrono::seconds(1));
+  // }
   LOG(INFO) << "Connected to rio!";
 }
 
