@@ -14,7 +14,7 @@ namespace localization {
 class NvidiaAprilTagDetector : public IAprilTagDetector {
  public:
   NvidiaAprilTagDetector(
-      int image_width, int image_height, nlohmann::json intrinsics,
+      int image_width, int image_height, const nlohmann::json& intrinsics,
       VPIAprilTagDecodeParams params = {NULL, 0, 1,  // NOLINT
                                         VPIAprilTagFamily::VPI_APRILTAG_36H11},
       VPIBackend backend = VPIBackend::VPI_BACKEND_PVA,

@@ -5,8 +5,10 @@
 #include "src/camera/select_camera.h"
 
 auto main(int argc, char* argv[]) -> int {
-  camera::Camera config = camera::SelectCameraConfig();
-  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
+  camera::camera_constant_t camera_constant =
+      camera::SelectCameraConfig(camera::GetCameraConstants());
+  std::unique_ptr<camera::ICamera> camera =
+      std::make_unique<camera::CVCamera>(camera_constant);
 
   camera::CscoreStreamer streamer("focus_calibrate", 5801, 30,
                                   camera->GetFrame().frame);

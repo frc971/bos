@@ -34,12 +34,12 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
   invert_translation_.at<double>(3, 3) = 1;
 }
 
-SquareSolver::SquareSolver(camera::Camera camera_config,
+SquareSolver::SquareSolver(camera::camera_constant_t camera_constant,
                            frc::AprilTagFieldLayout layout,
                            std::vector<cv::Point3d> tag_corners)
-    : SquareSolver(camera::camera_constants[camera_config].intrinsics_path,
-                   camera::camera_constants[camera_config].extrinsics_path,
-                   std::move(layout), std::move(tag_corners)) {}
+    : SquareSolver(camera_constant.intrinsics_path.value(),
+                   camera_constant.extrinsics_path.value(), std::move(layout),
+                   std::move(tag_corners)) {}
 
 auto SquareSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections, const bool reject_far_tags)
@@ -117,9 +117,15 @@ auto SquareSolver::EstimatePositionNew(
     }
     cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
     cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
-    cv::solvePnP(tag_corners_, detection.corners, camera_matrix_,
-                 distortion_coefficients_, rvec, tvec, false,
-                 cv::SOLVEPNP_IPPE_SQUARE);
+
+    try {
+      cv::solvePnP(tag_corners_, detection.corners, camera_matrix_,
+                   distortion_coefficients_, rvec, tvec, false,
+                   cv::SOLVEPNP_IPPE_SQUARE);
+    } catch (std::exception& e) {
+      LOG(WARNING) << "Caught solve pnp exception:\n" << e.what();
+      return {};
+    }
 
     double distance = cv::norm(tvec);
     if (reject_far_tags && distance > 5.0) {

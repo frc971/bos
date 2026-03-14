@@ -55,12 +55,12 @@ MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
   }
 }
 
-MultiTagSolver::MultiTagSolver(camera::Camera camera_config,
+MultiTagSolver::MultiTagSolver(camera::camera_constant_t camera_constant,
                                const frc::AprilTagFieldLayout& layout,
                                const std::vector<cv::Point3d>& tag_corners)
-    : MultiTagSolver(camera::camera_constants[camera_config].intrinsics_path,
-                     camera::camera_constants[camera_config].extrinsics_path,
-                     layout, tag_corners) {}
+    : MultiTagSolver(camera_constant.intrinsics_path.value(),
+                     camera_constant.extrinsics_path.value(), layout,
+                     tag_corners) {}
 
 auto MultiTagSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections, bool reject_far_tags)
@@ -107,15 +107,16 @@ auto MultiTagSolver::EstimatePosition(
   avg_distance /= tag_ids.size();
   cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
   cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);
-  if (detections.size() == 1) {
-    cv::solvePnP(object_points, image_points, camera_matrix_,
-                 distortion_coefficients_, rvec, tvec, false,
-                 cv::SOLVEPNP_IPPE_SQUARE);
-  } else {
+
+  try {
     cv::solvePnP(object_points, image_points, camera_matrix_,
                  distortion_coefficients_, rvec, tvec, false,
                  cv::SOLVEPNP_SQPNP);
+  } catch (const std::exception& e) {
+    LOG(WARNING) << "Caught solve pnp exception:\n" << e.what();
+    return {};
   }
+
   cv::Mat feild_to_camera = utils::MakeTransform(rvec, tvec).inv();
   cv::Mat feild_to_robot = feild_to_camera * camera_to_robot_;
 

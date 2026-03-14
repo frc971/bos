@@ -1,37 +1,38 @@
 #include "src/camera/select_camera.h"
 #include "cv_camera.h"
 #include "src/camera/camera_constants.h"
-#include "src/camera/realsense_camera.h"
 #include "src/utils/log.h"
+
+using camera::camera_constants_t;
 
 namespace camera {
 
-auto SelectCameraConfig() -> Camera {
-  std::cout << "Please select a camera" << std::endl;
-  for (const auto& camera_constant : camera_constants) {
-    std::cout << camera_constant.name << std::endl;
+auto SelectCameraConfig(const camera_constants_t& camera_constants)
+    -> camera_constant_t {
+  std::cout << "Available cameras:" << std::endl;
+  for (const auto& entry : camera_constants) {
+    std::cout << "  - " << entry.first << std::endl;
   }
+  std::cout << "Please select a camera: " << std::flush;
   std::string choice;
   std::cin >> choice;
-  return SelectCameraConfig(choice);
+  return SelectCameraConfig(choice, camera_constants);
 }
 
-auto SelectCameraConfig(const std::string& choice) -> Camera {
-  for (int i = 0; i < Camera::CAMERA_LENGTH; i++) {
-    if (choice == camera_constants[i].name) {
-      return static_cast<Camera>(i);
-    }
-  }
-  std::cout << "Did not find camera that match fallback to manual select";
-  return SelectCameraConfig();
+auto SelectCameraConfig(const std::string& choice,
+                        const camera_constants_t& camera_constants)
+    -> camera_constant_t {
+  return camera_constants.contains(choice)
+             ? camera_constants.at(choice)
+             : SelectCameraConfig(camera_constants);
 }
 
-auto SelectCameraConfig(std::optional<std::string> choice) -> Camera {
-  return choice.has_value() ? SelectCameraConfig(choice.value())
-                            : SelectCameraConfig();
+auto SelectCameraConfig(std::optional<std::string> choice,
+                        const camera_constants_t& camera_constants)
+    -> camera_constant_t {
+  return choice.has_value()
+             ? SelectCameraConfig(choice.value(), camera_constants)
+             : SelectCameraConfig(camera_constants);
 }
 
-auto GetCameraStream(Camera camera) -> std::unique_ptr<ICamera> {
-  return std::make_unique<camera::CVCamera>(camera_constants[camera]);
-}
 }  // namespace camera

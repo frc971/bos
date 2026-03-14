@@ -9,7 +9,7 @@ namespace localization {
 
 using data_point_t = struct DataPoint {
   Eigen::Vector2d undistorted_point;
-  camera::Camera source;
+  std::string name;
   Eigen::Vector4d field_to_tag_corner_homogenous;
 };
 
@@ -19,8 +19,9 @@ constexpr auto sq(double num) -> double {
 
 using frc::AprilTagFieldLayout;
 
-JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
-                         const AprilTagFieldLayout& layout)
+JointSolver::JointSolver(
+    const std::vector<camera::camera_constant_t>& camera_constants_,
+    const AprilTagFieldLayout& layout)
     : robot_to_field_(Eigen::Matrix4d::Identity()) {
   // clang-format off
   const Eigen::Matrix4d rotate_yaw_cv = (Eigen::Matrix4d() <<
@@ -41,21 +42,20 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
   }
   Eigen::Matrix<double, 3, 4> pi = Eigen::Matrix<double, 3, 4>::Zero();
   pi.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
-  for (const camera::Camera& camera_config : camera_constants_) {
-    const nlohmann::json intrinsics_json = utils::ReadIntrinsics(
-        camera::camera_constants[camera_config].intrinsics_path);
+  for (const camera::camera_constant_t& camera_constant : camera_constants_) {
+    const nlohmann::json intrinsics_json =
+        utils::ReadIntrinsics(camera_constant.intrinsics_path.value());
     const auto camera_matrix =
         utils::CameraMatrixFromJson<Eigen::Matrix3d>(intrinsics_json);
     const Eigen::Matrix<double, 3, 4> image_to_camera = camera_matrix * pi;
     const Eigen::Matrix4d camera_to_robot =
         utils::ExtrinsicsJsonToCameraToRobot(
-            utils::ReadExtrinsics(
-                camera::camera_constants[camera_config].extrinsics_path))
+            utils::ReadExtrinsics(camera_constant.extrinsics_path.value()))
             .ToMatrix();
     const Eigen::Matrix<double, 3, 4> image_to_robot =
         image_to_camera * camera_to_robot;
     camera_matrices_.insert(
-        {camera_config,
+        {camera_constant.name,
          {.image_to_robot = image_to_robot,
           .distortion_coefficients =
               utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics_json),
@@ -64,7 +64,7 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
 }
 
 auto JointSolver::EstimatePosition(
-    const std::map<camera::Camera, std::vector<tag_detection_t>>&
+    const std::map<std::string, std::vector<tag_detection_t>>&
         all_cam_detections,
     const frc::Pose3d& starting_pose) -> position_estimate_t {
   if (all_cam_detections.empty()) {
@@ -86,7 +86,7 @@ auto JointSolver::EstimatePosition(
             undistorted_corners[i].y;
         const data_point_t datapoint = {
             .undistorted_point = undistorted_image_point,
-            .source = pair.first,
+            .name = pair.first,
             .field_to_tag_corner_homogenous =
                 tag_corners_[detection.tag_id].value()[i]};
         data_points.push_back(datapoint);
@@ -109,7 +109,7 @@ auto JointSolver::EstimatePosition(
       decomposed_robot_to_field = utils::SeparateTranslationAndRotationMatrices(
           translation_and_rotation);
       const Eigen::Matrix<double, 3, 4>& image_to_robot =
-          camera_matrices_.at(data_point.source).image_to_robot;
+          camera_matrices_.at(data_point.name).image_to_robot;
 
       const Eigen::Vector4d Rx_activation =
           decomposed_robot_to_field.Rx *

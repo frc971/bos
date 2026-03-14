@@ -14,7 +14,7 @@ namespace localization {
 
 NvidiaAprilTagDetector::NvidiaAprilTagDetector(int image_width,
                                                int image_height,
-                                               nlohmann::json intrinsics,
+                                               const nlohmann::json& intrinsics,
                                                VPIAprilTagDecodeParams params,
                                                VPIBackend backend,
                                                int max_detections, bool verbose)

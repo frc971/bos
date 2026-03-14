@@ -17,8 +17,8 @@ auto FileSystemAlmostFull() {
 }
 
 CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
-    : cap_(cv::VideoCapture(c.pipeline)),
-      pipeline_(c.pipeline),
+    : cap_(cv::VideoCapture(c.pipeline.value())),
+      pipeline_(c.pipeline.value()),
       log_path_(std::move(log_path)) {
   cap_.release();
   cap_ = cv::VideoCapture(pipeline_);
@@ -26,7 +26,9 @@ CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
     log_path_ = std::nullopt;
     LOG(WARNING) << "Filesystem almost full! Not logging any frames";
   }
-  LOG(INFO) << c.pipeline;
+  PCHECK(c.pipeline.has_value()) << "Pipeline needs value";
+
+  LOG(INFO) << c.pipeline.value();
 
   backup_image_ = cv::imread("/bos/constants/dont_worry_about_it.jpg");
   if (c.frame_height.has_value() && c.frame_width.has_value()) {

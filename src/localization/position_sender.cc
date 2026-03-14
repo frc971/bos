@@ -78,9 +78,6 @@ void PositionSender::Send(
     pose3d_publisher_.Set(detection.pose);
 
     tag_estimation_publisher_.Set(tag_estimation);
-    tag_estimation_publisher_.Set(tag_estimation);
-    tag_estimation_publisher_.Set(tag_estimation);
-    tag_estimation_publisher_.Set(tag_estimation);
 
     tag_ids_publisher_.Set(tags);
     rejected_tag_ids_publisher_.Set(rejected_tags);
