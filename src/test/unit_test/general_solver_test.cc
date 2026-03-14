@@ -12,18 +12,19 @@
 
 class GeneralSolverTest : public ::testing::Test {
  protected:
-  static constexpr camera::Camera config = camera::DEV_ORIN;
-  localization::SquareSolver square_solver;
+  camera::camera_constant_t camera_constant;
   localization::MultiTagSolver multitag_solver;
+  localization::SquareSolver square_solver;
   localization::OpenCVAprilTagDetector detector;
   GeneralSolverTest()
-      : square_solver(config),
-        multitag_solver(config),
-        detector(utils::ReadIntrinsics(
-            camera::camera_constants[config].intrinsics_path)) {}
+      : camera_constant(camera::GetCameraConstants().at("dev_orin")),
+        multitag_solver(camera_constant),
+        square_solver(camera_constant),
+        detector(
+            utils::ReadIntrinsics(camera_constant.intrinsics_path.value())) {}
 };
 
-TEST_F(GeneralSolverTest, Basic) {
+TEST_F(GeneralSolverTest, Basic) {  // NOLINT
   const localization::position_estimate_t square_solve_estimate =
       square_solver.EstimatePosition(test_utils::fake_detections)[0];
   const localization::position_estimate_t multitag_solve_estimate =
@@ -31,7 +32,7 @@ TEST_F(GeneralSolverTest, Basic) {
   EXPECT_EQ(square_solve_estimate, multitag_solve_estimate);
 }
 
-TEST_F(GeneralSolverTest, RealImage) {
+TEST_F(GeneralSolverTest, RealImage) {  // NOLINT
   const cv::Mat image = cv::imread("/bos/constants/misc/apriltag.jpg");
   camera::timestamped_frame_t frame{.frame = image, .timestamp = 0.0};
   const std::vector<localization::tag_detection_t> detections =

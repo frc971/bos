@@ -3,6 +3,7 @@
 #include "src/camera/camera.h"
 #include "src/camera/camera_source.h"
 #include "src/utils/pch.h"
+#include "src/utils/timer.h"
 
 namespace camera {
 
@@ -14,7 +15,7 @@ using timestamped_frame_path_t = struct TimestampedFramePath {
 struct CompareTimestampedFramePath {
   auto operator()(const timestamped_frame_path_t& a,
                   const timestamped_frame_path_t& b) -> bool {
-    return a.timestamp < b.timestamp;
+    return a.timestamp > b.timestamp;
   }
 };
 
@@ -31,6 +32,7 @@ class DiskCamera : public ICamera {
   std::priority_queue<TimestampedFramePath, std::vector<TimestampedFramePath>,
                       CompareTimestampedFramePath>
       image_paths_;
+  frc::Timer timer_;
 };
 
 }  // namespace camera

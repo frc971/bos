@@ -5,10 +5,6 @@
 #include "src/utils/constants_from_json.h"
 #include "src/utils/transform.h"
 
-using camera::Camera;
-
-const auto config = camera::Camera::DEV_ORIN;
-
 std::vector<localization::tag_detection_t> detections(
     {{.tag_id = 31,
       .corners = {cv::Point2d(100.0, 200.0), cv::Point2d(200.0, 200.0),
@@ -17,8 +13,10 @@ std::vector<localization::tag_detection_t> detections(
       .confidence = 0.0}});
 
 TEST(JointSolveTest, EstimatePosition) {  // NOLINT
-  localization::JointSolver joint_solver({config});
-  localization::SquareSolver square_solver(config);
+  camera::camera_constant_t camera_constant =
+      camera::GetCameraConstants().at("dev_orin");
+  localization::JointSolver joint_solver({camera_constant});
+  localization::SquareSolver square_solver(camera_constant);
 
   auto square_solver_solution = square_solver.EstimatePosition(detections)[0];
   utils::PrintTransformationMatrix(
@@ -32,9 +30,9 @@ TEST(JointSolveTest, EstimatePosition) {  // NOLINT
 
   square_solver_solution.pose = square_solver_solution.pose.TransformBy(noise);
 
-  std::map<camera::Camera, std::vector<localization::tag_detection_t>>
+  std::map<std::string, std::vector<localization::tag_detection_t>>
       associated_detections;
-  associated_detections.insert({config, detections});
+  associated_detections.insert({camera_constant.name, detections});
   auto joint_solver_solution = joint_solver.EstimatePosition(
       associated_detections, square_solver_solution.pose);
   std::cout << "Joint solver solution: " << joint_solver_solution << std::endl;

@@ -2,10 +2,9 @@
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/square_solver.h"
 
-using camera::Camera;
-
 TEST(MultiTagTest, EqualToSquareSolve) {  // NOLINT
-  auto config = camera::Camera::DEV_ORIN;
+  camera::camera_constant_t camera_constant =
+      camera::GetCameraConstants().at("dev_orin");
 
   std::vector<localization::tag_detection_t> detections(
       {{.tag_id = 25,
@@ -14,8 +13,8 @@ TEST(MultiTagTest, EqualToSquareSolve) {  // NOLINT
         .timestamp = 0.0,
         .confidence = 0.0}});
 
-  localization::SquareSolver square_solver(config);
-  localization::MultiTagSolver multi_tag_solver(config);
+  localization::SquareSolver square_solver(camera_constant);
+  localization::MultiTagSolver multi_tag_solver(camera_constant);
 
   auto square_solver_solution = square_solver.EstimatePosition(detections)[0];
   auto multi_tag_solution = square_solver.EstimatePosition(detections)[0];
