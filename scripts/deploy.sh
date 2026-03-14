@@ -25,7 +25,5 @@ while true; do
   sleep 1
 done
 
-echo "asdfliuasf"
-
 rsync -avz --delete bin "$HOST":/bos
 rsync -avz constants "$HOST":/bos
