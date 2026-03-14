@@ -24,7 +24,6 @@ link_directories(/usr/local/cuda/lib64)
 find_package(wpilib REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(realsense2 REQUIRED)
 find_package(vpi REQUIRED)
 
 add_subdirectory(third_party/json)

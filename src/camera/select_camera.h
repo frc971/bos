@@ -13,8 +13,13 @@ namespace camera {
 // camera::CameraSource source("stress_test_camera",
 //                             camera::GetCameraStream(config));
 //
-auto SelectCameraConfig() -> Camera;
-auto SelectCameraConfig(const std::string& choice) -> Camera;
-auto SelectCameraConfig(std::optional<std::string> choice) -> Camera;
-auto GetCameraStream(Camera camera) -> std::unique_ptr<ICamera>;
+auto SelectCameraConfig(const camera::camera_constants_t& camera_constants)
+    -> camera_constant_t;
+auto SelectCameraConfig(const std::string& choice,
+                        const camera::camera_constants_t& camera_constants)
+    -> camera_constant_t;
+auto SelectCameraConfig(std::optional<std::string> choice,
+                        const camera::camera_constants_t& camera_constants)
+    -> camera_constant_t;
+// auto GetCameraStream(Camera camera) -> std::unique_ptr<ICamera>;
 }  // namespace camera

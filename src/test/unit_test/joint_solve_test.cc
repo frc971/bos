@@ -10,21 +10,24 @@
 
 class JointSolverTest : public ::testing::Test {
  protected:
-  static constexpr camera::Camera config = camera::DEV_ORIN;
+  camera::camera_constants_t camera_constants = camera::GetCameraConstants();
+
+  std::vector<camera::CameraConstant> joint_solve_cameras =
+      std::vector<camera::CameraConstant>{camera_constants.at("main_bot_left")};
   localization::SquareSolver square_solver;
   localization::JointSolver joint_solver;
   localization::OpenCVAprilTagDetector detector;
   JointSolverTest()
-      : square_solver(config),
-        joint_solver(test_utils::joint_solve_cameras),
+      : square_solver(camera_constants.at("main_bot_left")),
+        joint_solver(joint_solve_cameras),
         detector(utils::ReadIntrinsics(
-            camera::camera_constants[config].intrinsics_path)) {}
+            camera_constants.at("main_bot_left").intrinsics_path.value())) {}
 };
 
 // TEST_F(JointSolverTest, MaintainsValidEstimateOpenRotation) {  // NOLINT
 //   const localization::position_estimate_t square_solver_solution =
 //       square_solver.EstimatePosition(test_utils::fake_detections, false)[0];
-//   std::map<camera::Camera, std::vector<localization::tag_detection_t>>
+//   std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
 //       associated_detections;
 //   associated_detections.insert({config, test_utils::fake_detections});
 //   const localization::position_estimate_t joint_solver_solution =
@@ -44,7 +47,7 @@ class JointSolverTest : public ::testing::Test {
 //       square_solver.EstimatePosition(test_utils::fake_detections, false)[0];
 //   frc::Pose3d noisy_pose =
 //       square_solver_solution.pose.TransformBy(joint_solve_input_noise);
-//   std::map<camera::Camera, std::vector<localization::tag_detection_t>>
+//   std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
 //       associated_detections;
 //   associated_detections.insert({config, test_utils::fake_detections});
 //   const localization::position_estimate_t joint_solver_solution =
@@ -75,9 +78,10 @@ TEST_F(JointSolverTest, IncreasingDistanceYawOnly) {  // NOLINT
   yawDiff /= rotationDivider;
   localization::position_estimate_t square_solver_solution =
       square_solver.EstimatePosition(test_utils::fake_detections, false)[0];
-  std::map<camera::Camera, std::vector<localization::tag_detection_t>>
+  std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
       associated_detections;
-  associated_detections.insert({config, test_utils::fake_detections});
+  associated_detections.insert(
+      {camera_constants.at("main_bot_left"), test_utils::fake_detections});
   localization::position_estimate_t joint_solver_solution;
   for (int i = 0; i < 15; i++) {
     const frc::Transform3d joint_solve_input_noise(
@@ -112,7 +116,7 @@ TEST_F(JointSolverTest, IncreasingDistanceYawOnly) {  // NOLINT
 // TEST_F(JointSolverTest, MaintainsValidEstimateYawOnly) {  // NOLINT
 //   const localization::position_estimate_t square_solver_solution =
 //       square_solver.EstimatePosition(test_utils::fake_detections, false)[0];
-//   std::map<camera::Camera, std::vector<localization::tag_detection_t>>
+//   std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
 //       associated_detections;
 //   associated_detections.insert({config, test_utils::fake_detections});
 //   const localization::position_estimate_t joint_solver_solution =
@@ -133,7 +137,7 @@ TEST_F(JointSolverTest, IncreasingDistanceYawOnly) {  // NOLINT
 //       square_solver.EstimatePosition(test_utils::fake_detections, false)[0];
 //   frc::Pose3d noisy_pose =
 //       square_solver_solution.pose.TransformBy(joint_solve_input_noise);
-//   std::map<camera::Camera, std::vector<localization::tag_detection_t>>
+//   std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
 //       associated_detections;
 //   associated_detections.insert({config, test_utils::fake_detections});
 //   const localization::position_estimate_t joint_solver_solution =

@@ -12,7 +12,7 @@ namespace localization {
 
 using data_point_t = struct DataPoint {
   Eigen::Vector2d undistorted_point;
-  camera::Camera source;
+  camera::CameraConstant source;
   Eigen::Vector4d field_to_tag_corner_homogenous;
 };
 
@@ -25,7 +25,7 @@ struct CameraMatrices {
 static constexpr int kmax_tags = 50;
 class JointSolver {
  public:
-  JointSolver(const std::vector<camera::Camera>& camera_constants_,
+  JointSolver(const std::vector<camera::CameraConstant>& camera_constants_,
               const frc::AprilTagFieldLayout& layout = kapriltag_layout);
   auto Forward(const utils::TransformDecomposition& current_estimate,
                Eigen::Vector4d& Rx_activation, Eigen::Vector4d& Ry_activation,
@@ -59,7 +59,7 @@ class JointSolver {
       const std::vector<data_point_t>& data_points, bool yaw_only)
       -> utils::TransformValues;
   auto EstimatePosition(
-      const std::map<camera::Camera, std::vector<tag_detection_t>>&
+      const std::map<camera::CameraConstant, std::vector<tag_detection_t>>&
           all_cam_detections,
       const frc::Pose3d& starting_pose, bool yaw_only,
       const bool verbose = false) -> position_estimate_t;
@@ -71,7 +71,7 @@ class JointSolver {
   static constexpr double kyaw_prioritization = 1e-1;
   static constexpr double krotation_step_scalar = 3e-0;
   static constexpr size_t kmax_iters = 1e6;
-  std::map<camera::Camera, CameraMatrices> camera_matrices_;
+  std::map<camera::CameraConstant, CameraMatrices> camera_matrices_;
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;
   static const Eigen::Matrix4d rotate_yaw_cv_;

@@ -11,6 +11,7 @@
 
 namespace localization {
 
+// TODO remove extrinsics
 void RunLocalization(camera::CameraSource& source,
                      std::unique_ptr<localization::IAprilTagDetector> detector,
                      std::unique_ptr<localization::IPositionSolver> solver,
@@ -38,11 +39,12 @@ void RunLocalization(camera::CameraSource& source,
 }
 
 void RunJointSolve(
-    std::vector<std::pair<
-        camera::Camera, std::unique_ptr<camera::CameraSource>>>& camera_sources,
+    std::vector<std::pair<camera::CameraConstant,
+                          std::unique_ptr<camera::CameraSource>>>&
+        camera_sources,
     std::unique_ptr<localization::IAprilTagDetector> detector, uint port,
     bool square_solve_start, bool verbose) {
-  std::vector<camera::Camera> camera_configs;
+  std::vector<camera::CameraConstant> camera_configs;
   std::string name = "";
   std::vector<camera::CscoreStreamer> streamers;
   streamers.reserve(camera_sources.size());
@@ -58,7 +60,7 @@ void RunJointSolve(
   JointSolver solver(camera_configs);
   while (true) {
     utils::Timer timer(name, verbose);
-    std::map<camera::Camera, std::vector<localization::tag_detection_t>>
+    std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
         tag_detections;
     for (int i = 0; i < camera_sources.size(); i++) {
       camera::timestamped_frame_t timestamped_frame =
@@ -80,8 +82,9 @@ void RunJointSolve(
 }
 
 auto GetSquareSolveEstimates(
-    std::vector<std::pair<
-        camera::Camera, std::unique_ptr<camera::CameraSource>>>& camera_sources,
+    std::vector<std::pair<camera::CameraConstant,
+                          std::unique_ptr<camera::CameraSource>>>&
+        camera_sources,
     std::unique_ptr<localization::IAprilTagDetector>& detector) -> frc::Pose3d {
   double x = 0, y = 0, z = 0, roll = 0, pitch = 0, yaw = 0;
   int num_estimates = 0;

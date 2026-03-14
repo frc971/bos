@@ -14,3 +14,4 @@ image.tar
 bin/*
 build
 logs/
+bos_logs/

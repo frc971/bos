@@ -19,8 +19,6 @@ static const std::vector<localization::tag_detection_t> fake_detections(
       .timestamp = 0.0,
       .confidence = 0.0}});
 
-static const std::vector<camera::Camera> joint_solve_cameras =
-    std::vector<camera::Camera>{camera::DEV_ORIN};
 static constexpr double ERROR_MARGIN_TRANSLATION = 0.01;
 static constexpr double ERROR_MARGIN_EULER_ANGLE = deg2rad(1.0);  // 1 deg
 }  // namespace test_utils

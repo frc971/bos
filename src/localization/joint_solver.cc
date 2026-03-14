@@ -16,8 +16,9 @@ const Eigen::Matrix4d JointSolver::rotate_yaw_cv_ = (Eigen::Matrix4d() <<
       0, 0, 0, 1).finished();
 // clang-format on
 
-JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
-                         const AprilTagFieldLayout& layout)
+JointSolver::JointSolver(
+    const std::vector<camera::CameraConstant>& camera_constants_,
+    const AprilTagFieldLayout& layout)
     : robot_to_field_(Eigen::Matrix4d::Identity()), layout_(layout) {
   for (const frc::AprilTag& tag : layout.GetTags()) {
     Eigen::Matrix4d field_to_tag = tag.pose.ToMatrix();
@@ -31,16 +32,15 @@ JointSolver::JointSolver(const std::vector<camera::Camera>& camera_constants_,
   }
   Eigen::Matrix<double, 3, 4> pi = Eigen::Matrix<double, 3, 4>::Zero();
   pi.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
-  for (const camera::Camera& camera_config : camera_constants_) {
-    const nlohmann::json intrinsics_json = utils::ReadIntrinsics(
-        camera::camera_constants[camera_config].intrinsics_path);
+  for (const camera::CameraConstant& camera_config : camera_constants_) {
+    const nlohmann::json intrinsics_json =
+        utils::ReadIntrinsics(camera_config.intrinsics_path.value());
     const auto camera_matrix =
         utils::CameraMatrixFromJson<Eigen::Matrix3d>(intrinsics_json);
     const Eigen::Matrix<double, 3, 4> image_to_camera = camera_matrix * pi;
     Eigen::Matrix4d camera_to_robot =
         utils::ExtrinsicsJsonToCameraToRobot(
-            utils::ReadExtrinsics(
-                camera::camera_constants[camera_config].extrinsics_path))
+            utils::ReadExtrinsics(camera_config.extrinsics_path.value()))
             .ToMatrix();
     const frc::Transform3d camera_to_robot_transform =
         frc::Transform3d(camera_to_robot);
@@ -186,7 +186,7 @@ auto JointSolver::ComputeNetStep(
 }
 
 auto JointSolver::EstimatePosition(
-    const std::map<camera::Camera, std::vector<tag_detection_t>>&
+    const std::map<camera::CameraConstant, std::vector<tag_detection_t>>&
         all_cam_detections,
     const frc::Pose3d& starting_pose, const bool yaw_only, const bool verbose)
     -> position_estimate_t {

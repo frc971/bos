@@ -14,11 +14,11 @@ namespace localization {
 //     std::make_unique<localization::GPUAprilTagDetector>(
 //         front_right_camera.GetFrame().cols, front_right_camera.GetFrame().rows,
 //         utils::read_intrinsics(
-//             camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
+//             camera::camera_constants[camera::CameraConstant::TURRET_BOT_FRONT_RIGHT]
 //                 .intrinsics_path)),
 //     std::make_unique<localization::SquareSolver>(
-//         camera::Camera::TURRET_BOT_FRONT_RIGHT),
-//     camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
+//         camera::CameraConstant::TURRET_BOT_FRONT_RIGHT),
+//     camera::camera_constants[camera::CameraConstant::TURRET_BOT_FRONT_RIGHT]
 //         .extrinsics_path,
 //     4971, false);
 void RunLocalization(camera::CameraSource& source,
@@ -28,12 +28,14 @@ void RunLocalization(camera::CameraSource& source,
                      std::optional<uint> port = std::nullopt,
                      bool verbose = false);
 void RunJointSolve(
-    std::vector<std::pair<
-        camera::Camera, std::unique_ptr<camera::CameraSource>>>& camera_sources,
+    std::vector<std::pair<camera::CameraConstant,
+                          std::unique_ptr<camera::CameraSource>>>&
+        camera_sources,
     std::unique_ptr<localization::IAprilTagDetector> detector, uint port,
     bool square_solve_start, bool verbose);
 auto GetSquareSolveEstimates(
-    std::vector<std::pair<
-        camera::Camera, std::unique_ptr<camera::CameraSource>>>& camera_sources,
+    std::vector<std::pair<camera::CameraConstant,
+                          std::unique_ptr<camera::CameraSource>>>&
+        camera_sources,
     std::unique_ptr<localization::IAprilTagDetector>& detector) -> frc::Pose3d;
 }  // namespace localization

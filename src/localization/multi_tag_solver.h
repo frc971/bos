@@ -17,7 +17,7 @@ class MultiTagSolver : public IPositionSolver {
       const frc::AprilTagFieldLayout& layout = kapriltag_layout,
       const std::vector<cv::Point3d>& tag_corners = kapriltag_corners);
   MultiTagSolver(
-      camera::Camera camera_config,
+      camera::camera_constant_t camera_constant,
       const frc::AprilTagFieldLayout& layout = kapriltag_layout,
       const std::vector<cv::Point3d>& tag_corners = kapriltag_corners);
   auto EstimatePosition(const std::vector<tag_detection_t>& detections,
