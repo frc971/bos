@@ -1,8 +1,9 @@
+#include <frc/DataLogManager.h>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
 #include "absl/flags/flag.h"
-#include "absl/flags/internal/flag.h"
 #include "absl/flags/parse.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
@@ -14,6 +15,7 @@
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
+#include "src/utils/log.h"
 #include "src/utils/nt_utils.h"
 
 ABSL_FLAG(std::string, image_folder, "",  //NOLINT
@@ -33,7 +35,6 @@ auto main(int argc, char** argv) -> int {
   if (image_folder.empty() || !std::filesystem::exists(image_path) ||
       !std::filesystem::is_directory(image_path)) {
     LOG(FATAL) << "Folder empty or doesn't exist";
-    return 1;
   }
 
   camera::CameraSource camera("disk", std::make_unique<camera::DiskCamera>(
