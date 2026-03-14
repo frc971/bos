@@ -16,6 +16,11 @@ using tag_detection_t = struct TagDetection {
   double timestamp;
   double confidence;
 
+  auto operator==(const TagDetection& other) const -> bool {
+    return tag_id == other.tag_id && corners == other.corners &&
+           timestamp == other.timestamp && confidence == other.confidence;
+  }
+
   friend auto operator<<(std::ostream& os, const TagDetection& t)
       -> std::ostream& {
     os << "ID: " << t.tag_id << "\nCorners:\n";

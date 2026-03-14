@@ -18,6 +18,10 @@ using camera_constant_t = struct CameraConstant {
   std::optional<double> brightness = std::nullopt;
   std::optional<double> sharpness = std::nullopt;
 
+  auto operator==(const CameraConstant& other) const -> bool {
+    return name == other.name;
+  }
+
   friend auto operator<<(std::ostream& os, const CameraConstant& c)
       -> std::ostream& {
     os << "pipeline: " << c.pipeline.value_or("NO PIPELINE VALUE")

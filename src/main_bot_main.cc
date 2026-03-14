@@ -38,7 +38,7 @@ auto main() -> int {
                               std::move(left_src));
   // camera_sources.emplace_back(camera_constants.at("main_bot_right"),
   //                             std::move(right_src));
-  std::cout << "Made camera sources" << std::endl;
+  // std::cout << "Made camera sources" << std::endl;
   std::thread joint_solve_thread(localization::RunJointSolve,
                                  std::ref(camera_sources), 5801, false, false);
   LOG(INFO) << "Started estimators";

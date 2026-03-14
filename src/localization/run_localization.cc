@@ -12,6 +12,15 @@
 
 namespace localization {
 
+auto PrintTagDetections = [](const auto& detections_map) {
+  for (const auto& [camera_const, detections] : detections_map) {
+    std::cout << "Camera: " << camera_const << "\n";
+    for (const auto& det : detections) {
+      std::cout << "  " << det << "\n";
+    }
+  }
+};
+
 // TODO remove extrinsics
 void RunLocalization(camera::CameraSource& source,
                      std::unique_ptr<localization::IAprilTagDetector> detector,
@@ -67,8 +76,10 @@ void RunJointSolve(
   camera_configs.reserve(camera_sources.size());
   JointSolver solver(camera_configs);
   while (true) {
+    size_t num_detections = 0;
     std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
         tag_detections;
+    double timestamp = -1;
     for (int i = 0; i < camera_sources.size(); i++) {
       camera::timestamped_frame_t timestamped_frame =
           camera_sources[i].second->Get(true);
@@ -77,22 +88,26 @@ void RunJointSolve(
       for (tag_detection_t& detection :
            detectors[i].GetTagDetections(timestamped_frame)) {
         detections.push_back(detection);
+        num_detections++;
+        timestamp = detection.timestamp;
       }
       tag_detections.insert({camera_configs[i], detections});
     }
-    std::cout << "Considering timestamp: "
-              << tag_detections.at(camera_sources[0].first)[0].timestamp
-              << std::endl;
-    if (tag_detections.size() == 0 ||
-        tag_detections.at(camera_sources[0].first)[0].timestamp < 11.9) {
-      std::cout << "Rejected" << std::endl;
+    if (num_detections == 0 || timestamp < 11.9) {
       continue;
     }
+    std::cout << "Considering" << timestamp << std::endl;
+    // PrintTagDetections(tag_detections);
+    if (timestamp > 14.58) {
+      std::cout << "Finished" << std::endl;
+      std::exit(0);
+    }
     utils::Timer timer(name, verbose);
-    position_estimate_t position_estimate =
-        solver.EstimatePosition(tag_detections, prev_estimate, true, false);
-    prev_estimate = position_estimate.pose;
-    std::cout << "New pose after " << timer.Stop() << std::endl;
+    frc::Pose3d position_estimate =
+        GetSquareSolveEstimates(camera_sources, detectors);
+    //solver.EstimatePosition(tag_detections, prev_estimate, true, true);
+    prev_estimate = position_estimate;
+    // std::cout << "New pose after " << timer.Stop() << std::endl;
     utils::PrintPose3d(prev_estimate);
     // position_sender.Send(std::vector<position_estimate_t>{position_estimate},
     //                      timer.Stop());
@@ -134,4 +149,5 @@ auto GetSquareSolveEstimates(
       frc::Rotation3d{units::radian_t{roll}, units::radian_t{pitch},
                       units::radian_t{yaw}}};
 }
+
 }  // namespace localization

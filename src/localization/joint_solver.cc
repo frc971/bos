@@ -197,16 +197,15 @@ auto JointSolver::EstimatePosition(
   utils::ChangeBasis(robot_to_field_, utils::WPI_TO_CV);
   std::vector<data_point_t> data_points;
   for (const auto& pair : all_cam_detections) {
-    const CameraMatrices& camera_mats = camera_matrices_.at(pair.first);
     for (const tag_detection_t& detection : pair.second) {
-      std::vector<cv::Point2d> undistorted_corners;
-      cv::undistortImagePoints(detection.corners, undistorted_corners,
-                               camera_mats.camera_matrix,
-                               camera_mats.distortion_coefficients);
-      for (size_t i = 0; i < undistorted_corners.size(); i++) {
+      // std::vector<cv::Point2d> undistorted_corners;
+      // cv::undistortImagePoints(detection.corners, undistorted_corners,
+      //                          camera_mats.camera_matrix,
+      //                          camera_mats.distortion_coefficients);
+      for (size_t i = 0; i < detection.corners.size(); i++) {
         Eigen::Vector2d undistorted_image_point;
-        undistorted_image_point << undistorted_corners[i].x,
-            undistorted_corners[i].y;
+        undistorted_image_point << detection.corners[i].x,
+            detection.corners[i].y;
         const data_point_t datapoint = {
             .undistorted_point = undistorted_image_point,
             .source = pair.first,
