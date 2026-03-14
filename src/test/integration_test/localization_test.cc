@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <optional>
 #include "absl/flags/flag.h"
+#include "absl/flags/internal/flag.h"
 #include "absl/flags/parse.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
@@ -13,7 +14,7 @@
 #include "src/utils/nt_utils.h"
 
 // for reference, example command:
-// ./build/src/test/integration_test/localization_test --log_path=logs/log0/ --camera_name=main_bot_right --image_folder=logs/log152/right
+// ./build/src/test/integration_test/localization_test --log_path=logs/log0/ --camera_name=main_bot_right --image_folder=logs/log181/right --speed=0.5
 
 ABSL_FLAG(std::string, image_folder, "",  //NOLINT
           "Path to folder of test images");
@@ -40,7 +41,8 @@ auto main(int argc, char** argv) -> int {
                              : frc::DataLogManager::GetLogDir();
 
   camera::CameraSource camera(
-      "disk", std::make_unique<camera::DiskCamera>(image_folder, 0.5));
+      "disk", std::make_unique<camera::DiskCamera>(image_folder,
+                                                   absl::GetFlag(FLAGS_speed)));
 
   auto frame = camera.GetFrame();
   if (frame.empty()) {
