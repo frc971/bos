@@ -55,12 +55,12 @@ MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
   }
 }
 
-MultiTagSolver::MultiTagSolver(camera::Camera camera_config,
+MultiTagSolver::MultiTagSolver(camera::camera_constant_t camera_constant,
                                const frc::AprilTagFieldLayout& layout,
                                const std::vector<cv::Point3d>& tag_corners)
-    : MultiTagSolver(camera::camera_constants[camera_config].intrinsics_path,
-                     camera::camera_constants[camera_config].extrinsics_path,
-                     layout, tag_corners) {}
+    : MultiTagSolver(camera_constant.intrinsics_path.value(),
+                     camera_constant.extrinsics_path.value(), layout,
+                     tag_corners) {}
 
 auto MultiTagSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections, bool reject_far_tags)

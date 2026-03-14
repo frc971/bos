@@ -9,6 +9,7 @@
 
 namespace localization {
 
+// TODO remove extrinsics
 void RunLocalization(camera::CameraSource& source,
                      std::unique_ptr<localization::IAprilTagDetector> detector,
                      std::unique_ptr<localization::IPositionSolver> solver,

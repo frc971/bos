@@ -24,21 +24,20 @@ auto main(int argc, char* argv[]) -> int {
 
   bool time = absl::GetFlag(FLAGS_time).value_or(false);
 
-  camera::Camera config =
-      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
-  camera::CameraSource source("stress_test_camera",
-                              camera::GetCameraStream(config));
+  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
+      absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
+  camera::CameraSource source(
+      "stress_test_camera",
+      std::make_unique<camera::CVCamera>(camera_constant));
   cv::Mat frame = source.GetFrame();
 
   camera::CscoreStreamer streamer("tag_estimator_test", 5801, 30, frame);
 
   localization::OpenCVAprilTagDetector detector(
       frame.cols, frame.rows,
-      utils::ReadIntrinsics(camera::camera_constants[config].intrinsics_path));
+      utils::ReadIntrinsics(camera_constant.intrinsics_path.value()));
 
-  localization::SquareSolver solver(
-      camera::camera_constants[config].intrinsics_path,
-      camera::camera_constants[config].extrinsics_path);
+  localization::SquareSolver solver(camera_constant);
 
   camera::timestamped_frame_t timestamped_frame;
   while (true) {

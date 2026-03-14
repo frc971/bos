@@ -34,12 +34,12 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
   invert_translation_.at<double>(3, 3) = 1;
 }
 
-SquareSolver::SquareSolver(camera::Camera camera_config,
+SquareSolver::SquareSolver(camera::camera_constant_t camera_constant,
                            frc::AprilTagFieldLayout layout,
                            std::vector<cv::Point3d> tag_corners)
-    : SquareSolver(camera::camera_constants[camera_config].intrinsics_path,
-                   camera::camera_constants[camera_config].extrinsics_path,
-                   std::move(layout), std::move(tag_corners)) {}
+    : SquareSolver(camera_constant.intrinsics_path.value(),
+                   camera_constant.extrinsics_path.value(), std::move(layout),
+                   std::move(tag_corners)) {}
 
 auto SquareSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections, const bool reject_far_tags)

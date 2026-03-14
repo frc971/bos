@@ -68,11 +68,13 @@ auto WriteIntrinsicToFile(cv::Mat camera_matrix, cv::Mat dist_coeffs,
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  camera::Camera config =
-      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
-  std::unique_ptr<camera::ICamera> camera_ = camera::GetCameraStream(config);
-  camera::CameraSource source("camera", std::move(camera_));
+  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
+      absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
 
+  std::unique_ptr<camera::ICamera> camera =
+      std::make_unique<camera::CVCamera>(camera_constant);
+
+  camera::CameraSource source("camera", std::move(camera));
   camera::CscoreStreamer streamer("intrinsics_calibrate",
                                   absl::GetFlag(FLAGS_port).value_or(5801), 30,
                                   source.GetFrame());
