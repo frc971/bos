@@ -28,10 +28,10 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
 
   auto timestamp = timer_.Get().value();
   while (timestamp < image_paths_.top().timestamp) {
-    std::this_thread::sleep_for(std::chrono::duration<double>(
-        (image_paths_.top().timestamp - timestamp) / 50.0));
-    image_paths_.pop();
-    timestamp = timer_.Get().value();
+    const double time_diff = image_paths_.top().timestamp - timestamp;
+    std::this_thread::sleep_for(
+        std::chrono::duration<double>(time_diff / 50.0));
+    timestamp += time_diff;
   }
   return timestamped_frame;
 }

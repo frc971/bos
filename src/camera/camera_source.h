@@ -9,7 +9,7 @@ namespace camera {
 class CameraSource {
  public:
   CameraSource(std::string name, std::unique_ptr<ICamera> camera);
-  [[nodiscard]] auto Get() -> timestamped_frame_t;
+  [[nodiscard]] auto Get(bool sim = false) -> timestamped_frame_t;
   [[nodiscard]] auto GetFrame() -> cv::Mat;
   [[nodiscard]] auto GetName() const -> std::string { return name_; }
 

@@ -16,12 +16,12 @@ CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera)
   });
 }
 
-auto CameraSource::Get() -> timestamped_frame_t {
+auto CameraSource::Get(bool sim) -> timestamped_frame_t {
   mutex_.lock();
   timestamped_frame_t timestamped_frame = timestamped_frame_;
   mutex_.unlock();
   auto current_time = frc::Timer::GetFPGATimestamp().to<double>();
-  if (current_time - timestamped_frame.timestamp > 5.0) {
+  if (!sim && current_time - timestamped_frame.timestamp > 5.0) {
     LOG(INFO) << "Restarting camera because of old timestamp";
     timestamped_frame_.timestamp = current_time;
     mutex_.lock();

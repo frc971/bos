@@ -44,6 +44,7 @@ void RunJointSolve(
         camera_sources,
     std::unique_ptr<localization::IAprilTagDetector> detector, uint port,
     bool square_solve_start, bool verbose) {
+  std::cout << "Running joint solve: " << std::endl;
   std::vector<camera::CameraConstant> camera_configs;
   std::string name = "";
   // std::vector<camera::CscoreStreamer> streamers;
@@ -63,8 +64,10 @@ void RunJointSolve(
     std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
         tag_detections;
     for (int i = 0; i < camera_sources.size(); i++) {
+      std::cout << "GetJointSolveStart" << std::endl;
       camera::timestamped_frame_t timestamped_frame =
-          camera_sources[i].second->Get();
+          camera_sources[i].second->Get(true);
+      std::cout << "GetJointSolveDone" << std::endl;
       // streamers[i].WriteFrame(timestamped_frame.frame);
       std::vector<tag_detection_t> detections;
       for (tag_detection_t& detection :
@@ -76,8 +79,8 @@ void RunJointSolve(
     position_estimate_t position_estimate =
         solver.EstimatePosition(tag_detections, prev_estimate, true);
     prev_estimate = position_estimate.pose;
-    // std::cout << "New pose: " << std::endl;
-    // utils::PrintPose3d(prev_estimate);
+    std::cout << "New pose: " << std::endl;
+    utils::PrintPose3d(prev_estimate);
     // position_sender.Send(std::vector<position_estimate_t>{position_estimate},
     //                      timer.Stop());
   }
@@ -92,7 +95,9 @@ auto GetSquareSolveEstimates(
   int num_estimates = 0;
   for (auto& camera_source : camera_sources) {
     localization::SquareSolver square_solver(camera_source.first);
-    camera::timestamped_frame_t frame = camera_source.second->Get();
+    std::cout << "Getsqstart" << std::endl;
+    camera::timestamped_frame_t frame = camera_source.second->Get(true);
+    std::cout << "Getsqdone" << std::endl;
     const std::vector<localization::position_estimate_t> estimates =
         square_solver.EstimatePosition(detector->GetTagDetections(frame));
     for (const localization::position_estimate_t& estimate : estimates) {
