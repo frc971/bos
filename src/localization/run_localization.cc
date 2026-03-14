@@ -73,6 +73,7 @@ void RunJointSolve(
   // TODO do this with position receiver
   frc::Pose3d prev_estimate =
       GetSquareSolveEstimates(camera_sources, detectors);
+  std::vector<frc::Pose3d> estimates_over_time;
   camera_configs.reserve(camera_sources.size());
   JointSolver solver(camera_configs);
   while (true) {
@@ -87,9 +88,11 @@ void RunJointSolve(
       std::vector<tag_detection_t> detections;
       for (tag_detection_t& detection :
            detectors[i].GetTagDetections(timestamped_frame)) {
-        detections.push_back(detection);
-        num_detections++;
-        timestamp = detection.timestamp;
+        if (detection.tag_id == 26) {
+          detections.push_back(detection);
+          num_detections++;
+          timestamp = detection.timestamp;
+        }
       }
       tag_detections.insert({camera_configs[i], detections});
     }
@@ -98,16 +101,22 @@ void RunJointSolve(
     }
     std::cout << "Considering" << timestamp << std::endl;
     // PrintTagDetections(tag_detections);
-    if (timestamp > 14.58) {
+    if (timestamp > 13.6) {
       std::cout << "Finished" << std::endl;
+      for (const auto& estimate : estimates_over_time) {
+        utils::PrintPose3d(estimate);
+      }
       std::exit(0);
     }
     utils::Timer timer(name, verbose);
-    frc::Pose3d position_estimate =
-        GetSquareSolveEstimates(camera_sources, detectors);
-    //solver.EstimatePosition(tag_detections, prev_estimate, true, true);
-    prev_estimate = position_estimate;
-    // std::cout << "New pose after " << timer.Stop() << std::endl;
+    localization::position_estimate_t position_estimate =
+        solver.EstimatePosition(tag_detections, prev_estimate, true, false);
+    std::cout << "Solver took " << timer.Stop() << " seconds" << std::endl;
+    // frc::Pose3d position_estimate =
+    //     GetSquareSolveEstimates(camera_sources, detectors);
+    prev_estimate = position_estimate.pose;
+    // prev_estimate = position_estimate;
+    estimates_over_time.push_back(prev_estimate);
     utils::PrintPose3d(prev_estimate);
     // position_sender.Send(std::vector<position_estimate_t>{position_estimate},
     //                      timer.Stop());

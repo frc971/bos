@@ -231,6 +231,7 @@ auto JointSolver::EstimatePosition(
       ComputeNetStep(translation_and_rotation, decomposed_robot_to_field,
                      Rx_activations, Ry_activations, Rz_activations,
                      projections, projection_errors, data_points, yaw_only);
+  double step_size = starting_step_size_;
   if (verbose) {
     std::cout << "Initial loss: " << net_loss
               << " initial step: " << step * step_size << std::endl;
@@ -240,15 +241,15 @@ auto JointSolver::EstimatePosition(
   size_t stepups_first = 0;
   size_t stepdowns_second = 0;
   size_t stepups_second = 0;
-  for (size_t i = 0; i < (yaw_only ? 1 : 10) * kmax_iters &&
-                     net_loss > kacceptable_reprojection_error;
+  bool stuck_in_minimum = false;
+  for (size_t i = 0; i < kmax_iters && net_loss &&
+                     !stuck_in_minimum > kacceptable_reprojection_error;
        i++) {
     if (yaw_only) {
       step.rx *= krotation_step_scalar;
       step.ry *= krotation_step_scalar;
       step.rz *= krotation_step_scalar;
     } else {
-      step.rx *= kyaw_prioritization;
       step.ry *= kyaw_prioritization;
     }
     translation_and_rotation += step * step_size;
@@ -263,9 +264,8 @@ auto JointSolver::EstimatePosition(
         step_size /= 2.0;
         stepdowns_first++;
         if (stepdowns_first >= kmax_iters) {
-          std::cout << "Insane number of stepdowns, failed at iter: " << i
-                    << " with step size " << step_size << " and transform "
-                    << translation_and_rotation << std::endl;
+          stuck_in_minimum = true;
+          std::cout << "Stuck in minimum" << std::endl;
           break;
         }
         translation_and_rotation -= step * step_size;
