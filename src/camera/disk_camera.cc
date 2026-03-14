@@ -3,8 +3,8 @@
 
 namespace camera {
 
-DiskCamera::DiskCamera(std::string image_folder_path)
-    : image_folder_path_(std::move(image_folder_path)) {
+DiskCamera::DiskCamera(std::string image_folder_path, double speed)
+    : speed(speed), image_folder_path_(std::move(image_folder_path)) {
   for (auto& entry : std::filesystem::directory_iterator(image_folder_path_)) {
     std::string entry_name = entry.path().filename().string();
 
@@ -37,6 +37,12 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
       .frame = cv::imread(image_paths_.top().path),
       .timestamp = image_paths_.top().timestamp};
   image_paths_.pop();
+
+  if (!image_paths_.empty()) {
+    double delta = image_paths_.top().timestamp - timestamped_frame.timestamp;
+    std::this_thread::sleep_for(std::chrono::duration<double>(delta / speed));
+  }
+
   return timestamped_frame;
 }
 

@@ -12,12 +12,17 @@
 #include "src/utils/log.h"
 #include "src/utils/nt_utils.h"
 
+// for reference, example command:
+// ./build/src/test/integration_test/localization_test --log_path=logs/log0/ --camera_name=main_bot_right --image_folder=logs/log152/right
+
 ABSL_FLAG(std::string, image_folder, "",  //NOLINT
           "Path to folder of test images");
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt,  //NOLINT
           "Camera name");
 ABSL_FLAG(int, port, 5801, "Port");  //NOLINT
-ABSL_FLAG(std::optional<std::string>, log_path, std::nullopt, "Log path");
+ABSL_FLAG(std::optional<std::string>, log_path, std::nullopt,
+          "Log path");                                   //NOLINT
+ABSL_FLAG(double, speed, 0.01, "Delay between frames");  //NOLINT
 
 auto main(int argc, char** argv) -> int {
 
@@ -35,7 +40,7 @@ auto main(int argc, char** argv) -> int {
                              : frc::DataLogManager::GetLogDir();
 
   camera::CameraSource camera(
-      "disk", std::make_unique<camera::DiskCamera>(image_folder));
+      "disk", std::make_unique<camera::DiskCamera>(image_folder, 0.5));
 
   auto frame = camera.GetFrame();
   if (frame.empty()) {
@@ -53,5 +58,5 @@ auto main(int argc, char** argv) -> int {
               constants[camera_name].intrinsics_path.value())),
       std::make_unique<localization::MultiTagSolver>(constants[camera_name]),
       constants[camera_name].extrinsics_path.value(), absl::GetFlag(FLAGS_port),
-      false);
+      true);
 }
