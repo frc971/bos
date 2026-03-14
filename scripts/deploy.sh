@@ -20,10 +20,12 @@ while true; do
   if ping -c 1 "$target" >/dev/null 2>&1; then
     # success: exit 0 so && chains
     echo "Remote found!"
-    exit 0
+    break
   fi
   sleep 1
 done
+
+echo "asdfliuasf"
 
 rsync -avz --delete bin "$HOST":/bos
 rsync -avz constants "$HOST":/bos
