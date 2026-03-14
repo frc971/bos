@@ -31,15 +31,17 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
   if (image_paths_.empty()) {
     std::cout << "Finished reading all frames from DiskCamera. Folder path: "
               << image_folder_path_ << std::endl;
+    frc::DataLogManager::Stop();
     exit(0);
   }
+  double recorded_ts = image_paths_.top().timestamp;
   timestamped_frame_t timestamped_frame{
       .frame = cv::imread(image_paths_.top().path),
-      .timestamp = image_paths_.top().timestamp};
+      .timestamp = frc::Timer::GetFPGATimestamp().to<double>()};
   image_paths_.pop();
 
   if (!image_paths_.empty()) {
-    double delta = image_paths_.top().timestamp - timestamped_frame.timestamp;
+    double delta = image_paths_.top().timestamp - recorded_ts;
     std::this_thread::sleep_for(std::chrono::duration<double>(delta / speed));
   }
 
