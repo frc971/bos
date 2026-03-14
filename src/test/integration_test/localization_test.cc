@@ -17,12 +17,13 @@ ABSL_FLAG(std::string, image_folder, "",  //NOLINT
           "Path to folder of test images");
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt,  //NOLINT
           "Camera name");
-ABSL_FLAG(int, port, 5801, "Port");              //NOLINT
-ABSL_FLAG(std::optional<std::string>, log_path,  //NOLINT
-          frc::DataLogManager::GetLogDir(), "Log path");
+ABSL_FLAG(int, port, 5801, "Port");  //NOLINT
+// ABSL_FLAG(std::optional<std::string>, log_path,  //NOLINT **might be uneeded**
+//           frc::DataLogManager::GetLogDir(), "Log path");
 
 auto main(int argc, char** argv) -> int {
 
+  utils::StartNetworktables();
   absl::ParseCommandLine(argc, argv);
 
   const std::string image_folder = absl::GetFlag(FLAGS_image_folder);
@@ -36,6 +37,9 @@ auto main(int argc, char** argv) -> int {
                                           absl::GetFlag(FLAGS_image_folder)));
 
   auto frame = camera.GetFrame();
+  if (frame.empty()) {
+    LOG(FATAL) << "No readable images found in folder: " << image_folder;
+  }
 
   camera::Camera config =
       camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
