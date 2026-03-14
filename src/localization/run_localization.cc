@@ -76,6 +76,7 @@ void RunJointSolve(
   std::vector<frc::Pose3d> estimates_over_time;
   camera_configs.reserve(camera_sources.size());
   JointSolver solver(camera_configs);
+  double last_timestamp = -1;
   while (true) {
     size_t num_detections = 0;
     std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
@@ -88,18 +89,22 @@ void RunJointSolve(
       std::vector<tag_detection_t> detections;
       for (tag_detection_t& detection :
            detectors[i].GetTagDetections(timestamped_frame)) {
-        if (detection.tag_id == 26) {
-          detections.push_back(detection);
-          num_detections++;
-          timestamp = detection.timestamp;
-        }
+        // if (detection.tag_id == 26 || detection.tag_id == 25) {
+        detections.push_back(detection);
+        num_detections++;
+        timestamp = detection.timestamp;
+        // }
       }
       tag_detections.insert({camera_configs[i], detections});
     }
     if (num_detections == 0 || timestamp < 11.9) {
       continue;
     }
+    if (timestamp == last_timestamp) {
+      continue;
+    }
     std::cout << "Considering" << timestamp << std::endl;
+    last_timestamp = timestamp;
     // PrintTagDetections(tag_detections);
     if (timestamp > 13.6) {
       std::cout << "Finished" << std::endl;

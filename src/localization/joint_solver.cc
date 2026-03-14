@@ -242,8 +242,9 @@ auto JointSolver::EstimatePosition(
   size_t stepdowns_second = 0;
   size_t stepups_second = 0;
   bool stuck_in_minimum = false;
-  for (size_t i = 0; i < kmax_iters && net_loss &&
-                     !stuck_in_minimum > kacceptable_reprojection_error;
+  for (size_t i = 0;
+       i < kmax_iters && net_loss > kacceptable_reprojection_error &&
+       !stuck_in_minimum;
        i++) {
     if (yaw_only) {
       step.rx *= krotation_step_scalar;
