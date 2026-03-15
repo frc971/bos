@@ -52,12 +52,13 @@ auto main(int argc, char* argv[]) -> int {
       LOG(INFO) << position_estimate;
     }
 
+    cv::Mat display_frame = timestamped_frame.frame.clone();
     for (auto& tag_detection : tag_detections) {
       for (auto& corner : tag_detection.corners) {
-        cv::circle(timestamped_frame.frame, corner, 10, cv::Scalar(0, 0, 255));
+        cv::circle(display_frame, corner, 10, cv::Scalar(0, 0, 255));
       }
     }
 
-    streamer.WriteFrame(timestamped_frame.frame);
+    streamer.WriteFrame(display_frame);
   }
 }
