@@ -13,7 +13,6 @@ DiskCamera::DiskCamera(std::string image_folder_path, double speed)
         .path = entry.path(),
         .timestamp = std::stod(entry_name.erase(entry_name.size() - 4, 4))});
   }
-  timer_.Reset();
 
   auto offset = image_paths_.top().timestamp;
   std::priority_queue<TimestampedFramePath, std::vector<TimestampedFramePath>,
@@ -32,12 +31,12 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
     std::cout << "Finished reading all frames from DiskCamera. Folder path: "
               << image_folder_path_ << std::endl;
     frc::DataLogManager::Stop();
-    exit(0);
+    return {.invalid = true};
   }
+
   double recorded_ts = image_paths_.top().timestamp;
   timestamped_frame_t timestamped_frame{
-      .frame = cv::imread(image_paths_.top().path),
-      .timestamp = frc::Timer::GetFPGATimestamp().to<double>()};
+      .frame = cv::imread(image_paths_.top().path), .timestamp = recorded_ts};
   image_paths_.pop();
 
   if (!image_paths_.empty()) {
