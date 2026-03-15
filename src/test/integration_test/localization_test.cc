@@ -15,15 +15,13 @@
 #include "src/utils/log.h"
 
 // for reference, example command:
-// ./build/src/test/integration_test/localization_test --log_path=logs/log0/ --camera_name=main_bot_right --image_folder=logs/log181/right --speed=0.5
+// ./build/src/test/integration_test/localization_test --camera_name=main_bot_right --image_folder=logs/log181/right --speed=0.5
 
 ABSL_FLAG(std::string, image_folder, "",  //NOLINT
           "Path to folder of test images");
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt,  //NOLINT
           "Camera name");
-ABSL_FLAG(int, port, 5801, "Port");                            //NOLINT
-ABSL_FLAG(std::optional<std::string>, log_path, std::nullopt,  //NOLINT
-          "Log path");
+ABSL_FLAG(int, port, 5801, "Port");                      //NOLINT
 ABSL_FLAG(double, speed, 0.01, "Delay between frames");  //NOLINT
 
 auto main(int argc, char** argv) -> int {
