@@ -121,38 +121,20 @@ void RunJointSolve(
     if (timestamp == last_timestamp) {
       continue;
     }
-    std::cout << "Considering" << timestamp << std::endl;
     last_timestamp = timestamp;
-    // PrintTagDetections(tag_detections);
-    if (timestamp > 22) {
-      std::cout << "Finished" << std::endl;
-      log->Flush();
-      log->Finish(0, timestamp);
-      log.reset();
-      for (size_t i = 0; i < estimates_over_time.size(); i++) {
-        std::cout << losses[i] << "\t" << estimates_over_time[i] << std::endl;
-      }
-      return;
-    }
     utils::Timer timer(name, verbose);
     localization::joint_estimate_t position_estimate = solver.EstimatePosition(
         tag_detections, prev_estimate.pose, true, false);
-    std::cout << "Solver took " << timer.Stop() << " seconds" << std::endl;
-    // frc::Pose3d position_estimate =
-    //     GetSquareSolveEstimates(camera_sources, detectors);
     prev_estimate = position_estimate.pose_estimate;
-    // prev_estimate = position_estimate;
     estimates_over_time.push_back(prev_estimate);
     losses.push_back(position_estimate.loss);
-    std::cout << "Timestamp: " << timestamp << std::endl;
     uint64_t log_time = static_cast<uint64_t>(timestamp);
     pose_log.Append(prev_estimate.pose, log_time);
     loss_log.Append(position_estimate.loss, log_time);
     time_log.Append(timestamp, log_time);
-    std::cout << prev_estimate << std::endl;
     position_sender.Send(
         std::vector<position_estimate_t>{position_estimate.pose_estimate},
-        timer.Stop());
+        timer.Stop(), position_estimate.loss);
   }
 }
 

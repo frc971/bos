@@ -43,11 +43,13 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
   nt::BooleanArrayTopic rejected_tag_ids_topic =
       table->GetBooleanArrayTopic("RejectedTagId");
   rejected_tag_ids_publisher_ = rejected_tag_ids_topic.Publish();
+  nt::DoubleTopic loss_topic = table->GetDoubleTopic("Loss");
+  loss_publisher_ = loss_topic.Publish();
 }
 
 void PositionSender::Send(
     const std::vector<localization::position_estimate_t>& detections,
-    double latency) {
+    double latency, double loss) {
   mutex_.lock();
   for (auto& detection : detections) {
     std::array<double, 8> tag_estimation{
@@ -60,6 +62,8 @@ void PositionSender::Send(
         static_cast<double>(detection.num_tags),
         latency,
         detection.avg_tag_dist};
+
+    loss_publisher_.Set(loss);
 
     std::array<int, kmax_tags> tags{};
     for (int tag_id : detection.tag_ids) {

@@ -18,7 +18,7 @@ class PositionSender {
  public:
   PositionSender(const std::string& camera_name, bool verbose = false);
   void Send(const std::vector<localization::position_estimate_t>& detections,
-            double latency);
+            double latency, double loss = 0);
 
  private:
   nt::NetworkTableInstance instance_;
@@ -31,6 +31,7 @@ class PositionSender {
   nt::DoubleArrayPublisher tag_estimation_publisher_;
   nt::BooleanArrayPublisher tag_ids_publisher_;
   nt::BooleanArrayPublisher rejected_tag_ids_publisher_;
+  nt::DoublePublisher loss_publisher_;
 
   std::mutex mutex_;
   bool verbose_;
