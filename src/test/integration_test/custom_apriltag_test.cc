@@ -424,24 +424,32 @@ auto main() -> int {
     point_t p0 = GetPoint(*box.segment1, *box.segment2);
     point_t p1 = GetPoint(*box.segment2, *box.segment3);
     point_t p2 = GetPoint(*box.segment3, *box.segment4);
-    point_t p3 = GetPoint(*box.segment3, *box.segment4);
+    point_t p3 = GetPoint(*box.segment4, *box.segment1);
     DrawPoint(p0, decode_image);
     DrawPoint(p1, decode_image);
     DrawPoint(p2, decode_image);
     DrawPoint(p3, decode_image);
-    vector_t i_vector{.x = (p2.x - p1.x) / ktag_pixels,
-                      .y = (p2.y - p1.y) / ktag_pixels};
-    vector_t j_vector{
-        .x = (p1.x - p0.x) / ktag_pixels,
-        .y = (p1.y - p0.y) / ktag_pixels,
-    };
-    for (int i = 0; i < ktag_pixels; ++i) {
-      for (int j = 0; j < ktag_pixels; ++j) {
-        double x = p1.x + ((i + 0.5) * i_vector.x - (j + 0.5) * j_vector.x);
-        double y = p1.y + ((i + 0.5) * i_vector.y - (j + 0.5) * j_vector.y);
-        cv::circle(decode_image,
-                   cv::Point(static_cast<uint>(y), static_cast<uint>(x)), 1,
-                   cv::Scalar(255, 0, 0), -1, cv::LINE_AA);
+    LOG(INFO) << p0.x << " " << p0.y;
+    LOG(INFO) << p1.x << " " << p1.y;
+    LOG(INFO) << p2.x << " " << p2.y;
+    LOG(INFO) << p3.x << " " << p3.y;
+
+    std::vector<cv::Point2d> dstPoints = {
+        {p0.y, p0.x}, {p1.y, p1.x}, {p2.y, p2.x}, {p3.y, p3.x}};
+    std::vector<cv::Point2f> srcPoints = {
+        {ktag_pixels, ktag_pixels}, {ktag_pixels, 0}, {0, 0}, {0, ktag_pixels}};
+    cv::Mat H = cv::findHomography(srcPoints, dstPoints);
+
+    // std::array<std::array<bool, 4>, 4> tag_layout;
+    for (float i = 0; i < ktag_pixels; ++i) {
+      for (float j = 0; j < ktag_pixels; ++j) {
+        std::vector<cv::Point2f> src(1);
+        src[0] = cv::Point2f(i + 0.5, j + 0.5);
+        std::vector<cv::Point2f> dst;
+        cv::perspectiveTransform(src, dst, H);
+        cv::Point2f transformed = dst[0];
+        cv::circle(decode_image, transformed, 1, cv::Scalar(255, 0, 0), -1,
+                   cv::LINE_AA);
       }
     }
     break;

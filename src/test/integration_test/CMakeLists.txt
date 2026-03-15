@@ -21,3 +21,6 @@ target_link_libraries(localization_test PRIVATE camera localization utils)
 
 add_executable(networktable_performance_test networktable_performance_test.cc)
 target_link_libraries(networktable_performance_test PRIVATE utils localization)
+
+add_executable(custom_apriltag_test custom_apriltag_test.cc)
+target_link_libraries(custom_apriltag_test PRIVATE localization utils)
