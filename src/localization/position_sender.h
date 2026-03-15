@@ -20,8 +20,7 @@ class PositionSender {
   PositionSender(const std::string& camera_name, bool verbose = false);
   void Send(const std::vector<localization::position_estimate_t>& detections,
             double latency, double loss = 0);
-  void Send(const localization::joint_estimate_t& detection, double latency,
-            double loss);
+  void Send(const localization::joint_estimate_t& detection, double latency);
 
  private:
   nt::NetworkTableInstance instance_;

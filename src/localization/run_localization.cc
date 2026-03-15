@@ -1,6 +1,7 @@
 #include "src/localization/run_localization.h"
 #include <frc/DataLogManager.h>
 #include <frc/geometry/Pose3d.h>
+#include <frc/geometry/struct/Pose3dStruct.h>
 #include <wpi/DataLog.h>
 #include <wpi/DataLogWriter.h>
 #include <utility>
@@ -54,13 +55,19 @@ void RunJointSolve(
   auto log = std::make_unique<DataLogWriter>("position_log.wpilog", ec);
   if (ec) {
     std::cerr << "Failed to open log: " << ec.message() << std::endl;
+    return;
   }
+  log->AddStructSchema<frc::Translation3d>(0);
+  log->AddStructSchema<frc::Rotation3d>(0);
+  log->AddStructSchema<frc::Pose3d>(0);
+  std::this_thread::sleep_for(std::chrono::duration<double>(1.0));
 
   wpi::log::StructLogEntry<frc::Pose3d> pose_log(*log, "/localization/pose");
+  wpi::log::DoubleLogEntry x_log(*log, "/localization/x");
+  wpi::log::DoubleLogEntry y_log(*log, "/localization/y");
+  wpi::log::DoubleLogEntry rot_log(*log, "/localization/rot");
 
   wpi::log::DoubleLogEntry loss_log(*log, "/localization/loss");
-
-  wpi::log::DoubleLogEntry time_log(*log, "/localization/timestamp");
 
   std::vector<camera::CameraConstant> camera_configs;
   std::string name = "Front";
@@ -95,6 +102,12 @@ void RunJointSolve(
     for (int i = 0; i < camera_sources.size(); i++) {
       camera::timestamped_frame_t timestamped_frame =
           camera_sources[i].second->Get(true);
+      if (timestamped_frame.invalid || timestamped_frame.timestamp > 53) {
+        std::cout << "Stopping log" << std::endl;
+        log->Stop();
+        std::cout << "Stopped log" << std::endl;
+        return;
+      }
       timestamp = timestamped_frame.timestamp;
       // streamers[i].WriteFrame(timestamped_frame.frame);
       std::vector<tag_detection_t> detections;
@@ -116,7 +129,7 @@ void RunJointSolve(
       // std::cout << timestamp << " is same;" << std::endl;
       continue;
     }
-    // std::cout << "using: " << timestamp << std::endl;
+    std::cout << "using: " << timestamp << std::endl;
     last_timestamp = timestamp;
     utils::Timer timer(name, verbose);
     // localization::joint_estimate_t position_estimate = solver.EstimatePosition(
@@ -126,13 +139,18 @@ void RunJointSolve(
     position_estimate.pose_estimate.timestamp = timestamp;
     prev_estimate = position_estimate.pose_estimate;
     estimates_over_time.push_back(prev_estimate);
-    losses.push_back(position_estimate.loss);
-    uint64_t log_time = static_cast<uint64_t>(timestamp);
+    int64_t log_time = static_cast<int64_t>(timestamp * 1e6);
+    // std::cout << "Log_time: " << log_time << std::endl;
     pose_log.Append(prev_estimate.pose, log_time);
-    loss_log.Append(position_estimate.loss, log_time);
-    time_log.Append(timestamp, log_time);
-    position_sender.Send(position_estimate, timer.Stop(),
-                         position_estimate.loss);
+    loss_log.Append(1.0, log_time);
+    x_log.Append(position_estimate.pose_estimate.pose.X().value(), log_time);
+    y_log.Append(position_estimate.pose_estimate.pose.Y().value(), log_time);
+    rot_log.Append(position_estimate.pose_estimate.pose.Rotation().Z().value(),
+                   log_time);
+    // utils::PrintPose3d(position_estimate.pose_estimate.pose);
+    // std::cout << "x: " << position_estimate.pose_estimate.pose.X().value()
+    //           << std::endl;
+    position_sender.Send(position_estimate, timer.Stop());
   }
 }
 

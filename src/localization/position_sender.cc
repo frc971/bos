@@ -99,7 +99,7 @@ void PositionSender::Send(
 }
 
 void PositionSender::Send(const localization::joint_estimate_t& detection,
-                          double latency, double loss) {
+                          double latency) {
   mutex_.lock();
   std::array<double, 9> tag_estimation{
       detection.pose_estimate.pose.X().value(),
@@ -113,7 +113,7 @@ void PositionSender::Send(const localization::joint_estimate_t& detection,
       detection.pose_estimate.avg_tag_dist,
       static_cast<double>(detection.stuck_in_minimum)};
 
-  loss_publisher_.Set(loss);
+  loss_publisher_.Set(detection.loss);
 
   std::array<int, kmax_tags> tags{};
   for (int tag_id : detection.pose_estimate.tag_ids) {

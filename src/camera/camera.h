@@ -5,6 +5,7 @@ namespace camera {
 using timestamped_frame_t = struct TimestampedFrame {
   cv::Mat frame;
   double timestamp;
+  bool invalid = false;
 };
 
 class ICamera {

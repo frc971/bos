@@ -16,25 +16,25 @@ DiskCamera::DiskCamera(std::string image_folder_path)
 }
 auto DiskCamera::GetFrame() -> timestamped_frame_t {
   if (image_paths_.empty()) {
-    std::cout << "Finished reading all frames from DiskCamera. Folder path: "
-              << image_folder_path_ << std::endl;
-    exit(0);
+    // std::cout << "Finished reading all frames from DiskCamera. Folder path: "
+    //           << image_folder_path_ << std::endl;
+    return {.invalid = true};
   }
   timestamped_frame_t timestamped_frame{
       .frame = cv::imread(image_paths_.top().path),
       .timestamp = image_paths_.top().timestamp};
   image_paths_.pop();
 
-  double timestamp;
-  do {
-    timestamp = std::chrono::duration<double>(
-                    std::chrono::steady_clock::now().time_since_epoch() -
-                    start_time_.time_since_epoch())
-                    .count() +
-                4.10;
-    const double time_diff = image_paths_.top().timestamp - timestamp;
-    std::this_thread::sleep_for(std::chrono::duration<double>(time_diff));
-  } while (timestamp < image_paths_.top().timestamp);
+  // double timestamp;
+  // do {
+  //   timestamp = std::chrono::duration<double>(
+  //                   std::chrono::steady_clock::now().time_since_epoch() -
+  //                   start_time_.time_since_epoch())
+  //                   .count();
+  //   const double time_diff = image_paths_.top().timestamp - timestamp;
+  //   std::this_thread::sleep_for(std::chrono::duration<double>(time_diff));
+  // } while (timestamp < image_paths_.top().timestamp);
+  std::this_thread::sleep_for(std::chrono::duration<double>(0.02));
   return timestamped_frame;
 }
 
