@@ -150,7 +150,7 @@ void RunJointSolve(
     // utils::PrintPose3d(position_estimate.pose_estimate.pose);
     // std::cout << "x: " << position_estimate.pose_estimate.pose.X().value()
     //           << std::endl;
-    position_sender.Send(position_estimate, timer.Stop());
+    // position_sender.Send(position_estimate, timer.Stop());
   }
 }
 
