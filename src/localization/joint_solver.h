@@ -19,6 +19,7 @@ using data_point_t = struct DataPoint {
 using joint_estimate_t = struct JointEstimate {
   position_estimate_t pose_estimate;
   double loss;
+  bool stuck_in_minimum;
 };
 
 struct CameraMatrices {

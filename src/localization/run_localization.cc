@@ -63,13 +63,13 @@ void RunJointSolve(
   wpi::log::DoubleLogEntry time_log(*log, "/localization/timestamp");
 
   std::vector<camera::CameraConstant> camera_configs;
-  std::string name = "";
+  std::string name = "Front";
   std::vector<camera::CscoreStreamer> streamers;
   streamers.reserve(camera_sources.size());
   std::vector<localization::OpenCVAprilTagDetector> detectors;
   detectors.reserve(camera_sources.size());
   for (size_t i = 0; i < camera_sources.size(); i++) {
-    name += ", " + camera_sources[i].second->GetName();
+    // name += ", " + camera_sources[i].second->GetName();
     camera_configs.push_back(camera_sources[i].first);
     streamers.emplace_back(camera_sources[i].second->GetName(), port + i, 30,
                            1080, 1080);
@@ -121,16 +121,18 @@ void RunJointSolve(
     utils::Timer timer(name, verbose);
     // localization::joint_estimate_t position_estimate = solver.EstimatePosition(
     //     tag_detections, prev_estimate.pose, true, false);
-    localization::position_estimate_t position_estimate =
-        GetSquareSolveEstimates(camera_sources, detectors);
+    localization::joint_estimate_t position_estimate = solver.EstimatePosition(
+        tag_detections, prev_estimate.pose, true, false);
+    position_estimate.pose_estimate.timestamp = timestamp;
+    prev_estimate = position_estimate.pose_estimate;
     estimates_over_time.push_back(prev_estimate);
-    losses.push_back(1.0);
+    losses.push_back(position_estimate.loss);
     uint64_t log_time = static_cast<uint64_t>(timestamp);
     pose_log.Append(prev_estimate.pose, log_time);
-    loss_log.Append(1.0, log_time);
+    loss_log.Append(position_estimate.loss, log_time);
     time_log.Append(timestamp, log_time);
-    position_sender.Send(std::vector<position_estimate_t>{position_estimate},
-                         timer.Stop(), 1.0);
+    position_sender.Send(position_estimate, timer.Stop(),
+                         position_estimate.loss);
   }
 }
 

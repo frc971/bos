@@ -9,6 +9,7 @@
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
 #include <networktables/StructTopic.h>
+#include "src/localization/joint_solver.h"
 #include "src/localization/position.h"
 #include "src/utils/pch.h"
 
@@ -19,6 +20,8 @@ class PositionSender {
   PositionSender(const std::string& camera_name, bool verbose = false);
   void Send(const std::vector<localization::position_estimate_t>& detections,
             double latency, double loss = 0);
+  void Send(const localization::joint_estimate_t& detection, double latency,
+            double loss);
 
  private:
   nt::NetworkTableInstance instance_;
@@ -32,6 +35,7 @@ class PositionSender {
   nt::BooleanArrayPublisher tag_ids_publisher_;
   nt::BooleanArrayPublisher rejected_tag_ids_publisher_;
   nt::DoublePublisher loss_publisher_;
+  nt::BooleanPublisher minimum_publisher_;
 
   std::mutex mutex_;
   bool verbose_;

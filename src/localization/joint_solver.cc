@@ -196,8 +196,10 @@ auto JointSolver::EstimatePosition(
   robot_to_field_ = starting_pose.ToMatrix().inverse();
   utils::ChangeBasis(robot_to_field_, utils::WPI_TO_CV);
   std::vector<data_point_t> data_points;
+  int num_tags = 0;
   for (const auto& pair : all_cam_detections) {
     for (const tag_detection_t& detection : pair.second) {
+      num_tags++;
       // std::vector<cv::Point2d> undistorted_corners;
       // cv::undistortImagePoints(detection.corners, undistorted_corners,
       //                          camera_mats.camera_matrix,
@@ -218,6 +220,9 @@ auto JointSolver::EstimatePosition(
 
   utils::TransformValues translation_and_rotation =
       utils::ExtractTranslationAndRotation(robot_to_field_);
+  if (std::isnan(translation_and_rotation.ry)) {
+    translation_and_rotation = utils::TransformValues{0, 0, 0, 0, 0, 0};
+  }
   utils::TransformDecomposition decomposed_robot_to_field =
       utils::SeparateTranslationAndRotationMatrices(translation_and_rotation);
   std::vector<Eigen::Vector4d> Rx_activations(data_points.size()),
@@ -268,7 +273,6 @@ auto JointSolver::EstimatePosition(
         stepdowns_first++;
         if (stepdowns_first >= kmax_iters) {
           stuck_in_minimum = true;
-          std::cout << "Stuck in minimum" << std::endl;
           break;
         }
         translation_and_rotation -= step * step_size;
@@ -347,8 +351,10 @@ auto JointSolver::EstimatePosition(
                             .variance =
                                 Variance(num_detections, avg_distance,
                                          kvariance_scalar_, kvariance_scalar_),
-                            .timestamp = 0},
-          .loss = net_loss};
+                            .timestamp = 0,
+                            .num_tags = num_tags},
+          .loss = net_loss,
+          .stuck_in_minimum = stuck_in_minimum};
 }
 
 }  // namespace localization
