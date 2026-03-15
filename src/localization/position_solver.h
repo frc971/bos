@@ -25,11 +25,10 @@ const frc::AprilTagFieldLayout kapriltag_layout =
     frc::AprilTagFieldLayout::LoadField(
         frc::AprilTagField::k2026RebuiltAndyMark);
 
-inline auto Variance(const size_t num_tags_detected, const double distance,
+inline auto Variance(const int num_tags_detected, const double distance,
                      const double min_variance, const double scalar)
     -> double {  // distance can be avg
-  return distance * scalar /
-             std::pow(2, static_cast<double>(num_tags_detected) - 1.0) +
+  return distance * scalar / (num_tags_detected * num_tags_detected) +
          min_variance;
 }
 

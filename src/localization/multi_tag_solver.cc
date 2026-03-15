@@ -126,8 +126,9 @@ auto MultiTagSolver::EstimatePosition(
       .rejected_tag_ids = std::move(rejected_tag_ids),
       .pose =
           utils::ConvertOpencvTransformationMatrixToWpilibPose(feild_to_robot),
-      .variance = Variance(tag_ids.size(), avg_distance, kvariance_min_,
-                           kvariance_scalar_),
+      .variance = num_tags == 1 ? 10
+                                : Variance(num_tags, avg_distance,
+                                           kvariance_min_, kvariance_scalar_),
       .timestamp = detections[0].timestamp,
       .num_tags = num_tags,
       .avg_tag_dist = avg_distance}};
