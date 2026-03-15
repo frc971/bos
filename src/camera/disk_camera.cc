@@ -13,8 +13,6 @@ DiskCamera::DiskCamera(std::string image_folder_path)
         .path = entry.path(),
         .timestamp = std::stod(entry_name.erase(entry_name.size() - 4, 4))});
   }
-  timer_.Reset();
-  timer_.Start();
 }
 auto DiskCamera::GetFrame() -> timestamped_frame_t {
   if (image_paths_.empty()) {
@@ -29,7 +27,11 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
 
   double timestamp;
   do {
-    timestamp = timer_.Get().value() + 4.10;
+    timestamp = std::chrono::duration<double>(
+                    std::chrono::steady_clock::now().time_since_epoch() -
+                    start_time_.time_since_epoch())
+                    .count() +
+                4.10;
     const double time_diff = image_paths_.top().timestamp - timestamp;
     std::this_thread::sleep_for(std::chrono::duration<double>(time_diff));
   } while (timestamp < image_paths_.top().timestamp);

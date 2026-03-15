@@ -16,10 +16,10 @@ void StartNetworktables(int team_number) {
   inst.StopClient();
   inst.StartClient4("orin_localization");
   inst.SetServerTeam(team_number);
-  inst.StartDSClient();
-  // std::string log_path = GetNewLogPath();
-  // LOG(INFO) << "Log path: " << log_path;
-  // frc::DataLogManager::Start(log_path);
+  // inst.StartDSClient();
+  std::string log_path = GetNewLogPath();
+  LOG(INFO) << "Log path: " << log_path;
+  frc::DataLogManager::Start(log_path);
 
   LOG(INFO) << "Team number: " << team_number;
   LOG(INFO) << "Waiting for connection";

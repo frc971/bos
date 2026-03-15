@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <queue>
 #include "src/camera/camera.h"
 #include "src/camera/camera_source.h"
@@ -32,7 +33,8 @@ class DiskCamera : public ICamera {
   std::priority_queue<TimestampedFramePath, std::vector<TimestampedFramePath>,
                       CompareTimestampedFramePath>
       image_paths_;
-  frc::Timer timer_;
+  std::chrono::time_point<std::chrono::steady_clock> start_time_ =
+      std::chrono::steady_clock::now();
 };
 
 }  // namespace camera

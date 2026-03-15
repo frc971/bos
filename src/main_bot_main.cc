@@ -10,10 +10,10 @@
 #include "src/utils/nt_utils.h"
 
 auto main() -> int {
-  // utils::StartNetworktables();
+  utils::StartNetworktables();
   // TODO configure vision bot camera paths
 
-  // std::string log_path = frc::DataLogManager::GetLogDir();
+  std::cout << "Starting camera stuff" << std::endl;
   camera::camera_constants_t camera_constants = camera::GetCameraConstants();
 
   std::unique_ptr<camera::CameraSource> left_src =

@@ -33,10 +33,10 @@ void RunJointSolve(
                           std::unique_ptr<camera::CameraSource>>>&
         camera_sources,
     uint port, bool square_solve_start, bool verbose);
-auto GetMultiSolveEstimates(
+auto GetSquareSolveEstimates(
     std::vector<std::pair<camera::CameraConstant,
                           std::unique_ptr<camera::CameraSource>>>&
         camera_sources,
     std::vector<localization::OpenCVAprilTagDetector>& detectors)
-    -> frc::Pose3d;
+    -> position_estimate_t;
 }  // namespace localization

@@ -234,7 +234,9 @@ auto JointSolver::EstimatePosition(
   double step_size = starting_step_size_;
   if (verbose) {
     std::cout << "Initial loss: " << net_loss
-              << " initial step: " << step * step_size << std::endl;
+              << " initial step: " << step * step_size
+              << " initial pose: " << std::endl;
+    utils::PrintPose3d(starting_pose);
   }
 
   size_t stepdowns_first = 0;
