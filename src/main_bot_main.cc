@@ -19,11 +19,11 @@ auto main() -> int {
   std::unique_ptr<camera::CameraSource> left_src =
       std::make_unique<camera::CameraSource>(
           "Left",
-          std::make_unique<camera::DiskCamera>("/bos/logs/log181/left"));
+          std::make_unique<camera::DiskCamera>("/bos/logs/real_log/left"));
   std::unique_ptr<camera::CameraSource> right_src =
       std::make_unique<camera::CameraSource>(
           "Right",
-          std::make_unique<camera::DiskCamera>("/bos/logs/log181/right"));
+          std::make_unique<camera::DiskCamera>("/bos/logs/real_log/right"));
 
   LOG(INFO) << "Started cameras";
   LOG(INFO) << "Starting estimators";

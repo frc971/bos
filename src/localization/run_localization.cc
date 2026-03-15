@@ -18,15 +18,6 @@
 namespace localization {
 using wpi::log::DataLogWriter;
 
-auto PrintTagDetections = [](const auto& detections_map) {
-  for (const auto& [camera_const, detections] : detections_map) {
-    std::cout << "Camera: " << camera_const << "\n";
-    for (const auto& det : detections) {
-      std::cout << "  " << det << "\n";
-    }
-  }
-};
-
 // TODO remove extrinsics
 void RunLocalization(camera::CameraSource& source,
                      std::unique_ptr<localization::IAprilTagDetector> detector,
@@ -70,6 +61,7 @@ void RunJointSolve(
   wpi::log::DoubleLogEntry loss_log(*log, "/localization/loss");
 
   wpi::log::DoubleLogEntry time_log(*log, "/localization/timestamp");
+
   std::vector<camera::CameraConstant> camera_configs;
   std::string name = "";
   std::vector<camera::CscoreStreamer> streamers;
@@ -103,6 +95,7 @@ void RunJointSolve(
     for (int i = 0; i < camera_sources.size(); i++) {
       camera::timestamped_frame_t timestamped_frame =
           camera_sources[i].second->Get(true);
+      timestamp = timestamped_frame.timestamp;
       // streamers[i].WriteFrame(timestamped_frame.frame);
       std::vector<tag_detection_t> detections;
       for (tag_detection_t& detection :
@@ -110,31 +103,34 @@ void RunJointSolve(
         // if (detection.tag_id == 26 || detection.tag_id == 25) {
         detections.push_back(detection);
         num_detections++;
-        timestamp = detection.timestamp;
         // }
       }
       tag_detections.insert({camera_configs[i], detections});
     }
     if (num_detections == 0) {
+      // std::cout << "Rejecting timestamp: " << timestamp
+      //           << " because no estimates" << std::endl;
       continue;
     }
     if (timestamp == last_timestamp) {
+      // std::cout << timestamp << " is same;" << std::endl;
       continue;
     }
+    // std::cout << "using: " << timestamp << std::endl;
     last_timestamp = timestamp;
     utils::Timer timer(name, verbose);
-    localization::joint_estimate_t position_estimate = solver.EstimatePosition(
-        tag_detections, prev_estimate.pose, true, false);
-    prev_estimate = position_estimate.pose_estimate;
+    // localization::joint_estimate_t position_estimate = solver.EstimatePosition(
+    //     tag_detections, prev_estimate.pose, true, false);
+    localization::position_estimate_t position_estimate =
+        GetSquareSolveEstimates(camera_sources, detectors);
     estimates_over_time.push_back(prev_estimate);
-    losses.push_back(position_estimate.loss);
+    losses.push_back(1.0);
     uint64_t log_time = static_cast<uint64_t>(timestamp);
     pose_log.Append(prev_estimate.pose, log_time);
-    loss_log.Append(position_estimate.loss, log_time);
+    loss_log.Append(1.0, log_time);
     time_log.Append(timestamp, log_time);
-    position_sender.Send(
-        std::vector<position_estimate_t>{position_estimate.pose_estimate},
-        timer.Stop(), position_estimate.loss);
+    position_sender.Send(std::vector<position_estimate_t>{position_estimate},
+                         timer.Stop(), 1.0);
   }
 }
 
