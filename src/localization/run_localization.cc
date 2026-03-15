@@ -153,12 +153,12 @@ auto GetMultiSolveEstimates(
       double portion = estimate.variance / net_variance;
       std::cout << "\nPortion: " << portion << " for estimate " << estimate
                 << std::endl;
-      x += estimate.pose.X().value() * portion;
-      y += estimate.pose.Y().value() * portion;
-      z += estimate.pose.Z().value() * portion;
-      roll += estimate.pose.Rotation().X().value() * portion;
-      pitch += estimate.pose.Rotation().Y().value() * portion;
-      yaw += estimate.pose.Rotation().Z().value() * portion;
+      x += estimate.pose.X().value() / portion;
+      y += estimate.pose.Y().value() / portion;
+      z += estimate.pose.Z().value() / portion;
+      roll += estimate.pose.Rotation().X().value() / portion;
+      pitch += estimate.pose.Rotation().Y().value() / portion;
+      yaw += estimate.pose.Rotation().Z().value() / portion;
     }
     break;  // right is bad
   }

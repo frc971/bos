@@ -20,10 +20,10 @@ auto main() -> int {
       std::make_unique<camera::CameraSource>(
           "Left",
           std::make_unique<camera::DiskCamera>("/bos/logs/log181/left"));
-  // std::unique_ptr<camera::CameraSource> right_src =
-  //     std::make_unique<camera::CameraSource>(
-  //         "Right",
-  //         std::make_unique<camera::DiskCamera>("/bos/logs/log181/right"));
+  std::unique_ptr<camera::CameraSource> right_src =
+      std::make_unique<camera::CameraSource>(
+          "Right",
+          std::make_unique<camera::DiskCamera>("/bos/logs/log181/right"));
 
   LOG(INFO) << "Started cameras";
   LOG(INFO) << "Starting estimators";
@@ -32,9 +32,9 @@ auto main() -> int {
       camera_sources;
   camera_sources.emplace_back(camera_constants.at("main_bot_left"),
                               std::move(left_src));
-  // camera_sources.emplace_back(camera_constants.at("main_bot_right"),
-  //                             std::move(right_src));
-  // std::cout << "Made camera sources" << std::endl;
+  camera_sources.emplace_back(camera_constants.at("main_bot_right"),
+                              std::move(right_src));
+  std::cout << "Made camera sources" << std::endl;
   std::thread joint_solve_thread(localization::RunJointSolve,
                                  std::ref(camera_sources), 5801, false, false);
   LOG(INFO) << "Started estimators";
