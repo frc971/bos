@@ -1,6 +1,5 @@
 #pragma once
-#include <opencv2/core/mat.hpp>
-#include <opencv2/videoio.hpp>
+#include "src/utils/pch.h"
 namespace camera {
 
 using timestamped_frame_t = struct TimestampedFrame {
@@ -11,6 +10,7 @@ using timestamped_frame_t = struct TimestampedFrame {
 class ICamera {
  public:
   virtual auto GetFrame() -> timestamped_frame_t = 0;
+  virtual auto Restart() -> void = 0;
   virtual ~ICamera() = default;
 };
 }  // namespace camera

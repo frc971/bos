@@ -11,5 +11,19 @@ fi
 
 ./scripts/copy_to_bin.sh
 
-rsync -avz bin "$HOST":/bos
+target=$(echo "$HOST" | sed 's/nvidia@//g')
+
+echo "Waiting for remote $target"
+
+while true; do
+  # send a single ping; use default system behaviour
+  if ping -c 1 "$target" >/dev/null 2>&1; then
+    # success: exit 0 so && chains
+    echo "Remote found!"
+    break
+  fi
+  sleep 1
+done
+
+rsync -avz --delete bin "$HOST":/bos
 rsync -avz constants "$HOST":/bos

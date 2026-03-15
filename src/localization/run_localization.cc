@@ -1,34 +1,38 @@
 #include "src/localization/run_localization.h"
-
 #include <utility>
 #include "src/camera/cscore_streamer.h"
-#include "src/localization/get_field_relitive_position.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/position_sender.h"
+#include "src/localization/position_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/timer.h"
 
 namespace localization {
 
-void run_localization(camera::CameraSource& source,
-                      std::unique_ptr<localization::IAprilTagDetector> detector,
-                      const std::string& extrinsics, uint port, bool verbose) {
-
+// TODO remove extrinsics
+void RunLocalization(camera::CameraSource& source,
+                     std::unique_ptr<localization::IAprilTagDetector> detector,
+                     std::unique_ptr<localization::IPositionSolver> solver,
+                     const std::string& extrinsics, std::optional<uint> port,
+                     bool verbose) {
   localization::PositionSender position_sender(source.GetName(), verbose);
 
-  camera::CscoreStreamer streamer(source.GetName(), port, 30, 1080, 1080);
+  std::optional<camera::CscoreStreamer> streamer =
+      port.has_value() ? std::make_optional(camera::CscoreStreamer(
+                             source.GetName(), port.value(), 30, 1080, 1080))
+                       : std::nullopt;
 
-  nlohmann::json extrinsics_json = utils::read_extrinsics(extrinsics);
-  frc::Transform3d camera_to_robot =
-      localization::ExtrinsicsJsonToCameraToRobot(extrinsics_json);
   while (true) {
     utils::Timer timer(source.GetName(), verbose);
     camera::timestamped_frame_t timestamped_frame = source.Get();
-    streamer.WriteFrame(timestamped_frame.frame);
-    std::vector<localization::tag_detection_t> estimates =
-        localization::ToFeildRelitivePosition(
-            detector->GetTagDetections(timestamped_frame), camera_to_robot);
-    position_sender.Send(estimates, timer.Stop());
+    if (streamer.has_value()) {
+      streamer->WriteFrame(timestamped_frame.frame);
+    }
+    std::vector<localization::tag_detection_t> tag_detections =
+        detector->GetTagDetections(timestamped_frame);
+    std::vector<position_estimate_t> position_estimates =
+        solver->EstimatePosition(tag_detections, false);
+    position_sender.Send(position_estimates, timer.Stop());
   }
 }
 }  // namespace localization

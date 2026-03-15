@@ -1,18 +1,11 @@
 #pragma once
-#include <frc/geometry/Transform3d.h>
-#include <opencv2/core/mat.hpp>
 #include "src/camera/camera_source.h"
 #include "src/localization/position.h"
+#include "src/utils/pch.h"
 
 namespace localization {
 
-constexpr double ktag_size = 0.1651;  // meters
-const std::vector<cv::Point3f> kapriltag_dimensions = {
-    {-ktag_size / 2, ktag_size / 2, 0},
-    {ktag_size / 2, ktag_size / 2, 0},
-    {ktag_size / 2, -ktag_size / 2, 0},
-    {-ktag_size / 2, -ktag_size / 2, 0}};
-
+// Interface for different backend implementations of detecting an apriltag from a image
 class IAprilTagDetector {
  public:
   virtual auto GetTagDetections(camera::timestamped_frame_t& frame)

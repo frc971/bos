@@ -1,11 +1,10 @@
 #include "intrinsics_calibrate_lib.h"
-#include <opencv2/objdetect/charuco_detector.hpp>
+#include <opencv2/calib3d.hpp>
+#include "src/utils/pch.h"
 
 namespace calibration {
 
-auto intrisincs_to_json(cv::Mat cameraMatrix,
-                        cv::Mat distCoeffs) -> json {  // TODO get index
-
+auto IntrinsicsToJson(cv::Mat cameraMatrix, cv::Mat distCoeffs) -> json {
   json output;
   output["fx"] = cameraMatrix.ptr<double>()[0];
   output["cx"] = cameraMatrix.ptr<double>()[2];
@@ -71,7 +70,6 @@ auto DrawDetectionResult(cv::Mat& frame,
   // TODO
   cv::Mat result;
   frame.copyTo(result);
-  std::cout << frame.empty() << " " << frame.channels() << std::endl;
 
   if (detection_result.currentCharucoCorners.total() > 3) {
     cv::aruco::drawDetectedCornersCharuco(

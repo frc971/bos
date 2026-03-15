@@ -1,35 +1,34 @@
-#include <atomic>
-#include <filesystem>
-#include <functional>
-#include <iomanip>
-#include <iostream>
-#include <opencv2/opencv.hpp>
-#include <sstream>
-#include <thread>
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
+#include "src/utils/log.h"
 
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
+ABSL_FLAG(std::optional<int>, port, std::nullopt, "");                 //NOLINT
+ABSL_FLAG(std::optional<std::string>, log_path, std::nullopt, "");     //NOLINT
 
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  camera::Camera config =
-      camera::SelectCameraConfig(absl::GetFlag(FLAGS_camera_name));
-  std::unique_ptr<camera::ICamera> camera = camera::GetCameraStream(config);
+  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
+      absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
 
-  camera::CscoreStreamer streamer("frame_shower", 4971, 30, 1080, 1080);
+  camera::CVCamera camera(camera_constant, absl::GetFlag(FLAGS_log_path));
 
-  std::cout << "Camera opened successfully" << std::endl;
+  camera::CscoreStreamer streamer("frame_shower",
+                                  absl::GetFlag(FLAGS_port).value_or(5801), 30,
+                                  camera.GetFrame().frame);
 
+  LOG(INFO) << "Camera opened successfully" << std::endl;
+
+  cv::Mat frame = camera.GetFrame().frame;
+  LOG(INFO) << "Size of frame" << frame.size;
   while (true) {
-    cv::Mat frame = camera->GetFrame().frame;
+    frame = camera.GetFrame().frame;
     streamer.WriteFrame(frame);
   }
-  cv::destroyAllWindows();
   return 0;
 }

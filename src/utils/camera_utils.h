@@ -3,6 +3,6 @@
 #include "nlohmann/json.hpp"
 
 namespace utils {
-auto read_intrinsics(const std::string& path) -> nlohmann::json;
-auto read_extrinsics(const std::string& path) -> nlohmann::json;
+auto ReadIntrinsics(const std::string& path) -> nlohmann::json;
+auto ReadExtrinsics(const std::string& path) -> nlohmann::json;
 }  // namespace utils

@@ -1,20 +1,24 @@
 #pragma once
 #include <memory>
-#include <opencv2/core/mat.hpp>
-#include <opencv2/videoio.hpp>
-#include <string>
+#include "camera_constants.h"
 #include "src/camera/camera.h"
+#include "src/utils/pch.h"
 
 namespace camera {
 
+// Wrap opencv's camera into the ICamera interface
 class CVCamera : public ICamera {
  public:
-  CVCamera(const cv::VideoCapture& cap);
+  CVCamera(const CameraConstant& camera_constant,
+           std::optional<std::string> log_path = std::nullopt);
   auto GetFrame() -> timestamped_frame_t override;
+  auto Restart() -> void override;
 
  private:
   cv::VideoCapture cap_;
-  int current_frame_;
+  std::string pipeline_;
+  std::optional<std::string> log_path_;
+  cv::Mat backup_image_;
 };
 
 }  // namespace camera

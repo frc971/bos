@@ -1,0 +1,89 @@
+#include <frc/DataLogManager.h>
+#include <networktables/NetworkTableInstance.h>
+#include <iostream>
+#include <memory>
+#include <opencv2/videoio.hpp>
+#include <sstream>
+#include <thread>
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
+#include "apriltag/apriltag.h"
+#include "src/camera/camera_constants.h"
+#include "src/camera/camera_source.h"
+#include "src/camera/cscore_streamer.h"
+#include "src/camera/cv_camera.h"
+#include "src/camera/select_camera.h"
+#include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/position_sender.h"
+#include "src/localization/run_localization.h"
+#include "src/localization/square_solver.h"
+#include "src/utils/camera_utils.h"
+#include "src/utils/nt_utils.h"
+#include "src/utils/timer.h"
+
+ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
+
+using json = nlohmann::json;
+
+auto main(int argc, char* argv[]) -> int {
+  absl::ParseCommandLine(argc, argv);
+  utils::StartNetworktables();
+
+  camera::Camera config = camera::SelectCameraConfig();
+  camera::CameraSource source("stress_test_camera",
+                              camera::GetCameraStream(config));
+  cv::Mat frame = source.GetFrame();
+
+  // std::bind?
+  std::thread usb0_thread(
+      localization::RunLocalization, std::ref(source),
+      std::make_unique<localization::GPUAprilTagDetector>(
+          frame.cols, frame.rows,
+          utils::ReadIntrinsics(
+              camera::camera_constants[camera::Camera::FIDDLER_USB0]
+                  .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::FIDDLER_USB0),
+      camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
+      5801, false);
+
+  std::thread usb1_thread(
+      localization::RunLocalization, std::ref(source),
+      std::make_unique<localization::GPUAprilTagDetector>(
+          frame.cols, frame.rows,
+          utils::ReadIntrinsics(
+              camera::camera_constants[camera::Camera::FIDDLER_USB0]
+                  .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::FIDDLER_USB0),
+      camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
+      5802, false);
+
+  std::thread usb2_thread(
+      localization::RunLocalization, std::ref(source),
+      std::make_unique<localization::GPUAprilTagDetector>(
+          frame.cols, frame.rows,
+          utils::ReadIntrinsics(
+              camera::camera_constants[camera::Camera::FIDDLER_USB0]
+                  .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::FIDDLER_USB0),
+      camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
+      5803, false);
+
+  std::thread usb3_thread(
+      localization::RunLocalization, std::ref(source),
+      std::make_unique<localization::GPUAprilTagDetector>(
+          frame.cols, frame.rows,
+          utils::ReadIntrinsics(
+              camera::camera_constants[camera::Camera::FIDDLER_USB0]
+                  .intrinsics_path)),
+      std::make_unique<localization::SquareSolver>(
+          camera::Camera::FIDDLER_USB0),
+      camera::camera_constants[camera::Camera::FIDDLER_USB0].extrinsics_path,
+      4974, false);
+
+  usb0_thread.join();
+
+  return 0;
+}

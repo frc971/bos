@@ -16,23 +16,26 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
+option(ENABLE_CLANG_TIDY "Enable clang-tidy for static analysis" ON)
+
 include_directories(/usr/local/cuda/include)
 link_directories(/usr/local/cuda/lib64)
-
-include_directories(/usr/local/cuda-12.6/include)
-link_directories(/usr/local/cuda-12.6/compat)
-
-link_directories(/usr/lib/aarch64-linux-gnu/nvidia)
 
 find_package(wpilib REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(realsense2 REQUIRED)
 find_package(vpi REQUIRED)
 
 add_subdirectory(third_party/json)
 add_subdirectory(third_party/971apriltag)
 add_subdirectory(third_party/abseil-cpp)
+
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+)
+FetchContent_MakeAvailable(googletest)
 
 add_compile_options(-Wno-psabi)
 add_subdirectory(src)

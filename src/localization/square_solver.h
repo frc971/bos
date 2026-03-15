@@ -1,0 +1,41 @@
+#pragma once
+#include <frc/apriltag/AprilTagFieldLayout.h>
+#include "nlohmann/json.hpp"
+#include "src/camera/camera_constants.h"
+#include "src/localization/position_solver.h"
+
+using json = nlohmann::json;
+
+namespace localization {
+
+// Solves for position of robot using opencv's SOLVEPNP_IPPE_SQUARE method
+class SquareSolver : public IPositionSolver {
+ public:
+  SquareSolver(const std::string& intrinsics_path,
+               const std::string& extrinsics_path,
+               frc::AprilTagFieldLayout layout = kapriltag_layout,
+               std::vector<cv::Point3d> tag_corners = kapriltag_corners);
+  SquareSolver(camera::camera_constant_t camera_constant,
+               frc::AprilTagFieldLayout layout = kapriltag_layout,
+               std::vector<cv::Point3d> tag_corners = kapriltag_corners);
+
+  auto EstimatePosition(const std::vector<tag_detection_t>& detections,
+                        bool reject_far_tags = true)
+      -> std::vector<position_estimate_t> override;
+  auto EstimatePositionNew(const std::vector<tag_detection_t>& detection,
+                           bool reject_far_tags = true)
+      -> std::vector<position_estimate_t>;
+
+ private:
+  static constexpr double kvariance_scalar_ = 1.0;
+  static constexpr double kvariance_min_ = 0.0;
+  frc::AprilTagFieldLayout layout_;
+  std::vector<cv::Point3d> tag_corners_;
+  cv::Mat camera_matrix_;
+  cv::Mat distortion_coefficients_;
+  cv::Mat camera_to_robot_;
+  cv::Mat invert_translation_;
+  cv::Mat rotate_yaw_wpilib_;
+  cv::Mat rotate_yaw_cv_;
+};
+}  // namespace localization

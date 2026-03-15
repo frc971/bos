@@ -1,12 +1,8 @@
 #pragma once
 #include <fmt/ostream.h>
 #include <frc/geometry/Transform3d.h>
-#include <wpi/struct/Struct.h>
-#include <wpilibc/frc/Timer.h>
-#include <cmath>
-#include <iostream>
-#include <ostream>
 #include "src/utils/log.h"
+#include "src/utils/pch.h"
 namespace localization {
 using point3d_t = struct Point3d {
   double x;
@@ -15,13 +11,33 @@ using point3d_t = struct Point3d {
 };
 
 using tag_detection_t = struct TagDetection {
-  frc::Pose3d pose;
-  double timestamp;
-  double distance;
   int tag_id;
+  std::array<cv::Point2d, 4> corners;  // Image coordinates of tag corners
+  double timestamp;
+  double confidence;
+
   friend auto operator<<(std::ostream& os, const TagDetection& t)
       -> std::ostream& {
+    os << "ID: " << t.tag_id << "\nCorners:\n";
+    for (const cv::Point2d& corner : t.corners) {
+      os << corner << "\n";
+    }
+    os << "Timestamp: " << t.timestamp << "\nConfidence: " << t.confidence
+       << std::endl;
+    return os;
+  }
+};
 
+using position_estimate_t = struct PositionEstimate {
+  std::vector<int> tag_ids;
+  std::vector<int> rejected_tag_ids;
+  frc::Pose3d pose;
+  double variance;
+  double timestamp;
+  int num_tags;
+  double avg_tag_dist;
+  friend auto operator<<(std::ostream& os, const PositionEstimate& t)
+      -> std::ostream& {
     const auto& tr = t.pose.Translation();
     const auto& r = t.pose.Rotation();
 
@@ -34,16 +50,19 @@ using tag_detection_t = struct TagDetection {
                units::degree_t{r.Z()}.value());
     return os;
   }
-};
 
-using pose2d_t = struct Pose2d {
-  double x;
-  double y;
-  double rotation;
-};
+  friend auto operator==(const PositionEstimate& left,
+                         const PositionEstimate& right) -> bool {
+    const auto& lt = left.pose.Translation();
+    const auto& lr = left.pose.Rotation();
+    const auto& rt = left.pose.Translation();
+    const auto& rr = left.pose.Rotation();
 
-using pose3d_t = struct Pose3d {
-  point3d_t translation;
-  point3d_t rotation;
+    return lt.X().value() == rt.X().value() &&
+           lt.Y().value() == rt.Y().value() &&
+           lt.Z().value() == rt.Z().value() &&
+           lr.X().value() == rr.X().value() &&
+           lr.Y().value() == rr.Y().value() && lr.Z().value() == rr.Z().value();
+  }
 };
 }  // namespace localization
