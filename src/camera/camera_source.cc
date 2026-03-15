@@ -2,8 +2,11 @@
 #include "src/utils/log.h"
 
 namespace camera {
-CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera)
-    : name_(std::move(name)), camera_(std::move(camera)) {
+CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera,
+                           bool simulation)
+    : name_(std::move(name)),
+      camera_(std::move(camera)),
+      simulation_(simulation) {
   timestamped_frame_ = camera_->GetFrame();
   thread_ = std::thread([this] {
     while (true) {
@@ -20,13 +23,15 @@ auto CameraSource::Get() -> timestamped_frame_t {
   mutex_.lock();
   timestamped_frame_t timestamped_frame = timestamped_frame_;
   mutex_.unlock();
-  auto current_time = frc::Timer::GetFPGATimestamp().to<double>();
-  if (current_time - timestamped_frame.timestamp > 5.0) {
-    LOG(INFO) << "Restarting camera because of old timestamp";
-    timestamped_frame_.timestamp = current_time;
-    mutex_.lock();
-    camera_->Restart();
-    mutex_.unlock();
+  if (!simulation_) {
+    auto current_time = frc::Timer::GetFPGATimestamp().to<double>();
+    if (current_time - timestamped_frame.timestamp > 5.0) {
+      LOG(INFO) << "Restarting camera because of old timestamp";
+      timestamped_frame_.timestamp = current_time;
+      mutex_.lock();
+      camera_->Restart();
+      mutex_.unlock();
+    }
   }
   return timestamped_frame;
 }

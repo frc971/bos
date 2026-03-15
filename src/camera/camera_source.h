@@ -8,7 +8,8 @@ namespace camera {
 // cv::Mat's reference counter seems to be atomic, so it behaves similarly to a std::shared_ptr and it is safe to access the same cv::Mat across multiple threads as longs as we do not write to it
 class CameraSource {
  public:
-  CameraSource(std::string name, std::unique_ptr<ICamera> camera);
+  CameraSource(std::string name, std::unique_ptr<ICamera> camera,
+               bool simulation = false);
   [[nodiscard]] auto Get() -> timestamped_frame_t;
   [[nodiscard]] auto GetFrame() -> cv::Mat;
   [[nodiscard]] auto GetName() const -> std::string { return name_; }
@@ -19,6 +20,7 @@ class CameraSource {
   timestamped_frame_t timestamped_frame_;
   std::thread thread_;
   std::mutex mutex_;
+  const bool simulation_;
 };
 
 }  // namespace camera

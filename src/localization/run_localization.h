@@ -26,4 +26,10 @@ void RunLocalization(camera::CameraSource& source,
                      const std::string& extrinsics,
                      std::optional<uint> port = std::nullopt,
                      bool verbose = false);
+void RunLocalizationSimulation(
+    camera::CameraSource& source,
+    std::unique_ptr<localization::IAprilTagDetector> detector,
+    std::unique_ptr<localization::IPositionSolver> solver,
+    const std::string& extrinsics, std::optional<uint> port = std::nullopt,
+    bool verbose = false);
 }  // namespace localization
