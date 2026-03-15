@@ -62,11 +62,10 @@ void RunJointSolve(
   log->AddStructSchema<frc::Pose3d>(0);
   std::this_thread::sleep_for(std::chrono::duration<double>(1.0));
 
-  wpi::log::StructLogEntry<frc::Pose3d> pose_log(*log, "/localization/pose");
-  wpi::log::DoubleLogEntry x_log(*log, "/localization/x");
-  wpi::log::DoubleLogEntry y_log(*log, "/localization/y");
-  wpi::log::DoubleLogEntry rot_log(*log, "/localization/rot");
-
+  wpi::log::StructLogEntry<frc::Pose3d> joint_pose_log(
+      *log, "/localization/joint_pose");
+  wpi::log::StructLogEntry<frc::Pose3d> sq_pose_log(*log,
+                                                    "/localization/sq_pose");
   wpi::log::DoubleLogEntry loss_log(*log, "/localization/loss");
 
   std::vector<camera::CameraConstant> camera_configs;
@@ -76,7 +75,6 @@ void RunJointSolve(
   std::vector<localization::OpenCVAprilTagDetector> detectors;
   detectors.reserve(camera_sources.size());
   for (size_t i = 0; i < camera_sources.size(); i++) {
-    // name += ", " + camera_sources[i].second->GetName();
     camera_configs.push_back(camera_sources[i].first);
     streamers.emplace_back(camera_sources[i].second->GetName(), port + i, 30,
                            1080, 1080);
@@ -89,7 +87,6 @@ void RunJointSolve(
   // TODO do this with position receiver
   position_estimate_t prev_estimate =
       GetSquareSolveEstimates(camera_sources, detectors);
-  std::vector<position_estimate_t> estimates_over_time;
   camera_configs.reserve(camera_sources.size());
   JointSolver solver(camera_configs);
   double last_timestamp = -1;
@@ -109,49 +106,67 @@ void RunJointSolve(
         return;
       }
       timestamp = timestamped_frame.timestamp;
-      // streamers[i].WriteFrame(timestamped_frame.frame);
       std::vector<tag_detection_t> detections;
       for (tag_detection_t& detection :
            detectors[i].GetTagDetections(timestamped_frame)) {
-        // if (detection.tag_id == 26 || detection.tag_id == 25) {
         detections.push_back(detection);
         num_detections++;
-        // }
       }
       tag_detections.insert({camera_configs[i], detections});
     }
     if (num_detections == 0) {
-      // std::cout << "Rejecting timestamp: " << timestamp
-      //           << " because no estimates" << std::endl;
       continue;
     }
     if (timestamp == last_timestamp) {
-      // std::cout << timestamp << " is same;" << std::endl;
       continue;
     }
     std::cout << "using: " << timestamp << std::endl;
     last_timestamp = timestamp;
     utils::Timer timer(name, verbose);
-    // localization::joint_estimate_t position_estimate = solver.EstimatePosition(
-    //     tag_detections, prev_estimate.pose, true, false);
-    localization::joint_estimate_t position_estimate = solver.EstimatePosition(
-        tag_detections, prev_estimate.pose, true, false);
-    position_estimate.pose_estimate.timestamp = timestamp;
-    prev_estimate = position_estimate.pose_estimate;
-    estimates_over_time.push_back(prev_estimate);
-    int64_t log_time = static_cast<int64_t>(timestamp * 1e6);
-    // std::cout << "Log_time: " << log_time << std::endl;
-    pose_log.Append(prev_estimate.pose, log_time);
+    localization::joint_estimate_t joint_position_estimate =
+        solver.EstimatePosition(tag_detections, prev_estimate.pose, true,
+                                false);
+    joint_position_estimate.pose_estimate.timestamp = timestamp;
+    localization::position_estimate_t sq_pose_estimate =
+        GetSquareSolveEstimates(tag_detections);
+    prev_estimate = joint_position_estimate.pose_estimate;
+    auto log_time = static_cast<int64_t>(timestamp * 1e6);
+    joint_pose_log.Append(prev_estimate.pose, log_time);
+    sq_pose_log.Append(sq_pose_estimate.pose, log_time);
     loss_log.Append(1.0, log_time);
-    x_log.Append(position_estimate.pose_estimate.pose.X().value(), log_time);
-    y_log.Append(position_estimate.pose_estimate.pose.Y().value(), log_time);
-    rot_log.Append(position_estimate.pose_estimate.pose.Rotation().Z().value(),
-                   log_time);
-    // utils::PrintPose3d(position_estimate.pose_estimate.pose);
-    // std::cout << "x: " << position_estimate.pose_estimate.pose.X().value()
-    //           << std::endl;
-    // position_sender.Send(position_estimate, timer.Stop());
   }
+}
+
+auto GetSquareSolveEstimates(
+    const std::map<camera::CameraConstant, std::vector<tag_detection_t>>&
+        associated_frames) -> position_estimate_t {
+  double x = 0, y = 0, z = 0, roll = 0, pitch = 0, yaw = 0;
+  int num_estimates = 0;
+  for (const auto& associated_frame : associated_frames) {
+    localization::SquareSolver square_solver(associated_frame.first);
+    const std::vector<localization::position_estimate_t> estimates =
+        square_solver.EstimatePosition(associated_frame.second);
+    for (const localization::position_estimate_t& estimate : estimates) {
+      num_estimates++;
+      x += estimate.pose.X().value();
+      y += estimate.pose.Y().value();
+      z += estimate.pose.Z().value();
+      roll += estimate.pose.Rotation().X().value();
+      pitch += estimate.pose.Rotation().Y().value();
+      yaw += estimate.pose.Rotation().Z().value();
+    }
+  }
+  x /= num_estimates;
+  y /= num_estimates;
+  z /= num_estimates;
+  roll /= num_estimates;
+  pitch /= num_estimates;
+  yaw /= num_estimates;
+  return {.pose = frc::Pose3d{
+              frc::Translation3d{units::meter_t{x}, units::meter_t{y},
+                                 units::meter_t{z}},
+              frc::Rotation3d{units::radian_t{roll}, units::radian_t{pitch},
+                              units::radian_t{yaw}}}};
 }
 
 auto GetSquareSolveEstimates(

@@ -39,4 +39,7 @@ auto GetSquareSolveEstimates(
         camera_sources,
     std::vector<localization::OpenCVAprilTagDetector>& detectors)
     -> position_estimate_t;
+auto GetSquareSolveEstimates(
+    const std::map<camera::CameraConstant, std::vector<tag_detection_t>>&
+        associated_frames) -> position_estimate_t;
 }  // namespace localization
