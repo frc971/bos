@@ -33,7 +33,7 @@ void RunJointSolve(
                           std::unique_ptr<camera::CameraSource>>>&
         camera_sources,
     uint port, bool square_solve_start, bool verbose);
-auto GetSquareSolveEstimates(
+auto GetMultiSolveEstimates(
     std::vector<std::pair<camera::CameraConstant,
                           std::unique_ptr<camera::CameraSource>>>&
         camera_sources,

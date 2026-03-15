@@ -4,6 +4,7 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/joint_solver.h"
+#include "src/localization/multi_tag_solver.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/position_sender.h"
 #include "src/localization/position_solver.h"
@@ -71,12 +72,12 @@ void RunJointSolve(
   }
   // localization::PositionSender position_sender(name, verbose);
   // TODO do this with position receiver
-  frc::Pose3d prev_estimate =
-      GetSquareSolveEstimates(camera_sources, detectors);
+  frc::Pose3d prev_estimate = GetMultiSolveEstimates(camera_sources, detectors);
   std::vector<frc::Pose3d> estimates_over_time;
   camera_configs.reserve(camera_sources.size());
   JointSolver solver(camera_configs);
   double last_timestamp = -1;
+  std::vector<double> losses;
   while (true) {
     size_t num_detections = 0;
     std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
@@ -108,55 +109,65 @@ void RunJointSolve(
     // PrintTagDetections(tag_detections);
     if (timestamp > 13.6) {
       std::cout << "Finished" << std::endl;
-      for (const auto& estimate : estimates_over_time) {
-        utils::PrintPose3d(estimate);
+      for (size_t i = 0; i < estimates_over_time.size(); i++) {
+        std::cout << losses[i] << "\t";
+        utils::PrintPose3d(estimates_over_time[i]);
       }
-      std::exit(0);
+      return;
     }
     utils::Timer timer(name, verbose);
-    localization::position_estimate_t position_estimate =
+    localization::joint_estimate_t position_estimate =
         solver.EstimatePosition(tag_detections, prev_estimate, true, false);
     std::cout << "Solver took " << timer.Stop() << " seconds" << std::endl;
     // frc::Pose3d position_estimate =
-    //     GetSquareSolveEstimates(camera_sources, detectors);
-    prev_estimate = position_estimate.pose;
+    //     GetMultiSolveEstimates(camera_sources, detectors);
+    prev_estimate = position_estimate.pose_estimate.pose;
     // prev_estimate = position_estimate;
     estimates_over_time.push_back(prev_estimate);
+    losses.push_back(position_estimate.loss);
     utils::PrintPose3d(prev_estimate);
     // position_sender.Send(std::vector<position_estimate_t>{position_estimate},
     //                      timer.Stop());
   }
 }
 
-auto GetSquareSolveEstimates(
+auto GetMultiSolveEstimates(
     std::vector<std::pair<camera::CameraConstant,
                           std::unique_ptr<camera::CameraSource>>>&
         camera_sources,
     std::vector<localization::OpenCVAprilTagDetector>& detectors)
     -> frc::Pose3d {
   double x = 0, y = 0, z = 0, roll = 0, pitch = 0, yaw = 0;
-  int num_estimates = 0;
+  int num_sources = 0;
   for (int i = 0; i < camera_sources.size(); i++) {
-    localization::SquareSolver square_solver(camera_sources[i].first);
+    num_sources++;
+    localization::MultiTagSolver multi_solver(camera_sources[i].first);
     camera::timestamped_frame_t frame = camera_sources[i].second->Get();
     const std::vector<localization::position_estimate_t> estimates =
-        square_solver.EstimatePosition(detectors[i].GetTagDetections(frame));
+        multi_solver.EstimatePosition(detectors[i].GetTagDetections(frame));
+    double net_variance = 0;
     for (const localization::position_estimate_t& estimate : estimates) {
-      num_estimates++;
-      x += estimate.pose.X().value();
-      y += estimate.pose.Y().value();
-      z += estimate.pose.Z().value();
-      roll += estimate.pose.Rotation().X().value();
-      pitch += estimate.pose.Rotation().Y().value();
-      yaw += estimate.pose.Rotation().Z().value();
+      net_variance += estimate.variance;
     }
+    for (const localization::position_estimate_t& estimate : estimates) {
+      double portion = estimate.variance / net_variance;
+      std::cout << "\nPortion: " << portion << " for estimate " << estimate
+                << std::endl;
+      x += estimate.pose.X().value() * portion;
+      y += estimate.pose.Y().value() * portion;
+      z += estimate.pose.Z().value() * portion;
+      roll += estimate.pose.Rotation().X().value() * portion;
+      pitch += estimate.pose.Rotation().Y().value() * portion;
+      yaw += estimate.pose.Rotation().Z().value() * portion;
+    }
+    break;  // right is bad
   }
-  x /= num_estimates;
-  y /= num_estimates;
-  z /= num_estimates;
-  roll /= num_estimates;
-  pitch /= num_estimates;
-  yaw /= num_estimates;
+  x /= num_sources;
+  y /= num_sources;
+  z /= num_sources;
+  roll /= num_sources;
+  pitch /= num_sources;
+  yaw /= num_sources;
   return frc::Pose3d{
       frc::Translation3d{units::meter_t{x}, units::meter_t{y},
                          units::meter_t{z}},

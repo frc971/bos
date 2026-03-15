@@ -189,7 +189,7 @@ auto JointSolver::EstimatePosition(
     const std::map<camera::CameraConstant, std::vector<tag_detection_t>>&
         all_cam_detections,
     const frc::Pose3d& starting_pose, const bool yaw_only, const bool verbose)
-    -> position_estimate_t {
+    -> joint_estimate_t {
   if (all_cam_detections.empty()) {
     return {};
   }
@@ -341,10 +341,12 @@ auto JointSolver::EstimatePosition(
   }
   avg_distance /= num_detections;
 
-  return {.pose = robot_pose,
-          .variance = Variance(num_detections, avg_distance, kvariance_scalar_,
-                               kvariance_scalar_),
-          .timestamp = 0};
+  return {.pose_estimate = {.pose = robot_pose,
+                            .variance =
+                                Variance(num_detections, avg_distance,
+                                         kvariance_scalar_, kvariance_scalar_),
+                            .timestamp = 0},
+          .loss = net_loss};
 }
 
 }  // namespace localization

@@ -138,8 +138,10 @@ TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
   associated_detections.insert(
       {camera_constants.at("main_bot_left"), detections});
   const localization::position_estimate_t joint_solver_solution =
-      joint_solver.EstimatePosition(associated_detections,
-                                    square_solver_solution.pose, false, true);
+      joint_solver
+          .EstimatePosition(associated_detections, square_solver_solution.pose,
+                            false, true)
+          .pose_estimate;
   // std::cout << "sq: " << square_solver_solution
   //           << "\njoint: " << joint_solver_solution << std::endl;
   EXPECT_EQ(square_solver_solution, joint_solver_solution);

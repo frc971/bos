@@ -16,6 +16,11 @@ using data_point_t = struct DataPoint {
   Eigen::Vector4d field_to_tag_corner_homogenous;
 };
 
+using joint_estimate_t = struct JointEstimate {
+  position_estimate_t pose_estimate;
+  double loss;
+};
+
 struct CameraMatrices {
   Eigen::Matrix<double, 3, 4> image_to_robot;
   frc::Transform3d camera_to_robot;
@@ -62,7 +67,7 @@ class JointSolver {
       const std::map<camera::CameraConstant, std::vector<tag_detection_t>>&
           all_cam_detections,
       const frc::Pose3d& starting_pose, bool yaw_only,
-      const bool verbose = false) -> position_estimate_t;
+      const bool verbose = false) -> joint_estimate_t;
   Eigen::Matrix4d robot_to_field_;
 
  private:
@@ -70,7 +75,7 @@ class JointSolver {
   static constexpr double starting_step_size_ = 1e-5;
   static constexpr double kyaw_prioritization = 1e1;
   static constexpr double krotation_step_scalar = 3e-1;
-  static constexpr size_t kmax_iters = 5e4;
+  static constexpr size_t kmax_iters = 1e5;
   std::map<camera::CameraConstant, CameraMatrices> camera_matrices_;
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;
