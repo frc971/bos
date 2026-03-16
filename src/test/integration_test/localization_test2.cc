@@ -8,6 +8,7 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/disk_camera.h"
+#include "src/localization/localize_unambiguous.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
@@ -48,13 +49,12 @@ auto main(int argc, char** argv) -> int {
   auto constants = camera::GetCameraConstants();
   std::string camera_name = absl::GetFlag(FLAGS_camera_name).value();
 
-  localization::RunLocalizationSimulation(
-      camera,
-      std::make_unique<localization::OpenCVAprilTagDetector>(
-          frame.cols, frame.rows,
-          utils::ReadIntrinsics(
-              constants[camera_name].intrinsics_path.value())),
-      std::make_unique<localization::MultiTagSolver>(constants[camera_name]),
-      constants[camera_name].extrinsics_path.value(), absl::GetFlag(FLAGS_port),
-      true);
+  std::vector<std::pair<camera::CameraConstant, localization::Detector>>
+      cameras{{constants.at(camera_name), localization::OPENCV_CPU}};
+
+  auto disk_paths =
+      std::make_optional<std::vector<std::string>>({"/bos/logs/log181/left"});
+
+  localization::UnambiguousEstimator estimator(cameras, disk_paths);
+  estimator.Run();
 }

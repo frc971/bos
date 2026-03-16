@@ -1,4 +1,5 @@
 #pragma once
+#include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/localization/apriltag_detector.h"
 #include "src/localization/gpu_apriltag_detector.h"

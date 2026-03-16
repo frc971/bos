@@ -6,9 +6,12 @@
 #include <wpi/DataLogWriter.h>
 #include <utility>
 #include "src/camera/cscore_streamer.h"
+#include "src/camera/cv_camera.h"
 #include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/position_sender.h"
 #include "src/localization/position_solver.h"
+#include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/timer.h"
 

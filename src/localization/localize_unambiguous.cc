@@ -1,0 +1,263 @@
+#include "src/localization/localize_unambiguous.h"
+#include <frc/DataLogManager.h>
+#include <frc/geometry/Pose3d.h>
+#include <frc/geometry/struct/Pose3dStruct.h>
+#include <wpi/DataLog.h>
+#include <wpi/DataLogWriter.h>
+#include <utility>
+#include "src/camera/cscore_streamer.h"
+#include "src/camera/cv_camera.h"
+#include "src/camera/disk_camera.h"
+#include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/opencv_apriltag_detector.h"
+#include "src/localization/position_sender.h"
+#include "src/localization/position_solver.h"
+#include "src/localization/square_solver.h"
+#include "src/utils/camera_utils.h"
+#include "src/utils/timer.h"
+
+namespace localization {
+
+UnambiguousEstimator::UnambiguousEstimator(
+    std::vector<std::pair<camera::CameraConstant, Detector>>& cameras,
+    std::optional<std::vector<std::string>>& img_dir_paths,
+    std::optional<uint> port_start, bool verbose)
+    : port_start_(port_start), sim_(img_dir_paths.has_value()) {
+  std::string log_path = frc::DataLogManager::GetLogDir();
+  auto camera_constants = camera::GetCameraConstants();
+  sources_.reserve(cameras.size());
+  detectors_.reserve(cameras.size());
+  solvers_.reserve(cameras.size());
+  if (port_start.has_value()) {
+    streamers_.reserve(cameras.size());
+  }
+  for (size_t i = 0; i < cameras.size(); i++) {
+    if (sim_) {
+      sources_.push_back(std::make_unique<camera::CameraSource>(
+          cameras[i].first.name,
+          std::make_unique<camera::DiskCamera>(img_dir_paths.value()[i], 10),
+          true));
+    } else {
+      sources_.push_back(std::make_unique<camera::CameraSource>(
+          cameras[i].first.name,
+          std::make_unique<camera::CVCamera>(
+              cameras[i].first,
+              fmt::format("{}/{}", log_path, cameras[i].first.name))));
+    }
+    const cv::Mat first_frame = sources_[i]->GetFrame();
+    switch (cameras[i].second) {
+      case OPENCV_CPU:
+        detectors_.push_back(std::make_unique<OpenCVAprilTagDetector>(
+            first_frame.cols, first_frame.rows,
+            utils::ReadIntrinsics(cameras[i].first.intrinsics_path.value())));
+        break;
+      case AUSTIN_GPU:
+        detectors_.push_back(std::make_unique<GPUAprilTagDetector>(
+            first_frame.cols, first_frame.rows,
+            utils::ReadIntrinsics(cameras[i].first.intrinsics_path.value())));
+        break;
+      default:
+        LOG(FATAL) << "Invalid solver type";
+        return;
+    }
+    solvers_.emplace_back(cameras[i].first);
+    if (port_start.has_value()) {
+      streamers_.emplace_back(cameras[i].first.name, port_start.value() + i, 30,
+                              1080, 1080);
+    }
+  }
+  if (sim_) {
+    std::error_code ec;
+    log_.emplace("localization_log.wpilog", ec);
+    if (ec) {
+      std::cerr << "Failed to open log: " << ec.message() << std::endl;
+      return;
+    }
+
+    log_->AddStructSchema<frc::Translation3d>(0);
+    log_->AddStructSchema<frc::Rotation3d>(0);
+    log_->AddStructSchema<frc::Pose3d>(0);
+
+    pose_log_.emplace(*log_, "/localization/pose");
+  }
+}
+
+auto UnambiguousEstimator::Cost(const frc::Pose3d& a, const frc::Pose3d& b)
+    -> double {
+  double translation = a.Translation().Distance(b.Translation()).value();
+
+  frc::Rotation3d delta = a.Rotation() - b.Rotation();
+  double rotation = delta.Angle().value();
+
+  constexpr double kRotationWeight = 1.0;
+  return translation + kRotationWeight * rotation;
+}
+
+auto UnambiguousEstimator::ComputeCost(
+    const std::vector<position_estimate_t>& poses) -> double {
+  double cost = 0.0;
+
+  for (size_t i = 0; i < poses.size(); i++) {
+    for (size_t j = i + 1; j < poses.size(); j++) {
+      cost += Cost(poses[i].pose, poses[j].pose);
+    }
+  }
+
+  return cost;
+}
+
+auto UnambiguousEstimator::WeightedAveragePose(
+    const std::vector<position_estimate_t>& solutions) -> frc::Pose3d {
+  if (solutions.empty())
+    return frc::Pose3d{};
+  if (solutions.size() == 1)
+    return solutions[0].pose;
+
+  double total_weight = 0.0;
+  for (const auto& est : solutions) {
+    total_weight += 1.0 / est.variance;
+  }
+
+  double x = 0, y = 0, z = 0;
+  double roll = 0, pitch = 0, yaw = 0;
+
+  for (const auto& est : solutions) {
+    double w = (1.0 / est.variance) / total_weight;
+    x += w * est.pose.X().value();
+    y += w * est.pose.Y().value();
+    z += w * est.pose.Z().value();
+    roll += w * est.pose.Rotation().X().value();
+    pitch += w * est.pose.Rotation().Y().value();
+    yaw += w * est.pose.Rotation().Z().value();
+  }
+
+  return frc::Pose3d{
+      units::meter_t{x}, units::meter_t{y}, units::meter_t{z},
+      frc::Rotation3d{units::radian_t{roll}, units::radian_t{pitch},
+                      units::radian_t{yaw}}};
+}
+
+void UnambiguousEstimator::SearchSolutions(
+    size_t index, std::vector<position_estimate_t>& current_solution,
+    std::vector<position_estimate_t>& best_solution, double& best_cost) {
+  if (index == all_pose_estimates_.size()) {
+    double cost = ComputeCost(current_solution);
+
+    if (cost < best_cost) {
+      best_cost = cost;
+      best_solution = current_solution;
+    }
+
+    return;
+  }
+
+  const auto& pair = all_pose_estimates_[index];
+
+  current_solution.push_back(pair.first);
+  SearchSolutions(index + 1, current_solution, best_solution, best_cost);
+  current_solution.pop_back();
+
+  current_solution.push_back(pair.second);
+  SearchSolutions(index + 1, current_solution, best_solution, best_cost);
+  current_solution.pop_back();
+}
+
+void UnambiguousEstimator::FillPoseEstimates() {
+  all_pose_estimates_.clear();
+  std::vector<std::thread> workers;
+  workers.reserve(sources_.size());
+  for (size_t i = 0; i < sources_.size(); ++i) {
+    workers.emplace_back([&, i]() {
+      camera::timestamped_frame_t frame = sources_[i]->Get();
+      if (frame.invalid) {
+        std::cout << "Stopping log" << std::endl;
+        log_.value().Stop();
+        std::cout << "Stopped log" << std::endl;
+        throw std::runtime_error("DONE");
+      }
+      std::cout << "Using: " << frame.timestamp << std::endl;
+
+      std::vector<tag_detection_t> detections =
+          detectors_[i]->GetTagDetections(frame);
+
+      std::vector<std::pair<position_estimate_t, position_estimate_t>>
+          pose_estimates = solvers_[i].EstimatePositionAmbiguous(detections);
+
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        all_pose_estimates_.insert(all_pose_estimates_.end(),
+                                   pose_estimates.begin(),
+                                   pose_estimates.end());
+      }
+
+      if (port_start_.has_value()) {
+        streamers_[i].WriteFrame(frame.frame);
+      }
+    });
+  }
+  for (auto& t : workers) {
+    t.join();
+  }
+}
+
+void UnambiguousEstimator::Run() {
+  if (!sim_) {
+    localization::PositionSender position_sender("Front");
+    while (true) {
+      latent_estimate_t estimate = GetUnambiguatedEstimate();
+      position_sender.Send(
+          std::vector<position_estimate_t>{estimate.pose_estimate},
+          estimate.latency);
+    }
+  } else {
+    while (true) {
+      position_estimate_t pose_estimate =
+          GetUnambiguatedEstimate().pose_estimate;
+      auto log_time = static_cast<int64_t>(pose_estimate.timestamp * 1e6);
+      std::cout << "Appending with log time: " << log_time << std::endl;
+      pose_log_.value().Append(pose_estimate.pose, log_time);
+    }
+  }
+}
+
+auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
+  std::cout << "Getting estimate" << std::endl;
+  utils::Timer fetch_timer("Fetch");
+  FillPoseEstimates();
+  fetch_timer.Stop();
+  std::vector<position_estimate_t> best_solution;
+  std::vector<position_estimate_t> current_solution;
+
+  double best_cost = std::numeric_limits<double>::infinity();
+
+  utils::Timer search_timer("Search");
+  SearchSolutions(0, current_solution, best_solution, best_cost);
+  search_timer.Stop();
+  utils::Timer everything_timer("everything else");
+  double avg_variance = 0;
+  double avg_timestamp = 0;
+  std::vector<int> tag_ids;
+  bool invalid = false;
+  for (const position_estimate_t& est : best_solution) {
+    if (est.invalid) {
+      invalid = true;
+      break;
+    }
+    avg_variance += est.variance;
+    tag_ids.insert(tag_ids.end(), est.tag_ids.begin(), est.tag_ids.end());
+    avg_timestamp += est.timestamp;
+  }
+  avg_timestamp /= best_solution.size();
+  avg_variance /= best_solution.size();
+  const int num_tags = tag_ids.size();
+  position_estimate_t averaged_estimate = {
+      .pose = WeightedAveragePose(best_solution),
+      .variance = avg_variance,
+      .timestamp = avg_timestamp,
+      .num_tags = num_tags,
+      .invalid = invalid};
+  everything_timer.Stop();
+  return {.pose_estimate = averaged_estimate, .latency = 0};
+}
+
+}  // namespace localization
