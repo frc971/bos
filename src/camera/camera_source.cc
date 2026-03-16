@@ -25,13 +25,13 @@ auto CameraSource::Get() -> timestamped_frame_t {
   mutex_.unlock();
   if (!simulation_) {
     auto current_time = frc::Timer::GetFPGATimestamp().to<double>();
-    if (current_time - timestamped_frame.timestamp > 5.0) {
-      LOG(INFO) << "Restarting camera because of old timestamp";
-      timestamped_frame_.timestamp = current_time;
-      mutex_.lock();
-      camera_->Restart();
-      mutex_.unlock();
-    }
+    // if (current_time - timestamped_frame.timestamp > 999999999999999999.0) {
+    //   LOG(INFO) << "Restarting camera because of old timestamp";
+    //   timestamped_frame_.timestamp = current_time;
+    //   mutex_.lock();
+    //   camera_->Restart();
+    //   mutex_.unlock();
+    // }
   }
   return timestamped_frame;
 }
