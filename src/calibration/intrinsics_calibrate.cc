@@ -3,11 +3,8 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "src/calibration/intrinsics_calibrate_lib.h"
-#include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
-#include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
-#include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
 
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
@@ -68,13 +65,9 @@ auto WriteIntrinsicToFile(cv::Mat camera_matrix, cv::Mat dist_coeffs,
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
-      absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
-
-  std::unique_ptr<camera::ICamera> camera =
-      std::make_unique<camera::CVCamera>(camera_constant);
-
-  camera::CameraSource source("camera", std::move(camera));
+  camera::CameraSource source = camera::SelectCamera(
+      "camera", absl::GetFlag(FLAGS_camera_name),
+      camera::GetCameraConstants());
   camera::CscoreStreamer streamer("intrinsics_calibrate",
                                   absl::GetFlag(FLAGS_port).value_or(5801), 30,
                                   source.GetFrame());

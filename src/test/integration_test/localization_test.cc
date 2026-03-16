@@ -7,7 +7,7 @@
 #include "frc/DataLogManager.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
-#include "src/camera/disk_camera.h"
+#include "src/camera/select_camera.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
@@ -37,11 +37,11 @@ auto main(int argc, char** argv) -> int {
     LOG(FATAL) << "Folder empty or doesn't exist";
   }
 
-  camera::CameraSource camera(
-      "disk", std::make_unique<camera::DiskCamera>(image_folder,
-                                                   absl::GetFlag(FLAGS_speed)));
+  camera::CameraSource source =
+      camera::SelectCamera("disk", image_folder, camera::GetCameraConstants(),
+                           absl::GetFlag(FLAGS_speed));
 
-  auto frame = camera.GetFrame();
+  auto frame = source.GetFrame();
   if (frame.empty()) {
     LOG(FATAL) << "No readable images found in folder: " << image_folder;
   }
@@ -50,7 +50,7 @@ auto main(int argc, char** argv) -> int {
   std::string camera_name = absl::GetFlag(FLAGS_camera_name).value();
 
   localization::RunLocalization(
-      camera,
+      source,
       std::make_unique<localization::OpenCVAprilTagDetector>(
           frame.cols, frame.rows,
           utils::ReadIntrinsics(
