@@ -22,8 +22,7 @@ void StartNetworktables(int team_number) {
   std::string log_path = GetNewLogPath();
   LOG(INFO) << "Log path: " << log_path;
   frc::DataLogManager::Start(log_path);
-  WpiLogSink wpi_log_sink;
-  absl::AddLogSink(&wpi_log_sink);
+  absl::AddLogSink(new WpiLogSink());
 
   LOG(INFO) << "Team number: " << team_number;
   LOG(INFO) << "Waiting for connection";
