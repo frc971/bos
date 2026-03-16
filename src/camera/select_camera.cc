@@ -1,4 +1,5 @@
 #include "src/camera/select_camera.h"
+#include <string>
 #include "cv_camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/utils/log.h"
@@ -16,7 +17,12 @@ auto SelectCameraConfig(const camera_constants_t& camera_constants)
   std::cout << "Please select a camera: " << std::flush;
   std::string choice;
   std::cin >> choice;
-  return SelectCameraConfig(choice, camera_constants);
+
+  if (choice.find('/') != std::string::npos) {
+    return camera_constant_t{.name = choice};
+  } else {
+    return SelectCameraConfig(choice, camera_constants);
+  }
 }
 
 auto SelectCameraConfig(const std::string& choice,
