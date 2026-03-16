@@ -36,7 +36,6 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
   double recorded_ts = image_paths_.top().timestamp;
   timestamped_frame_t timestamped_frame{
       .frame = cv::imread(image_paths_.top().path), .timestamp = recorded_ts};
-
   image_paths_.pop();
 
   if (!image_paths_.empty()) {
