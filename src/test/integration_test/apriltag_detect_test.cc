@@ -40,6 +40,7 @@ auto main(int argc, char* argv[]) -> int {
   localization::SquareSolver solver(camera_constant);
 
   camera::timestamped_frame_t timestamped_frame;
+  cv::Mat display_frame;
   while (true) {
     utils::Timer timer("tag estimator apriltag", time);
     timestamped_frame = source.Get();
@@ -52,12 +53,13 @@ auto main(int argc, char* argv[]) -> int {
       LOG(INFO) << position_estimate;
     }
 
+    timestamped_frame.frame.copyTo(display_frame);
     for (auto& tag_detection : tag_detections) {
       for (auto& corner : tag_detection.corners) {
-        cv::circle(timestamped_frame.frame, corner, 10, cv::Scalar(0, 0, 255));
+        cv::circle(display_frame, corner, 10, cv::Scalar(0, 0, 255));
       }
     }
 
-    streamer.WriteFrame(timestamped_frame.frame);
+    streamer.WriteFrame(display_frame);
   }
 }
