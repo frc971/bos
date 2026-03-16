@@ -36,16 +36,6 @@ auto main(int argc, char** argv) -> int {
     LOG(FATAL) << "Folder empty or doesn't exist";
   }
 
-  camera::CameraSource camera("disk",
-                              std::make_unique<camera::DiskCamera>(
-                                  image_folder, absl::GetFlag(FLAGS_speed)),
-                              true);
-
-  auto frame = camera.GetFrame();
-  if (frame.empty()) {
-    LOG(FATAL) << "No readable images found in folder: " << image_folder;
-  }
-
   auto constants = camera::GetCameraConstants();
   std::string camera_name = absl::GetFlag(FLAGS_camera_name).value();
 

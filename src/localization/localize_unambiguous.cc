@@ -165,7 +165,6 @@ void UnambiguousEstimator::SearchSolutions(
 void UnambiguousEstimator::FillPoseEstimates() {
   all_pose_estimates_.clear();
   std::vector<std::thread> workers;
-  workers.reserve(sources_.size());
   for (size_t i = 0; i < sources_.size(); ++i) {
     workers.emplace_back([&, i]() {
       camera::timestamped_frame_t frame = sources_[i]->Get();
@@ -222,7 +221,7 @@ void UnambiguousEstimator::Run() {
 
 auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   std::cout << "Getting estimate" << std::endl;
-  utils::Timer fetch_timer("Fetch");
+  utils::Timer fetch_timer("Fetch", false);
   FillPoseEstimates();
   fetch_timer.Stop();
   std::vector<position_estimate_t> best_solution;
@@ -230,10 +229,10 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
 
   double best_cost = std::numeric_limits<double>::infinity();
 
-  utils::Timer search_timer("Search");
+  utils::Timer search_timer("Search", false);
   SearchSolutions(0, current_solution, best_solution, best_cost);
   search_timer.Stop();
-  utils::Timer everything_timer("everything else");
+  utils::Timer everything_timer("everything else", false);
   double avg_variance = 0;
   double avg_timestamp = 0;
   std::vector<int> tag_ids;
