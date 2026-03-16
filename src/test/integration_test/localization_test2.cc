@@ -8,10 +8,10 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/disk_camera.h"
-#include "src/localization/localize_unambiguous.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
+#include "src/localization/unambiguous_estimator.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/log.h"
 
