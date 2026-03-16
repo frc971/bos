@@ -1,3 +1,4 @@
+#pragma once
 #include <frc/DataLogManager.h>
 #include <networktables/StringTopic.h>
 #include <wpi/DataLog.h>
