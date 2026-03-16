@@ -4,7 +4,9 @@
 #include <chrono>
 #include <filesystem>
 #include <thread>
+#include "absl/log/log_sink_registry.h"
 #include "src/utils/log.h"
+#include "src/utils/wpi_log_sink.h"
 
 namespace fs = std::filesystem;
 
@@ -20,6 +22,8 @@ void StartNetworktables(int team_number) {
   std::string log_path = GetNewLogPath();
   LOG(INFO) << "Log path: " << log_path;
   frc::DataLogManager::Start(log_path);
+  WpiLogSink wpi_log_sink;
+  absl::AddLogSink(&wpi_log_sink);
 
   LOG(INFO) << "Team number: " << team_number;
   LOG(INFO) << "Waiting for connection";
