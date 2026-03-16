@@ -29,6 +29,12 @@ using node_t = struct Node {
   double y_grad2;
   double x_start;
   double x_end;
+  double y_start;
+  double y_end;
+
+  double slope;
+  double x0;
+  double y0;
 
   double x;
   double y;
@@ -37,15 +43,9 @@ using node_t = struct Node {
   double x_grad_sum;
   double y_grad_sum;
 
-  double y_start = -1;
-  double y_end = -1;
-  double slope = -1;
-  double bias = -1;
+  std::vector<cv::Point2f> children;
 
-  double top = 0;
-  double bottom = 0;
-
-  uint children;
+  uint num_children;
   Node* parent = nullptr;
   bool is_quad = false;
 };
@@ -68,9 +68,11 @@ using vector_t = struct Vector {
 };
 
 auto GetPoint(const node_t& segment1, const node_t& segment2) -> point_t {
-  const double x =
-      (segment2.bias - segment1.bias) / (segment1.slope - segment2.slope);
-  const double y = segment1.slope * x + segment1.bias;
+  double b1 = segment1.y0 - segment1.slope * segment1.x0;
+  double b2 = segment2.y0 - segment2.slope * segment2.x0;
+
+  double x = (b2 - b1) / (segment1.slope - segment2.slope);
+  double y = segment1.slope * x + b1;
   return {x, y};
 }
 
@@ -81,30 +83,45 @@ auto DrawPoint(const point_t& point, const cv::Mat& image) -> void {
 }
 
 auto IsNeighbor(node_t* a, node_t* b) -> bool {
+  if (a == b) {
+    return false;
+  }
   const double squared_distance =
       (a->x_end - b->x_start) * (a->x_end - b->x_start) +
       (a->y_end - b->y_start) * (a->y_end - b->y_start);
-  if (squared_distance > 50) {
+  if (squared_distance > 100) {
     return false;
   }
   return true;
 }
 
-auto FindQuads(node_t* curr, std::vector<node_t*> quad,
-               const std::vector<node_t*>& segments) -> std::vector<node_t*> {
-  quad.push_back(curr);
-  if (quad.size() == 4) {
-    return IsNeighbor(curr, quad[0]) ? quad : std::vector<node_t*>{};
-  }
-  for (size_t i = 0; i < segments.size(); i++) {
-    if (!segments[i]->is_quad && IsNeighbor(curr, segments[i])) {
-      std::vector<node_t*> result = FindQuads(segments[i], quad, segments);
-      if (result.size() == 4) {
-        return result;
+auto IsValidQuad(std::vector<node_t*>& quad) {
+  for (size_t i = 0; i < quad.size(); i++) {
+    for (size_t j = i + 1; j < quad.size(); j++) {
+      if (quad[i] == quad[j]) {
+        return false;
       }
     }
   }
-  return {};
+  return true;
+}
+
+auto FindQuads(node_t* curr, std::vector<node_t*> quad,
+               const std::vector<node_t*>& segments, std::vector<box_t>& boxes)
+    -> void {
+  quad.push_back(curr);
+  if (quad.size() == 4) {
+    if (IsNeighbor(curr, quad[0]) && IsValidQuad(quad)) {
+      boxes.push_back(box_t{quad[0], quad[1], quad[2], quad[3]});
+    }
+    return;
+  }
+  for (size_t i = 0; i < segments.size(); i++) {
+    if (IsNeighbor(curr, segments[i])) {
+      FindQuads(segments[i], quad, segments, boxes);
+    }
+  }
+  return;
 }
 
 auto GetParent(node_t& curr) -> node_t& {
@@ -184,13 +201,15 @@ auto main() -> int {
                                         .y_grad2 = grad_y.at<double>(i, j),
                                         .x_start = static_cast<double>(i),
                                         .x_end = static_cast<double>(i),
+                                        .y_start = static_cast<double>(j),
+                                        .y_end = static_cast<double>(j),
                                         .x = static_cast<double>(i),
                                         .y = static_cast<double>(j),
                                         .x_sum = static_cast<double>(i),
                                         .y_sum = static_cast<double>(j),
                                         .x_grad_sum = grad_x.at<double>(i, j),
                                         .y_grad_sum = grad_y.at<double>(i, j),
-                                        .children = 1,
+                                        .num_children = 1,
                                         .parent = nullptr};
     }
   }
@@ -245,7 +264,7 @@ auto main() -> int {
     const double curr_magnitude_cost =
         std::min(node1_parent.magnitude_high - node1_parent.magnitude_low,
                  node1_parent.magnitude_high - node1_parent.magnitude_low) +
-        kmagnitude / (node1_parent.children + node2_parent.children);
+        kmagnitude / (node1_parent.num_children + node2_parent.num_children);
 
     const double new_magnitude_cost =
         std::max(node1_parent.magnitude_high, node2_parent.magnitude_high) -
@@ -260,7 +279,7 @@ auto main() -> int {
                       node1_parent.y_grad1 * node1_parent.y_grad2,
                   node2_parent.x_grad1 * node2_parent.x_grad2 +
                       node2_parent.y_grad1 * node2_parent.y_grad2) +
-        kgradient / (node1_parent.children + node2_parent.children);
+        kgradient / (node1_parent.num_children + node2_parent.num_children);
 
     double x_grad1 = node1_parent.x_grad1;
     double x_grad2 = node2_parent.x_grad1;
@@ -333,7 +352,9 @@ auto main() -> int {
     node2_parent.y_grad_sum += node1_parent.y_grad_sum;
     node2_parent.x_start = std::min(node2_parent.x_start, node1_parent.x_start);
     node2_parent.x_end = std::max(node2_parent.x_end, node1_parent.x_end);
-    node2_parent.children += node1_parent.children;
+    node2_parent.y_start = std::min(node2_parent.y_start, node1_parent.y_start);
+    node2_parent.y_end = std::max(node2_parent.y_end, node1_parent.y_end);
+    node2_parent.num_children += node1_parent.num_children;
   }
 
   cv::Mat magnitude;
@@ -344,7 +365,8 @@ auto main() -> int {
   for (int i = 0; i < union_image.rows; ++i) {
     for (int j = 0; j < union_image.cols; ++j) {
       node_t& parent = GetParent(graph[i * union_image.cols + j]);
-      if (parent.parent == nullptr && parent.children > 100) {
+      if (parent.parent == nullptr && parent.num_children > 100 &&
+          parent.num_children < 1000) {
         union_image.at<cv::Vec3b>(i, j) = parent.color;
       }
     }
@@ -355,28 +377,36 @@ auto main() -> int {
   for (size_t i = 0; i < graph_length; ++i) {
     node_t& node = graph[i];
     node_t& parent = GetParent(node);
-    parent.top += (node.x - parent.x_sum / parent.children) *
-                  (node.y - parent.y_sum / parent.children);
-    parent.bottom += (node.x - (parent.x_sum / parent.children)) *
-                     (node.x - (parent.x_sum - parent.children));
-    if (node.parent == nullptr && node.children > 100) {
+    parent.children.emplace_back(node.x, node.y);
+    if (node.parent == nullptr && node.num_children > 100 &&
+        parent.num_children < 1000) {
       segments.push_back(&node);
     }
   }
 
   for (auto& segment : segments) {
-    segment->slope = segment->bottom == 0 ? 0 : segment->top / segment->bottom;
-    // segment->slope = segment->top / segment->bottom;
-    const double x_bar = segment->x_sum / segment->children;
-    const double y_bar = segment->y_sum / segment->children;
-    segment->bias = y_bar - segment->slope * x_bar;
-    segment->y_start = segment->bias + segment->slope * segment->x_start;
-    segment->y_end = segment->bias + segment->slope * segment->x_end;
+    cv::Vec4f line;
+    cv::fitLine(segment->children, line, cv::DIST_L2, 0, 0.01, 0.01);
+    const float vx = line[0];
+    const float vy = line[1];
+    const float x0 = line[2];
+    const float y0 = line[3];
+    segment->slope = vy / vx;
+    segment->x0 = x0;
+    segment->y0 = y0;
+    if (segment->slope < 0) {
+      std::swap(segment->y_start, segment->y_end);
+    }
+    // segment->y_start = segment->slope * (segment->x_start - x0) + y0;
+    // segment->y_end = segment->slope * (segment->x_end - x0) + y0;
     if (segment->x_grad_sum < 0) {
       std::swap(segment->x_start, segment->x_end);
       std::swap(segment->y_start, segment->y_end);
     }
   }
+
+  std::erase_if(segments,
+                [](const node_t* i) { return std::abs(i->slope) > 10; });
 
   cv::Mat segment_image = image.clone();
   for (auto& segment : segments) {
@@ -385,7 +415,7 @@ auto main() -> int {
                        static_cast<int>(segment->x_start)),
              cv::Point(static_cast<int>(segment->y_end),
                        static_cast<int>(segment->x_end)),
-             cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+             cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
 
     cv::circle(segment_image, cv::Point(segment->y_start, segment->x_start), 3,
                cv::Scalar(255, 0, 0), -1, cv::LINE_AA);
@@ -398,15 +428,15 @@ auto main() -> int {
   std::vector<box_t> boxes;
   for (size_t i = 0; i < segments.size(); i++) {
     if (segments[i]->is_quad) {
-      continue;
+      // continue;
     }
-    std::vector<node_t*> quad = FindQuads(segments[i], {}, segments);
-    if (quad.size() == 4) {
-      boxes.push_back(box_t{quad[0], quad[1], quad[2], quad[3]});
-      for (auto& i : quad) {
-        i->is_quad = true;
-      }
-    }
+    FindQuads(segments[i], {}, segments, boxes);
+    // if (quad.size() == 4) {
+    //   boxes.push_back(box_t{quad[0], quad[1], quad[2], quad[3]});
+    //   for (auto& i : quad) {
+    //     i->is_quad = true;
+    //   }
+    // }
   }
 
   LOG(INFO) << boxes.size();
@@ -429,10 +459,10 @@ auto main() -> int {
     DrawPoint(p1, decode_image);
     DrawPoint(p2, decode_image);
     DrawPoint(p3, decode_image);
-    LOG(INFO) << p0.x << " " << p0.y;
-    LOG(INFO) << p1.x << " " << p1.y;
-    LOG(INFO) << p2.x << " " << p2.y;
-    LOG(INFO) << p3.x << " " << p3.y;
+    // LOG(INFO) << p0.x << " " << p0.y;
+    // LOG(INFO) << p1.x << " " << p1.y;
+    // LOG(INFO) << p2.x << " " << p2.y;
+    // LOG(INFO) << p3.x << " " << p3.y;
 
     std::vector<cv::Point2d> dstPoints = {
         {p0.y, p0.x}, {p1.y, p1.x}, {p2.y, p2.x}, {p3.y, p3.x}};
@@ -452,7 +482,6 @@ auto main() -> int {
                    cv::LINE_AA);
       }
     }
-    break;
   }
   cv::imshow("grad_y", grad_y);
   cv::imshow("magnitude", magnitude);
@@ -463,6 +492,8 @@ auto main() -> int {
 
   cv::imwrite("union_image.png", union_image);
   cv::imwrite("segment_image.png", segment_image);
+  cv::imwrite("quad_image.png", quad_image);
+  cv::imwrite("decode_image.png", decode_image);
 
   delete[] edges;
   delete[] graph;
