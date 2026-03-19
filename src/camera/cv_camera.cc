@@ -12,7 +12,7 @@ namespace camera {
 
 auto FileSystemAlmostFull() {
   fs::space_info info = fs::space("/");
-  return static_cast<float>(info.capacity) / static_cast<float>(info.free) <
+  return static_cast<float>(info.free) / static_cast<float>(info.capacity) <
          0.2;
 }
 
