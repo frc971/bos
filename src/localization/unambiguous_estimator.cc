@@ -83,6 +83,7 @@ UnambiguousEstimator::UnambiguousEstimator(
 
     pose_log_.emplace(*log_, "/localization/pose");
     num_tags_log_.emplace(*log_, "/localization/num_tags");
+    timestamp_log_.emplace(*log_, "/localization/timestamp");
   }
 }
 
@@ -184,6 +185,10 @@ void UnambiguousEstimator::FillPoseEstimates() {
         // std::cout << "Rejecting " << frame.timestamp << std::endl;
         return;
       }
+      // if (std::abs(frame.timestamp - 26.632) < 0.01 ||
+      //     std::abs(frame.timestamp - 26.54) < 0.01) {
+      //   cv::imwrite("bad_frame.jpg", frame.frame);
+      // }
       prev_timestamps_[i] = frame.timestamp;
       // std::cout << "Using: " << frame.timestamp << std::endl;
 
@@ -210,6 +215,13 @@ void UnambiguousEstimator::FillPoseEstimates() {
   }
   if (all_pose_estimates_.empty()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  } else {
+    if (std::abs(all_pose_estimates_[0].first.timestamp - 26.632) < 0.01 ||
+        std::abs(all_pose_estimates_[0].first.timestamp - 26.54) < 0.01) {
+      std::cout << "Timestamp: " << all_pose_estimates_[0].first.timestamp
+                << " Num estimates: " << all_pose_estimates_.size()
+                << std::endl;
+    }
   }
   // std::cout << "Received: " << all_pose_estimates_.size() << " estimates"
   //           << std::endl;
@@ -235,6 +247,7 @@ void UnambiguousEstimator::Run() {
       auto log_time = static_cast<int64_t>(pose_estimate.timestamp * 1e6);
       pose_log_.value().Append(pose_estimate.pose, log_time);
       num_tags_log_.value().Append(pose_estimate.num_tags, log_time);
+      timestamp_log_.value().Append(pose_estimate.timestamp, log_time);
     }
   }
 }
@@ -270,17 +283,22 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
     avg_timestamp += est.timestamp;
   }
   avg_timestamp /= best_solution.size();
-  if (avg_timestamp >= 15 && avg_timestamp < 16) {
-    std::cout << "Had estimates: " << std::endl;
-    for (const auto& est : all_pose_estimates_) {
-      std::cout << est.first;
-      std::cout << est.second;
-    }
-    std::cout << "Used estimates: " << std::endl;
-    for (const position_estimate_t& est : best_solution) {
-      std::cout << est;
-    }
+  if (std::abs(avg_timestamp - 26.632) < 0.01 ||
+      std::abs(avg_timestamp - 26.54) < 0.01) {
+    std::cout << "Timestamp" << avg_timestamp
+              << "Num estimates used: " << best_solution.size() << std::endl;
   }
+  // if (avg_timestamp >= 15 && avg_timestamp < 16) {
+  //   std::cout << "Had estimates: " << std::endl;
+  //   for (const auto& est : all_pose_estimates_) {
+  //     std::cout << est.first;
+  //     std::cout << est.second;
+  //   }
+  //   std::cout << "Used estimates: " << std::endl;
+  //   for (const position_estimate_t& est : best_solution) {
+  //     std::cout << est;
+  //   }
+  // }
   avg_variance /= best_solution.size();
   const int num_tags = tag_ids.size();
   position_estimate_t averaged_estimate = {
