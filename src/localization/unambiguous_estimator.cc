@@ -23,7 +23,9 @@ UnambiguousEstimator::UnambiguousEstimator(
     std::vector<std::pair<camera::CameraConstant, Detector>>& cameras,
     std::optional<std::vector<std::filesystem::path>>& img_dir_paths,
     std::optional<uint> port_start, bool verbose)
-    : port_start_(port_start), sim_(img_dir_paths.has_value()) {
+    : port_start_(port_start),
+      prev_timestamps_(cameras.size()),
+      sim_(img_dir_paths.has_value()) {
   std::string log_path = frc::DataLogManager::GetLogDir();
   auto camera_constants = camera::GetCameraConstants();
   sources_.reserve(cameras.size());
@@ -165,10 +167,12 @@ void UnambiguousEstimator::SearchSolutions(
 }
 
 void UnambiguousEstimator::FillPoseEstimates() {
+  // std::cout << "FILLING POSE ESTIMATES" << std::endl;
   all_pose_estimates_.clear();
   std::vector<std::thread> workers;
   for (size_t i = 0; i < sources_.size(); ++i) {
     workers.emplace_back([&, i]() {
+      // std::cout << "Fetching " << std::endl;
       camera::timestamped_frame_t frame = sources_[i]->Get();
       if (frame.invalid) {
         std::cout << "Stopping log" << std::endl;
@@ -176,6 +180,11 @@ void UnambiguousEstimator::FillPoseEstimates() {
         std::cout << "Stopped log" << std::endl;
         throw std::runtime_error("DONE");
       }
+      if (prev_timestamps_[i] == frame.timestamp) {
+        // std::cout << "Rejecting " << frame.timestamp << std::endl;
+        return;
+      }
+      prev_timestamps_[i] = frame.timestamp;
       // std::cout << "Using: " << frame.timestamp << std::endl;
 
       std::vector<tag_detection_t> detections =
@@ -199,6 +208,9 @@ void UnambiguousEstimator::FillPoseEstimates() {
   for (auto& t : workers) {
     t.join();
   }
+  if (all_pose_estimates_.empty()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  }
   // std::cout << "Received: " << all_pose_estimates_.size() << " estimates"
   //           << std::endl;
 }
@@ -214,8 +226,12 @@ void UnambiguousEstimator::Run() {
     }
   } else {
     while (true) {
+      // std::cout << "Loop " << std::endl;
       position_estimate_t pose_estimate =
           GetUnambiguatedEstimate().pose_estimate;
+      if (pose_estimate.invalid) {
+        continue;
+      }
       auto log_time = static_cast<int64_t>(pose_estimate.timestamp * 1e6);
       pose_log_.value().Append(pose_estimate.pose, log_time);
       num_tags_log_.value().Append(pose_estimate.num_tags, log_time);
@@ -224,6 +240,7 @@ void UnambiguousEstimator::Run() {
 }
 
 auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
+  // std::cout << "GETTING ESTIMATE " << std::endl;
   utils::Timer fetch_timer("Fetch", false);
   FillPoseEstimates();
   fetch_timer.Stop();
@@ -235,6 +252,10 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   utils::Timer search_timer("Search", false);
   SearchSolutions(0, current_solution, best_solution, best_cost);
   search_timer.Stop();
+  if (best_solution.size() == 0) {
+    // std::cout << "Nothing in the solution" << std::endl;
+    return {.invalid = true};
+  }
   // std::cout << "Num estimates used: " << best_solution.size() << std::endl;
   utils::Timer everything_timer("everything else", false);
   double avg_variance = 0;
