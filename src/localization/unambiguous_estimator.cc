@@ -4,6 +4,7 @@
 #include <frc/geometry/struct/Pose3dStruct.h>
 #include <wpi/DataLog.h>
 #include <wpi/DataLogWriter.h>
+#include <unordered_set>
 #include <utility>
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
@@ -68,7 +69,7 @@ UnambiguousEstimator::UnambiguousEstimator(
   }
   if (sim_) {
     std::error_code ec;
-    log_.emplace("localization_log.wpilog", ec);
+    log_.emplace("unambiguous.wpilog", ec);
     if (ec) {
       std::cerr << "Failed to open log: " << ec.message() << std::endl;
       return;
@@ -79,6 +80,7 @@ UnambiguousEstimator::UnambiguousEstimator(
     log_->AddStructSchema<frc::Pose3d>(0);
 
     pose_log_.emplace(*log_, "/localization/pose");
+    num_tags_log_.emplace(*log_, "/localization/num_tags");
   }
 }
 
@@ -174,7 +176,7 @@ void UnambiguousEstimator::FillPoseEstimates() {
         std::cout << "Stopped log" << std::endl;
         throw std::runtime_error("DONE");
       }
-      std::cout << "Using: " << frame.timestamp << std::endl;
+      // std::cout << "Using: " << frame.timestamp << std::endl;
 
       std::vector<tag_detection_t> detections =
           detectors_[i]->GetTagDetections(frame);
@@ -197,6 +199,8 @@ void UnambiguousEstimator::FillPoseEstimates() {
   for (auto& t : workers) {
     t.join();
   }
+  // std::cout << "Received: " << all_pose_estimates_.size() << " estimates"
+  //           << std::endl;
 }
 
 void UnambiguousEstimator::Run() {
@@ -213,14 +217,13 @@ void UnambiguousEstimator::Run() {
       position_estimate_t pose_estimate =
           GetUnambiguatedEstimate().pose_estimate;
       auto log_time = static_cast<int64_t>(pose_estimate.timestamp * 1e6);
-      std::cout << "Appending with log time: " << log_time << std::endl;
       pose_log_.value().Append(pose_estimate.pose, log_time);
+      num_tags_log_.value().Append(pose_estimate.num_tags, log_time);
     }
   }
 }
 
 auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
-  std::cout << "Getting estimate" << std::endl;
   utils::Timer fetch_timer("Fetch", false);
   FillPoseEstimates();
   fetch_timer.Stop();
@@ -232,21 +235,34 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   utils::Timer search_timer("Search", false);
   SearchSolutions(0, current_solution, best_solution, best_cost);
   search_timer.Stop();
+  // std::cout << "Num estimates used: " << best_solution.size() << std::endl;
   utils::Timer everything_timer("everything else", false);
   double avg_variance = 0;
   double avg_timestamp = 0;
-  std::vector<int> tag_ids;
+  std::unordered_set<int> tag_ids;
   bool invalid = false;
   for (const position_estimate_t& est : best_solution) {
-    if (est.invalid) {
-      invalid = true;
-      break;
-    }
     avg_variance += est.variance;
-    tag_ids.insert(tag_ids.end(), est.tag_ids.begin(), est.tag_ids.end());
+    // std::cout << "Using tags: ";
+    // for (const int tag_id : est.tag_ids) {
+    //   tag_ids.insert(tag_id);
+    //   std::cout << tag_id << ", ";
+    // }
+    // std::cout << std::endl;
     avg_timestamp += est.timestamp;
   }
   avg_timestamp /= best_solution.size();
+  if (avg_timestamp >= 15 && avg_timestamp < 16) {
+    std::cout << "Had estimates: " << std::endl;
+    for (const auto& est : all_pose_estimates_) {
+      std::cout << est.first;
+      std::cout << est.second;
+    }
+    std::cout << "Used estimates: " << std::endl;
+    for (const position_estimate_t& est : best_solution) {
+      std::cout << est;
+    }
+  }
   avg_variance /= best_solution.size();
   const int num_tags = tag_ids.size();
   position_estimate_t averaged_estimate = {

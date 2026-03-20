@@ -11,7 +11,6 @@
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
-#include "src/localization/unambiguous_estimator.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/log.h"
 
@@ -26,6 +25,7 @@ ABSL_FLAG(int, port, 5801, "Port");                      //NOLINT
 ABSL_FLAG(double, speed, 0.01, "Delay between frames");  //NOLINT
 
 auto main(int argc, char** argv) -> int {
+  std::cout << "RUNNING MULTITAG SOLVE" << std::endl;
 
   absl::ParseCommandLine(argc, argv);
 
@@ -36,15 +36,26 @@ auto main(int argc, char** argv) -> int {
     LOG(FATAL) << "Folder empty or doesn't exist";
   }
 
+  camera::CameraSource camera("disk",
+                              std::make_unique<camera::DiskCamera>(
+                                  image_folder, absl::GetFlag(FLAGS_speed)),
+                              true);
+
+  auto frame = camera.GetFrame();
+  if (frame.empty()) {
+    LOG(FATAL) << "No readable images found in folder: " << image_folder;
+  }
+
   auto constants = camera::GetCameraConstants();
   std::string camera_name = absl::GetFlag(FLAGS_camera_name).value();
 
-  std::vector<std::pair<camera::CameraConstant, localization::Detector>>
-      cameras{{constants.at(camera_name), localization::OPENCV_CPU}};
-
-  auto disk_paths =
-      std::make_optional<std::vector<std::string>>({"/bos/logs/real_log/left"});
-
-  localization::UnambiguousEstimator estimator(cameras, disk_paths);
-  estimator.Run();
+  localization::RunLocalizationSimulation(
+      camera,
+      std::make_unique<localization::OpenCVAprilTagDetector>(
+          frame.cols, frame.rows,
+          utils::ReadIntrinsics(
+              constants[camera_name].intrinsics_path.value())),
+      std::make_unique<localization::MultiTagSolver>(constants[camera_name]),
+      constants[camera_name].extrinsics_path.value(), absl::GetFlag(FLAGS_port),
+      true);
 }

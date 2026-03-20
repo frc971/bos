@@ -51,8 +51,7 @@ void RunLocalizationSimulation(
     std::unique_ptr<localization::IPositionSolver> solver,
     const std::string& extrinsics, std::optional<uint> port, bool verbose) {
   std::error_code ec;
-  auto log =
-      std::make_unique<wpi::log::DataLogWriter>("localization_log.wpilog", ec);
+  auto log = std::make_unique<wpi::log::DataLogWriter>("multitag.wpilog", ec);
   if (ec) {
     std::cerr << "Failed to open log: " << ec.message() << std::endl;
     return;
@@ -61,6 +60,7 @@ void RunLocalizationSimulation(
   log->AddStructSchema<frc::Rotation3d>(0);
   log->AddStructSchema<frc::Pose3d>(0);
   wpi::log::StructLogEntry<frc::Pose3d> pose_log(*log, "/localization/pose");
+  wpi::log::DoubleLogEntry num_tags_log(*log, "/localization/num_tags");
   while (true) {
     camera::timestamped_frame_t timestamped_frame = source.Get();
     double timestamp = timestamped_frame.timestamp;
@@ -78,6 +78,7 @@ void RunLocalizationSimulation(
     auto log_time = static_cast<int64_t>(timestamp * 1e6);
     for (const auto& estimate : position_estimates) {
       pose_log.Append(estimate.pose, log_time);
+      num_tags_log.Append(estimate.num_tags, log_time);
     }
   }
 }

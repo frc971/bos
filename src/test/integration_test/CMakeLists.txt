@@ -19,8 +19,11 @@ target_link_libraries(solver_test PRIVATE utils localization)
 add_executable(localization_test localization_test.cc)
 target_link_libraries(localization_test PRIVATE camera localization utils)
 
-add_executable(l2calization_test localization_test2.cc)
-target_link_libraries(l2calization_test PRIVATE camera localization utils)
+add_executable(localization_test2 localization_test2.cc)
+target_link_libraries(localization_test2 PRIVATE camera localization utils)
+
+add_executable(localization_test3 localization_test3.cc)
+target_link_libraries(localization_test3 PRIVATE camera localization utils)
 
 add_executable(networktable_performance_test networktable_performance_test.cc)
 target_link_libraries(networktable_performance_test PRIVATE utils localization)
