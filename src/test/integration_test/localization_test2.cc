@@ -42,9 +42,9 @@ auto main(int argc, char** argv) -> int {
   std::vector<std::pair<camera::CameraConstant, localization::Detector>>
       cameras{{constants.at(camera_name), localization::OPENCV_CPU}};
 
-  auto disk_paths =
-      std::make_optional<std::vector<std::string>>({"/bos/logs/real_log/left"});
+  auto paths =
+      std::make_optional<std::vector<std::filesystem::path>>({image_path});
 
-  localization::UnambiguousEstimator estimator(cameras, disk_paths);
+  localization::UnambiguousEstimator estimator(cameras, paths);
   estimator.Run();
 }

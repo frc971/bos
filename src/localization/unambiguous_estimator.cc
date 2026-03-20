@@ -21,7 +21,7 @@ namespace localization {
 
 UnambiguousEstimator::UnambiguousEstimator(
     std::vector<std::pair<camera::CameraConstant, Detector>>& cameras,
-    std::optional<std::vector<std::string>>& img_dir_paths,
+    std::optional<std::vector<std::filesystem::path>>& img_dir_paths,
     std::optional<uint> port_start, bool verbose)
     : port_start_(port_start), sim_(img_dir_paths.has_value()) {
   std::string log_path = frc::DataLogManager::GetLogDir();

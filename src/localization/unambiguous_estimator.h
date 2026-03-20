@@ -20,7 +20,7 @@ class UnambiguousEstimator {
  public:
   UnambiguousEstimator(
       std::vector<std::pair<camera::CameraConstant, Detector>>& cameras,
-      std::optional<std::vector<std::string>>& img_dir_paths,
+      std::optional<std::vector<std::filesystem::path>>& img_dir_paths,
       std::optional<uint> port_start = std::nullopt, bool verbose = false);
   void Run();
 
@@ -46,6 +46,7 @@ class UnambiguousEstimator {
   std::mutex mutex_;
   std::vector<std::pair<position_estimate_t, position_estimate_t>>
       all_pose_estimates_;
+  std::vector<double> prev_timestamps_;
   const bool sim_;
   std::optional<wpi::log::DataLogWriter> log_;
   std::optional<wpi::log::StructLogEntry<frc::Pose3d>> pose_log_;
