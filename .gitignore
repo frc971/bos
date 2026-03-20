@@ -16,3 +16,4 @@ build
 logs/
 *.wpilog
 bos_logs/
+wpilib-install

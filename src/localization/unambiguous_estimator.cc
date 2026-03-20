@@ -264,12 +264,9 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   bool invalid = false;
   for (const position_estimate_t& est : best_solution) {
     avg_variance += est.variance;
-    // std::cout << "Using tags: ";
-    // for (const int tag_id : est.tag_ids) {
-    //   tag_ids.insert(tag_id);
-    //   std::cout << tag_id << ", ";
-    // }
-    // std::cout << std::endl;
+    for (const int tag_id : est.tag_ids) {
+      tag_ids.insert(tag_id);
+    }
     avg_timestamp += est.timestamp;
   }
   avg_timestamp /= best_solution.size();
