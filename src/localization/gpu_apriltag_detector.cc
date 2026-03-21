@@ -3,7 +3,7 @@
 #include "apriltag/apriltag.h"
 #include "apriltag/tag36h11.h"
 #include "src/utils/constants_from_json.h"
-#include "third_party/971apriltag/971apriltag.h"
+#include "third_party/971apriltag/apriltag.h"
 
 namespace localization {
 using json = nlohmann::json;
@@ -30,23 +30,24 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
   apriltag_detector_->qtp.min_white_black_diff = 4;
   apriltag_detector_->debug = false;
 
-  gpu_detector_ = std::make_unique<frc971::apriltag::GpuDetector>(
+  gpu_detector_ = std::make_unique<frc::apriltag::GpuDetector>(
       image_width, image_height, apriltag_detector_,
-      utils::CameraMatrixFromJson<frc971::apriltag::CameraMatrix>(intrinsics),
-      utils::DistortionCoefficientsFromJson<frc971::apriltag::DistCoeffs>(
-          intrinsics));
+      utils::CameraMatrixFromJson<frc::apriltag::CameraMatrix>(intrinsics),
+      utils::DistortionCoefficientsFromJson<frc::apriltag::DistCoeffs>(
+          intrinsics),
+      vision::ImageFormat::BGR8);
 }
 auto GPUAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame)
     -> std::vector<tag_detection_t> {
   try {
     if (timestamped_frame.frame.channels() == 1) {
-      gpu_detector_->DetectGrayHost(
-          (unsigned char*)timestamped_frame.frame.ptr());
+      gpu_detector_->Detect((unsigned char*)timestamped_frame.frame.ptr(),
+                            nullptr);
     } else if (timestamped_frame.frame.channels() == 3) {
       cv::Mat gray;
       cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
-      gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
+      gpu_detector_->Detect((unsigned char*)gray.ptr(), nullptr);
     } else {
       LOG(ERROR) << "Unknown frame type";
     }

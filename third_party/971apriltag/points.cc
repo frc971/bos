@@ -1,11 +1,12 @@
 #include "points.h"
 
+#include <cub/iterator/transform_input_iterator.cuh>
 #include <iomanip>
 #include <ostream>
 
-namespace frc971::apriltag {
+namespace frc::apriltag {
 
-std::ostream &operator<<(std::ostream &os, const QuadBoundaryPoint &point) {
+std::ostream& operator<<(std::ostream& os, const QuadBoundaryPoint& point) {
   std::ios_base::fmtflags original_flags = os.flags();
 
   os << "key:" << std::hex << std::setw(16) << std::setfill('0') << point.key
@@ -18,7 +19,7 @@ std::ostream &operator<<(std::ostream &os, const QuadBoundaryPoint &point) {
 static_assert(sizeof(QuadBoundaryPoint) == 8,
               "QuadBoundaryPoint didn't pack right.");
 
-std::ostream &operator<<(std::ostream &os, const IndexPoint &point) {
+std::ostream& operator<<(std::ostream& os, const IndexPoint& point) {
   std::ios_base::fmtflags original_flags = os.flags();
 
   os << "key:" << std::hex << std::setw(16) << std::setfill('0') << point.key
@@ -30,4 +31,4 @@ std::ostream &operator<<(std::ostream &os, const IndexPoint &point) {
 
 static_assert(sizeof(IndexPoint) == 8, "IndexPoint didn't pack right.");
 
-}  // namespace frc971::apriltag
+}  // namespace frc::apriltag
