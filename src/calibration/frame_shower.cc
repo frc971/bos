@@ -20,7 +20,7 @@ auto main(int argc, char* argv[]) -> int {
 
   camera::CscoreStreamer streamer("frame_shower",
                                   absl::GetFlag(FLAGS_port).value_or(5801), 30,
-                                  camera.GetFrame().frame, 0.1);
+                                  camera.GetFrame().frame);
 
   LOG(INFO) << "Camera opened successfully" << std::endl;
 
