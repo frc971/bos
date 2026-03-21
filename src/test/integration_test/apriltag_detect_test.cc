@@ -29,7 +29,7 @@ auto main(int argc, char* argv[]) -> int {
       camera::GetCameraConstants().at("main_bot_left");
   camera::CameraSource source(
       "stress_test_camera",
-      std::make_unique<camera::DiskCamera>("/bos/joint_bad_frames/", 2), true);
+      std::make_unique<camera::DiskCamera>("/bos/joint_bad_frames/", 4), true);
   cv::Mat frame = source.GetFrame();
 
   camera::CscoreStreamer streamer("tag_estimator_test", 5801, 30, frame);
@@ -44,6 +44,7 @@ auto main(int argc, char* argv[]) -> int {
   while (true) {
     utils::Timer timer("tag estimator apriltag", time);
     timestamped_frame = source.Get();
+    std::cout << "Processing: " << timestamped_frame.timestamp << std::endl;
 
     std::vector<localization::tag_detection_t> tag_detections =
         detector.GetTagDetections(timestamped_frame);

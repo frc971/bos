@@ -21,7 +21,6 @@ class CameraSource {
   std::thread thread_;
   std::mutex mutex_;
   const bool simulation_;
-  bool done = false;
 };
 
 }  // namespace camera
