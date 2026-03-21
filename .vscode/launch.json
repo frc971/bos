@@ -8,7 +8,7 @@
             "program": "${workspaceFolder}/build/src/test/integration_test/localization_test2",
             "args": [
                 "--camera_name=main_bot_left",
-                "--image_folder=/bos/bos_logs/trimmed",
+                "--image_folder=/bos/bos_logs/real_log/left",
                 "--speed=1"
             ],
             "stopAtEntry": false,

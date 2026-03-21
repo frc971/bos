@@ -15,6 +15,9 @@ enum Detector { OPENCV_CPU, AUSTIN_GPU };
 using latent_estimate_t = struct LatentEstimate {
   position_estimate_t pose_estimate;
   double latency;
+  double best_cost;
+  bool used_prev_pose;
+  std::vector<frc::Pose3d> all_pose_estimates;
   bool invalid = false;
 };
 class UnambiguousEstimator {
@@ -33,11 +36,12 @@ class UnambiguousEstimator {
   auto ComputeCost(const std::vector<position_estimate_t>& poses) -> double;
   static auto WeightedAveragePose(
       const std::vector<position_estimate_t>& solutions) -> frc::Pose3d;
-  void SearchSolutions(
+  auto SearchSolutions(
       const std::vector<std::pair<position_estimate_t, position_estimate_t>>&
           all_pose_estimates,
       size_t index, std::vector<position_estimate_t>& current_solution,
-      std::vector<position_estimate_t>& best_solution, double& best_cost);
+      std::vector<position_estimate_t>& best_solution, double& best_cost)
+      -> double;
 
  private:
   std::vector<camera::CscoreStreamer> streamers_;
@@ -53,8 +57,11 @@ class UnambiguousEstimator {
   std::optional<wpi::log::StructLogEntry<frc::Pose3d>> pose_log_;
   std::optional<wpi::log::DoubleLogEntry> num_tags_log_;
   std::optional<wpi::log::DoubleLogEntry> timestamp_log_;
-  static constexpr double interesting_timestamp_start_ = 0.0;
-  static constexpr double interesting_timestamp_end_ = 100;
+  std::optional<wpi::log::DoubleLogEntry> best_cost_log_;
+  std::optional<wpi::log::BooleanLogEntry> used_prev_pose_log_;
+  std::optional<wpi::log::StructArrayLogEntry<frc::Pose3d>> all_pose_estimates_log_;
+  static constexpr double interesting_timestamp_start_ = 34;
+  static constexpr double interesting_timestamp_end_ = 35;
   static constexpr double kuse_prev_pose_threshold = 100;
   bool log_interesting_timestamp_ = false;
   bool use_prev_pose_ = false;
