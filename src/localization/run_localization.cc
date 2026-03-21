@@ -61,6 +61,7 @@ void RunLocalizationSimulation(
   log->AddStructSchema<frc::Pose3d>(0);
   wpi::log::StructLogEntry<frc::Pose3d> pose_log(*log, "/localization/pose");
   wpi::log::DoubleLogEntry num_tags_log(*log, "/localization/num_tags");
+  wpi::log::DoubleLogEntry timestamp_log(*log, "/localization/timestamp");
   while (true) {
     camera::timestamped_frame_t timestamped_frame = source.Get();
     double timestamp = timestamped_frame.timestamp;
@@ -79,6 +80,7 @@ void RunLocalizationSimulation(
     for (const auto& estimate : position_estimates) {
       pose_log.Append(estimate.pose, log_time);
       num_tags_log.Append(estimate.num_tags, log_time);
+      timestamp_log.Append(estimate.timestamp, log_time);
     }
   }
 }

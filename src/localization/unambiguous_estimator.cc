@@ -181,14 +181,18 @@ void UnambiguousEstimator::FillPoseEstimates() {
         std::cout << "Stopped log" << std::endl;
         throw std::runtime_error("DONE");
       }
-      if (prev_timestamps_[i] == frame.timestamp) {
-        // std::cout << "Rejecting " << frame.timestamp << std::endl;
+      if (log_interesting_timestamp_ &&
+          prev_timestamps_[i] == frame.timestamp) {
+        std::cout << "Rejecting " << frame.timestamp << std::endl;
         return;
       }
-      // if (std::abs(frame.timestamp - 26.632) < 0.01 ||
-      //     std::abs(frame.timestamp - 26.54) < 0.01) {
-      //   cv::imwrite("bad_frame.jpg", frame.frame);
-      // }
+      if (frame.timestamp > interesting_timestamp_start_ &&
+          frame.timestamp < interesting_timestamp_end_) {
+        log_interesting_timestamp_ = true;
+        cv::imwrite(fmt::format("{}.jpg", frame.timestamp), frame.frame);
+      } else {
+        log_interesting_timestamp_ = false;
+      }
       prev_timestamps_[i] = frame.timestamp;
       // std::cout << "Using: " << frame.timestamp << std::endl;
 
@@ -216,8 +220,7 @@ void UnambiguousEstimator::FillPoseEstimates() {
   if (all_pose_estimates_.empty()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
   } else {
-    if (std::abs(all_pose_estimates_[0].first.timestamp - 26.632) < 0.01 ||
-        std::abs(all_pose_estimates_[0].first.timestamp - 26.54) < 0.01) {
+    if (log_interesting_timestamp_) {
       std::cout << "Timestamp: " << all_pose_estimates_[0].first.timestamp
                 << " Num estimates: " << all_pose_estimates_.size()
                 << std::endl;
@@ -254,7 +257,7 @@ void UnambiguousEstimator::Run() {
 
 auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   // std::cout << "GETTING ESTIMATE " << std::endl;
-  utils::Timer fetch_timer("Fetch", false);
+  utils::Timer fetch_timer("Fetch", log_interesting_timestamp_);
   FillPoseEstimates();
   fetch_timer.Stop();
   std::vector<position_estimate_t> best_solution;
@@ -262,15 +265,15 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
 
   double best_cost = std::numeric_limits<double>::infinity();
 
-  utils::Timer search_timer("Search", false);
+  utils::Timer search_timer("Search", log_interesting_timestamp_);
   SearchSolutions(0, current_solution, best_solution, best_cost);
   search_timer.Stop();
-  if (best_solution.size() == 0) {
-    // std::cout << "Nothing in the solution" << std::endl;
+  if (log_interesting_timestamp_ && best_solution.size() == 0) {
+    std::cout << "Nothing in the solution" << std::endl;
     return {.invalid = true};
   }
   // std::cout << "Num estimates used: " << best_solution.size() << std::endl;
-  utils::Timer everything_timer("everything else", false);
+  utils::Timer everything_timer("everything else", log_interesting_timestamp_);
   double avg_variance = 0;
   double avg_timestamp = 0;
   std::unordered_set<int> tag_ids;
@@ -283,11 +286,6 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
     avg_timestamp += est.timestamp;
   }
   avg_timestamp /= best_solution.size();
-  if (std::abs(avg_timestamp - 26.632) < 0.01 ||
-      std::abs(avg_timestamp - 26.54) < 0.01) {
-    std::cout << "Timestamp" << avg_timestamp
-              << "Num estimates used: " << best_solution.size() << std::endl;
-  }
   // if (avg_timestamp >= 15 && avg_timestamp < 16) {
   //   std::cout << "Had estimates: " << std::endl;
   //   for (const auto& est : all_pose_estimates_) {
@@ -308,6 +306,10 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
       .num_tags = num_tags,
       .invalid = invalid};
   everything_timer.Stop();
+  if (log_interesting_timestamp_) {
+    std::cout << "Timestamp" << avg_timestamp
+              << "Num estimates used: " << best_solution.size() << std::endl;
+  }
   return {.pose_estimate = averaged_estimate, .latency = 0};
 }
 

@@ -52,5 +52,8 @@ class UnambiguousEstimator {
   std::optional<wpi::log::StructLogEntry<frc::Pose3d>> pose_log_;
   std::optional<wpi::log::DoubleLogEntry> num_tags_log_;
   std::optional<wpi::log::DoubleLogEntry> timestamp_log_;
+  static constexpr double interesting_timestamp_start_ = 31.4;
+  static constexpr double interesting_timestamp_end_ = 32.6;
+  bool log_interesting_timestamp_ = false;
 };
 }  // namespace localization
