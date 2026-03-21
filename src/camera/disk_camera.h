@@ -2,7 +2,6 @@
 #include <chrono>
 #include <queue>
 #include "src/camera/camera.h"
-#include "src/camera/camera_source.h"
 #include "src/utils/pch.h"
 #include "src/utils/timer.h"
 

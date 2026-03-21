@@ -1,5 +1,6 @@
 #pragma once
 #include "src/camera/camera.h"
+#include "src/camera/disk_camera.h"
 #include "src/utils/pch.h"
 namespace camera {
 
@@ -8,8 +9,7 @@ namespace camera {
 // cv::Mat's reference counter seems to be atomic, so it behaves similarly to a std::shared_ptr and it is safe to access the same cv::Mat across multiple threads as longs as we do not write to it
 class CameraSource {
  public:
-  CameraSource(std::string name, std::unique_ptr<ICamera> camera,
-               bool simulation = false);
+  CameraSource(std::string name, std::unique_ptr<ICamera> camera, bool simulation = false, bool use_fetcher_thread = true);
   [[nodiscard]] auto Get() -> timestamped_frame_t;
   [[nodiscard]] auto GetFrame() -> cv::Mat;
   [[nodiscard]] auto GetName() const -> std::string { return name_; }
@@ -21,6 +21,7 @@ class CameraSource {
   std::thread thread_;
   std::mutex mutex_;
   const bool simulation_;
+  const bool use_fetcher_thread_;
 };
 
 }  // namespace camera

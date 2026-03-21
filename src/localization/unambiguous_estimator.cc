@@ -39,7 +39,7 @@ UnambiguousEstimator::UnambiguousEstimator(
       sources_.push_back(std::make_unique<camera::CameraSource>(
           cameras[i].first.name,
           std::make_unique<camera::DiskCamera>(img_dir_paths.value()[i], 10),
-          true));
+          true, false));
     } else {
       sources_.push_back(std::make_unique<camera::CameraSource>(
           cameras[i].first.name,
