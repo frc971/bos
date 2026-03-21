@@ -1,6 +1,7 @@
 #include "src/localization/unambiguous_estimator.h"
 #include <frc/DataLogManager.h>
 #include <frc/geometry/Pose3d.h>
+#include <frc/geometry/Translation3d.h>
 #include <frc/geometry/struct/Pose3dStruct.h>
 #include <wpi/DataLog.h>
 #include <wpi/DataLogWriter.h>
@@ -17,6 +18,7 @@
 #include "src/utils/camera_utils.h"
 #include "src/utils/log.h"
 #include "src/utils/timer.h"
+#include "src/utils/transform.h"
 
 namespace localization {
 
@@ -107,6 +109,9 @@ auto UnambiguousEstimator::ComputeCost(
   double cost = 0.0;
 
   for (size_t i = 0; i < poses.size(); i++) {
+    if (poses[i].invalid) {
+      return 1000;
+    }
     for (size_t j = i + 1; j < poses.size(); j++) {
       cost += Cost(poses[i].pose, poses[j].pose);
     }
@@ -226,9 +231,19 @@ auto UnambiguousEstimator::FillPoseEstimates()
 
       {
         std::lock_guard<std::mutex> lock(mutex_);
-        all_pose_estimates_.insert(all_pose_estimates_.end(),
-                                   pose_estimates.begin(),
-                                   pose_estimates.end());
+        for (auto& est : pose_estimates) {
+          if (std::abs(est.first.timestamp - 14.484) < 0.05) {
+            std::cout << "It's debuggin time" << std::endl;
+          }
+          bool firstOffField = utils::PoseOffField(est.first.pose);
+          bool secondOffField = utils::PoseOffField(est.second.pose);
+          if (firstOffField && secondOffField) {
+            continue;
+          }
+          est.first.invalid = firstOffField;
+          est.second.invalid = secondOffField;
+          all_pose_estimates_.push_back(std::move(est));
+        }
       }
 
       if (port_start_.has_value()) {
@@ -298,10 +313,6 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
     all_pose_estimates_for_log.push_back(est.first.pose);
     all_pose_estimates_for_log.push_back(est.second.pose);
   }
-  // std::cout << "All poses" << std::endl;
-  // for (const auto& est : all_pose_estimates_for_log) {
-  //   utils::PrintPose3d(est);
-  // }
   fetch_timer.Stop();
   std::vector<position_estimate_t> best_solution;
   std::vector<position_estimate_t> current_solution;
@@ -312,10 +323,6 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   double cost = SearchSolutions(all_pose_estimates, 0, current_solution,
                                 best_solution, best_cost);
   search_timer.Stop();
-  // std::cout << "Best poses" << std::endl;
-  // for (const auto& est : best_solution) {
-  //   utils::PrintPose3d(est.pose);
-  // }
   if (best_solution.size() == 0) {
     return {.invalid = true};
   }
@@ -335,6 +342,16 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   avg_variance /= best_solution.size();
   if (std::isnan(avg_timestamp)) {
     std::cout << "Morbin time" << std::endl;
+  }
+  if (std::abs(avg_timestamp - 14.484) < 0.05) {
+    std::cout << "All poses" << std::endl;
+    for (const auto& est : all_pose_estimates_for_log) {
+      utils::PrintPose3d(est);
+    }
+    std::cout << "Best poses" << std::endl;
+    for (const auto& est : best_solution) {
+      utils::PrintPose3d(est.pose);
+    }
   }
   const int num_tags = tag_ids.size();
   position_estimate_t averaged_estimate = {
