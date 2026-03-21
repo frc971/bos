@@ -176,62 +176,55 @@ auto UnambiguousEstimator::FillPoseEstimates()
   // std::cout << "FILLING POSE ESTIMATES" << std::endl;
   std::vector<std::pair<position_estimate_t, position_estimate_t>>
       all_pose_estimates_;
-  std::vector<std::thread> workers;
   for (size_t i = 0; i < sources_.size(); ++i) {
-    workers.emplace_back([&, i]() {
-      // std::cout << "Fetching " << std::endl;
-      camera::timestamped_frame_t frame = sources_[i]->Get();
-      if (frame.invalid) {
-        std::cout << "Stopping log" << std::endl;
-        log_.value().Stop();
-        std::cout << "Stopped log" << std::endl;
-        throw std::runtime_error("DONE");
-      }
-      if (prev_timestamps_[i] == frame.timestamp) {
-        // std::cout << "Rejecting " << frame.timestamp << std::endl;
-        return;
-      }
-      if (frame.timestamp > interesting_timestamp_start_ &&
-          frame.timestamp < interesting_timestamp_end_) {
-        log_interesting_timestamp_ = true;
-        std::cout << "Using: " << frame.timestamp << std::endl;
-        // cv::imwrite(fmt::format("{}.jpg", frame.timestamp), frame.frame);
-      } else {
-        log_interesting_timestamp_ = false;
-      }
-      prev_timestamps_[i] = frame.timestamp;
+    // std::cout << "Fetching " << std::endl;
+    camera::timestamped_frame_t frame = sources_[i]->Get();
+    if (frame.invalid) {
+      std::cout << "Stopping log" << std::endl;
+      log_.value().Stop();
+      std::cout << "Stopped log" << std::endl;
+      throw std::runtime_error("DONE");
+    }
+    if (prev_timestamps_[i] == frame.timestamp) {
+      // std::cout << "Rejecting " << frame.timestamp << std::endl;
+      continue;
+    }
+    if (frame.timestamp > interesting_timestamp_start_ &&
+        frame.timestamp < interesting_timestamp_end_) {
+      log_interesting_timestamp_ = true;
+      std::cout << "Using: " << frame.timestamp << std::endl;
+      // cv::imwrite(fmt::format("{}.jpg", frame.timestamp), frame.frame);
+    } else {
+      log_interesting_timestamp_ = false;
+    }
+    prev_timestamps_[i] = frame.timestamp;
 
-      std::vector<tag_detection_t> detections =
-          detectors_[i]->GetTagDetections(frame);
+    std::vector<tag_detection_t> detections =
+        detectors_[i]->GetTagDetections(frame);
 
-      // std::cout << "Timestamp: " << frame.timestamp << " has "
-      //           << detections.size() << " detections" << std::endl;
+    // std::cout << "Timestamp: " << frame.timestamp << " has "
+    //           << detections.size() << " detections" << std::endl;
 
-      if (log_interesting_timestamp_ && detections.size() <= 1) {
-        CHECK(frame.timestamp < 6);
-        std::cout << "Writing bad frame with timestamp: " << frame.timestamp
-                  << std::endl;
-        cv::imwrite(fmt::format("joint_bad_frames/{}.jpg", frame.timestamp),
-                    frame.frame);
-      }
+    if (log_interesting_timestamp_ && detections.size() <= 1) {
+      // CHECK(frame.timestamp < 6);
+      std::cout << "Writing bad frame with timestamp: " << frame.timestamp
+                << std::endl;
+      cv::imwrite(fmt::format("joint_bad_frames/{}.jpg", frame.timestamp),
+                  frame.frame);
+    }
 
-      std::vector<std::pair<position_estimate_t, position_estimate_t>>
-          pose_estimates = solvers_[i].EstimatePositionAmbiguous(detections);
+    std::vector<std::pair<position_estimate_t, position_estimate_t>>
+        pose_estimates = solvers_[i].EstimatePositionAmbiguous(detections, false);
 
-      {
-        std::lock_guard<std::mutex> lock(mutex_);
-        all_pose_estimates_.insert(all_pose_estimates_.end(),
-                                   pose_estimates.begin(),
-                                   pose_estimates.end());
-      }
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      all_pose_estimates_.insert(all_pose_estimates_.end(),
+                                 pose_estimates.begin(), pose_estimates.end());
+    }
 
-      if (port_start_.has_value()) {
-        streamers_[i].WriteFrame(frame.frame);
-      }
-    });
-  }
-  for (auto& t : workers) {
-    t.join();
+    if (port_start_.has_value()) {
+      streamers_[i].WriteFrame(frame.frame);
+    }
   }
   if (all_pose_estimates_.empty()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -302,7 +295,6 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
       for (const auto& est : all_pose_estimates) {
         std::cout << est.first << std::endl;
       }
-      std::exit(0);
     }
     return {.invalid = true};
   }
