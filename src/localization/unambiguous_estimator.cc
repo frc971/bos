@@ -5,6 +5,7 @@
 #include <frc/geometry/struct/Pose3dStruct.h>
 #include <wpi/DataLog.h>
 #include <wpi/DataLogWriter.h>
+#include <future>
 #include <unordered_set>
 #include <utility>
 #include "src/camera/cscore_streamer.h"
@@ -204,9 +205,9 @@ auto UnambiguousEstimator::FillPoseEstimates()
     -> std::vector<std::pair<position_estimate_t, position_estimate_t>> {
   std::vector<std::pair<position_estimate_t, position_estimate_t>>
       all_pose_estimates_;
-  std::vector<std::thread> workers;
+  std::vector<std::future<void>> futures;
   for (size_t i = 0; i < sources_.size(); ++i) {
-    workers.emplace_back([&, i]() {
+    futures.emplace_back(std::async(std::launch::async, [&, i]() {
       camera::timestamped_frame_t frame = sources_[i]->Get();
       if (log_.has_value() && frame.invalid) {
         std::cout << "Stopping log at timestamp: " << std::endl;
@@ -249,10 +250,22 @@ auto UnambiguousEstimator::FillPoseEstimates()
       if (port_start_.has_value()) {
         streamers_[i].WriteFrame(frame.frame);
       }
-    });
+    }));
   }
-  for (auto& t : workers) {
-    t.join();
+  constexpr auto timeout = std::chrono::milliseconds(50);  // tune this
+  auto deadline = std::chrono::steady_clock::now() + timeout;
+  for (auto& f : futures) {
+    auto now = std::chrono::steady_clock::now();
+    if (now >= deadline) {
+      std::cerr << "Global timeout reached before all workers completed\n";
+      break;
+    }
+    auto remaining = deadline - now;
+    if (f.wait_for(remaining) == std::future_status::ready) {
+      f.get();
+    } else {
+      std::cerr << "Worker timed out\n";
+    }
   }
   if (all_pose_estimates_.empty()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
