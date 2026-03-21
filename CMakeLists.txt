@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(BOS CXX C CUDA)
 
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -13,11 +13,10 @@ set(CMAKE_CUDA20_STANDARD_COMPILE_OPTION "-std=c++20")
 set(CMAKE_CUDA20_EXTENSION_COMPILE_OPTION "-std=c++20")
 set(CMAKE_CUDA_FLAGS "--expt-relaxed-constexpr")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 option(ENABLE_CLANG_TIDY "Enable clang-tidy for static analysis" ON)
-
 
 include_directories(/usr/local/cuda/include)
 link_directories(/usr/local/cuda/lib64)
@@ -39,11 +38,4 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 add_compile_options(-Wno-psabi)
-# Replace existing -O flags with -O0 for C++
-STRING(REPLACE "-O2" "-O0" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-STRING(REPLACE "-O3" "-O0" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-# Repeat for CMAKE_C_FLAGS_DEBUG if needed
-
-# Append -O0 to ensure it's the last and effective flag
-STRING(APPEND CMAKE_CXX_FLAGS_DEBUG " -O0")
 add_subdirectory(src)
