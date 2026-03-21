@@ -26,16 +26,18 @@ class UnambiguousEstimator {
 
  private:
   auto GetUnambiguatedEstimate() -> latent_estimate_t;
-  void FillPoseEstimates();
+  auto FillPoseEstimates()
+      -> std::vector<std::pair<position_estimate_t, position_estimate_t>>;
   static auto Cost(const frc::Pose3d& a, const frc::Pose3d& b) -> double;
   static auto ComputeCost(const std::vector<position_estimate_t>& poses)
       -> double;
   static auto WeightedAveragePose(
       const std::vector<position_estimate_t>& solutions) -> frc::Pose3d;
-  void SearchSolutions(size_t index,
-                       std::vector<position_estimate_t>& current_solution,
-                       std::vector<position_estimate_t>& best_solution,
-                       double& best_cost);
+  void SearchSolutions(
+      const std::vector<std::pair<position_estimate_t, position_estimate_t>>&
+          all_pose_estimates,
+      size_t index, std::vector<position_estimate_t>& current_solution,
+      std::vector<position_estimate_t>& best_solution, double& best_cost);
 
  private:
   std::vector<camera::CscoreStreamer> streamers_;
@@ -44,8 +46,7 @@ class UnambiguousEstimator {
   std::vector<SquareSolver> solvers_;
   const std::optional<uint> port_start_;
   std::mutex mutex_;
-  std::vector<std::pair<position_estimate_t, position_estimate_t>>
-      all_pose_estimates_;
+
   std::vector<double> prev_timestamps_;
   const bool sim_;
   std::optional<wpi::log::DataLogWriter> log_;

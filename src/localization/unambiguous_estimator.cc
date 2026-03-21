@@ -143,6 +143,8 @@ auto UnambiguousEstimator::WeightedAveragePose(
 }
 
 void UnambiguousEstimator::SearchSolutions(
+    const std::vector<std::pair<position_estimate_t, position_estimate_t>>&
+        all_pose_estimates_,
     size_t index, std::vector<position_estimate_t>& current_solution,
     std::vector<position_estimate_t>& best_solution, double& best_cost) {
   if (index == all_pose_estimates_.size()) {
@@ -159,17 +161,21 @@ void UnambiguousEstimator::SearchSolutions(
   const auto& pair = all_pose_estimates_[index];
 
   current_solution.push_back(pair.first);
-  SearchSolutions(index + 1, current_solution, best_solution, best_cost);
+  SearchSolutions(all_pose_estimates_, index + 1, current_solution,
+                  best_solution, best_cost);
   current_solution.pop_back();
 
   current_solution.push_back(pair.second);
-  SearchSolutions(index + 1, current_solution, best_solution, best_cost);
+  SearchSolutions(all_pose_estimates_, index + 1, current_solution,
+                  best_solution, best_cost);
   current_solution.pop_back();
 }
 
-void UnambiguousEstimator::FillPoseEstimates() {
-  std::cout << "FILLING POSE ESTIMATES" << std::endl;
-  all_pose_estimates_.clear();
+auto UnambiguousEstimator::FillPoseEstimates()
+    -> std::vector<std::pair<position_estimate_t, position_estimate_t>> {
+  // std::cout << "FILLING POSE ESTIMATES" << std::endl;
+  std::vector<std::pair<position_estimate_t, position_estimate_t>>
+      all_pose_estimates_;
   std::vector<std::thread> workers;
   for (size_t i = 0; i < sources_.size(); ++i) {
     workers.emplace_back([&, i]() {
@@ -198,8 +204,8 @@ void UnambiguousEstimator::FillPoseEstimates() {
       std::vector<tag_detection_t> detections =
           detectors_[i]->GetTagDetections(frame);
 
-      std::cout << "Timestamp: " << frame.timestamp << " has "
-                << detections.size() << " detections" << std::endl;
+      // std::cout << "Timestamp: " << frame.timestamp << " has "
+      //           << detections.size() << " detections" << std::endl;
 
       if (log_interesting_timestamp_ && detections.size() <= 1) {
         CHECK(frame.timestamp < 6);
@@ -231,16 +237,18 @@ void UnambiguousEstimator::FillPoseEstimates() {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
   } else {
     if (log_interesting_timestamp_) {
-      std::cout << "Timestamp: " << all_pose_estimates_[0].first.timestamp
-                << " Num estimates: " << all_pose_estimates_.size()
-                << std::endl;
+      // std::cout << "Timestamp: " << all_pose_estimates_[0].first.timestamp
+      //           << " Num estimates: " << all_pose_estimates_.size()
+      //           << std::endl;
     }
   }
+  return all_pose_estimates_;
   // std::cout << "Received: " << all_pose_estimates_.size() << " estimates"
   //           << std::endl;
 }
 
 void UnambiguousEstimator::Run() {
+  std::cout << "Running run" << std::endl;
   if (!sim_) {
     localization::PositionSender position_sender("Front");
     while (true) {
@@ -257,6 +265,7 @@ void UnambiguousEstimator::Run() {
       if (pose_estimate.invalid) {
         continue;
       }
+      std::cout << "ab";
       auto log_time = static_cast<int64_t>(pose_estimate.timestamp * 1e6);
       pose_log_.value().Append(pose_estimate.pose, log_time);
       num_tags_log_.value().Append(pose_estimate.num_tags, log_time);
@@ -268,7 +277,14 @@ void UnambiguousEstimator::Run() {
 auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   // std::cout << "GETTING ESTIMATE " << std::endl;
   utils::Timer fetch_timer("Fetch", false);
-  FillPoseEstimates();
+  const auto& all_pose_estimates = FillPoseEstimates();
+  if (all_pose_estimates.empty()) {
+    std::cout << "NO ESTIMATES" << std::endl;
+  } else {
+    std::cout << "Timestamp " << all_pose_estimates[0].first.timestamp
+              << " has " << all_pose_estimates.size() / 2 << " estimates"
+              << std::endl;
+  }
   fetch_timer.Stop();
   std::vector<position_estimate_t> best_solution;
   std::vector<position_estimate_t> current_solution;
@@ -276,10 +292,18 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   double best_cost = std::numeric_limits<double>::infinity();
 
   utils::Timer search_timer("Search", false);
-  SearchSolutions(0, current_solution, best_solution, best_cost);
+  SearchSolutions(all_pose_estimates, 0, current_solution, best_solution,
+                  best_cost);
   search_timer.Stop();
   if (log_interesting_timestamp_ && best_solution.size() == 0) {
-    std::cout << "Nothing in the solution " << std::endl;
+    // std::cout << "Nothing in the solution " << std::endl;
+    if (!all_pose_estimates.empty() &&
+        all_pose_estimates[0].first.timestamp > 0.1) {
+      for (const auto& est : all_pose_estimates) {
+        std::cout << est.first << std::endl;
+      }
+      std::exit(0);
+    }
     return {.invalid = true};
   }
   // std::cout << "Num estimates used: " << best_solution.size() << std::endl;
