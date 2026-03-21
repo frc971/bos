@@ -62,7 +62,7 @@ class UnambiguousEstimator {
   std::optional<wpi::log::StructArrayLogEntry<frc::Pose3d>> all_pose_estimates_log_;
   static constexpr double interesting_timestamp_start_ = 34;
   static constexpr double interesting_timestamp_end_ = 35;
-  static constexpr double kuse_prev_pose_threshold = 100;
+  static constexpr double kuse_prev_pose_threshold = 100; // tune
   bool log_interesting_timestamp_ = false;
   bool use_prev_pose_ = false;
 };

@@ -100,7 +100,7 @@ auto UnambiguousEstimator::Cost(const frc::Pose3d& a, const frc::Pose3d& b)
   frc::Rotation3d delta = a.Rotation() - b.Rotation();
   double rotation = delta.Angle().value();
 
-  constexpr double kRotationWeight = 0.0;
+  constexpr double kRotationWeight = 0.0;  // tune
   return translation + kRotationWeight * rotation;
 }
 
@@ -208,13 +208,13 @@ auto UnambiguousEstimator::FillPoseEstimates()
   for (size_t i = 0; i < sources_.size(); ++i) {
     workers.emplace_back([&, i]() {
       camera::timestamped_frame_t frame = sources_[i]->Get();
-      if (frame.invalid) {
+      if (log_.has_value() && frame.invalid) {
         std::cout << "Stopping log at timestamp: " << std::endl;
         log_.value().Stop();
         std::cout << "Stopped log" << std::endl;
         throw std::runtime_error("DONE");
       }
-      if (prev_timestamps_[i] == frame.timestamp) {
+      if (std::abs(prev_timestamps_[i] - frame.timestamp) < 1e-6) {
         return;
       }
       log_interesting_timestamp_ =
