@@ -15,6 +15,7 @@
 #include "src/localization/position_solver.h"
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
+#include "src/utils/log.h"
 #include "src/utils/timer.h"
 
 namespace localization {
@@ -203,7 +204,7 @@ auto UnambiguousEstimator::FillPoseEstimates()
     workers.emplace_back([&, i]() {
       camera::timestamped_frame_t frame = sources_[i]->Get();
       if (frame.invalid) {
-        std::cout << "Stopping log" << std::endl;
+        std::cout << "Stopping log at timestamp: " << std::endl;
         log_.value().Stop();
         std::cout << "Stopped log" << std::endl;
         throw std::runtime_error("DONE");
@@ -214,9 +215,6 @@ auto UnambiguousEstimator::FillPoseEstimates()
       log_interesting_timestamp_ =
           frame.timestamp > interesting_timestamp_start_ &&
           frame.timestamp < interesting_timestamp_end_;
-      if (log_interesting_timestamp_) {
-        std::cout << "It's loggin time" << std::endl;
-      }
       prev_timestamps_[i] = frame.timestamp;
 
       std::vector<tag_detection_t> detections =
@@ -300,6 +298,10 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
     all_pose_estimates_for_log.push_back(est.first.pose);
     all_pose_estimates_for_log.push_back(est.second.pose);
   }
+  // std::cout << "All poses" << std::endl;
+  // for (const auto& est : all_pose_estimates_for_log) {
+  //   utils::PrintPose3d(est);
+  // }
   fetch_timer.Stop();
   std::vector<position_estimate_t> best_solution;
   std::vector<position_estimate_t> current_solution;
@@ -310,6 +312,10 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   double cost = SearchSolutions(all_pose_estimates, 0, current_solution,
                                 best_solution, best_cost);
   search_timer.Stop();
+  // std::cout << "Best poses" << std::endl;
+  // for (const auto& est : best_solution) {
+  //   utils::PrintPose3d(est.pose);
+  // }
   if (best_solution.size() == 0) {
     return {.invalid = true};
   }
