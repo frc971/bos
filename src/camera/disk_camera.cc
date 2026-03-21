@@ -24,11 +24,6 @@ DiskCamera::DiskCamera(std::string image_folder_path, double speed)
     entry.timestamp -= offset;
     normalized.push(entry);
   }
-  // while (!normalized.empty()) {
-  //   std::cout << normalized.top().timestamp << " ";
-  //   normalized.pop();
-  // }
-  // std::exit(0);
   image_paths_ = std::move(normalized);
 }
 auto DiskCamera::GetFrame() -> timestamped_frame_t {
