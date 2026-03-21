@@ -5,6 +5,7 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/localization/apriltag_detector.h"
 #include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/position.h"
 #include "src/localization/position_solver.h"
 #include "src/localization/square_solver.h"
 #include "src/utils/pch.h"
@@ -29,8 +30,7 @@ class UnambiguousEstimator {
   auto FillPoseEstimates()
       -> std::vector<std::pair<position_estimate_t, position_estimate_t>>;
   static auto Cost(const frc::Pose3d& a, const frc::Pose3d& b) -> double;
-  static auto ComputeCost(const std::vector<position_estimate_t>& poses)
-      -> double;
+  auto ComputeCost(const std::vector<position_estimate_t>& poses) -> double;
   static auto WeightedAveragePose(
       const std::vector<position_estimate_t>& solutions) -> frc::Pose3d;
   void SearchSolutions(
@@ -46,8 +46,8 @@ class UnambiguousEstimator {
   std::vector<SquareSolver> solvers_;
   const std::optional<uint> port_start_;
   std::mutex mutex_;
-
   std::vector<double> prev_timestamps_;
+  std::optional<position_estimate_t> prev_pose_estimate_ = std::nullopt;
   const bool sim_;
   std::optional<wpi::log::DataLogWriter> log_;
   std::optional<wpi::log::StructLogEntry<frc::Pose3d>> pose_log_;
@@ -55,6 +55,8 @@ class UnambiguousEstimator {
   std::optional<wpi::log::DoubleLogEntry> timestamp_log_;
   static constexpr double interesting_timestamp_start_ = 0.0;
   static constexpr double interesting_timestamp_end_ = 100;
+  static constexpr double kuse_prev_pose_threshold = 100;
   bool log_interesting_timestamp_ = false;
+  bool use_prev_pose_ = false;
 };
 }  // namespace localization

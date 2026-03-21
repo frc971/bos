@@ -106,6 +106,9 @@ auto UnambiguousEstimator::ComputeCost(
     for (size_t j = i + 1; j < poses.size(); j++) {
       cost += Cost(poses[i].pose, poses[j].pose);
     }
+    if (use_prev_pose_) {
+      cost += Cost(poses[i].pose, prev_pose_estimate_.value().pose);
+    }
   }
 
   return cost;
@@ -206,7 +209,6 @@ auto UnambiguousEstimator::FillPoseEstimates()
     //           << detections.size() << " detections" << std::endl;
 
     if (log_interesting_timestamp_ && detections.size() <= 1) {
-      // CHECK(frame.timestamp < 6);
       std::cout << "Writing bad frame with timestamp: " << frame.timestamp
                 << std::endl;
       cv::imwrite(fmt::format("joint_bad_frames/{}.jpg", frame.timestamp),
@@ -214,7 +216,8 @@ auto UnambiguousEstimator::FillPoseEstimates()
     }
 
     std::vector<std::pair<position_estimate_t, position_estimate_t>>
-        pose_estimates = solvers_[i].EstimatePositionAmbiguous(detections, false);
+        pose_estimates =
+            solvers_[i].EstimatePositionAmbiguous(detections, false);
 
     {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -235,6 +238,10 @@ auto UnambiguousEstimator::FillPoseEstimates()
       //           << std::endl;
     }
   }
+  use_prev_pose_ =
+      prev_pose_estimate_.has_value() && !all_pose_estimates_.empty() &&
+      all_pose_estimates_[0].first.timestamp - prev_pose_estimate_->timestamp <
+          kuse_prev_pose_threshold;
   return all_pose_estimates_;
   // std::cout << "Received: " << all_pose_estimates_.size() << " estimates"
   //           << std::endl;
@@ -336,6 +343,7 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
     std::cout << "Timestamp" << avg_timestamp
               << "Num estimates used: " << best_solution.size() << std::endl;
   }
+  prev_pose_estimate_ = std::make_optional(averaged_estimate);
   return {.pose_estimate = averaged_estimate, .latency = 0};
 }
 
