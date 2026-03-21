@@ -74,6 +74,10 @@ void RunLocalizationSimulation(
     std::cout << "Reading from timestamp: " << timestamp << std::endl;
     std::vector<localization::tag_detection_t> tag_detections =
         detector->GetTagDetections(timestamped_frame);
+    if (tag_detections.size() == 0) {
+      cv::imwrite(fmt::format("multi_bad_frames/{}.jpg", timestamp),
+                  timestamped_frame.frame);
+    }
     std::vector<position_estimate_t> position_estimates =
         solver->EstimatePosition(tag_detections, false);
     auto log_time = static_cast<int64_t>(timestamp * 1e6);

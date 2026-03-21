@@ -181,15 +181,14 @@ void UnambiguousEstimator::FillPoseEstimates() {
         std::cout << "Stopped log" << std::endl;
         throw std::runtime_error("DONE");
       }
-      if (log_interesting_timestamp_ &&
-          prev_timestamps_[i] == frame.timestamp) {
+      if (prev_timestamps_[i] == frame.timestamp) {
         std::cout << "Rejecting " << frame.timestamp << std::endl;
         return;
       }
       if (frame.timestamp > interesting_timestamp_start_ &&
           frame.timestamp < interesting_timestamp_end_) {
         log_interesting_timestamp_ = true;
-        cv::imwrite(fmt::format("{}.jpg", frame.timestamp), frame.frame);
+        // cv::imwrite(fmt::format("{}.jpg", frame.timestamp), frame.frame);
       } else {
         log_interesting_timestamp_ = false;
       }
@@ -198,6 +197,11 @@ void UnambiguousEstimator::FillPoseEstimates() {
 
       std::vector<tag_detection_t> detections =
           detectors_[i]->GetTagDetections(frame);
+
+      if (detections.size() == 0) {
+        cv::imwrite(fmt::format("joint_bad_frames/{}.jpg", frame.timestamp),
+                    frame.frame);
+      }
 
       std::vector<std::pair<position_estimate_t, position_estimate_t>>
           pose_estimates = solvers_[i].EstimatePositionAmbiguous(detections);
