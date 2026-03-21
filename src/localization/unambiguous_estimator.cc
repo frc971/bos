@@ -198,41 +198,48 @@ auto UnambiguousEstimator::FillPoseEstimates()
     -> std::vector<std::pair<position_estimate_t, position_estimate_t>> {
   std::vector<std::pair<position_estimate_t, position_estimate_t>>
       all_pose_estimates_;
+  std::vector<std::thread> workers;
   for (size_t i = 0; i < sources_.size(); ++i) {
-    camera::timestamped_frame_t frame = sources_[i]->Get();
-    if (frame.invalid) {
-      std::cout << "Stopping log" << std::endl;
-      log_.value().Stop();
-      std::cout << "Stopped log" << std::endl;
-      throw std::runtime_error("DONE");
-    }
-    if (prev_timestamps_[i] == frame.timestamp) {
-      continue;
-    }
-    log_interesting_timestamp_ =
-        frame.timestamp > interesting_timestamp_start_ &&
-        frame.timestamp < interesting_timestamp_end_;
-    if (log_interesting_timestamp_) {
-      std::cout << "It's loggin time" << std::endl;
-    }
-    prev_timestamps_[i] = frame.timestamp;
+    workers.emplace_back([&, i]() {
+      camera::timestamped_frame_t frame = sources_[i]->Get();
+      if (frame.invalid) {
+        std::cout << "Stopping log" << std::endl;
+        log_.value().Stop();
+        std::cout << "Stopped log" << std::endl;
+        throw std::runtime_error("DONE");
+      }
+      if (prev_timestamps_[i] == frame.timestamp) {
+        return;
+      }
+      log_interesting_timestamp_ =
+          frame.timestamp > interesting_timestamp_start_ &&
+          frame.timestamp < interesting_timestamp_end_;
+      if (log_interesting_timestamp_) {
+        std::cout << "It's loggin time" << std::endl;
+      }
+      prev_timestamps_[i] = frame.timestamp;
 
-    std::vector<tag_detection_t> detections =
-        detectors_[i]->GetTagDetections(frame);
+      std::vector<tag_detection_t> detections =
+          detectors_[i]->GetTagDetections(frame);
 
-    std::vector<std::pair<position_estimate_t, position_estimate_t>>
-        pose_estimates =
-            solvers_[i].EstimatePositionAmbiguous(detections, false);
+      std::vector<std::pair<position_estimate_t, position_estimate_t>>
+          pose_estimates =
+              solvers_[i].EstimatePositionAmbiguous(detections, false);
 
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      all_pose_estimates_.insert(all_pose_estimates_.end(),
-                                 pose_estimates.begin(), pose_estimates.end());
-    }
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        all_pose_estimates_.insert(all_pose_estimates_.end(),
+                                   pose_estimates.begin(),
+                                   pose_estimates.end());
+      }
 
-    if (port_start_.has_value()) {
-      streamers_[i].WriteFrame(frame.frame);
-    }
+      if (port_start_.has_value()) {
+        streamers_[i].WriteFrame(frame.frame);
+      }
+    });
+  }
+  for (auto& t : workers) {
+    t.join();
   }
   if (all_pose_estimates_.empty()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
