@@ -269,7 +269,6 @@ auto UnambiguousEstimator::FillPoseEstimates()
       prev_pose_estimate_.has_value() && !all_pose_estimates_.empty() &&
       all_pose_estimates_[0].first.timestamp - prev_pose_estimate_->timestamp <
           kuse_prev_pose_threshold;
-  std::cout << "# estimates: " << all_pose_estimates_.size();
   return all_pose_estimates_;
 }
 
@@ -302,9 +301,6 @@ void UnambiguousEstimator::Run() {
       latent_estimate_t pose_estimate = GetUnambiguatedEstimate();
       if (pose_estimate.invalid) {
         continue;
-      }
-      if (std::isnan(pose_estimate.pose_estimate.timestamp)) {
-        std::cout << "How this even possible" << std::endl;
       }
       auto log_time =
           static_cast<int64_t>(pose_estimate.pose_estimate.timestamp * 1e6);
@@ -358,19 +354,6 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   }
   avg_timestamp /= best_solution.size();
   avg_variance /= best_solution.size();
-  if (std::isnan(avg_timestamp)) {
-    std::cout << "Morbin time" << std::endl;
-  }
-  if (std::abs(avg_timestamp - 14.484) < 0.05) {
-    std::cout << "All poses" << std::endl;
-    for (const auto& est : all_pose_estimates_for_log) {
-      utils::PrintPose3d(est);
-    }
-    std::cout << "Best poses" << std::endl;
-    for (const auto& est : best_solution) {
-      utils::PrintPose3d(est.pose);
-    }
-  }
   const int num_tags = tag_ids.size();
   position_estimate_t averaged_estimate = {
       .pose = WeightedAveragePose(best_solution),
