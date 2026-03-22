@@ -9,6 +9,7 @@
 #include "src/localization/position_solver.h"
 #include "src/localization/square_solver.h"
 #include "src/utils/pch.h"
+#include "thread_pool.h"
 
 namespace localization {
 enum Detector { OPENCV_CPU, AUSTIN_GPU };
@@ -49,6 +50,7 @@ class UnambiguousEstimator {
   std::vector<std::unique_ptr<camera::CameraSource>> sources_;
   std::vector<std::unique_ptr<IAprilTagDetector>> detectors_;
   std::vector<SquareSolver> solvers_;
+  ThreadPool pool_;
   const std::optional<uint> port_start_;
   std::mutex mutex_;
   std::vector<double> prev_timestamps_;

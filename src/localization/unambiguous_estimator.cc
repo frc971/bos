@@ -27,7 +27,8 @@ UnambiguousEstimator::UnambiguousEstimator(
     std::vector<std::pair<camera::CameraConstant, Detector>>& cameras,
     std::optional<uint> port_start, bool verbose,
     std::optional<std::vector<std::filesystem::path>> img_dir_paths)
-    : port_start_(port_start),
+    : pool_(cameras.size()),
+      port_start_(port_start),
       prev_timestamps_(cameras.size()),
       sim_(img_dir_paths.has_value()) {
   std::string log_path = frc::DataLogManager::GetLogDir();
@@ -38,6 +39,7 @@ UnambiguousEstimator::UnambiguousEstimator(
   if (port_start.has_value()) {
     streamers_.reserve(cameras.size());
   }
+  std::cout << "Initializing cameras" << std::endl;
   for (size_t i = 0; i < cameras.size(); i++) {
     if (sim_) {
       sources_.push_back(std::make_unique<camera::CameraSource>(
@@ -51,6 +53,10 @@ UnambiguousEstimator::UnambiguousEstimator(
               cameras[i].first,
               fmt::format("{}/{}", log_path, cameras[i].first.name))));
     }
+  }
+  std::cout << "Initialized cameras" << std::endl;
+  std::cout << "Initializing estimators and streamers" << std::endl;
+  for (size_t i = 0; i < cameras.size(); i++) {
     const cv::Mat first_frame = sources_[i]->GetFrame();
     switch (cameras[i].second) {
       case OPENCV_CPU:
@@ -73,6 +79,7 @@ UnambiguousEstimator::UnambiguousEstimator(
                               1080, 1080);
     }
   }
+  std::cout << "Initialized estimators and streamers" << std::endl;
   std::error_code ec;
   log_.emplace("unambiguous.wpilog", ec);
   if (ec) {
@@ -201,11 +208,12 @@ auto UnambiguousEstimator::SearchSolutions(
 
 auto UnambiguousEstimator::FillPoseEstimates()
     -> std::vector<std::pair<position_estimate_t, position_estimate_t>> {
+  std::cout << "Filling pose estimates" << std::endl;
   std::vector<std::pair<position_estimate_t, position_estimate_t>>
       all_pose_estimates_;
   std::vector<std::future<void>> futures;
   for (size_t i = 0; i < sources_.size(); ++i) {
-    futures.emplace_back(std::async(std::launch::async, [&, i]() {
+    futures.emplace_back(pool_.Enqueue([&, i]() {
       camera::timestamped_frame_t frame = sources_[i]->Get();
       if (log_.has_value() && frame.invalid) {
         std::cout << "Stopping log at timestamp: " << std::endl;
@@ -213,9 +221,9 @@ auto UnambiguousEstimator::FillPoseEstimates()
         std::cout << "Stopped log" << std::endl;
         throw std::runtime_error("DONE");
       }
-      // if (std::abs(prev_timestamps_[i] - frame.timestamp) < 1e-6) {
-      // return;
-      // }
+      if (std::abs(prev_timestamps_[i] - frame.timestamp) < 1e-6) {
+        return;
+      }
       log_interesting_timestamp_ =
           frame.timestamp > interesting_timestamp_start_ &&
           frame.timestamp < interesting_timestamp_end_;
@@ -247,7 +255,7 @@ auto UnambiguousEstimator::FillPoseEstimates()
       }
     }));
   }
-  constexpr auto timeout = std::chrono::milliseconds(100);  // tune this
+  constexpr auto timeout = std::chrono::milliseconds(30);  // tune this
   auto deadline = std::chrono::steady_clock::now() + timeout;
   for (auto& f : futures) {
     auto now = std::chrono::steady_clock::now();
@@ -259,7 +267,7 @@ auto UnambiguousEstimator::FillPoseEstimates()
     if (f.wait_for(remaining) == std::future_status::ready) {
       f.get();
     } else {
-      std::cerr << "Worker timed out\n";
+      std::cerr << "Worker timed out" << std::endl;
     }
   }
   if (all_pose_estimates_.empty()) {
@@ -282,7 +290,7 @@ void UnambiguousEstimator::Run() {
       }
       position_sender.Send(
           std::vector<position_estimate_t>{pose_estimate.pose_estimate},
-          pose_estimate.latency);
+          pose_estimate.latency, pose_estimate.all_pose_estimates);
       auto log_time =
           static_cast<int64_t>(pose_estimate.pose_estimate.timestamp * 1e6);
       pose_log_.value().Append(pose_estimate.pose_estimate.pose, log_time);
@@ -319,7 +327,7 @@ void UnambiguousEstimator::Run() {
 }
 
 auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
-  utils::Timer fetch_timer("Fetch", false);
+  utils::Timer everything_timer("Getting estimate", true);
   const std::vector<std::pair<position_estimate_t, position_estimate_t>>
       all_pose_estimates = FillPoseEstimates();
   std::vector<frc::Pose3d> all_pose_estimates_for_log;
@@ -327,20 +335,16 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
     all_pose_estimates_for_log.push_back(est.first.pose);
     all_pose_estimates_for_log.push_back(est.second.pose);
   }
-  fetch_timer.Stop();
   std::vector<position_estimate_t> best_solution;
   std::vector<position_estimate_t> current_solution;
 
   double best_cost = std::numeric_limits<double>::infinity();
 
-  utils::Timer search_timer("Search", false);
   double cost = SearchSolutions(all_pose_estimates, 0, current_solution,
                                 best_solution, best_cost);
-  search_timer.Stop();
   if (best_solution.size() == 0) {
     return {.invalid = true};
   }
-  utils::Timer everything_timer("everything else", false);
   double avg_variance = 0;
   double avg_timestamp = 0;
   std::unordered_set<int> tag_ids;

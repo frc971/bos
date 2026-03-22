@@ -17,7 +17,7 @@ auto main() -> int {
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
 
-  LOG(INFO) << "Starting estimators";
+  LOG(INFO) << "Starting cameras";
 
   std::vector<std::pair<camera::CameraConstant, localization::Detector>>
       cameras{
@@ -29,9 +29,9 @@ auto main() -> int {
            localization::Detector::OPENCV_CPU},
       };
 
+  LOG(INFO) << "Started cameras";
+
   localization::UnambiguousEstimator localizer(cameras,
                                                std::make_optional<uint>(5801));
   localizer.Run();
-
-  LOG(INFO) << "Started estimators";
 }

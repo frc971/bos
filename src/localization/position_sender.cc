@@ -19,9 +19,12 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
       table->GetStructTopic<frc::Pose2d>("Pose");
   nt::StructTopic<frc::Pose3d> pose3d_topic =
       table->GetStructTopic<frc::Pose3d>("Pose3d");
+  nt::StructArrayTopic<frc::Pose3d> all_estimates_topic =
+      table->GetStructArrayTopic<frc::Pose3d>("All Estimates");
 
   pose_publisher_ = pose_topic.Publish();
   pose3d_publisher_ = pose3d_topic.Publish();
+  all_estimates_publisher_ = all_estimates_topic.Publish();
 
   nt::DoubleTopic latency_topic = table->GetDoubleTopic("Latency");
   latency_publisher_ = latency_topic.Publish();
@@ -47,7 +50,8 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
 
 void PositionSender::Send(
     const std::vector<localization::position_estimate_t>& detections,
-    double latency) {
+    double latency,
+    const std::optional<std::vector<frc::Pose3d>>& all_estimates) {
   mutex_.lock();
   for (auto& detection : detections) {
     std::array<double, 8> tag_estimation{
@@ -85,6 +89,9 @@ void PositionSender::Send(
 
     latency_publisher_.Set(latency);
     num_tags_publisher_.Set(detection.num_tags);
+    if (all_estimates.has_value()) {
+      all_estimates_publisher_.Set(all_estimates.value());
+    }
 
     if (verbose_) {
       LOG(INFO) << detection;
