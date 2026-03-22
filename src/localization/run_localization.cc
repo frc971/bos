@@ -33,7 +33,6 @@ void RunLocalization(camera::CameraSource& source,
   while (true) {
     utils::Timer timer(source.GetName(), verbose);
     camera::timestamped_frame_t timestamped_frame = source.Get();
-    std::cout << "Time: " << timestamped_frame.timestamp << std::endl;
     if (streamer.has_value()) {
       streamer->WriteFrame(timestamped_frame.frame);
     }
