@@ -342,7 +342,7 @@ std::unique_ptr<Threshold> MakeThreshold(vision::ImageFormat image_format,
       return std::make_unique<TypedThreshold<vision::ImageFormat::BGRA8>>(
           width, height);
     default:
-      LOG(FATAL) << "Charlie's bug";
+      LOG(FATAL) << "Unknown image format:  Charlie";
   }
 }
 

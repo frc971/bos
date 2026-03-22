@@ -85,13 +85,13 @@ struct DistCoeffs {
 class GpuDetector {
  public:
   // The number of blobs we will consider when counting april tags.
-  static constexpr size_t kMaxBlobs = 64;  // TODO Charlie
+  static constexpr size_t kMaxBlobs = 2048;  // TODO Charlie
 
   // Constructs a detector, reserving space for detecting tags of the provided
   // with and height, using the provided detector options.
   GpuDetector(size_t width, size_t height, apriltag_detector_t* tag_detector,
               CameraMatrix camera_matrix, DistCoeffs distortion_coefficients,
-              vision::ImageFormat image_format);
+              vision::ImageFormat image_format = vision::ImageFormat::YUYV422);
   virtual ~GpuDetector();
 
   size_t width() const { return width_; }

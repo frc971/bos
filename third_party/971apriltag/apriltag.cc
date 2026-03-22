@@ -678,32 +678,20 @@ void GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
   after_memset_.Record(&memset_stream_);
 
   // Threshold the image.
-  if (absl::GetFlag(FLAGS_use_neon)) {
-    // We are being asked to do this on the CPU.  Use the CPU source image, and
-    // put it into unified memory so it gets moved over to the GPU in the
-    // background.
-    threshold_->ThresholdAndDecimate(
-        image, decimated_image_device_.get(), thresholded_image_device_.get(),
-        tag_detector_->qtp.min_white_black_diff, &stream_);
-
-    start_.Record(&stream_);
-    after_image_memcpy_to_device_.Record(&stream_);
-  } else {
-    start_.Record(&stream_);
-    // If the image isn't already in device memory, copy it there and update the
-    // pointer.
-    if (image_device == nullptr) {
-      color_image_device_.MemcpyAsyncFrom(image, &stream_);
-      image_device = color_image_device_.get();
-    }
-    after_image_memcpy_to_device_.Record(&stream_);
-
-    // Now, threshold on the GPU fully.
-    threshold_->ThresholdAndDecimate(
-        image_device, decimated_image_device_.get(),
-        thresholded_image_device_.get(),
-        tag_detector_->qtp.min_white_black_diff, &stream_);
+  start_.Record(&stream_);
+  // If the image isn't already in device memory, copy it there and update the
+  // pointer.
+  if (image_device == nullptr) {
+    color_image_device_.MemcpyAsyncFrom(image, &stream_);
+    image_device = color_image_device_.get();
   }
+  after_image_memcpy_to_device_.Record(&stream_);
+
+  // Now, threshold on the GPU fully.
+  threshold_->ThresholdAndDecimate(image_device, decimated_image_device_.get(),
+                                   thresholded_image_device_.get(),
+                                   tag_detector_->qtp.min_white_black_diff,
+                                   &stream_);
 
   after_threshold_.Record(&stream_);
 

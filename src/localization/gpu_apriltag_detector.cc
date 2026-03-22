@@ -12,6 +12,12 @@ constexpr auto RadianToDegree(double radian) -> double {
   return radian * (180 / M_PI);
 }
 
+auto ToMat(const cv::Mat& image) -> cv::Mat {
+  cv::Mat color_image(cv::Size(image.cols, image.rows), CV_8UC2,
+                      (void*)image.data);
+  return color_image;
+}
+
 GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
                                          const nlohmann::json& intrinsics,
                                          bool verbose)
@@ -35,29 +41,24 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
       utils::CameraMatrixFromJson<frc::apriltag::CameraMatrix>(intrinsics),
       utils::DistortionCoefficientsFromJson<frc::apriltag::DistCoeffs>(
           intrinsics),
-      vision::ImageFormat::BGR8);
+      vision::ImageFormat::YUYV422);
+  LOG(INFO) << "Constructor done";
 }
 auto GPUAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame)
     -> std::vector<tag_detection_t> {
+  LOG(INFO) << "Type: " << timestamped_frame.frame.type() << std::endl;
   try {
-    if (timestamped_frame.frame.channels() == 1) {
-      gpu_detector_->Detect((unsigned char*)timestamped_frame.frame.ptr(),
-                            nullptr);
-    } else if (timestamped_frame.frame.channels() == 3) {
-      cv::Mat gray;
-      cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
-      gpu_detector_->Detect((unsigned char*)gray.ptr(), nullptr);
-    } else {
-      LOG(ERROR) << "Unknown frame type";
-    }
+    CHECK(timestamped_frame.frame.channels() == 3);
+    cv::Mat gray;
+    cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2YUV_YUY2);
+    cv::Mat mat_ = ToMat(gray);
+    gpu_detector_->Detect(mat_.data, nullptr);
   } catch (const std::exception& e) {
-    LOG(WARNING) << "Caught exception: " << e.what();
     return {};
   }
   const zarray_t* raw_detections = gpu_detector_->Detections();
   std::vector<tag_detection_t> tag_detections;
-
   if (zarray_size(raw_detections)) {
     for (int i = 0; i < zarray_size(raw_detections); ++i) {
       apriltag_detection_t* gpu_detection;
