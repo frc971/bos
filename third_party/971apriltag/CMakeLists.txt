@@ -30,6 +30,9 @@ add_library(971apriltag
   points.cc
 )
 
-target_compile_options(971apriltag PRIVATE -w)
 target_link_libraries(971apriltag PUBLIC apriltag 971apriltag_cuda_dep 971apriltag_threshold_dep absl::log absl::check 971apriltag_dep)
 set_source_files_properties(labeling_allegretti_2019_BKE.cc apriltag_detect.cc apriltag.cc line_fit_filter.cc points.cc PROPERTIES LANGUAGE CUDA)
+
+target_compile_options(971apriltag PRIVATE -w)
+target_compile_options(971apriltag_dep PRIVATE -w)
+target_compile_options(971apriltag_threshold_dep PRIVATE -w)
