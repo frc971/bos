@@ -1210,8 +1210,8 @@ void FitQuads(
     CudaStream* stream) {
   constexpr size_t kThreads = MaxRankedIndex();
   const size_t kBlocks = num_extents;
-  LOG(INFO) << "Spawning with " << kThreads << " threads, and " << kBlocks
-            << " blocks for " << num_extents << " blob_ids";
+  VLOG(1) << "Spawning with " << kThreads << " threads, and " << kBlocks
+          << " blocks for " << num_extents << " blob_ids";
   CHECK_EQ(nmaxima, kNMaxima)
       << ": Kernel is compiled and optimized for a fixed nmaxima, please "
          "recompile if you want to change it.";
@@ -1219,7 +1219,6 @@ void FitQuads(
       peaks_device, peak_extents, line_fit_points_device,
       selected_extents_device, max_line_fit_mse, cos_critical_rad,
       fit_quads_device);
-  LOG(INFO) << "Done fitting quads";
 }
 
 std::ostream& operator<<(std::ostream& os,

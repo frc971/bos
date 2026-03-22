@@ -42,18 +42,19 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
       utils::DistortionCoefficientsFromJson<frc::apriltag::DistCoeffs>(
           intrinsics),
       vision::ImageFormat::YUYV422);
-  LOG(INFO) << "Constructor done";
 }
 auto GPUAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame)
     -> std::vector<tag_detection_t> {
-  LOG(INFO) << "Type: " << timestamped_frame.frame.type() << std::endl;
   try {
     CHECK(timestamped_frame.frame.channels() == 3);
     cv::Mat gray;
     cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2YUV_YUY2);
     cv::Mat mat_ = ToMat(gray);
-    gpu_detector_->Detect(mat_.data, nullptr);
+    if (!gpu_detector_->Detect(mat_.data, nullptr)) {
+      LOG(WARNING) << "Gpu detector failed";
+      return {};
+    }
   } catch (const std::exception& e) {
     return {};
   }

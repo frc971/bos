@@ -106,7 +106,7 @@
       "backlight": null,
       "frame_width": 1280,
       "frame_height": 800,
-      "fps": 30.0,
+      "fps": 60.0,
       "exposure": null
     },
     {
@@ -117,7 +117,7 @@
       "backlight": null,
       "frame_width": 1280,
       "frame_height": 800,
-      "fps": 30.0,
+      "fps": 60.0,
       "exposure": null
     }
   ]

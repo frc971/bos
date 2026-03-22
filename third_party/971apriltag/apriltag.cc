@@ -670,7 +670,7 @@ struct MergePeakExtents {
 
 }  // namespace
 
-void GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
+bool GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
   // const aos::monotonic_clock::time_point start_time =
   //     aos::monotonic_clock::now();
 
@@ -754,12 +754,14 @@ void GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
     size_t temp_storage_bytes =
         temp_storage_compressed_union_marker_pair_device_.size();
     NonZero nz;
-    CHECK_CUDA(cub::DeviceSelect::If(
-        temp_storage_compressed_union_marker_pair_device_.get(),
-        temp_storage_bytes, union_marker_pair_device_.get(),
-        compressed_union_marker_pair_device_.get(),
-        num_compressed_union_marker_pair_device_.get(),
-        union_marker_pair_device_.size(), nz, stream_.get()));
+    if (cub::DeviceSelect::If(
+            temp_storage_compressed_union_marker_pair_device_.get(),
+            temp_storage_bytes, union_marker_pair_device_.get(),
+            compressed_union_marker_pair_device_.get(),
+            num_compressed_union_marker_pair_device_.get(),
+            union_marker_pair_device_.size(), nz, stream_.get())) {
+      return false;
+    }
 
     MaybeCheckAndSynchronize("cub::DeviceSelect::If");
   }
@@ -977,11 +979,14 @@ void GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
     size_t temp_storage_bytes =
         temp_storage_compressed_union_marker_pair_device_.size();
     ValidPeaks peak_filter;
-    CHECK_CUDA(cub::DeviceSelect::If(
-        temp_storage_compressed_union_marker_pair_device_.get(),
-        temp_storage_bytes, filtered_is_local_peak_device_.get(),
-        compressed_peaks_device_.get(), num_compressed_peaks_device_.get(),
-        num_selected_blobs_host, peak_filter, stream_.get()));
+    if (cub::DeviceSelect::If(
+            temp_storage_compressed_union_marker_pair_device_.get(),
+            temp_storage_bytes, filtered_is_local_peak_device_.get(),
+            compressed_peaks_device_.get(), num_compressed_peaks_device_.get(),
+            num_selected_blobs_host, peak_filter, stream_.get())) {
+      LOG(INFO) << "Failed";
+      return false;
+    }
 
     after_peak_compression_.Record(&stream_);
     MaybeCheckAndSynchronize("cub::DeviceSelect::If");
@@ -1140,6 +1145,7 @@ void GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
   }
 
   first_ = false;
+  return true;
 }
 
 }  // namespace frc::apriltag
