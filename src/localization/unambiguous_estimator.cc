@@ -73,25 +73,23 @@ UnambiguousEstimator::UnambiguousEstimator(
                               1080, 1080);
     }
   }
-  if (sim_) {
-    std::error_code ec;
-    log_.emplace("unambiguous.wpilog", ec);
-    if (ec) {
-      std::cerr << "Failed to open log: " << ec.message() << std::endl;
-      return;
-    }
-
-    log_->AddStructSchema<frc::Translation3d>(0);
-    log_->AddStructSchema<frc::Rotation3d>(0);
-    log_->AddStructSchema<frc::Pose3d>(0);
-
-    pose_log_.emplace(*log_, "/localization/pose");
-    num_tags_log_.emplace(*log_, "/localization/num_tags");
-    timestamp_log_.emplace(*log_, "/localization/timestamp");
-    used_prev_pose_log_.emplace(*log_, "/localization/used_prev_pose");
-    best_cost_log_.emplace(*log_, "/localization/best_cost");
-    all_pose_estimates_log_.emplace(*log_, "/localization/all_pose_estimates");
+  std::error_code ec;
+  log_.emplace("unambiguous.wpilog", ec);
+  if (ec) {
+    std::cerr << "Failed to open log: " << ec.message() << std::endl;
+    return;
   }
+
+  log_->AddStructSchema<frc::Translation3d>(0);
+  log_->AddStructSchema<frc::Rotation3d>(0);
+  log_->AddStructSchema<frc::Pose3d>(0);
+
+  pose_log_.emplace(*log_, "/localization/pose");
+  num_tags_log_.emplace(*log_, "/localization/num_tags");
+  timestamp_log_.emplace(*log_, "/localization/timestamp");
+  used_prev_pose_log_.emplace(*log_, "/localization/used_prev_pose");
+  best_cost_log_.emplace(*log_, "/localization/best_cost");
+  all_pose_estimates_log_.emplace(*log_, "/localization/all_pose_estimates");
 }
 
 auto UnambiguousEstimator::Cost(const frc::Pose3d& a, const frc::Pose3d& b)
@@ -101,7 +99,7 @@ auto UnambiguousEstimator::Cost(const frc::Pose3d& a, const frc::Pose3d& b)
   frc::Rotation3d delta = a.Rotation() - b.Rotation();
   double rotation = delta.Angle().value();
 
-  constexpr double kRotationWeight = 0.0;  // tune
+  constexpr double kRotationWeight = 3.0;  // tune
   return translation + kRotationWeight * rotation;
 }
 
@@ -215,9 +213,9 @@ auto UnambiguousEstimator::FillPoseEstimates()
         std::cout << "Stopped log" << std::endl;
         throw std::runtime_error("DONE");
       }
-      if (std::abs(prev_timestamps_[i] - frame.timestamp) < 1e-6) {
-        return;
-      }
+      // if (std::abs(prev_timestamps_[i] - frame.timestamp) < 1e-6) {
+      // return;
+      // }
       log_interesting_timestamp_ =
           frame.timestamp > interesting_timestamp_start_ &&
           frame.timestamp < interesting_timestamp_end_;
@@ -233,9 +231,6 @@ auto UnambiguousEstimator::FillPoseEstimates()
       {
         std::lock_guard<std::mutex> lock(mutex_);
         for (auto& est : pose_estimates) {
-          if (std::abs(est.first.timestamp - 14.484) < 0.05) {
-            std::cout << "It's debuggin time" << std::endl;
-          }
           bool firstOffField = utils::PoseOffField(est.first.pose);
           bool secondOffField = utils::PoseOffField(est.second.pose);
           if (firstOffField && secondOffField) {
@@ -274,12 +269,7 @@ auto UnambiguousEstimator::FillPoseEstimates()
       prev_pose_estimate_.has_value() && !all_pose_estimates_.empty() &&
       all_pose_estimates_[0].first.timestamp - prev_pose_estimate_->timestamp <
           kuse_prev_pose_threshold;
-  if (log_interesting_timestamp_ && !all_pose_estimates_.empty()) {
-    std::cout << "time diff: "
-              << all_pose_estimates_[0].first.timestamp -
-                     prev_pose_estimate_->timestamp
-              << std::endl;
-  }
+  std::cout << "# estimates: " << all_pose_estimates_.size();
   return all_pose_estimates_;
 }
 
@@ -287,10 +277,25 @@ void UnambiguousEstimator::Run() {
   if (!sim_) {
     localization::PositionSender position_sender("Front");
     while (true) {
-      latent_estimate_t estimate = GetUnambiguatedEstimate();
+      latent_estimate_t pose_estimate = GetUnambiguatedEstimate();
+      if (pose_estimate.invalid) {
+        continue;
+      }
       position_sender.Send(
-          std::vector<position_estimate_t>{estimate.pose_estimate},
-          estimate.latency);
+          std::vector<position_estimate_t>{pose_estimate.pose_estimate},
+          pose_estimate.latency);
+      auto log_time =
+          static_cast<int64_t>(pose_estimate.pose_estimate.timestamp * 1e6);
+      pose_log_.value().Append(pose_estimate.pose_estimate.pose, log_time);
+      num_tags_log_.value().Append(pose_estimate.pose_estimate.num_tags,
+                                   log_time);
+      timestamp_log_.value().Append(pose_estimate.pose_estimate.timestamp,
+                                    log_time);
+      best_cost_log_.value().Append(pose_estimate.best_cost, log_time);
+      used_prev_pose_log_.value().Append(pose_estimate.used_prev_pose,
+                                         log_time);
+      all_pose_estimates_log_.value().Append(pose_estimate.all_pose_estimates,
+                                             log_time);
     }
   } else {
     while (true) {

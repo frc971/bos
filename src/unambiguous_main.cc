@@ -31,6 +31,7 @@ auto main() -> int {
 
   localization::UnambiguousEstimator localizer(cameras,
                                                std::make_optional<uint>(5801));
+  localizer.Run();
 
   LOG(INFO) << "Started estimators";
 }

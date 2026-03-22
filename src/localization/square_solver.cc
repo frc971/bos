@@ -162,7 +162,7 @@ auto SquareSolver::EstimatePositionAmbiguous(
     auto est2 = build_estimate(rvecs[1], tvecs[1]);
 
     if (reject_far_tags &&
-        (cv::norm(tvecs[0]) > 5.0 || cv::norm(tvecs[1]) > 5.0)) {
+        (cv::norm(tvecs[0]) > 5.0 && cv::norm(tvecs[1]) > 5.0)) {
       continue;
     }
 
