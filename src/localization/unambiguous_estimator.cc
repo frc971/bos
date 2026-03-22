@@ -25,8 +25,8 @@ namespace localization {
 
 UnambiguousEstimator::UnambiguousEstimator(
     std::vector<std::pair<camera::CameraConstant, Detector>>& cameras,
-    std::optional<std::vector<std::filesystem::path>>& img_dir_paths,
-    std::optional<uint> port_start, bool verbose)
+    std::optional<uint> port_start, bool verbose,
+    std::optional<std::vector<std::filesystem::path>> img_dir_paths)
     : port_start_(port_start),
       prev_timestamps_(cameras.size()),
       sim_(img_dir_paths.has_value()) {
@@ -252,7 +252,7 @@ auto UnambiguousEstimator::FillPoseEstimates()
       }
     }));
   }
-  constexpr auto timeout = std::chrono::milliseconds(50);  // tune this
+  constexpr auto timeout = std::chrono::milliseconds(100);  // tune this
   auto deadline = std::chrono::steady_clock::now() + timeout;
   for (auto& f : futures) {
     auto now = std::chrono::steady_clock::now();

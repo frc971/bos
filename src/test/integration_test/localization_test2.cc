@@ -45,6 +45,6 @@ auto main(int argc, char** argv) -> int {
   auto paths = std::make_optional<std::vector<std::filesystem::path>>(
       {image_path, std::filesystem::path{"/bos/bos_logs/real_log/right"}});
 
-  localization::UnambiguousEstimator estimator(cameras, paths);
+  localization::UnambiguousEstimator estimator(cameras, std::nullopt, false, paths);
   estimator.Run();
 }

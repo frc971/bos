@@ -24,8 +24,9 @@ class UnambiguousEstimator {
  public:
   UnambiguousEstimator(
       std::vector<std::pair<camera::CameraConstant, Detector>>& cameras,
-      std::optional<std::vector<std::filesystem::path>>& img_dir_paths,
-      std::optional<uint> port_start = std::nullopt, bool verbose = false);
+      std::optional<uint> port_start = std::nullopt, bool verbose = false,
+      std::optional<std::vector<std::filesystem::path>> img_dir_paths =
+          std::nullopt);
   void Run();
 
  private:
@@ -59,10 +60,11 @@ class UnambiguousEstimator {
   std::optional<wpi::log::DoubleLogEntry> timestamp_log_;
   std::optional<wpi::log::DoubleLogEntry> best_cost_log_;
   std::optional<wpi::log::BooleanLogEntry> used_prev_pose_log_;
-  std::optional<wpi::log::StructArrayLogEntry<frc::Pose3d>> all_pose_estimates_log_;
+  std::optional<wpi::log::StructArrayLogEntry<frc::Pose3d>>
+      all_pose_estimates_log_;
   static constexpr double interesting_timestamp_start_ = 34;
   static constexpr double interesting_timestamp_end_ = 35;
-  static constexpr double kuse_prev_pose_threshold = 100; // tune
+  static constexpr double kuse_prev_pose_threshold = 100;  // tune
   bool log_interesting_timestamp_ = false;
   bool use_prev_pose_ = false;
 };
