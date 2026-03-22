@@ -40,11 +40,13 @@ auto main(int argc, char** argv) -> int {
   std::string camera_name = absl::GetFlag(FLAGS_camera_name).value();
 
   std::vector<std::pair<camera::CameraConstant, localization::Detector>>
-      cameras{{constants.at(camera_name), localization::OPENCV_CPU}, {constants.at("main_bot_right"), localization::OPENCV_CPU}};
+      cameras{{constants.at(camera_name), localization::OPENCV_CPU},
+              {constants.at("main_bot_right"), localization::OPENCV_CPU}};
 
   auto paths = std::make_optional<std::vector<std::filesystem::path>>(
-      {image_path, std::filesystem::path{"/bos/bos_logs/real_log/right"}});
+      {image_folder + "/left", image_folder + "/right"});
 
-  localization::UnambiguousEstimator estimator(cameras, std::nullopt, false, paths);
+  localization::UnambiguousEstimator estimator(cameras, std::nullopt, false,
+                                               paths);
   estimator.Run();
 }
