@@ -2,6 +2,7 @@
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include "nlohmann/json.hpp"
 #include "src/camera/camera_constants.h"
+#include "src/localization/position.h"
 #include "src/localization/position_solver.h"
 
 static const uint kmax_tags = 50;
@@ -9,6 +10,11 @@ static const uint kmax_tags = 50;
 using json = nlohmann::json;
 
 namespace localization {
+
+using ambiguous_estimate_t = struct AmbiguousEstimate {
+  position_estimate_t pos1;
+  std::optional<position_estimate_t> pos2;
+};
 
 class MultiTagSolver : public IPositionSolver {
  public:
@@ -23,6 +29,9 @@ class MultiTagSolver : public IPositionSolver {
   auto EstimatePosition(const std::vector<tag_detection_t>& detections,
                         bool reject_far_tags = true)
       -> std::vector<position_estimate_t> override;
+  auto EstimatePositionAmbiguous(const std::vector<tag_detection_t>& detections,
+                                 bool reject_far_tags = true)
+      -> std::vector<ambiguous_estimate_t>;
 
  private:
   cv::Mat camera_matrix_;

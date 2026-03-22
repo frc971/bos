@@ -28,11 +28,12 @@ class DiskCamera : public ICamera {
   auto Restart() -> void override;
 
  private:
-  double speed;
-  std::string image_folder_path_;
+  const double speed;
+  const std::string image_folder_path_;
   std::priority_queue<TimestampedFramePath, std::vector<TimestampedFramePath>,
                       CompareTimestampedFramePath>
       image_paths_;
+  double offset_;
 };
 
 }  // namespace camera

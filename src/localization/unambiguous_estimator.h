@@ -5,6 +5,7 @@
 #include "src/camera/cscore_streamer.h"
 #include "src/localization/apriltag_detector.h"
 #include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/multi_tag_solver.h"
 #include "src/localization/position.h"
 #include "src/localization/position_solver.h"
 #include "src/localization/square_solver.h"
@@ -32,13 +33,13 @@ class UnambiguousEstimator {
  private:
   auto GetUnambiguatedEstimate() -> latent_estimate_t;
   auto FillPoseEstimates()
-      -> std::vector<std::pair<position_estimate_t, position_estimate_t>>;
+      -> std::vector<ambiguous_estimate_t>;
   static auto Cost(const frc::Pose3d& a, const frc::Pose3d& b) -> double;
   auto ComputeCost(const std::vector<position_estimate_t>& poses) -> double;
   static auto WeightedAveragePose(
       const std::vector<position_estimate_t>& solutions) -> frc::Pose3d;
   auto SearchSolutions(
-      const std::vector<std::pair<position_estimate_t, position_estimate_t>>&
+      const std::vector<ambiguous_estimate_t>&
           all_pose_estimates,
       size_t index, std::vector<position_estimate_t>& current_solution,
       std::vector<position_estimate_t>& best_solution, double& best_cost)
@@ -48,7 +49,7 @@ class UnambiguousEstimator {
   std::vector<camera::CscoreStreamer> streamers_;
   std::vector<std::unique_ptr<camera::CameraSource>> sources_;
   std::vector<std::unique_ptr<IAprilTagDetector>> detectors_;
-  std::vector<SquareSolver> solvers_;
+  std::vector<MultiTagSolver> solvers_;
   const std::optional<uint> port_start_;
   std::mutex mutex_;
   std::vector<double> prev_timestamps_;

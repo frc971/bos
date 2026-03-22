@@ -134,4 +134,107 @@ auto MultiTagSolver::EstimatePosition(
       .avg_tag_dist = avg_distance}};
 }
 
+auto MultiTagSolver::EstimatePositionAmbiguous(
+    const std::vector<tag_detection_t>& detections, bool reject_far_tags)
+    -> std::vector<ambiguous_estimate_t> {
+  std::vector<cv::Point3d> object_points;
+  std::vector<cv::Point2d> image_points;
+  std::vector<int> tag_ids;
+  std::vector<int> rejected_tag_ids;
+  std::vector<std::pair<position_estimate_t, position_estimate_t>>
+      position_estimates;
+  position_estimates.reserve(detections.size());
+  double avg_distance = 0.0;
+  for (const tag_detection_t& detection : detections) {
+    if (!tag_corners_[detection.tag_id].has_value()) {
+      LOG(WARNING) << "Invalid tag id: " << detection.tag_id;
+      continue;
+    }
+    if (reject_far_tags) {
+      const auto& c = detection.corners;
+      const double area = 0.5 * std::abs((c[0].x - c[2].x) * (c[1].y - c[3].y) -
+                                         (c[1].x - c[3].x) * (c[0].y - c[2].y));
+      if (area < kmin_tag_area_pixels) {
+        rejected_tag_ids.push_back(detection.tag_id);
+        continue;
+      }
+    }
+    cv::Mat rvec_tag = cv::Mat::zeros(3, 1, CV_64FC1);
+    cv::Mat tvec_tag = cv::Mat::zeros(3, 1, CV_64FC1);
+    cv::solvePnP(kapriltag_corners, detection.corners, camera_matrix_,
+                 distortion_coefficients_, rvec_tag, tvec_tag, false,
+                 cv::SOLVEPNP_IPPE_SQUARE);
+    if (reject_far_tags && cv::norm(tvec_tag) > 5.0) {
+      rejected_tag_ids.push_back(detection.tag_id);
+      continue;
+    }
+    avg_distance += cv::norm(tvec_tag);
+    tag_ids.push_back(detection.tag_id);
+    image_points.insert(image_points.end(), detection.corners.begin(),
+                        detection.corners.end());
+    object_points.insert(object_points.end(),
+                         tag_corners_[detection.tag_id].value().begin(),
+                         tag_corners_[detection.tag_id].value().end());
+  }
+  if (image_points.size() == 0 || object_points.size() == 0) {
+    return {};
+  }
+  avg_distance /= tag_ids.size();
+
+  std::vector<cv::Mat> rvecs;
+  std::vector<cv::Mat> tvecs;
+
+  try {
+    cv::solvePnPGeneric(object_points, image_points, camera_matrix_,
+                        distortion_coefficients_, rvecs, tvecs, false,
+                        cv::SOLVEPNP_SQPNP);
+  } catch (const std::exception& e) {
+    LOG(WARNING) << "Caught solve pnp exception:\n" << e.what();
+    return {};
+  }
+
+  if (rvecs.empty() || tvecs.empty()) {
+    return {};
+  }
+
+  auto build_estimate = [&](const cv::Mat& rvec,
+                            const cv::Mat& tvec) -> position_estimate_t {
+    cv::Mat field_to_camera = utils::MakeTransform(rvec, tvec).inv();
+    cv::Mat field_to_robot = field_to_camera * camera_to_robot_;
+
+    int num_tags = tag_ids.size();
+
+    return position_estimate_t{
+        .tag_ids = tag_ids,
+        .rejected_tag_ids = rejected_tag_ids,
+        .pose = utils::ConvertOpencvTransformationMatrixToWpilibPose(
+            field_to_robot),
+        .variance = num_tags == 1 ? 100
+                                  : Variance(num_tags, avg_distance,
+                                             kvariance_min_, kvariance_scalar_),
+        .timestamp = detections[0].timestamp,
+        .num_tags = num_tags,
+        .avg_tag_dist = avg_distance};
+  };
+
+  std::vector<ambiguous_estimate_t> estimates;
+  estimates.reserve(1);
+
+  if (reject_far_tags && cv::norm(tvecs[0]) > 5.0) {
+    return {};
+  }
+
+  ambiguous_estimate_t result;
+  result.pos1 = build_estimate(rvecs[0], tvecs[0]);
+
+  if (rvecs.size() >= 2 && tvecs.size() >= 2) {
+    if (!(reject_far_tags && cv::norm(tvecs[1]) > 5.0)) {
+      result.pos2 = build_estimate(rvecs[1], tvecs[1]);
+    }
+  }
+
+  estimates.emplace_back(std::move(result));
+  return estimates;
+}
+
 }  // namespace localization

@@ -14,14 +14,14 @@ DiskCamera::DiskCamera(std::string image_folder_path, double speed)
         .timestamp = std::stod(entry_name.erase(entry_name.size() - 4, 4))});
   }
 
-  auto offset = image_paths_.top().timestamp;
+  offset_ = image_paths_.top().timestamp;
   std::priority_queue<TimestampedFramePath, std::vector<TimestampedFramePath>,
                       CompareTimestampedFramePath>
       normalized;
   while (!image_paths_.empty()) {
     auto entry = image_paths_.top();
     image_paths_.pop();
-    entry.timestamp -= offset;
+    entry.timestamp -= offset_;
     normalized.push(entry);
   }
   image_paths_ = std::move(normalized);
@@ -36,11 +36,14 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
 
   double recorded_ts = image_paths_.top().timestamp;
   timestamped_frame_t timestamped_frame{
-      .frame = cv::imread(image_paths_.top().path), .timestamp = recorded_ts};
+      .frame = cv::imread(image_paths_.top().path),
+      .timestamp = recorded_ts + offset_};
   image_paths_.pop();
 
   if (!image_paths_.empty()) {
     double delta = image_paths_.top().timestamp - recorded_ts;
+    std::cout << "Delta: " << delta << "\tRecorded_ts: " << recorded_ts
+              << "\tOffset: " << offset_ << std::endl;
     std::this_thread::sleep_for(std::chrono::duration<double>(delta / speed));
   }
 

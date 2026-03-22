@@ -12,6 +12,7 @@
 #include "src/camera/cv_camera.h"
 #include "src/camera/disk_camera.h"
 #include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/multi_tag_solver.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/position_sender.h"
 #include "src/localization/position_solver.h"
@@ -171,9 +172,8 @@ auto UnambiguousEstimator::WeightedAveragePose(
 }
 
 auto UnambiguousEstimator::SearchSolutions(
-    const std::vector<std::pair<position_estimate_t, position_estimate_t>>&
-        all_pose_estimates_,
-    size_t index, std::vector<position_estimate_t>& current_solution,
+    const std::vector<ambiguous_estimate_t>& all_pose_estimates_, size_t index,
+    std::vector<position_estimate_t>& current_solution,
     std::vector<position_estimate_t>& best_solution, double& best_cost)
     -> double {
   if (index == all_pose_estimates_.size()) {
@@ -189,22 +189,23 @@ auto UnambiguousEstimator::SearchSolutions(
 
   const auto& pair = all_pose_estimates_[index];
 
-  current_solution.push_back(pair.first);
+  current_solution.push_back(pair.pos1);
   SearchSolutions(all_pose_estimates_, index + 1, current_solution,
                   best_solution, best_cost);
   current_solution.pop_back();
 
-  current_solution.push_back(pair.second);
-  SearchSolutions(all_pose_estimates_, index + 1, current_solution,
-                  best_solution, best_cost);
-  current_solution.pop_back();
+  if (pair.pos2.has_value()) {
+    current_solution.push_back(pair.pos2.value());
+    SearchSolutions(all_pose_estimates_, index + 1, current_solution,
+                    best_solution, best_cost);
+    current_solution.pop_back();
+  }
   return best_cost;
 }
 
 auto UnambiguousEstimator::FillPoseEstimates()
-    -> std::vector<std::pair<position_estimate_t, position_estimate_t>> {
-  std::vector<std::pair<position_estimate_t, position_estimate_t>>
-      all_pose_estimates_;
+    -> std::vector<ambiguous_estimate_t> {
+  std::vector<ambiguous_estimate_t> all_pose_estimates_;
   std::vector<std::future<void>> futures;
   for (size_t i = 0; i < sources_.size(); ++i) {
     futures.emplace_back(std::async(std::launch::async, [&, i]() {
@@ -226,23 +227,23 @@ auto UnambiguousEstimator::FillPoseEstimates()
       std::vector<tag_detection_t> detections =
           detectors_[i]->GetTagDetections(frame);
 
-      std::vector<std::pair<position_estimate_t, position_estimate_t>>
-          pose_estimates =
-              solvers_[i].EstimatePositionAmbiguous(detections, false);
+      std::vector<ambiguous_estimate_t> pose_estimates =
+          solvers_[i].EstimatePositionAmbiguous(detections, false);
 
       {
         std::lock_guard<std::mutex> lock(mutex_);
         for (auto& est : pose_estimates) {
-          if (std::abs(est.first.timestamp - 14.484) < 0.05) {
-            std::cout << "It's debuggin time" << std::endl;
-          }
-          bool firstOffField = utils::PoseOffField(est.first.pose);
-          bool secondOffField = utils::PoseOffField(est.second.pose);
-          if (firstOffField && secondOffField) {
+
+          est.pos1.invalid = utils::PoseOffField(est.pos1.pose);
+          if (est.pos2.has_value()) {
+            est.pos2.value().invalid =
+                utils::PoseOffField(est.pos2.value().pose);
+            if (est.pos2->invalid && est.pos1.invalid) {
+              continue;
+            }
+          } else if (est.pos1.invalid) {
             continue;
           }
-          est.first.invalid = firstOffField;
-          est.second.invalid = secondOffField;
           all_pose_estimates_.push_back(std::move(est));
         }
       }
@@ -272,14 +273,8 @@ auto UnambiguousEstimator::FillPoseEstimates()
   }
   use_prev_pose_ =
       prev_pose_estimate_.has_value() && !all_pose_estimates_.empty() &&
-      all_pose_estimates_[0].first.timestamp - prev_pose_estimate_->timestamp <
+      all_pose_estimates_[0].pos1.timestamp - prev_pose_estimate_->timestamp <
           kuse_prev_pose_threshold;
-  if (log_interesting_timestamp_ && !all_pose_estimates_.empty()) {
-    std::cout << "time diff: "
-              << all_pose_estimates_[0].first.timestamp -
-                     prev_pose_estimate_->timestamp
-              << std::endl;
-  }
   return all_pose_estimates_;
 }
 
@@ -319,12 +314,14 @@ void UnambiguousEstimator::Run() {
 
 auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   utils::Timer fetch_timer("Fetch", false);
-  const std::vector<std::pair<position_estimate_t, position_estimate_t>>
-      all_pose_estimates = FillPoseEstimates();
+  const std::vector<ambiguous_estimate_t> all_pose_estimates =
+      FillPoseEstimates();
   std::vector<frc::Pose3d> all_pose_estimates_for_log;
   for (const auto& est : all_pose_estimates) {
-    all_pose_estimates_for_log.push_back(est.first.pose);
-    all_pose_estimates_for_log.push_back(est.second.pose);
+    all_pose_estimates_for_log.push_back(est.pos1.pose);
+    if (est.pos2.has_value()) {
+      all_pose_estimates_for_log.push_back(est.pos2.value().pose);
+    }
   }
   fetch_timer.Stop();
   std::vector<position_estimate_t> best_solution;
@@ -353,19 +350,6 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   }
   avg_timestamp /= best_solution.size();
   avg_variance /= best_solution.size();
-  if (std::isnan(avg_timestamp)) {
-    std::cout << "Morbin time" << std::endl;
-  }
-  if (std::abs(avg_timestamp - 14.484) < 0.05) {
-    std::cout << "All poses" << std::endl;
-    for (const auto& est : all_pose_estimates_for_log) {
-      utils::PrintPose3d(est);
-    }
-    std::cout << "Best poses" << std::endl;
-    for (const auto& est : best_solution) {
-      utils::PrintPose3d(est.pose);
-    }
-  }
   const int num_tags = tag_ids.size();
   position_estimate_t averaged_estimate = {
       .pose = WeightedAveragePose(best_solution),
