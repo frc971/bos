@@ -8,7 +8,6 @@ CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera,
       camera_(std::move(camera)),
       simulation_(simulation),
       use_fetcher_thread_(use_fetcher_thread) {
-  CHECK(simulation || use_fetcher_thread);
   if (use_fetcher_thread) {
     timestamped_frame_ = camera_->GetFrame();
     thread_ = std::thread([this] {
