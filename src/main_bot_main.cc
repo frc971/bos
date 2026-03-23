@@ -17,9 +17,9 @@ auto main() -> int {
   camera_constants_t camera_constants = camera::GetCameraConstants();
 
   LOG(INFO) << "Starting cameras";
-  camera::CameraSource front_camera =
-      camera::CameraSource("Front", std::make_unique<camera::CVCamera>(
-                                        camera_constants.at("main_bot_front")));
+  // camera::CameraSource front_camera =
+  //     camera::CameraSource("Front", std::make_unique<camera::CVCamera>(
+  //                                       camera_constants.at("main_bot_front")));
 
   camera::CameraSource left_camera = camera::CameraSource(
       "Left",
