@@ -17,9 +17,9 @@ auto main() -> int {
   camera_constants_t camera_constants = camera::GetCameraConstants();
 
   LOG(INFO) << "Starting cameras";
-  // camera::CameraSource front_camera =
-  //     camera::CameraSource("Front", std::make_unique<camera::CVCamera>(
-  //                                       camera_constants.at("main_bot_front")));
+  camera::CameraSource front_camera =
+      camera::CameraSource("Front", std::make_unique<camera::CVCamera>(
+                                        camera_constants.at("main_bot_front")));
 
   camera::CameraSource left_camera = camera::CameraSource(
       "Left",
@@ -35,16 +35,16 @@ auto main() -> int {
   std::this_thread::sleep_for(std::chrono::seconds(2));
   LOG(INFO) << "Starting estimators";
 
-  // std::thread front_thread(
-  //     localization::RunLocalization, std::ref(front_camera),
-  //     std::make_unique<localization::OpenCVAprilTagDetector>(
-  //         front_camera.GetFrame().cols, front_camera.GetFrame().rows,
-  //         utils::ReadIntrinsics(
-  //             camera_constants.at("main_bot_front").intrinsics_path.value())),
-  //     std::make_unique<localization::MultiTagSolver>(
-  //         camera_constants.at("main_bot_front")),
-  //     camera_constants.at("main_bot_front").extrinsics_path.value(), 5801,
-  //     false);
+  std::thread front_thread(
+      localization::RunLocalization, std::ref(front_camera),
+      std::make_unique<localization::OpenCVAprilTagDetector>(
+          front_camera.GetFrame().cols, front_camera.GetFrame().rows,
+          utils::ReadIntrinsics(
+              camera_constants.at("main_bot_front").intrinsics_path.value())),
+      std::make_unique<localization::MultiTagSolver>(
+          camera_constants.at("main_bot_front")),
+      camera_constants.at("main_bot_front").extrinsics_path.value(), 4971,
+      false);
 
   std::thread left_thread(
       localization::RunLocalization, std::ref(left_camera),
