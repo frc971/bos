@@ -96,19 +96,16 @@ auto main(int argc, char* argv[]) -> int {
       std::ref(detection_results), std::ref(capture_frames),
       std::ref(log_image));
 
-  bool run = true;
-  while (run) {
-    char key;
-    std::cin >> key;
-    switch (key) {
-      case 'q':
-        run = false;
-      case 'c':
-        log_image.store(true);
-        break;
-      default:
-        std::cout << "Received invalid key!\n";
+  while (true) {
+    std::string input;
+    std::getline(std::cin, input);
+    if (input == "q") {
+      break;
     }
+    if (input.empty()) {
+      log_image.store(true);
+    }
+    std::cout << "Received invalid key!\n";
   }
 
   capture_frames.store(false);

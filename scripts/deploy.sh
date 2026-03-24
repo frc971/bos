@@ -27,3 +27,4 @@ done
 
 rsync -avz --delete bin "$HOST":/bos
 rsync -avz constants "$HOST":/bos
+ssh $HOST 'sudo systemctl restart bos.service'
