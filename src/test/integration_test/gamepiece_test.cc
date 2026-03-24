@@ -1,6 +1,9 @@
 #include "src/gamepiece/gamepiece.h"
 #include "src/camera/camera_constants.h"
+#include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
+#include "src/camera/cv_camera.h"
+#include "src/camera/disk_camera.h"
 #include "src/camera/select_camera.h"
 #include "src/utils/camera_utils.h"
 #include "src/yolo/model_constants.h"
@@ -9,8 +12,14 @@
 auto main() -> int {
   auto camera_constant =
       camera::SelectCameraConfig(camera::GetCameraConstants());
-  camera::CameraSource source = camera::SelectCamera(
-      "nvidia_apriltag_test", std::nullopt, camera::GetCameraConstants());
+  camera::CameraSource source =
+      (camera_constant.name.find('/') != std::string::npos)
+          ? camera::CameraSource{"nvidia_apriltag_test",
+                                 std::make_unique<camera::DiskCamera>(
+                                     camera_constant.name, 1.0)}
+          : camera::CameraSource{"nvidia_apriltag_test",
+                                 std::make_unique<camera::CVCamera>(
+                                     camera_constant)};
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   std::shared_ptr<nt::NetworkTable> coral_table =
       inst.GetTable("Orin/Gamepiece/coral");

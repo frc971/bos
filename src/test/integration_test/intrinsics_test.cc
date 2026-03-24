@@ -42,9 +42,9 @@ auto main(int argc, char* argv[]) -> int {
 
   PCHECK(camera_constant.intrinsics_path.has_value())
       << "No intrinsics path in camera constant";
-  camera::CameraSource source = camera::SelectCamera(
-      camera_constant.name, absl::GetFlag(FLAGS_camera_name),
-      camera::GetCameraConstants());
+  camera::CameraSource source(
+      camera_constant.name,
+      std::make_unique<camera::CVCamera>(camera_constant));
 
   cv::Mat frame = source.GetFrame();
 

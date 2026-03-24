@@ -24,11 +24,11 @@ auto main(int argc, char* argv[]) -> int {
 
   bool time = absl::GetFlag(FLAGS_time).value_or(false);
 
-  auto camera_constant = camera::SelectCameraConfig(
+  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
       absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
-  camera::CameraSource source = camera::SelectCamera(
-      "stress_test_camera", absl::GetFlag(FLAGS_camera_name),
-      camera::GetCameraConstants());
+  camera::CameraSource source(
+      "stress_test_camera",
+      std::make_unique<camera::CVCamera>(camera_constant));
   cv::Mat frame = source.GetFrame();
 
   camera::CscoreStreamer streamer("tag_estimator_test", 5801, 30, frame);

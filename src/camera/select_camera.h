@@ -2,7 +2,6 @@
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cv_camera.h"
-#include "src/camera/disk_camera.h"
 #include "src/utils/pch.h"
 
 namespace camera {
@@ -23,11 +22,5 @@ auto SelectCameraConfig(std::optional<std::string> choice,
                         const camera::camera_constants_t& camera_constants)
     -> camera_constant_t;
 
-auto SelectCamera(const std::string& name, std::optional<std::string> choice,
-                  const camera_constants_t& camera_constants) -> CameraSource;
-auto SelectCamera(const std::string& name, std::optional<std::string> choice,
-                  const camera_constants_t& camera_constants, double disk_speed)
-    -> CameraSource;
-
-// auto GetCameraStream(Camera camera) -> std::unique_ptr<ICamera>;
+auto GetCameraStream(camera_constant_t camera) -> std::unique_ptr<ICamera>;
 }  // namespace camera
