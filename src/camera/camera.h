@@ -1,4 +1,5 @@
 #pragma once
+#include "src/camera/camera_constants.h"
 #include "src/utils/pch.h"
 namespace camera {
 
@@ -12,6 +13,7 @@ class ICamera {
  public:
   virtual auto GetFrame() -> timestamped_frame_t = 0;
   virtual auto Restart() -> void = 0;
+  [[nodiscard]] virtual auto GetCameraConstant() const -> camera_constant_t = 0;
   virtual ~ICamera() = default;
 };
 }  // namespace camera
