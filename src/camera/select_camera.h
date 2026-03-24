@@ -1,8 +1,13 @@
 #pragma once
+#include <optional>
+#include "absl/flags/declare.h"
+#include "absl/flags/flag.h"
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cv_camera.h"
 #include "src/utils/pch.h"
+
+ABSL_DECLARE_FLAG(std::optional<std::string>, folder_name);  //NOLINT
 
 namespace camera {
 // Utility functions to let the user select what camera they want to use with testing.

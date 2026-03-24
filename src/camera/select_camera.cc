@@ -5,6 +5,9 @@
 #include "src/camera/camera_constants.h"
 #include "src/utils/log.h"
 
+ABSL_FLAG(std::optional<std::string>, folder_name, std::nullopt,  //NOLINT
+          "");
+
 using camera::camera_constants_t;
 
 namespace camera {
@@ -26,6 +29,10 @@ auto SelectCameraConfig(const std::string& choice,
     -> camera_constant_t {
   if (choice.find('/') != std::string::npos) {
     std::string camera_name = std::filesystem::path(choice).filename().string();
+
+    if (absl::GetFlag(FLAGS_folder_name).has_value()) {
+      camera_constan
+    }
 
     auto it = camera_constants.find(camera_name);
     if (it == camera_constants.end()) {
