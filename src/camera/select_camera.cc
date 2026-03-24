@@ -1,14 +1,23 @@
 #include "src/camera/select_camera.h"
+#include <memory>
+#include <optional>
+#include "absl/flags/flag.h"
+#include "absl/flags/internal/flag.h"
 #include "cv_camera.h"
+#include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
+#include "src/camera/disk_camera.h"
 #include "src/utils/log.h"
+
+ABSL_FLAG(std::optional<std::string>, folder_path, std::nullopt,  // NOLINT
+          "Folder path to folder with the images logs");
 
 using camera::camera_constants_t;
 
 namespace camera {
 
 auto SelectCameraConfig(const camera_constants_t& camera_constants)
-    -> camera_constant_t {
+    -> std::unique_ptr<ICamera> {
   std::cout << "Available cameras:" << std::endl;
   for (const auto& entry : camera_constants) {
     std::cout << "  - " << entry.first << std::endl;
@@ -21,15 +30,16 @@ auto SelectCameraConfig(const camera_constants_t& camera_constants)
 
 auto SelectCameraConfig(const std::string& choice,
                         const camera_constants_t& camera_constants)
-    -> camera_constant_t {
+    -> std::unique_ptr<ICamera> {
   return camera_constants.contains(choice)
-             ? camera_constants.at(choice)
+             ? nullptr
              : SelectCameraConfig(camera_constants);
 }
 
 auto SelectCameraConfig(std::optional<std::string> choice,
                         const camera_constants_t& camera_constants)
-    -> camera_constant_t {
+    -> std::unique_ptr<ICamera> {
+
   return choice.has_value()
              ? SelectCameraConfig(choice.value(), camera_constants)
              : SelectCameraConfig(camera_constants);

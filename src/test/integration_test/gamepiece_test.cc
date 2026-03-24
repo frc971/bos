@@ -1,4 +1,6 @@
 #include "src/gamepiece/gamepiece.h"
+#include <memory>
+#include "src/camera/camera.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/select_camera.h"
 #include "src/utils/camera_utils.h"
@@ -6,11 +8,10 @@
 #include "src/yolo/yolo.h"
 
 auto main() -> int {
-  camera::camera_constant_t camera_constant =
+  std::unique_ptr<camera::ICamera> camera =
       camera::SelectCameraConfig(camera::GetCameraConstants());
   camera::CameraSource source =
-      camera::CameraSource("nvidia_apriltag_test",
-                           std::make_unique<camera::CVCamera>(camera_constant));
+      camera::CameraSource("nvidia_apriltag_test", std::move(camera));
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   std::shared_ptr<nt::NetworkTable> coral_table =
       inst.GetTable("Orin/Gamepiece/coral");
@@ -27,8 +28,11 @@ auto main() -> int {
       gamepiece::run_gamepiece_detect, std::ref(color_model),
       std::ref(model_info.class_names), std::ref(source), std::ref(coral_topic),
       std::ref(algae_topic),
-      utils::ReadIntrinsics(camera_constant.intrinsics_path.value()),
-      utils::ReadExtrinsics(camera_constant.extrinsics_path.value()), true);
+      utils::ReadIntrinsics(
+          camera->GetCameraConstant().intrinsics_path.value()),
+      utils::ReadExtrinsics(
+          camera->GetCameraConstant().extrinsics_path.value()),
+      true);
 
   usb0_gamepiece_thread.join();
 }
