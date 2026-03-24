@@ -8,7 +8,7 @@
             "program": "${workspaceFolder}/build/src/test/integration_test/localization_test2",
             "args": [
                 "--camera_name=main_bot_left",
-                "--image_folder=/bos/bos_logs/real_log/left",
+                "--image_folder=/bos/bos_logs/log232",
                 "--speed=1"
             ],
             "stopAtEntry": false,
@@ -22,6 +22,10 @@
                     "description": "Enable pretty-printing",
                     "text": "-enable-pretty-printing",
                     "ignoreFailures": true
+                },
+                {
+                    "description": "Load custom GDB pretty printers",
+                    "text": "source /bos/gdb_pretty_printers.py"
                 }
             ],
             "preLaunchTask": "build",

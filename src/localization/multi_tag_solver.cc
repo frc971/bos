@@ -1,4 +1,5 @@
 #include "src/localization/multi_tag_solver.h"
+#include "src/localization/position.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/constants_from_json.h"
 #include "src/utils/transform.h"
@@ -35,7 +36,8 @@ MultiTagSolver::MultiTagSolver(const std::string& intrinsics_path,
       distortion_coefficients_(utils::DistortionCoefficientsFromJson<cv::Mat>(
           utils::ReadIntrinsics(intrinsics_path))),
       camera_to_robot_(Transform3dToCvMat(utils::ExtrinsicsJsonToCameraToRobot(
-          utils::ReadExtrinsics(extrinsics_path)))) {
+          utils::ReadExtrinsics(extrinsics_path)))),
+      single_tag_solver(intrinsics_path, extrinsics_path) {
   cv::Mat rvec = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
   cv::Mat rotate_z = utils::MakeTransform(rvec, tvec);
@@ -101,7 +103,7 @@ auto MultiTagSolver::EstimatePosition(
                          tag_corners_[detection.tag_id].value().begin(),
                          tag_corners_[detection.tag_id].value().end());
   }
-  if (image_points.size() == 0 || object_points.size() == 0) {
+  if (image_points.empty() || object_points.empty()) {
     return {};
   }
   avg_distance /= tag_ids.size();
@@ -132,6 +134,29 @@ auto MultiTagSolver::EstimatePosition(
       .timestamp = detections[0].timestamp,
       .num_tags = num_tags,
       .avg_tag_dist = avg_distance}};
+}
+
+auto MultiTagSolver::EstimatePositionAmbiguous(
+    const std::vector<tag_detection_t>& detections, bool reject_far_tags)
+    -> std::optional<ambiguous_estimate_t> {
+  if (detections.empty()) {
+    return std::nullopt;
+  } else if (detections.size() == 1) {
+    const auto& ambiguous_solution =
+        single_tag_solver.EstimatePositionAmbiguous(detections);
+    if (ambiguous_solution.empty()) {
+      return std::nullopt;
+    }
+    return std::make_optional(ambiguous_estimate_t{
+        ambiguous_solution[0].first, ambiguous_solution[0].second});
+  } else {
+    const std::vector<position_estimate_t> unambiguous_estimate =
+        EstimatePosition(detections);
+    return (unambiguous_estimate.empty())
+               ? std::nullopt
+               : std::make_optional(
+                     ambiguous_estimate_t{unambiguous_estimate[0], std::nullopt});
+  }
 }
 
 }  // namespace localization

@@ -20,6 +20,10 @@ DiskCamera::DiskCamera(std::string image_folder_path, double speed)
       normalized;
   while (!image_paths_.empty()) {
     auto entry = image_paths_.top();
+    if (cv::imread(image_paths_.top().path).empty()) {
+      std::cout << "EMPTY FRAME" << std::endl;
+      std::exit(0);
+    }
     image_paths_.pop();
     entry.timestamp -= offset;
     normalized.push(entry);

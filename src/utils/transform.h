@@ -89,7 +89,7 @@ inline auto PoseOffField(frc::Pose3d pose) -> bool {
   return pose.X().value() < 0 - kerror_margin ||
          pose.X().value() > 16.54 + kerror_margin ||
          pose.Y().value() < 0 - kerror_margin ||
-         pose.Y().value() > 8 + kerror_margin;
+         pose.Y().value() > 8 + kerror_margin || pose.Z().value() > kerror_margin;
 }
 
 }  // namespace utils
