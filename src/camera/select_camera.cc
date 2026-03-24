@@ -31,9 +31,21 @@ auto SelectCameraConfig(const camera_constants_t& camera_constants)
 auto SelectCameraConfig(const std::string& choice,
                         const camera_constants_t& camera_constants)
     -> std::unique_ptr<ICamera> {
-  return camera_constants.contains(choice)
-             ? nullptr
-             : SelectCameraConfig(camera_constants);
+
+  if (choice.find("/right") != std::string::npos) {
+    LOG(INFO) << "in the right thing";
+    return std::make_unique<camera::DiskCamera>(
+        choice, camera::GetCameraConstants()["main_bot_right"]);
+  } else if (choice.find("/left") != std::string::npos) {
+    return std::make_unique<camera::DiskCamera>(
+        choice, camera::GetCameraConstants()["main_bot_left"]);
+  }
+  if (camera_constants.contains(choice)) {
+    return std::make_unique<camera::CVCamera>(
+        camera::GetCameraConstants()[choice]);
+  } else {
+    return SelectCameraConfig(camera_constants);
+  }
 }
 
 auto SelectCameraConfig(std::optional<std::string> choice,
