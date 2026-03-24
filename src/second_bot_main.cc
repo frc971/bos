@@ -47,7 +47,7 @@ auto main() -> int {
 
   std::thread left_thread(
       localization::RunLocalization, std::ref(left_camera),
-      std::make_unique<localization::OpenCVAprilTagDetector>(
+      std::make_unique<localization::GPUAprilTagDetector>(
           left_camera.GetFrame().cols, left_camera.GetFrame().rows,
           utils::ReadIntrinsics(
               camera_constants.at("second_bot_left").intrinsics_path.value())),
@@ -58,7 +58,7 @@ auto main() -> int {
 
   std::thread right_thread(
       localization::RunLocalization, std::ref(right_camera),
-      std::make_unique<localization::OpenCVAprilTagDetector>(
+      std::make_unique<localization::GPUAprilTagDetector>(
           right_camera.GetFrame().cols, right_camera.GetFrame().rows,
           utils::ReadIntrinsics(
               camera_constants.at("second_bot_right").intrinsics_path.value())),
