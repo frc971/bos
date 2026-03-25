@@ -30,6 +30,7 @@ class DiskCamera : public ICamera {
              double speed = 1.0);
   auto GetFrame() -> timestamped_frame_t override;
   auto Restart() -> void override;
+  auto IsDone() -> bool override { return image_paths_.empty(); }
   [[nodiscard]] auto GetCameraConstant() const -> camera_constant_t override;
 
  private:

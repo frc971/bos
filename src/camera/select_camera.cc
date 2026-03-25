@@ -33,7 +33,6 @@ auto SelectCameraConfig(const std::string& choice,
     -> std::unique_ptr<ICamera> {
 
   if (choice.find("/right") != std::string::npos) {
-    LOG(INFO) << "in the right thing";
     return std::make_unique<camera::DiskCamera>(
         choice, camera::GetCameraConstants()["main_bot_right"]);
   } else if (choice.find("/left") != std::string::npos) {
