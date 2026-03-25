@@ -1,6 +1,8 @@
 #include "src/camera/select_camera.h"
+#include <filesystem>
 #include <memory>
 #include <optional>
+#include <string>
 #include "absl/flags/flag.h"
 #include "absl/flags/internal/flag.h"
 #include "cv_camera.h"
@@ -32,19 +34,21 @@ auto SelectCameraConfig(const std::string& choice,
                         const camera_constants_t& camera_constants)
     -> std::unique_ptr<ICamera> {
 
-  if (choice.find("/right") != std::string::npos) {
-    return std::make_unique<camera::DiskCamera>(
-        choice, camera::GetCameraConstants()["main_bot_right"]);
-  } else if (choice.find("/left") != std::string::npos) {
-    return std::make_unique<camera::DiskCamera>(
-        choice, camera::GetCameraConstants()["main_bot_left"]);
+  if (absl::GetFlag(FLAGS_folder_path).has_value()) {
+    if (std::filesystem::is_directory(
+            absl::GetFlag(FLAGS_folder_path).value())) {
+      return std::make_unique<camera::DiskCamera>(
+          absl::GetFlag(FLAGS_folder_path).value(),
+          camera::GetCameraConstants()[choice]);
+    } else {
+      LOG(WARNING) << "You entered in an invalid "
+    }
   }
-  if (camera_constants.contains(choice)) {
-    return std::make_unique<camera::CVCamera>(
-        camera::GetCameraConstants()[choice]);
-  } else {
-    return SelectCameraConfig(camera_constants);
-  }
+
+  return camera_constants.contains(choice)
+             ? std::make_unique<camera::CVCamera>(
+                   camera::GetCameraConstants()[choice])
+             : SelectCameraConfig(camera_constants);
 }
 
 auto SelectCameraConfig(std::optional<std::string> choice,
