@@ -1,12 +1,14 @@
 #include <src/camera/cv_camera.h>
 #include <iomanip>
 #include <iostream>
+#include <memory>
 #include <nlohmann/json.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 #include <sstream>
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
+#include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/cscore_streamer.h"
@@ -38,17 +40,17 @@ void warmupCamera(const std::string& pipeline) {
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
+  std::unique_ptr<camera::ICamera> camera = camera::SelectCameraConfig(
       absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
 
-  PCHECK(camera_constant.intrinsics_path.has_value())
+  PCHECK(camera->GetCameraConstant().intrinsics_path.has_value())
       << "No intrinsics path in camera constant";
-  camera::CameraSource source(
-      camera_constant.name,
-      std::make_unique<camera::CVCamera>(camera_constant));
+  camera::CameraSource source(camera->GetCameraConstant().name,
+                              std::move(camera));
   cv::Mat frame = source.GetFrame();
 
-  std::ifstream intrinsics_file(camera_constant.intrinsics_path.value());
+  std::ifstream intrinsics_file(
+      camera->GetCameraConstant().intrinsics_path.value());
   json intrinsics;
   intrinsics_file >> intrinsics;
 

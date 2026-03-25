@@ -38,7 +38,7 @@ auto main(int argc, char** argv) -> int {
   }
 
   camera::CameraSource camera(
-      "disk", std::make_unique<camera::DiskCamera>(image_folder,
+      "disk", std::make_unique<camera::DiskCamera>(image_folder, std::nullopt,
                                                    absl::GetFlag(FLAGS_speed)));
 
   auto frame = camera.GetFrame();

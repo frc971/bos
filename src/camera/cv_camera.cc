@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <utility>
+#include "src/camera/camera_constants.h"
 #include "src/camera/write_frame.h"
 #include "src/utils/log.h"
 #include "src/utils/timer.h"
@@ -17,7 +18,8 @@ auto FileSystemAlmostFull() {
 }
 
 CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
-    : cap_(cv::VideoCapture(c.pipeline.value())),
+    : camera_constant_(c),
+      cap_(cv::VideoCapture(c.pipeline.value())),
       pipeline_(c.pipeline.value()),
       log_path_(std::move(log_path)) {
   cap_.release();
@@ -95,4 +97,7 @@ auto CVCamera::Restart() -> void {
   std::this_thread::sleep_for(std::chrono::seconds(3));
 }
 
+auto CVCamera::GetCameraConstant() const -> camera_constant_t {
+  return camera_constant_;
+}
 }  // namespace camera

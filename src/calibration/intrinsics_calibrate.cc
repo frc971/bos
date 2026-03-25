@@ -1,3 +1,4 @@
+#include <memory>
 #include <utility>
 
 #include "absl/flags/flag.h"
@@ -68,11 +69,8 @@ auto WriteIntrinsicToFile(cv::Mat camera_matrix, cv::Mat dist_coeffs,
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
+  std::unique_ptr<camera::ICamera> camera = camera::SelectCameraConfig(
       absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
-
-  std::unique_ptr<camera::ICamera> camera =
-      std::make_unique<camera::CVCamera>(camera_constant);
 
   camera::CameraSource source("camera", std::move(camera));
   camera::CscoreStreamer streamer("intrinsics_calibrate",
