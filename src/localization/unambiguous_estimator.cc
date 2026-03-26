@@ -44,8 +44,8 @@ UnambiguousEstimator::UnambiguousEstimator(
   std::vector<std::unique_ptr<camera::ICamera>> icameras;
   for (size_t i = 0; i < cameras.size(); i++) {
     if (sim_) {
-      icameras.push_back(
-          std::make_unique<camera::DiskCamera>(img_dir_paths.value()[i], 10));
+      icameras.push_back(std::make_unique<camera::DiskCamera>(
+          img_dir_paths.value()[i], 10, interesting_timestamp_start_ - 1));
     } else {
       icameras.push_back(std::make_unique<camera::CVCamera>(
           cameras[i].first,
@@ -79,24 +79,24 @@ UnambiguousEstimator::UnambiguousEstimator(
                               1080, 1080);
     }
   }
-  // std::cout << "Initialized estimators and streamers" << std::endl;
-  // std::error_code ec;
-  // log_.emplace("unambiguous.wpilog", ec);
-  // if (ec) {
-  //   std::cerr << "Failed to open log: " << ec.message() << std::endl;
-  //   return;
-  // }
+  std::cout << "Initialized estimators and streamers" << std::endl;
+  std::error_code ec;
+  log_.emplace("unambiguous.wpilog", ec);
+  if (ec) {
+    std::cerr << "Failed to open log: " << ec.message() << std::endl;
+    return;
+  }
 
-  // log_->AddStructSchema<frc::Translation3d>(0);
-  // log_->AddStructSchema<frc::Rotation3d>(0);
-  // log_->AddStructSchema<frc::Pose3d>(0);
+  log_->AddStructSchema<frc::Translation3d>(0);
+  log_->AddStructSchema<frc::Rotation3d>(0);
+  log_->AddStructSchema<frc::Pose3d>(0);
 
-  // pose_log_.emplace(*log_, "/localization/pose");
-  // num_tags_log_.emplace(*log_, "/localization/num_tags");
-  // timestamp_log_.emplace(*log_, "/localization/timestamp");
-  // used_prev_pose_log_.emplace(*log_, "/localization/used_prev_pose");
-  // best_cost_log_.emplace(*log_, "/localization/best_cost");
-  // all_pose_estimates_log_.emplace(*log_, "/localization/all_pose_estimates");
+  pose_log_.emplace(*log_, "/localization/pose");
+  num_tags_log_.emplace(*log_, "/localization/num_tags");
+  timestamp_log_.emplace(*log_, "/localization/timestamp");
+  used_prev_pose_log_.emplace(*log_, "/localization/used_prev_pose");
+  best_cost_log_.emplace(*log_, "/localization/best_cost");
+  all_pose_estimates_log_.emplace(*log_, "/localization/all_pose_estimates");
 }
 
 auto UnambiguousEstimator::Cost(const frc::Pose3d& a, const frc::Pose3d& b)
@@ -237,18 +237,18 @@ void UnambiguousEstimator::Run() {
       if (pose_estimate.invalid) {
         continue;
       }
-      // auto log_time =
-      //     static_cast<int64_t>(pose_estimate.pose_estimate.timestamp * 1e6);
-      // pose_log_.value().Append(pose_estimate.pose_estimate.pose, log_time);
-      // num_tags_log_.value().Append(pose_estimate.pose_estimate.num_tags,
-      //                              log_time);
-      // timestamp_log_.value().Append(pose_estimate.pose_estimate.timestamp,
-      //                               log_time);
-      // best_cost_log_.value().Append(pose_estimate.best_cost, log_time);
-      // used_prev_pose_log_.value().Append(pose_estimate.used_prev_pose,
-      //                                    log_time);
-      // all_pose_estimates_log_.value().Append(pose_estimate.all_pose_estimates,
-      //                                        log_time);
+      auto log_time =
+          static_cast<int64_t>(pose_estimate.pose_estimate.timestamp * 1e6);
+      pose_log_.value().Append(pose_estimate.pose_estimate.pose, log_time);
+      num_tags_log_.value().Append(pose_estimate.pose_estimate.num_tags,
+                                   log_time);
+      timestamp_log_.value().Append(pose_estimate.pose_estimate.timestamp,
+                                    log_time);
+      best_cost_log_.value().Append(pose_estimate.best_cost, log_time);
+      used_prev_pose_log_.value().Append(pose_estimate.used_prev_pose,
+                                         log_time);
+      all_pose_estimates_log_.value().Append(pose_estimate.all_pose_estimates,
+                                             log_time);
     }
   }
 }
@@ -270,13 +270,16 @@ auto UnambiguousEstimator::GetAmbiguousEstimates()
       std::cout << "Stopped log" << std::endl;
       throw std::runtime_error("DONE");
     }
-    log_interesting_timestamp_ =
-        usable_frames[i]->timestamp > interesting_timestamp_start_ &&
-        usable_frames[i]->timestamp < interesting_timestamp_end_;
     prev_timestamps_[i] = usable_frames[i]->timestamp;
 
     std::vector<tag_detection_t> detections =
         detectors_[i]->GetTagDetections(usable_frames[i].value());
+
+    if (log_interesting_timestamp_ && detections.size() > 0) {
+      cv::imwrite("/bos/interesting_frames/" +
+                      std::to_string(usable_frames[i]->timestamp) + ".png",
+                  usable_frames[i]->frame);
+    }
 
     std::optional<ambiguous_estimate_t> est =
         solvers_[i].EstimatePositionAmbiguous(detections, false);
@@ -317,13 +320,16 @@ auto UnambiguousEstimator::GetUsableFrames(
     if (frame.timestamp > latest_timestamp) {
       latest_timestamp = frame.timestamp;
     }
+    log_interesting_timestamp_ =
+        frame.timestamp > interesting_timestamp_start_ &&
+        frame.timestamp < interesting_timestamp_end_;
   }
   for (size_t i = 0; i < frames.size(); i++) {
     if (latest_timestamp - frames[i].timestamp < kacceptable_frame_recency) {
       usable_frames[i] = std::move(frames[i]);
     }
   }
-  
+
   return usable_frames;
 }
 
@@ -339,7 +345,9 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   }
   std::vector<position_estimate_t> best_solution;
   std::vector<position_estimate_t> current_solution;
-  use_prev_pose_ = frc::Timer::GetFPGATimestamp().value() - prev_pose_estimate_->timestamp < 0.2;
+  use_prev_pose_ =
+      frc::Timer::GetFPGATimestamp().value() - prev_pose_estimate_->timestamp <
+      0.2;
   double best_cost = std::numeric_limits<double>::infinity();
 
   double cost = SearchSolutions(ambiguous_estimates, 0, current_solution,

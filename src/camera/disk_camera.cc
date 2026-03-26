@@ -3,11 +3,16 @@
 
 namespace camera {
 
-DiskCamera::DiskCamera(std::string image_folder_path, double speed)
+DiskCamera::DiskCamera(std::string image_folder_path, double speed,
+                       std::optional<double> start)
     : speed(speed), image_folder_path_(std::move(image_folder_path)) {
   for (auto& entry : std::filesystem::directory_iterator(image_folder_path_)) {
     std::string entry_name = entry.path().filename().string();
 
+    if (start.has_value() &&
+        std::stod(entry_name.erase(entry_name.size() - 4, 4)) < start) {
+      continue;
+    }
     // remove .png for timestamp
     image_paths_.push(timestamped_frame_path_t{
         .path = entry.path(),
