@@ -20,11 +20,11 @@ namespace camera {
 
 auto SelectCameraConfig(const camera_constants_t& camera_constants)
     -> std::unique_ptr<ICamera> {
-  std::cout << "Available cameras:" << std::endl;
+  LOG(INFO) << "Available cameras: ";
   for (const auto& entry : camera_constants) {
-    std::cout << "  - " << entry.first << std::endl;
+    LOG(INFO) << "  - " << entry.first;
   }
-  std::cout << "Please select a camera: " << std::flush;
+  LOG(INFO) << "Please select a camera: ";
   std::string choice;
   std::cin >> choice;
   return SelectCameraConfig(choice, camera_constants);
@@ -41,23 +41,34 @@ auto SelectCameraConfig(const std::string& choice,
           absl::GetFlag(FLAGS_folder_path).value(),
           camera::GetCameraConstants()[choice]);
     } else {
-      LOG(WARNING) << "You entered in an invalid "
+      LOG(WARNING) << "You entered in an invalid camera";
     }
   }
+  if (camera_constants.contains(choice)) {
 
-  return camera_constants.contains(choice)
-             ? std::make_unique<camera::CVCamera>(
-                   camera::GetCameraConstants()[choice])
-             : SelectCameraConfig(camera_constants);
+    return std::make_unique<camera::CVCamera>(
+        camera::GetCameraConstants()[choice]);
+  } else {
+    return SelectCameraConfig(camera_constants);
+  }
+  // return camera_constants.contains(choice)
+  //            ? std::make_unique<camera::CVCamera>(
+  //                  camera::GetCameraConstants()[choice])
+  //            : SelectCameraConfig(camera_constants);
 }
 
 auto SelectCameraConfig(std::optional<std::string> choice,
                         const camera_constants_t& camera_constants)
     -> std::unique_ptr<ICamera> {
 
-  return choice.has_value()
-             ? SelectCameraConfig(choice.value(), camera_constants)
-             : SelectCameraConfig(camera_constants);
+  if (choice.has_value()) {
+    return SelectCameraConfig(choice.value(), camera_constants);
+  } else {
+    return SelectCameraConfig(camera_constants);
+  }
+  // return choice.has_value()
+  //            ? SelectCameraConfig(choice.value(), camera_constants)
+  //            : SelectCameraConfig(camera_constants);
 }
 
 }  // namespace camera

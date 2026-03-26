@@ -10,6 +10,12 @@
 auto main() -> int {
   std::unique_ptr<camera::ICamera> camera =
       camera::SelectCameraConfig(camera::GetCameraConstants());
+
+  std::string intrinsics_path =
+      camera->GetCameraConstant().intrinsics_path.value();
+  std::string extrinsics_path =
+      camera->GetCameraConstant().extrinsics_path.value();
+
   camera::CameraSource source =
       camera::CameraSource("nvidia_apriltag_test", std::move(camera));
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
@@ -27,12 +33,8 @@ auto main() -> int {
   std::thread usb0_gamepiece_thread(
       gamepiece::run_gamepiece_detect, std::ref(color_model),
       std::ref(model_info.class_names), std::ref(source), std::ref(coral_topic),
-      std::ref(algae_topic),
-      utils::ReadIntrinsics(
-          camera->GetCameraConstant().intrinsics_path.value()),
-      utils::ReadExtrinsics(
-          camera->GetCameraConstant().extrinsics_path.value()),
-      true);
+      std::ref(algae_topic), utils::ReadIntrinsics(intrinsics_path),
+      utils::ReadExtrinsics(extrinsics_path), true);
 
   usb0_gamepiece_thread.join();
 }

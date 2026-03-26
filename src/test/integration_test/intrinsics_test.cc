@@ -43,16 +43,18 @@ auto main(int argc, char* argv[]) -> int {
   std::unique_ptr<camera::ICamera> camera = camera::SelectCameraConfig(
       absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
 
+  CHECK(camera.get() != nullptr);
   PCHECK(camera->GetCameraConstant().intrinsics_path.has_value())
       << "No intrinsics path in camera constant";
-  camera::CameraSource source(camera->GetCameraConstant().name,
-                              std::move(camera));
-  cv::Mat frame = source.GetFrame();
 
   std::ifstream intrinsics_file(
       camera->GetCameraConstant().intrinsics_path.value());
   json intrinsics;
   intrinsics_file >> intrinsics;
+
+  camera::CameraSource source(camera->GetCameraConstant().name,
+                              std::move(camera));
+  cv::Mat frame = source.GetFrame();
 
   cv::Mat camera_matrix = camera_matrix_from_json(intrinsics);
   cv::Mat distortion_coefficients =
