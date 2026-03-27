@@ -5,8 +5,8 @@ cmake \
   -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_CXX_FLAGS_DEBUG="-g -O0" \
   -DCMAKE_CXX_FLAGS="-O0 -g -fno-lto" \
-  -B build -G Ninja .
-cmake --build build
+  -B debug_build -G Ninja .
+cmake --build debug_build
 mkdir -p /bos 
 if [ "$(realpath constants)" != "$(realpath /bos/constants 2>/dev/null)" ]; then
   cp -r constants /bos

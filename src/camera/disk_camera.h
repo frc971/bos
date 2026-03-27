@@ -23,12 +23,15 @@ struct CompareTimestampedFramePath {
 // Can be used to testing
 class DiskCamera : public ICamera {
  public:
-  DiskCamera(std::string image_folder_path, double speed, std::optional<double> start = std::nullopt);
+  DiskCamera(std::string image_folder_path, double speed,
+             std::optional<double> start = std::nullopt,
+             std::optional<double> end = std::nullopt);
   auto GetFrame() -> timestamped_frame_t override;
   auto Restart() -> void override;
 
  private:
-  double speed;
+  const double speed_;
+  const std::optional<double> start_, end_;
   std::string image_folder_path_;
   std::priority_queue<TimestampedFramePath, std::vector<TimestampedFramePath>,
                       CompareTimestampedFramePath>

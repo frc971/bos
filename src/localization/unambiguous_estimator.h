@@ -30,6 +30,7 @@ class UnambiguousEstimator {
       std::optional<std::vector<std::filesystem::path>> img_dir_paths =
           std::nullopt);
   void Run();
+  static bool log_interesting_timestamp_;
 
  private:
   auto GetUnambiguatedEstimate() -> latent_estimate_t;
@@ -45,10 +46,9 @@ class UnambiguousEstimator {
   auto GetAmbiguousEstimates() -> std::vector<ambiguous_estimate_t>;
   auto GetUsableFrames(std::vector<camera::timestamped_frame_t>& frames)
       -> std::vector<std::optional<camera::timestamped_frame_t>>;
-  static constexpr double interesting_timestamp_start_ = 29.6;  // 13.265;
-  static constexpr double interesting_timestamp_end_ = 30;
+  static constexpr double interesting_timestamp_start_ = 35.6;  // 13.265;
+  static constexpr double interesting_timestamp_end_ = 42;
 
- private:
   std::vector<camera::CscoreStreamer> streamers_;
   std::unique_ptr<camera::MultiCameraSource> sources_;
   std::vector<std::unique_ptr<IAprilTagDetector>> detectors_;
@@ -67,7 +67,6 @@ class UnambiguousEstimator {
   std::optional<wpi::log::StructArrayLogEntry<frc::Pose3d>>
       all_pose_estimates_log_;
   static constexpr double kuse_prev_pose_threshold = 100;  // tune
-  bool log_interesting_timestamp_ = false;
   bool use_prev_pose_ = false;
 };
 }  // namespace localization

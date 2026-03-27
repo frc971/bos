@@ -110,14 +110,8 @@ auto MultiTagSolver::EstimatePosition(
   cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);
   cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);
 
-  try {
-    cv::solvePnP(object_points, image_points, camera_matrix_,
-                 distortion_coefficients_, rvec, tvec, false,
-                 cv::SOLVEPNP_SQPNP);
-  } catch (const std::exception& e) {
-    LOG(WARNING) << "Caught solve pnp exception:\n" << e.what();
-    return {};
-  }
+  cv::solvePnP(object_points, image_points, camera_matrix_,
+               distortion_coefficients_, rvec, tvec, false, cv::SOLVEPNP_SQPNP);
 
   cv::Mat feild_to_camera = utils::MakeTransform(rvec, tvec).inv();
   cv::Mat feild_to_robot = feild_to_camera * camera_to_robot_;
@@ -145,17 +139,21 @@ auto MultiTagSolver::EstimatePositionAmbiguous(
     const auto& ambiguous_solution =
         single_tag_solver.EstimatePositionAmbiguous(detections);
     if (ambiguous_solution.empty()) {
+      std::cout << "Squaresolve failed" << std::endl;
       return std::nullopt;
     }
     return std::make_optional(ambiguous_estimate_t{
         ambiguous_solution[0].first, ambiguous_solution[0].second});
   } else {
     const std::vector<position_estimate_t> unambiguous_estimate =
-        EstimatePosition(detections);
+        EstimatePosition(detections, false);
+    if (unambiguous_estimate.empty()) {
+      std::cout << "Base function failed" << std::endl;
+    }
     return (unambiguous_estimate.empty())
                ? std::nullopt
-               : std::make_optional(
-                     ambiguous_estimate_t{unambiguous_estimate[0], std::nullopt});
+               : std::make_optional(ambiguous_estimate_t{
+                     unambiguous_estimate[0], std::nullopt});
   }
 }
 

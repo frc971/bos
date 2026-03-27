@@ -50,7 +50,7 @@ void RunLocalizationSimulation(
     std::unique_ptr<localization::IPositionSolver> solver,
     const std::string& extrinsics, std::optional<uint> port, bool verbose) {
   std::error_code ec;
-  auto log = std::make_unique<wpi::log::DataLogWriter>("multitag.wpilog", ec);
+  auto log = std::make_unique<wpi::log::DataLogWriter>("multitag2.wpilog", ec);
   if (ec) {
     std::cerr << "Failed to open log: " << ec.message() << std::endl;
     return;

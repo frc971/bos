@@ -26,6 +26,8 @@
 
 namespace localization {
 
+bool UnambiguousEstimator::log_interesting_timestamp_ = false;
+
 UnambiguousEstimator::UnambiguousEstimator(
     std::vector<std::pair<camera::camera_constant_t, Detector>>& cameras,
     std::optional<uint> port_start, bool verbose,
@@ -45,7 +47,8 @@ UnambiguousEstimator::UnambiguousEstimator(
   for (size_t i = 0; i < cameras.size(); i++) {
     if (sim_) {
       icameras.push_back(std::make_unique<camera::DiskCamera>(
-          img_dir_paths.value()[i], 10, interesting_timestamp_start_ - 1));
+          img_dir_paths.value()[i], 10, interesting_timestamp_start_ - 1,
+          interesting_timestamp_end_));
     } else {
       icameras.push_back(std::make_unique<camera::CVCamera>(
           cameras[i].first,
@@ -86,10 +89,6 @@ UnambiguousEstimator::UnambiguousEstimator(
     std::cerr << "Failed to open log: " << ec.message() << std::endl;
     return;
   }
-
-  log_->AddStructSchema<frc::Translation3d>(0);
-  log_->AddStructSchema<frc::Rotation3d>(0);
-  log_->AddStructSchema<frc::Pose3d>(0);
 
   pose_log_.emplace(*log_, "/localization/pose");
   num_tags_log_.emplace(*log_, "/localization/num_tags");
@@ -235,8 +234,11 @@ void UnambiguousEstimator::Run() {
     while (true) {
       latent_estimate_t pose_estimate = GetUnambiguatedEstimate();
       if (pose_estimate.invalid) {
+        std::cout << "Received invalid estimate" << std::endl;
         continue;
       }
+      std::cout << "pose timestamp: " << pose_estimate.pose_estimate.timestamp
+                << std::endl;
       auto log_time =
           static_cast<int64_t>(pose_estimate.pose_estimate.timestamp * 1e6);
       pose_log_.value().Append(pose_estimate.pose_estimate.pose, log_time);
@@ -275,16 +277,24 @@ auto UnambiguousEstimator::GetAmbiguousEstimates()
     std::vector<tag_detection_t> detections =
         detectors_[i]->GetTagDetections(usable_frames[i].value());
 
-    if (log_interesting_timestamp_ && detections.size() > 0) {
-      cv::imwrite("/bos/interesting_frames/" +
-                      std::to_string(usable_frames[i]->timestamp) + ".png",
-                  usable_frames[i]->frame);
+    if (detections.empty()) {
+      std::cout << "no detections for timestamp: " << usable_frames[i]->timestamp << std::endl;
+      continue;
     }
+
+    // if (log_interesting_timestamp_) {
+    // cv::imwrite("/bos/interesting_frames/" +
+    //                 std::to_string(usable_frames[i]->timestamp) + ".png",
+    //             usable_frames[i]->frame);
+    // }
 
     std::optional<ambiguous_estimate_t> est =
         solvers_[i].EstimatePositionAmbiguous(detections, false);
 
     if (!est.has_value()) {
+      cv::imwrite("/bos/interesting_frames/" +
+                      std::to_string(usable_frames[i]->timestamp) + ".png",
+                  usable_frames[i]->frame);
       continue;
     }
 
@@ -320,15 +330,19 @@ auto UnambiguousEstimator::GetUsableFrames(
     if (frame.timestamp > latest_timestamp) {
       latest_timestamp = frame.timestamp;
     }
-    log_interesting_timestamp_ =
+    UnambiguousEstimator::log_interesting_timestamp_ =
         frame.timestamp > interesting_timestamp_start_ &&
         frame.timestamp < interesting_timestamp_end_;
   }
+  int count = 0;
   for (size_t i = 0; i < frames.size(); i++) {
     if (latest_timestamp - frames[i].timestamp < kacceptable_frame_recency) {
       usable_frames[i] = std::move(frames[i]);
+      count++;
     }
   }
+  std::cout << "At timestamp: " << latest_timestamp << ", kept " << count
+            << " out of " << frames.size() << std::endl;
 
   return usable_frames;
 }
@@ -353,6 +367,8 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   double cost = SearchSolutions(ambiguous_estimates, 0, current_solution,
                                 best_solution, best_cost);
   if (best_solution.size() == 0) {
+    std::cout << "Nothing in solution, ambiguous estimates: "
+              << ambiguous_estimates.size() << std::endl;
     return {.invalid = true};
   }
   double avg_variance = 0;
@@ -377,6 +393,8 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
       .invalid = invalid};
   everything_timer.Stop();
   prev_pose_estimate_ = std::make_optional(averaged_estimate);
+  std::cout << "Sending estimate with avg timestamp: " << avg_timestamp
+            << std::endl;
   return {.pose_estimate = averaged_estimate,
           .latency = 0,
           .best_cost = cost,
