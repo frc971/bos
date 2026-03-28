@@ -10,7 +10,8 @@ DiskCamera::DiskCamera(std::string image_folder_path, double speed,
       start_(start),
       end_(end),
       image_folder_path_(std::move(image_folder_path)) {
-  CHECK(!start_.has_value() || !end_.has_value() || end_.value() > start_.value());
+  CHECK(!start_.has_value() || !end_.has_value() ||
+        end_.value() > start_.value());
   for (auto& entry : std::filesystem::directory_iterator(image_folder_path_)) {
     std::string entry_name = entry.path().filename().string();
 
@@ -35,7 +36,7 @@ DiskCamera::DiskCamera(std::string image_folder_path, double speed,
     auto entry = image_paths_.top();
     if (cv::imread(image_paths_.top().path).empty()) {
       std::cout << "EMPTY FRAME" << std::endl;
-      std::exit(0);
+      break;
     }
     image_paths_.pop();
     entry.timestamp -= offset;
