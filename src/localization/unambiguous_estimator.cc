@@ -55,7 +55,7 @@ UnambiguousEstimator::UnambiguousEstimator(
           fmt::format("{}/{}", log_path, cameras[i].first.name)));
     }
   }
-  sources_ = std::make_unique<camera::MultiCameraSource>(icameras);
+  sources_ = std::make_unique<camera::MultiCameraSource>(icameras, sim_);
   std::cout << "Initialized cameras" << std::endl;
   std::this_thread::sleep_for(std::chrono::duration<double>(0.1));
   std::cout << "Initializing estimators and streamers" << std::endl;
@@ -278,7 +278,8 @@ auto UnambiguousEstimator::GetAmbiguousEstimates()
         detectors_[i]->GetTagDetections(usable_frames[i].value());
 
     if (detections.empty()) {
-      std::cout << "no detections for timestamp: " << usable_frames[i]->timestamp << std::endl;
+      std::cout << "no detections for timestamp: "
+                << usable_frames[i]->timestamp << std::endl;
       continue;
     }
 

@@ -10,7 +10,7 @@ namespace camera {
 class MultiCameraSource {
  public:
   MultiCameraSource(std::vector<std::unique_ptr<ICamera>>& cameras,
-                    bool simulation = false);
+                    bool use_all_frames = false);
   [[nodiscard]] auto GetTimestampedFrames() -> std::vector<timestamped_frame_t>;
   [[nodiscard]] auto GetCVFrames() -> std::vector<cv::Mat>;
   [[nodiscard]] inline auto NumCameras() -> double { return cameras_.size(); }
@@ -22,7 +22,8 @@ class MultiCameraSource {
   std::vector<timestamped_frame_t> timestamped_frames_;
   std::vector<std::thread> camera_threads_;
   std::mutex mutex_;
-  const bool simulation_;
+  const bool use_all_frames_;
+  bool frames_used_ = true; // only for when use_all_frames_ is true
 };
 
 }  // namespace camera
