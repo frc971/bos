@@ -10,7 +10,7 @@ DiskCamera::DiskCamera(std::string image_folder_path, double speed,
       start_(start),
       end_(end),
       image_folder_path_(std::move(image_folder_path)) {
-  CHECK(end_ > start_);
+  CHECK(!start_.has_value() || !end_.has_value() || end_.value() > start_.value());
   for (auto& entry : std::filesystem::directory_iterator(image_folder_path_)) {
     std::string entry_name = entry.path().filename().string();
 
