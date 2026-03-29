@@ -5,5 +5,5 @@
 	path = third_party/abseil-cpp
 	url = https://github.com/abseil/abseil-cpp.git
 [submodule "bos-logs"]
-	path = logs
-	url = https://github.com/frc971/bos-logs.git
+	path = bos-logs
+	url = https://github.com/frc971/bos-logs
