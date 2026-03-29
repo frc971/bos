@@ -35,8 +35,7 @@ else
   BUILD_DIR="${NAME}-${TYPE_LOWER}-build"
 fi
 
-git submodule init
-git submodule update
+git submodule update --init --depth 1
 cmake -DENABLE_CLANG_TIDY=OFF -DCMAKE_BUILD_TYPE="$TYPE" -B "$BUILD_DIR" -G Ninja .
 cmake --build "$BUILD_DIR"
 mkdir -p /bos
