@@ -46,8 +46,8 @@ class UnambiguousEstimator {
   auto GetAmbiguousEstimates() -> std::vector<ambiguous_estimate_t>;
   auto GetUsableFrames(std::vector<camera::timestamped_frame_t>& frames)
       -> std::vector<std::optional<camera::timestamped_frame_t>>;
-  static constexpr double interesting_timestamp_start_ = 35.6;  // 13.265;
-  static constexpr double interesting_timestamp_end_ = 42;
+  static constexpr double interesting_timestamp_start_ = 0;  // 13.265;
+  static constexpr double interesting_timestamp_end_ = 200;
 
   std::vector<camera::CscoreStreamer> streamers_;
   std::unique_ptr<camera::MultiCameraSource> sources_;

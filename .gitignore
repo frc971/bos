@@ -19,4 +19,4 @@ bos_logs/
 wpilib-install
 *.jpg
 interesting_frames/
-debug_build/
+*build*/

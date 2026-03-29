@@ -1,14 +1,20 @@
 #include "disk_camera.h"
+#include <optional>
+#include <utility>
 #include "absl/log/check.h"
+#include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 
 namespace camera {
 
-DiskCamera::DiskCamera(std::string image_folder_path, double speed,
-                       std::optional<double> start, std::optional<double> end)
+DiskCamera::DiskCamera(std::string image_folder_path,
+                       std::optional<camera_constant_t> camera_constant,
+                       double speed, std::optional<double> start,
+                       std::optional<double> end)
     : speed_(speed),
       start_(start),
       end_(end),
+      camera_constant_(std::move(camera_constant)),
       image_folder_path_(std::move(image_folder_path)) {
   CHECK(!start_.has_value() || !end_.has_value() ||
         end_.value() > start_.value());
@@ -28,6 +34,10 @@ DiskCamera::DiskCamera(std::string image_folder_path, double speed,
         timestamped_frame_path_t{.path = entry.path(), .timestamp = timestamp});
   }
 
+  if (image_paths_.empty()) {
+    std::cout << "Failed to capture any images" << std::endl;
+    std::exit(0);
+  }
   auto offset = image_paths_.top().timestamp;
   std::priority_queue<TimestampedFramePath, std::vector<TimestampedFramePath>,
                       CompareTimestampedFramePath>
@@ -36,7 +46,8 @@ DiskCamera::DiskCamera(std::string image_folder_path, double speed,
     auto entry = image_paths_.top();
     if (cv::imread(image_paths_.top().path).empty()) {
       std::cout << "EMPTY FRAME" << std::endl;
-      break;
+      image_paths_.pop();
+      continue;
     }
     image_paths_.pop();
     entry.timestamp -= offset;
@@ -69,4 +80,7 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
 
 auto DiskCamera::Restart() -> void {}
 
+auto DiskCamera::GetCameraConstant() const -> camera_constant_t {
+  return *camera_constant_;
+}
 }  // namespace camera

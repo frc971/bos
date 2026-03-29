@@ -47,8 +47,8 @@ UnambiguousEstimator::UnambiguousEstimator(
   for (size_t i = 0; i < cameras.size(); i++) {
     if (sim_) {
       icameras.push_back(std::make_unique<camera::DiskCamera>(
-          img_dir_paths.value()[i], 10, interesting_timestamp_start_ - 1,
-          interesting_timestamp_end_));
+          img_dir_paths.value()[i], cameras[i].first, 10,
+          interesting_timestamp_start_ - 1, interesting_timestamp_end_));
     } else {
       icameras.push_back(std::make_unique<camera::CVCamera>(
           cameras[i].first,
@@ -283,19 +283,10 @@ auto UnambiguousEstimator::GetAmbiguousEstimates()
       continue;
     }
 
-    // if (log_interesting_timestamp_) {
-    // cv::imwrite("/bos/interesting_frames/" +
-    //                 std::to_string(usable_frames[i]->timestamp) + ".png",
-    //             usable_frames[i]->frame);
-    // }
-
     std::optional<ambiguous_estimate_t> est =
         solvers_[i].EstimatePositionAmbiguous(detections, false);
 
     if (!est.has_value()) {
-      cv::imwrite("/bos/interesting_frames/" +
-                      std::to_string(usable_frames[i]->timestamp) + ".png",
-                  usable_frames[i]->frame);
       continue;
     }
 
