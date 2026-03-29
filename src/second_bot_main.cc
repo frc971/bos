@@ -37,7 +37,7 @@ auto main() -> int {
 
   std::thread front_thread(
       localization::RunLocalization, std::ref(front_camera),
-      std::make_unique<localization::OpenCVAprilTagDetector>(
+      std::make_unique<localization::GPUAprilTagDetector>(
           front_camera.GetFrame().cols, front_camera.GetFrame().rows,
           utils::ReadIntrinsics(
               camera_constants.at("second_bot_front").intrinsics_path.value())),
