@@ -9,29 +9,35 @@
 #include <system_error>
 #include <vector>
 #include "src/pathing/pathing.h"
+#include "src/utils/wpilog_time.h"
 
 constexpr uint CELL_SIZE = 20;
 
 using namespace pathing;
 
 auto main() -> int {
-  std::string logDir = "./logs";
-  std::filesystem::create_directories(logDir);
-  std::filesystem::remove(logDir + "/sim.wpilog");
+  utils::InitializeWpiLogTime();
   std::error_code ec;
-  auto log =
-      std::make_unique<wpi::log::DataLogWriter>("localization_log.wpilog", ec);
+  wpi::log::DataLogWriter log{"/bos/logs/sim.wpilog", ec};
   if (ec) {
-    std::cerr << "Failed to open log: " << ec.message() << std::endl;
-    return 0;
+    std::cerr << "Failed to open log: " << ec.message() << '\n';
+    return 1;
   }
+  const int64_t init_timestamp = utils::GetNonzeroLogTimestampMicros();
 
-  wpi::log::StructLogEntry<frc::Pose2d> poseLog(*log, "/sim/Pose");
-  wpi::log::DoubleLogEntry accelXLog(*log, "/sim/AccelX");
-  wpi::log::DoubleLogEntry accelYLog(*log, "/sim/AccelY");
-  wpi::log::DoubleLogEntry accelMagLog(*log, "/sim/AccelMagnitude");
-  wpi::log::DoubleLogEntry velXLog(*log, "/sim/VelX");
-  wpi::log::DoubleLogEntry velYLog(*log, "/sim/VelY");
+  log.AddStructSchema<frc::Pose2d>(init_timestamp);
+  wpi::log::StructLogEntry<frc::Pose2d> poseLog(
+      log, "/sim/Pose2d", init_timestamp);
+  wpi::log::DoubleLogEntry accelXLog(
+      log, "/sim/AccelX", init_timestamp);
+  wpi::log::DoubleLogEntry accelYLog(
+      log, "/sim/AccelY", init_timestamp);
+  wpi::log::DoubleLogEntry accelMagLog(
+      log, "/sim/AccelMagnitude", init_timestamp);
+  wpi::log::DoubleLogEntry velXLog(
+      log, "/sim/VelX", init_timestamp);
+  wpi::log::DoubleLogEntry velYLog(
+      log, "/sim/VelY", init_timestamp);
 
   std::ifstream file("/bos/constants/navgrid.json");
   if (!file.is_open()) {
@@ -163,7 +169,7 @@ auto main() -> int {
   }
 
   std::cout << "Stopping this log" << std::endl;
-  log->Stop();
+  log.Stop();
   return 0;
 }
 
