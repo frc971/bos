@@ -1,5 +1,6 @@
 #include <frc/DataLogManager.h>
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <optional>
 #include <thread>
@@ -29,7 +30,15 @@ ABSL_FLAG(double, speed, 0.01, "Delay between frames");  //NOLINT
 
 auto HasRegularFiles(const std::filesystem::path& path) -> bool {
   for (const auto& entry : std::filesystem::directory_iterator(path)) {
-    if (entry.is_regular_file()) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+
+    std::string extension = entry.path().extension().string();
+    std::transform(extension.begin(), extension.end(), extension.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    if (extension == ".png" || extension == ".jpg" ||
+        extension == ".jpeg") {
       return true;
     }
   }
