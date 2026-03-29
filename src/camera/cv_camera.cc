@@ -6,6 +6,7 @@
 #include "src/camera/write_frame.h"
 #include "src/utils/log.h"
 #include "src/utils/timer.h"
+#include "src/utils/wpilog_time.h"
 
 namespace fs = std::filesystem;
 
@@ -71,7 +72,7 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
     Restart();
     LOG(WARNING) << "Restarting camera";
   }
-  timestamped_frame.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
+  timestamped_frame.timestamp = utils::GetLogTimestampSeconds();
   cap_.retrieve(raw_image);
 
   raw_image.copyTo(timestamped_frame.frame);

@@ -5,12 +5,14 @@
 #include <filesystem>
 #include <thread>
 #include "src/utils/log.h"
+#include "src/utils/wpilog_time.h"
 
 namespace fs = std::filesystem;
 
 namespace utils {
 
 void StartNetworktables(int team_number) {
+  utils::InitializeWpiLogTime();
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   inst.StopServer();
   inst.StopClient();
@@ -26,6 +28,7 @@ void StartNetworktables(int team_number) {
   while (!inst.IsConnected()) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
+  utils::WaitForSaneTimestamp();
   LOG(INFO) << "Connected to rio!";
 }
 
