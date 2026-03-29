@@ -1,16 +1,11 @@
 #include "src/pathing/pathing.h"
 #include <absl/log/log.h>
-#include <frc/DataLogManager.h>
-#include <frc/geometry/Pose2d.h>
-#include <networktables/NetworkTableInstance.h>
-#include <networktables/StructArrayTopic.h>
 #include <units/angle.h>
 #include <units/length.h>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 #include <ostream>
 #include <queue>

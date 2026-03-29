@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug BOS executable",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/bos/debug-build/src/pathing/simulator",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/bos",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                } /*,
+                {
+                    "description": "Load custom GDB pretty printers",
+                    "text": "source /bos/gdb_pretty_printers.py"
+                }*/
+            ],
+            "preLaunchTask": "build",
+        }
+    ]
+}

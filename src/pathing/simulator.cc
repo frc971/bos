@@ -1,4 +1,6 @@
-#include <wpi/DataLogBackgroundWriter.h>
+#include <absl/log/log.h>
+#include <frc/geometry/Pose2d.h>
+#include <wpi/DataLogWriter.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -8,23 +10,32 @@
 #include <vector>
 #include "src/pathing/pathing.h"
 
-
 constexpr uint CELL_SIZE = 20;
 
 using namespace pathing;
 
 auto main() -> int {
-  wpi::log::DataLogBackgroundWriter log{"/root/bos/logs", "sim.wpilog"};
+  std::string logDir = "./logs";
+  std::filesystem::create_directories(logDir);
+  std::filesystem::remove(logDir + "/sim.wpilog");
+  std::error_code ec;
+  auto log =
+      std::make_unique<wpi::log::DataLogWriter>("localization_log.wpilog", ec);
+  if (ec) {
+    std::cerr << "Failed to open log: " << ec.message() << std::endl;
+    return 0;
+  }
 
-  wpi::log::StructLogEntry<frc::Translation2d> poseLog(log, "/sim/Pose");
-  wpi::log::DoubleLogEntry accelXLog(log, "/sim/AccelX");
-  wpi::log::DoubleLogEntry accelYLog(log, "/sim/AccelY");
-  wpi::log::DoubleLogEntry accelMagLog(log, "/sim/AccelMagnitude");
-  wpi::log::DoubleLogEntry velXLog(log, "/sim/VelX");
-  wpi::log::DoubleLogEntry velYLog(log, "/sim/VelY");
+  wpi::log::StructLogEntry<frc::Pose2d> poseLog(*log, "/sim/Pose");
+  wpi::log::DoubleLogEntry accelXLog(*log, "/sim/AccelX");
+  wpi::log::DoubleLogEntry accelYLog(*log, "/sim/AccelY");
+  wpi::log::DoubleLogEntry accelMagLog(*log, "/sim/AccelMagnitude");
+  wpi::log::DoubleLogEntry velXLog(*log, "/sim/VelX");
+  wpi::log::DoubleLogEntry velYLog(*log, "/sim/VelY");
 
-  std::ifstream file("/root/bos/constants/navgrid.json");
+  std::ifstream file("/bos/constants/navgrid.json");
   if (!file.is_open()) {
+    LOG(FATAL) << "Unable to find navgrid";
     return 1;
   }
 
@@ -45,15 +56,15 @@ auto main() -> int {
 
   auto poses = CreateSpline(grid, 10, 5, 45, 22);
   if (poses.empty()) {
+    LOG(FATAL) << "Spline is empty";
     return 1;
   }
 
-  constexpr int64_t kDtUs = 20'000;
-  constexpr double kDtSec = kDtUs / 1'000'000.0;
+  constexpr double kDtSec = 0.02;
   constexpr double kMaxAccel = 3.0;
   constexpr double kMaxDecel = 3.0;
   constexpr double kMaxModuleSpeed = 5.0;
-  int64_t t = 0;
+  double t = 0;
 
   std::vector<double> pathDist(poses.size(), 0.0);
   for (size_t i = 1; i < poses.size(); ++i) {
@@ -99,7 +110,11 @@ auto main() -> int {
   for (size_t i = 0; i < poses.size(); ++i) {
     frc::Translation2d actualPose{units::meter_t{currentX},
                                   units::meter_t{currentY}};
-    poseLog.Append(actualPose, t);
+    std::cout << "Appending: x: " << currentX << ", y: " << currentY
+              << std::endl;
+    poseLog.Append(frc::Pose2d{actualPose, frc::Rotation2d{units::radian_t{0}}},
+                   t);
+    std::cout << "Appended" << std::endl;
 
     double desiredSpeed = targetSpeed[i];
 
@@ -144,10 +159,11 @@ auto main() -> int {
       velYLog.Append(currentVy, t);
     }
 
-    t += kDtUs;
+    t += kDtSec;
   }
 
-  log.Flush();
+  std::cout << "Stopping this log" << std::endl;
+  log->Stop();
   return 0;
 }
 
