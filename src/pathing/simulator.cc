@@ -1,4 +1,3 @@
-#include <frc/geometry/Pose2d.h>
 #include <wpi/DataLogBackgroundWriter.h>
 #include <algorithm>
 #include <cmath>
@@ -9,10 +8,15 @@
 #include <vector>
 #include "src/pathing/pathing.h"
 
+
+constexpr uint CELL_SIZE = 20;
+
+using namespace pathing;
+
 auto main() -> int {
   wpi::log::DataLogBackgroundWriter log{"/root/bos/logs", "sim.wpilog"};
 
-  wpi::log::StructLogEntry<frc::Pose2d> poseLog(log, "/sim/Pose2d");
+  wpi::log::StructLogEntry<frc::Translation2d> poseLog(log, "/sim/Pose");
   wpi::log::DoubleLogEntry accelXLog(log, "/sim/AccelX");
   wpi::log::DoubleLogEntry accelYLog(log, "/sim/AccelY");
   wpi::log::DoubleLogEntry accelMagLog(log, "/sim/AccelMagnitude");
@@ -29,7 +33,6 @@ auto main() -> int {
 
   const int GRID_W = data["grid"][0].size();
   const int GRID_H = data["grid"].size();
-  double nodeSizeMeters = data["nodeSizeMeters"];
 
   std::vector<std::vector<bool>> gridData(GRID_H, std::vector<bool>(GRID_W));
   for (int y = 0; y < GRID_H; ++y) {
@@ -38,9 +41,9 @@ auto main() -> int {
     }
   }
 
-  cv::Mat grid = initializeGrid(gridData);
+  cv::Mat grid = InitializeGrid(gridData);
 
-  auto poses = createSpline(grid, 10, 5, 45, 22, nodeSizeMeters);
+  auto poses = CreateSpline(grid, 10, 5, 45, 22);
   if (poses.empty()) {
     return 1;
   }
@@ -94,8 +97,8 @@ auto main() -> int {
   double currentSpeed = 0.0;
 
   for (size_t i = 0; i < poses.size(); ++i) {
-    frc::Pose2d actualPose{units::meter_t{currentX}, units::meter_t{currentY},
-                           poses[i].Rotation()};
+    frc::Translation2d actualPose{units::meter_t{currentX},
+                                  units::meter_t{currentY}};
     poseLog.Append(actualPose, t);
 
     double desiredSpeed = targetSpeed[i];
@@ -146,4 +149,23 @@ auto main() -> int {
 
   log.Flush();
   return 0;
+}
+
+auto ConstructLinePath(cv::Mat& canvas, std::vector<cv::Point2i> path)
+    -> std::vector<cv::Point2i> {
+  std::vector<cv::Point2i> controlPoints;
+  for (size_t i = 0; i < path.size(); ++i) {
+    int px = path[i].x * CELL_SIZE + (CELL_SIZE / 2);
+    int py = path[i].y * CELL_SIZE + (CELL_SIZE / 2);
+
+    controlPoints.emplace_back(px, py);
+
+    if (i > 0) {
+      int prevX = path[i - 1].x * CELL_SIZE + (CELL_SIZE / 2);
+      int prevY = path[i - 1].y * CELL_SIZE + (CELL_SIZE / 2);
+      cv::line(canvas, cv::Point(prevX, prevY), cv::Point(px, py), {0, 0, 0},
+               2);
+    }
+  }
+  return controlPoints;
 }

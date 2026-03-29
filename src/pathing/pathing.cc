@@ -1,4 +1,5 @@
 #include "src/pathing/pathing.h"
+#include <absl/log/log.h>
 #include <frc/DataLogManager.h>
 #include <frc/geometry/Pose2d.h>
 #include <networktables/NetworkTableInstance.h>
@@ -15,9 +16,11 @@
 #include <queue>
 #include <vector>
 
-const int CELL_SIZE = 20;
+namespace pathing {
 
-auto initializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat {
+constexpr uchar WALL = 0;
+
+auto InitializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat {
   int GRID_H = gridData.size();
   int GRID_W = gridData[0].size();
   cv::Mat grid(GRID_H, GRID_W, CV_8UC1);
@@ -29,69 +32,70 @@ auto initializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat {
   return grid;
 }
 
-auto BFS(const cv::Mat& grid, std::pair<int, int> start,
-         std::pair<int, int> target) -> std::vector<std::pair<int, int>> {
-  std::cout << "BFS: Grid size: " << grid.cols << "x" << grid.rows << std::endl;
-  std::cout << "BFS: Start (" << start.first << ", " << start.second
-            << ") value: " << (int)grid.at<uchar>(start.second, start.first)
-            << std::endl;
-  std::cout << "BFS: Target (" << target.first << ", " << target.second
-            << ") value: " << (int)grid.at<uchar>(target.second, target.first)
-            << std::endl;
+auto BFS(const cv::Mat& grid, cv::Point2i start, cv::Point2i target, bool verbose)
+    -> std::vector<cv::Point2i> {
+  if (verbose) {
+    std::cout << "BFS: Grid size: " << grid.cols << "x" << grid.rows
+              << std::endl;
+    std::cout << "BFS: Start (" << start.x << ", " << start.y
+              << ") value: " << (int)grid.at<uchar>(start.y, start.x)
+              << std::endl;
+    std::cout << "BFS: Target (" << target.x << ", " << target.y
+              << ") value: " << (int)grid.at<uchar>(target.y, target.x)
+              << std::endl;
+  }
 
-  if (grid.at<uchar>(start.second, start.first) == 0) {
+  if (grid.at<uchar>(start.y, start.x) == 0) {
     std::cerr << "BFS: Start position is blocked!" << std::endl;
     return {};
   }
-  if (grid.at<uchar>(target.second, target.first) == 0) {
+  if (grid.at<uchar>(target.y, target.x) == 0) {
     std::cerr << "BFS: Target position is blocked!" << std::endl;
     return {};
   }
 
-  cv::Mat visited(grid.rows, grid.cols, CV_8UC1, cv::Scalar(0));
-  cv::Mat parent(grid.rows, grid.cols, CV_32SC2, cv::Scalar(-1, -1));
+  std::vector<std::vector<bool>> visited(grid.rows,
+                                         std::vector<bool>(grid.cols));
+  std::vector<std::vector<cv::Point2i>> parents(grid.rows,
+                                             std::vector<cv::Point2i>(grid.cols));
 
-  std::queue<std::pair<int, int>> queue;
+  std::queue<cv::Point2i> queue;
 
-  visited.at<uchar>(start.second, start.first) = 1;
+  visited[start.y][start.x] = true;
   queue.push(start);
 
-  std::vector<std::pair<int, int>> dirs = {{0, -1},  {0, 1},  {-1, 0}, {1, 0},
-                                           {-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+  const std::array<cv::Point2i, 8> dirs = {
+      {{0, -1}, {0, 1}, {-1, 0}, {1, 0}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}}};
 
   while (!queue.empty()) {
-    auto current = queue.front();
+    cv::Point2i current = queue.front();
     queue.pop();
 
     if (current == target) {
-      std::vector<std::pair<int, int>> path;
-      auto node = target;
-      while (true) {
+      std::vector<cv::Point2i> path;
+      cv::Point2i node = target;
+      while (node != start) {
         path.push_back(node);
-        cv::Vec2i p = parent.at<cv::Vec2i>(node.second, node.first);
-        if (p[0] == -1) {
-          break;
-        }
-        node = {p[0], p[1]};
+        node = parents[node.y][node.x];
       }
       std::reverse(path.begin(), path.end());
       return path;
     }
 
-    for (const std::pair<int, int>& d : dirs) {
-      int nx = current.first + d.first;
-      int ny = current.second + d.second;
+    for (const cv::Point2i& d : dirs) {
+      int nx = current.x + d.x;
+      int ny = current.y + d.y;
 
       if (nx < 0 || nx >= grid.cols || ny < 0 || ny >= grid.rows) {
         continue;
       }
 
-      if (grid.at<uchar>(ny, nx) == 0 || visited.at<uchar>(ny, nx) == 1) {
+      if (grid.at<uchar>(ny, nx) == WALL || visited[ny][nx]) {
         continue;
       }
 
-      visited.at<uchar>(ny, nx) = 1;
-      parent.at<cv::Vec2i>(ny, nx) = cv::Vec2i(current.first, current.second);
+      visited[ny][nx] = true;
+      parents[ny][nx] = current;
       queue.push({nx, ny});
     }
   }
@@ -99,123 +103,83 @@ auto BFS(const cv::Mat& grid, std::pair<int, int> start,
   return {};
 }
 
-auto constructLinePath(cv::Mat& canvas, std::vector<std::pair<int, int>> path)
-    -> std::vector<std::pair<int, int>> {
-  std::vector<std::pair<int, int>> controlPoints;
-  for (size_t i = 0; i < path.size(); ++i) {
-    int px = path[i].first * CELL_SIZE + (CELL_SIZE / 2);
-    int py = path[i].second * CELL_SIZE + (CELL_SIZE / 2);
 
-    controlPoints.emplace_back(px, py);
-
-    if (i > 0) {
-      int prevX = path[i - 1].first * CELL_SIZE + (CELL_SIZE / 2);
-      int prevY = path[i - 1].second * CELL_SIZE + (CELL_SIZE / 2);
-      cv::line(canvas, cv::Point(prevX, prevY), cv::Point(px, py), {0, 0, 0},
-               2);
-    }
-  }
-  return controlPoints;
-}
-
-auto clampedUniformKnotVector(double k, double p) -> std::vector<double> {
+auto ClampedUniformKnotVector(size_t num_control_points, uint degree)
+    -> std::vector<double> {
   std::vector<double> knots;
-  int n = (int)k;
-  int d = (int)p;
 
-  for (int i = 0; i <= d; ++i) {
+  for (size_t i = 0; i <= degree; ++i) {
     knots.push_back(0.0);
   }
 
-  int middle = n - d - 1;
+  int middle = num_control_points - degree - 1;
   for (int i = 1; i <= middle; ++i) {
     knots.push_back((double)i / (middle + 1));
   }
 
-  for (int i = 0; i <= d; ++i) {
+  for (size_t i = 0; i <= degree; ++i) {
     knots.push_back(1.0);
   }
 
   return knots;
 }
 
-auto basisFunction(double i, double p, double t,
+auto BasisFunction(size_t index, uint degree, double t,
                    const std::vector<double>& knots) -> double {
-  int idx = static_cast<int>(i);
-  int deg = static_cast<int>(p);
-
-  if (deg == 0) {
-    if (p == 0) {
-      if (knots[i] <= t && t < knots[i + 1]) {
-        return 1.0;
-      }
-
-      if (t == 0.0 && knots[i] == 0.0 && knots[i + 1] > 0.0) {
-        return 1.0;
-      }
-
-      if (t == 1.0 && knots[i + 1] == 1.0 && knots[i] < 1.0) {
-        return 1.0;
-      }
-
-      return 0.0;
-    }
+  if (degree == 0) {
+    return knots[index] <= t && t < knots[index + 1] ? 1 : 0;
   }
 
   double weight = 0.0;
 
-  double denom1 = knots[idx + deg] - knots[idx];
+  double denom1 = knots[index + degree] - knots[index];
   if (denom1 != 0) {
-    weight += ((t - knots[idx]) / denom1) * basisFunction(i, p - 1, t, knots);
+    weight += ((t - knots[index]) / denom1) *
+              BasisFunction(index, degree - 1, t, knots);
   }
-  double denom2 = knots[idx + deg + 1] - knots[idx + 1];
+  double denom2 = knots[index + degree + 1] - knots[index + 1];
   if (denom2 != 0) {
-    weight += ((knots[idx + deg + 1] - t) / denom2) *
-              basisFunction(i + 1, p - 1, t, knots);
+    weight += ((knots[index + degree + 1] - t) / denom2) *
+              BasisFunction(index + 1, degree - 1, t, knots);
   }
   return weight;
 }
 
-auto getSplinePoint(double t, const std::vector<std::pair<int, int>>& points,
-                    const std::vector<double>& knots, int p)
-    -> std::pair<double, double> {
+auto GetSplinePoint(double t, const std::vector<cv::Point2i>& points,
+                    const std::vector<double>& knots, uint degree)
+    -> frc::Translation2d {
   double px = 0.0, py = 0.0;
   for (size_t i = 0; i < points.size(); ++i) {
-    double weight = basisFunction((double)i, (double)p, t, knots);
-    px += points[i].first * weight;
-    py += points[i].second * weight;
+    double weight = BasisFunction(i, degree, t, knots);
+    px += points[i].x * weight;
+    py += points[i].y * weight;
   }
-  return {px, py};
+  return {units::meter_t{px}, units::meter_t{py}};
 }
 
-auto createSpline(cv::Mat& grid, int start_x, int start_y, int target_x,
-                  int target_y, double nodeSizeMeters)
-    -> std::vector<frc::Pose2d> {
-  auto path = BFS(grid, {start_x, start_y}, {target_x, target_y});
-  if (path.empty()) {
+auto CreateSpline(cv::Mat& grid, int start_x, int start_y, int target_x,
+                  int target_y) -> std::vector<frc::Translation2d> {
+  std::vector<cv::Point2i> control_points = BFS(grid, {start_x, start_y}, {target_x, target_y});
+  if (control_points.empty()) {
     return {};
   }
 
-  auto controlPoints = constructLinePath(grid, path);
-
-  if (controlPoints.size() < 4) {
+  if (control_points.size() < 4) {
+    LOG(WARNING) << "Too few points to generic cubic spline";
     return {};
   }
 
-  auto knots = clampedUniformKnotVector(controlPoints.size(), 3);
+  std::vector<double> knots = ClampedUniformKnotVector(control_points.size(), 3);
 
-  std::vector<frc::Pose2d> trajectory;
+  std::vector<frc::Translation2d> trajectory;
   int resolution = 200;
   for (int i = 0; i < resolution; ++i) {
     double t = (double)i / resolution;
-    std::pair<double, double> point =
-        getSplinePoint(t, controlPoints, knots, 3);
-    double px = point.first / CELL_SIZE;
-    double py = point.second / CELL_SIZE;
-    trajectory.push_back(frc::Pose2d(units::meter_t{px * nodeSizeMeters},
-                                     units::meter_t{py * nodeSizeMeters},
-                                     units::radian_t{0.0}));
+    const frc::Translation2d point = GetSplinePoint(t, control_points, knots, 3);
+    trajectory.push_back(point);
   }
 
   return trajectory;
 }
+
+}  // namespace pathing

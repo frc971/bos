@@ -1,26 +1,30 @@
 #pragma once
 
-#include <frc/geometry/Pose2d.h>
+#include <frc/geometry/Translation2d.h>
 #include <opencv2/opencv.hpp>
 #include <vector>
 
-auto initializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat;
+namespace pathing {
 
-auto BFS(const cv::Mat& grid, std::pair<int, int> start,
-         std::pair<int, int> target) -> std::vector<std::pair<int, int>>;
+auto InitializeGrid(const std::vector<std::vector<bool>>& gridData) -> cv::Mat;
 
-auto constructLinePath(cv::Mat& canvas, std::vector<std::pair<int, int>> path)
-    -> std::vector<std::pair<int, int>>;
+auto BFS(const cv::Mat& grid, cv::Point2i start, cv::Point2i target,
+           bool verbose = false) -> std::vector<cv::Point2i>;
 
-auto clampedUniformKnotVector(double k, double p) -> std::vector<double>;
+auto ConstructLinePath(cv::Mat& canvas, std::vector<cv::Point2i> path)
+    -> std::vector<cv::Point2i>;
 
-auto basisFunction(double i, double p, double t,
+auto ClampedUniformKnotVector(size_t num_control_points, uint degree)
+    -> std::vector<double>;
+
+auto BasisFunction(size_t index, uint degree, double t,
                    const std::vector<double>& knots) -> double;
 
-auto getSplinePoint(double t, const std::vector<std::pair<int, int>>& points,
-                    const std::vector<double>& knots, int p)
-    -> std::pair<double, double>;
+auto GetSplinePoint(double t, const std::vector<cv::Point2i>& points,
+                    const std::vector<double>& knots, uint degree)
+    -> frc::Translation2d;
 
-auto createSpline(cv::Mat& grid, int start_x, int start_y, int target_x,
-                  int target_y, double nodeSizeMeters)
-    -> std::vector<frc::Pose2d>;
+auto CreateSpline(cv::Mat& grid, int start_x, int start_y, int target_x,
+                  int target_y) -> std::vector<frc::Translation2d>;
+
+}  // namespace pathing
