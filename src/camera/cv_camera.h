@@ -13,8 +13,10 @@ class CVCamera : public ICamera {
            std::optional<std::string> log_path = std::nullopt);
   auto GetFrame() -> timestamped_frame_t override;
   auto Restart() -> void override;
+  [[nodiscard]] auto GetCameraConstant() const -> camera_constant_t override;
 
  private:
+  camera_constant_t camera_constant_;
   cv::VideoCapture cap_;
   std::string pipeline_;
   std::optional<std::string> log_path_;

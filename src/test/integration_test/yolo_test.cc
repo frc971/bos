@@ -1,9 +1,11 @@
 #include "src/yolo/yolo.h"
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <numbers>
 #include <opencv2/opencv.hpp>
 #include <string>
+#include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
@@ -16,10 +18,8 @@ const int MAX_DETECTIONS = 10;
 auto main() -> int {
   yolo::ModelInfo model_info = yolo::models[yolo::Model::COLOR];
   yolo::Yolo model(model_info.path, model_info.color, true);
-  camera::camera_constant_t camera_constant =
-      camera::SelectCameraConfig(camera::GetCameraConstants());
   std::unique_ptr<camera::ICamera> camera =
-      std::make_unique<camera::CVCamera>(camera_constant);
+      camera::SelectCameraConfig(camera::GetCameraConstants());
 
   camera::CscoreStreamer streamer("yolo_test", 5801, 30,
                                   camera->GetFrame().frame);
