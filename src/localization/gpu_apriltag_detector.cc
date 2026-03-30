@@ -46,6 +46,7 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
 auto GPUAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame)
     -> std::vector<tag_detection_t> {
+  CHECK(!timestamped_frame.frame.empty());
   try {
     CHECK(timestamped_frame.frame.channels() == 3);
     cv::Mat gray;
