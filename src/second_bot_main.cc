@@ -71,5 +71,5 @@ auto main() -> int {
   LOG(INFO) << "Started estimators";
 
   // TODO find better way
-  left_thread.join();
+  right_thread.join();
 }
