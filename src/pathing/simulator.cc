@@ -1,5 +1,5 @@
 #include <frc/geometry/Pose2d.h>
-#include <wpi/DataLogWriter.h>
+#include <wpi/DataLogBackgroundWriter.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -8,31 +8,16 @@
 #include <system_error>
 #include <vector>
 #include "src/pathing/pathing.h"
-#include "src/utils/wpilog_time.h"
 
 auto main() -> int {
-  utils::InitializeWpiLogTime();
-  std::error_code ec;
-  wpi::log::DataLogWriter log{"/root/bos/logs/sim.wpilog", ec};
-  if (ec) {
-    std::cerr << "Failed to open log: " << ec.message() << '\n';
-    return 1;
-  }
-  const int64_t init_timestamp = utils::GetNonzeroLogTimestampMicros();
+  wpi::log::DataLogBackgroundWriter log{"/root/bos/logs", "sim.wpilog"};
 
-  log.AddStructSchema<frc::Pose2d>(init_timestamp);
-  wpi::log::StructLogEntry<frc::Pose2d> poseLog(
-      log, "/sim/Pose2d", init_timestamp);
-  wpi::log::DoubleLogEntry accelXLog(
-      log, "/sim/AccelX", init_timestamp);
-  wpi::log::DoubleLogEntry accelYLog(
-      log, "/sim/AccelY", init_timestamp);
-  wpi::log::DoubleLogEntry accelMagLog(
-      log, "/sim/AccelMagnitude", init_timestamp);
-  wpi::log::DoubleLogEntry velXLog(
-      log, "/sim/VelX", init_timestamp);
-  wpi::log::DoubleLogEntry velYLog(
-      log, "/sim/VelY", init_timestamp);
+  wpi::log::StructLogEntry<frc::Pose2d> poseLog(log, "/sim/Pose2d");
+  wpi::log::DoubleLogEntry accelXLog(log, "/sim/AccelX");
+  wpi::log::DoubleLogEntry accelYLog(log, "/sim/AccelY");
+  wpi::log::DoubleLogEntry accelMagLog(log, "/sim/AccelMagnitude");
+  wpi::log::DoubleLogEntry velXLog(log, "/sim/VelX");
+  wpi::log::DoubleLogEntry velYLog(log, "/sim/VelY");
 
   std::ifstream file("/root/bos/constants/navgrid.json");
   if (!file.is_open()) {
@@ -65,7 +50,7 @@ auto main() -> int {
   constexpr double kMaxAccel = 3.0;
   constexpr double kMaxDecel = 3.0;
   constexpr double kMaxModuleSpeed = 5.0;
-  int64_t t = init_timestamp;
+  int64_t t = 0;
 
   std::vector<double> pathDist(poses.size(), 0.0);
   for (size_t i = 1; i < poses.size(); ++i) {

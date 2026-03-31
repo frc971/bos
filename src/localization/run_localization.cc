@@ -11,7 +11,6 @@
 #include "src/localization/position_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/timer.h"
-#include "src/utils/wpilog_time.h"
 
 namespace localization {
 
@@ -54,12 +53,10 @@ void RunLocalizationSimulation(
     std::cerr << "Failed to open log: " << ec.message() << std::endl;
     return;
   }
-  const int64_t init_timestamp = utils::GetNonzeroLogTimestampMicros();
-  log->AddStructSchema<frc::Translation3d>(init_timestamp);
-  log->AddStructSchema<frc::Rotation3d>(init_timestamp);
-  log->AddStructSchema<frc::Pose3d>(init_timestamp);
-  wpi::log::StructLogEntry<frc::Pose3d> pose_log(
-      *log, "/localization/pose", init_timestamp);
+  log->AddStructSchema<frc::Translation3d>(0);
+  log->AddStructSchema<frc::Rotation3d>(0);
+  log->AddStructSchema<frc::Pose3d>(0);
+  wpi::log::StructLogEntry<frc::Pose3d> pose_log(*log, "/localization/pose");
   while (true) {
     camera::timestamped_frame_t timestamped_frame = source.Get();
     double timestamp = timestamped_frame.timestamp;
