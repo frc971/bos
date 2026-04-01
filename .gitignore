@@ -14,3 +14,6 @@ image.tar
 bin/*
 build
 logs/
+*.wpilog
+bos_logs/
+*build*/
