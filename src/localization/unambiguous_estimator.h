@@ -58,14 +58,6 @@ class UnambiguousEstimator {
   std::vector<double> prev_timestamps_;
   std::optional<position_estimate_t> prev_pose_estimate_ = std::nullopt;
   const bool sim_;
-  std::optional<wpi::log::DataLogWriter> log_;
-  std::optional<wpi::log::StructLogEntry<frc::Pose3d>> pose_log_;
-  std::optional<wpi::log::DoubleLogEntry> num_tags_log_;
-  std::optional<wpi::log::DoubleLogEntry> timestamp_log_;
-  std::optional<wpi::log::DoubleLogEntry> best_cost_log_;
-  std::optional<wpi::log::BooleanLogEntry> used_prev_pose_log_;
-  std::optional<wpi::log::StructArrayLogEntry<frc::Pose3d>>
-      all_pose_estimates_log_;
   static constexpr double kuse_prev_pose_threshold = 100;  // tune
   bool use_prev_pose_ = false;
 };
