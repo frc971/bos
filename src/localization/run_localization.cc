@@ -16,21 +16,21 @@
 namespace localization {
 
 // TODO remove extrinsics
-void RunLocalization(camera::CameraSource& source,
+void RunLocalization(std::unique_ptr<camera::CameraSource> source,
                      std::unique_ptr<localization::IAprilTagDetector> detector,
                      std::unique_ptr<localization::IPositionSolver> solver,
+                     std::unique_ptr<localization::IPositionSender> sender,
                      const std::string& extrinsics, std::optional<uint> port,
                      bool verbose) {
-  localization::NetworkTableSender position_sender(source.GetName(), verbose);
 
   std::optional<camera::CscoreStreamer> streamer =
       port.has_value() ? std::make_optional(camera::CscoreStreamer(
-                             source.GetName(), port.value(), 30, 1080, 1080))
+                             source->GetName(), port.value(), 30, 1080, 1080))
                        : std::nullopt;
 
   while (true) {
-    utils::Timer timer(source.GetName(), verbose);
-    camera::timestamped_frame_t timestamped_frame = source.Get();
+    utils::Timer timer(source->GetName(), verbose);
+    camera::timestamped_frame_t timestamped_frame = source->Get();
     if (streamer.has_value()) {
       streamer->WriteFrame(timestamped_frame.frame);
     }
@@ -42,7 +42,7 @@ void RunLocalization(camera::CameraSource& source,
     for (auto& position_estimate : position_estimates) {
       position_estimate.latency = latency;
     }
-    position_sender.Send(position_estimates);
+    sender->Send(position_estimates);
   }
 }
 

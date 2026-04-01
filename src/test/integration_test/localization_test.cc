@@ -13,6 +13,7 @@
 #include "src/camera/camera_source.h"
 #include "src/camera/disk_camera.h"
 #include "src/localization/multi_tag_solver.h"
+#include "src/localization/networktable_sender.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
 #include "src/utils/camera_utils.h"
@@ -37,8 +38,7 @@ auto HasRegularFiles(const std::filesystem::path& path) -> bool {
     std::string extension = entry.path().extension().string();
     std::transform(extension.begin(), extension.end(), extension.begin(),
                    [](unsigned char c) { return std::tolower(c); });
-    if (extension == ".png" || extension == ".jpg" ||
-        extension == ".jpeg") {
+    if (extension == ".png" || extension == ".jpg" || extension == ".jpeg") {
       return true;
     }
   }
@@ -65,15 +65,14 @@ auto FindCameraFolders(const std::filesystem::path& path)
 auto ResolveCameraName(const std::string& directory_name,
                        const camera::camera_constants_t& constants)
     -> std::string {
-  std::string resolved_name =
-      directory_name.rfind("main_bot_", 0) == 0
-          ? directory_name
-          : "main_bot_" + directory_name;
+  std::string resolved_name = directory_name.rfind("main_bot_", 0) == 0
+                                  ? directory_name
+                                  : "main_bot_" + directory_name;
 
   if (!constants.contains(resolved_name)) {
     LOG(FATAL) << "Could not resolve camera constants name for directory: "
-               << directory_name << ", expected constants entry: "
-               << resolved_name;
+               << directory_name
+               << ", expected constants entry: " << resolved_name;
   }
 
   return resolved_name;
@@ -100,9 +99,7 @@ auto main(int argc, char** argv) -> int {
     LOG(FATAL) << "--camera_name may only be used with a single camera folder";
   }
 
-  std::vector<std::unique_ptr<camera::CameraSource>> camera_sources;
   std::vector<std::thread> localization_threads;
-  camera_sources.reserve(camera_folders.size());
   localization_threads.reserve(camera_folders.size());
 
   const int base_port = absl::GetFlag(FLAGS_port);
@@ -123,26 +120,28 @@ auto main(int argc, char** argv) -> int {
       LOG(FATAL) << "Unknown camera name: " << camera_name;
     }
 
-    camera_sources.push_back(std::make_unique<camera::CameraSource>(
-        camera_name,
-        std::make_unique<camera::DiskCamera>(camera_folder.string(),
-                                             std::nullopt, speed)));
+    auto camera_source = std::make_unique<camera::CameraSource>(
+        camera_name, std::make_unique<camera::DiskCamera>(
+                         camera_folder.string(), std::nullopt, speed));
 
-    camera::CameraSource& camera_source = *camera_sources.back();
-    auto frame = camera_source.GetFrame();
+    auto frame = camera_source->GetFrame();
     if (frame.empty()) {
       LOG(FATAL) << "No readable images found in folder: " << camera_folder;
     }
 
     const auto& camera_constant = constants.at(camera_name);
-    localization_threads.emplace_back(
-        localization::RunLocalization, std::ref(camera_source),
-        std::make_unique<localization::OpenCVAprilTagDetector>(
-            frame.cols, frame.rows,
-            utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
-        std::make_unique<localization::MultiTagSolver>(camera_constant),
-        camera_constant.extrinsics_path.value(),
-        base_port + static_cast<int>(i), true);
+    localization_threads.emplace_back([&]() {
+      localization::RunLocalization(
+          std::move(camera_source),
+          std::make_unique<localization::OpenCVAprilTagDetector>(
+              frame.cols, frame.rows,
+              utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
+          std::make_unique<localization::MultiTagSolver>(camera_constant),
+          std::make_unique<localization::NetworkTableSender>(
+              camera_constant.name),
+          camera_constant.extrinsics_path.value(),
+          base_port + static_cast<int>(i), true);
+    });
   }
 
   if (localization_threads.empty()) {

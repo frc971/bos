@@ -2,6 +2,7 @@
 #include "src/camera/camera_source.h"
 #include "src/camera/cv_camera.h"
 #include "src/localization/multi_tag_solver.h"
+#include "src/localization/networktable_sender.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
@@ -20,55 +21,53 @@ auto main() -> int {
   //     camera::CameraSource("Front", std::make_unique<camera::CVCamera>(
   //                                       camera_constants.at("main_bot_front")));
 
-  camera::CameraSource left_camera = camera::CameraSource(
+  auto left_camera = std::make_unique<camera::CameraSource>(
       "Left",
       std::make_unique<camera::CVCamera>(camera_constants.at("second_bot_left"),
                                          fmt::format("{}/left", log_path)));
+  cv::Mat left_camera_frame = left_camera->GetFrame();
 
-  camera::CameraSource right_camera =
-      camera::CameraSource("Right", std::make_unique<camera::CVCamera>(
-                                        camera_constants.at("second_bot_right"),
-                                        fmt::format("{}/right", log_path)));
+  auto right_camera = std::make_unique<camera::CameraSource>(
+      "Right", std::make_unique<camera::CVCamera>(
+                   camera_constants.at("second_bot_right"),
+                   fmt::format("{}/right", log_path)));
+  cv::Mat right_camera_frame = right_camera->GetFrame();
 
   LOG(INFO) << "Started cameras";
   std::this_thread::sleep_for(std::chrono::seconds(2));
   LOG(INFO) << "Starting estimators";
 
-  // std::thread front_thread(
-  //     localization::RunLocalization, std::ref(front_camera),
-  //     std::make_unique<localization::OpenCVAprilTagDetector>(
-  //         front_camera.GetFrame().cols, front_camera.GetFrame().rows,
-  //         utils::ReadIntrinsics(
-  //             camera_constants.at("main_bot_front").intrinsics_path.value())),
-  //     std::make_unique<localization::MultiTagSolver>(
-  //         camera_constants.at("main_bot_front")),
-  //     camera_constants.at("main_bot_front").extrinsics_path.value(), 5801,
-  //     false);
+  std::thread left_thread([&]() {
+    localization::RunLocalization(
+        std::move(left_camera),
+        std::make_unique<localization::GPUAprilTagDetector>(
+            left_camera_frame.cols, left_camera_frame.rows,
+            utils::ReadIntrinsics(camera_constants.at("second_bot_left")
+                                      .intrinsics_path.value())),
+        std::make_unique<localization::MultiTagSolver>(
+            camera_constants.at("second_bot_left")),
+        std::make_unique<localization::NetworkTableSender>(
+            camera_constants.at("second_bot_left").name),
+        camera_constants.at("second_bot_left").extrinsics_path.value(), 5802,
+        false);
+  });
 
-  std::thread left_thread(
-      localization::RunLocalization, std::ref(left_camera),
-      std::make_unique<localization::GPUAprilTagDetector>(
-          left_camera.GetFrame().cols, left_camera.GetFrame().rows,
-          utils::ReadIntrinsics(
-              camera_constants.at("second_bot_left").intrinsics_path.value())),
-      std::make_unique<localization::MultiTagSolver>(
-          camera_constants.at("second_bot_left")),
-      camera_constants.at("second_bot_left").extrinsics_path.value(), 5803,
-      false);
-
-  std::thread right_thread(
-      localization::RunLocalization, std::ref(right_camera),
-      std::make_unique<localization::GPUAprilTagDetector>(
-          right_camera.GetFrame().cols, right_camera.GetFrame().rows,
-          utils::ReadIntrinsics(
-              camera_constants.at("second_bot_right").intrinsics_path.value())),
-      std::make_unique<localization::MultiTagSolver>(
-          camera_constants.at("second_bot_right")),
-      camera_constants.at("second_bot_right").extrinsics_path.value(), 5804,
-      false);
+  std::thread right_thread([&]() {
+    localization::RunLocalization(
+        std::move(right_camera),
+        std::make_unique<localization::GPUAprilTagDetector>(
+            right_camera_frame.cols, right_camera_frame.rows,
+            utils::ReadIntrinsics(camera_constants.at("second_bot_right")
+                                      .intrinsics_path.value())),
+        std::make_unique<localization::MultiTagSolver>(
+            camera_constants.at("second_bot_right")),
+        std::make_unique<localization::NetworkTableSender>(
+            camera_constants.at("second_bot_right").name),
+        camera_constants.at("second_bot_right").extrinsics_path.value(), 5803,
+        false);
+  });
 
   LOG(INFO) << "Started estimators";
 
-  // TODO find better way
   left_thread.join();
 }

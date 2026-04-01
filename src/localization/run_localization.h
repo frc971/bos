@@ -2,6 +2,7 @@
 #include "src/camera/camera_source.h"
 #include "src/localization/apriltag_detector.h"
 #include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/position_sender.h"
 #include "src/localization/position_solver.h"
 #include "src/utils/pch.h"
 
@@ -20,9 +21,10 @@ namespace localization {
 //     camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
 //         .extrinsics_path,
 //     5801, false);
-void RunLocalization(camera::CameraSource& source,
+void RunLocalization(std::unique_ptr<camera::CameraSource> source,
                      std::unique_ptr<localization::IAprilTagDetector> detector,
                      std::unique_ptr<localization::IPositionSolver> solver,
+                     std::unique_ptr<localization::IPositionSender> sender,
                      const std::string& extrinsics,
                      std::optional<uint> port = std::nullopt,
                      bool verbose = false);
