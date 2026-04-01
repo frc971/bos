@@ -7,6 +7,7 @@
 #include <utility>
 #include "src/camera/cscore_streamer.h"
 #include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/networktable_sender.h"
 #include "src/localization/position_sender.h"
 #include "src/localization/position_solver.h"
 #include "src/utils/camera_utils.h"
@@ -20,7 +21,7 @@ void RunLocalization(camera::CameraSource& source,
                      std::unique_ptr<localization::IPositionSolver> solver,
                      const std::string& extrinsics, std::optional<uint> port,
                      bool verbose) {
-  localization::PositionSender position_sender(source.GetName(), verbose);
+  localization::NetworkTableSender position_sender(source.GetName(), verbose);
 
   std::optional<camera::CscoreStreamer> streamer =
       port.has_value() ? std::make_optional(camera::CscoreStreamer(

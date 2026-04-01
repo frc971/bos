@@ -1,4 +1,4 @@
-#include "position_sender.h"
+#include "networktable_sender.h"
 #include "frc/DataLogManager.h"
 #include "src/localization/position.h"
 
@@ -10,7 +10,8 @@ constexpr auto RadianToDegree(double radian) -> double {
 
 static const int kmax_tags = 50;
 
-PositionSender::PositionSender(const std::string& camera_name, bool verbose)
+NetworkTableSender::NetworkTableSender(const std::string& camera_name,
+                                       bool verbose)
     : instance_(nt::NetworkTableInstance::GetDefault()), verbose_(verbose) {
   std::shared_ptr<nt::NetworkTable> table =
       instance_.GetTable("Orin/PoseEstimate/" + camera_name);
@@ -45,7 +46,7 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
   rejected_tag_ids_publisher_ = rejected_tag_ids_topic.Publish();
 }
 
-void PositionSender::Send(
+void NetworkTableSender::Send(
     const std::vector<localization::position_estimate_t>& detections,
     double latency) {
   mutex_.lock();
