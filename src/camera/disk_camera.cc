@@ -1,10 +1,17 @@
 #include "disk_camera.h"
+#include <optional>
+#include <utility>
+#include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 
 namespace camera {
 
-DiskCamera::DiskCamera(std::string image_folder_path, double speed)
-    : speed(speed), image_folder_path_(std::move(image_folder_path)) {
+DiskCamera::DiskCamera(std::string image_folder_path,
+                       std::optional<camera_constant_t> camera_constant,
+                       double speed)
+    : speed(speed),
+      camera_constant_(std::move(camera_constant)),
+      image_folder_path_(std::move(image_folder_path)) {
   for (auto& entry : std::filesystem::directory_iterator(image_folder_path_)) {
     std::string entry_name = entry.path().filename().string();
 
@@ -13,7 +20,6 @@ DiskCamera::DiskCamera(std::string image_folder_path, double speed)
         .path = entry.path(),
         .timestamp = std::stod(entry_name.erase(entry_name.size() - 4, 4))});
   }
-  timer_.Reset();
 
   auto offset = image_paths_.top().timestamp;
   std::priority_queue<TimestampedFramePath, std::vector<TimestampedFramePath>,
@@ -33,11 +39,12 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
               << image_folder_path_ << std::endl;
     frc::DataLogManager::Stop();
     exit(0);
+    // return {.invalid = true};
   }
+
   double recorded_ts = image_paths_.top().timestamp;
   timestamped_frame_t timestamped_frame{
-      .frame = cv::imread(image_paths_.top().path),
-      .timestamp = frc::Timer::GetFPGATimestamp().to<double>()};
+      .frame = cv::imread(image_paths_.top().path), .timestamp = recorded_ts};
   image_paths_.pop();
 
   if (!image_paths_.empty()) {
@@ -50,4 +57,7 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
 
 auto DiskCamera::Restart() -> void {}
 
+auto DiskCamera::GetCameraConstant() const -> camera_constant_t {
+  return *camera_constant_;
+}
 }  // namespace camera
