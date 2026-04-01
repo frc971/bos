@@ -18,8 +18,8 @@ namespace localization {
 class NetworkTableSender : public IPositionSender {
  public:
   NetworkTableSender(const std::string& camera_name, bool verbose = false);
-  void Send(const std::vector<localization::position_estimate_t>& detections,
-            double latency) override;
+  void Send(const std::vector<localization::position_estimate_t>& detections)
+      override;
   ~NetworkTableSender() override = default;
 
  private:

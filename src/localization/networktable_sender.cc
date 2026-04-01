@@ -47,8 +47,7 @@ NetworkTableSender::NetworkTableSender(const std::string& camera_name,
 }
 
 void NetworkTableSender::Send(
-    const std::vector<localization::position_estimate_t>& detections,
-    double latency) {
+    const std::vector<localization::position_estimate_t>& detections) {
   mutex_.lock();
   for (auto& detection : detections) {
     std::array<double, 8> tag_estimation{
@@ -59,7 +58,7 @@ void NetworkTableSender::Send(
         detection.timestamp +
             instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
         static_cast<double>(detection.num_tags),
-        latency,
+        detection.latency,
         detection.avg_tag_dist};
 
     std::array<int, kmax_tags> tags{};
@@ -84,7 +83,7 @@ void NetworkTableSender::Send(
     rejected_tag_ids_publisher_.Set(rejected_tags);
     varience_publisher_.Set(detection.variance);
 
-    latency_publisher_.Set(latency);
+    latency_publisher_.Set(detection.latency);
     num_tags_publisher_.Set(detection.num_tags);
 
     if (verbose_) {

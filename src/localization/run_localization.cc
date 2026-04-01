@@ -38,7 +38,11 @@ void RunLocalization(camera::CameraSource& source,
         detector->GetTagDetections(timestamped_frame);
     std::vector<position_estimate_t> position_estimates =
         solver->EstimatePosition(tag_detections, false);
-    position_sender.Send(position_estimates, timer.Stop());
+    const double latency = timer.Stop();
+    for (auto& position_estimate : position_estimates) {
+      position_estimate.latency = latency;
+    }
+    position_sender.Send(position_estimates);
   }
 }
 
