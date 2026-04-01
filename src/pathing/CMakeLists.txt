@@ -1,2 +1,5 @@
-add_executable(simulator simulator.cc pathing.cc)
-target_link_libraries(simulator PRIVATE utils)
+add_library(pathing pathing.cc pathfinding.cc pathfinding.h splines.cc)
+target_link_libraries(pathing PUBLIC wpilibc wpiutil ntcore ${OpenCV_LIBS})
+
+add_executable(simulator simulator.cc)
+target_link_libraries(simulator PRIVATE pathing utils nlohmann_json::nlohmann_json wpiutil)
