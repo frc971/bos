@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Usage: ./sync_chunks.sh <user@host:/remote/path> <local_dest>
-# Example: ./sync_chunks.sh nvidia@10.9.71.11:/bos/logs/log44 ./local_logs
+# Usage: ./get_log.sh <user@host:/remote/path> <local_dest>
+# Example: ./get_log.sh nvidia@10.9.71.11:/bos/logs/log44 ./local_logs
 
 set -euo pipefail
 
