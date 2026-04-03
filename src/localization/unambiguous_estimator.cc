@@ -57,7 +57,7 @@ UnambiguousEstimator::UnambiguousEstimator(
   }
   sources_ = std::make_unique<camera::MultiCameraSource>(icameras, sim_);
   std::cout << "Initialized cameras" << std::endl;
-  std::this_thread::sleep_for(std::chrono::duration<double>(0.1));
+  std::this_thread::sleep_for(std::chrono::duration<double>(2));
   std::cout << "Initializing estimators and streamers" << std::endl;
   std::vector<cv::Mat> first_frames = sources_->GetCVFrames();
   for (size_t i = 0; i < cameras.size(); i++) {
@@ -107,7 +107,7 @@ auto UnambiguousEstimator::ComputeCost(
     for (size_t j = i + 1; j < poses.size(); j++) {
       cost += Cost(poses[i].pose, poses[j].pose);
     }
-    if (use_prev_pose_) {
+    if (prev_pose_estimate_.has_value() /*use_prev_pose_*/) {
       cost += Cost(poses[i].pose, prev_pose_estimate_.value().pose);
     }
   }
@@ -194,7 +194,8 @@ auto UnambiguousEstimator::SearchSolutions(
 }
 
 void UnambiguousEstimator::Run() {
-  localization::PositionSender position_sender("Joint");
+  frc::DataLogManager::Start();
+  localization::PositionSender position_sender("Left");
   while (true) {
     latent_estimate_t pose_estimate = GetUnambiguatedEstimate();
     if (pose_estimate.invalid) {
@@ -261,7 +262,7 @@ auto UnambiguousEstimator::GetUsableFrames(
       frames.size());
   constexpr double kacceptable_frame_recency = 0.25;
   double latest_timestamp = -1;
-  for (const auto& frame : frames) {
+  for (auto& frame : frames) {
     if (sim_ && (frame.invalid || frame.frame.empty())) {
       std::cout << "STOPPING LOG" << std::endl;
       frc::DataLogManager::Stop();
@@ -277,6 +278,7 @@ auto UnambiguousEstimator::GetUsableFrames(
   int count = 0;
   for (size_t i = 0; i < frames.size(); i++) {
     if (latest_timestamp - frames[i].timestamp < kacceptable_frame_recency) {
+      streamers_[count].WriteFrame(usable_frames[i]->frame);
       usable_frames[i] = std::move(frames[i]);
       count++;
     }
@@ -297,9 +299,7 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   }
   std::vector<position_estimate_t> best_solution;
   std::vector<position_estimate_t> current_solution;
-  use_prev_pose_ =
-      frc::Timer::GetFPGATimestamp().value() - prev_pose_estimate_->timestamp <
-      0.2;
+  use_prev_pose_ = true;
   double best_cost = std::numeric_limits<double>::infinity();
 
   double cost = SearchSolutions(ambiguous_estimates, 0, current_solution,

@@ -30,6 +30,7 @@ class PositionSender {
   nt::StructPublisher<frc::Pose3d> pose3d_publisher_;
   nt::StructArrayPublisher<frc::Pose3d> all_estimates_publisher_;
   nt::DoublePublisher latency_publisher_;
+  nt::DoublePublisher timestamp_publisher_;
   nt::IntegerPublisher num_tags_publisher_;
   nt::DoublePublisher varience_publisher_;
   nt::DoubleArrayPublisher tag_estimation_publisher_;

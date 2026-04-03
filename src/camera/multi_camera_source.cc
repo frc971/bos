@@ -12,12 +12,14 @@ MultiCameraSource::MultiCameraSource(
   for (size_t i = 0; i < cameras_.size(); i++) {
     camera_threads_.emplace_back([this, i]() -> void {
       while (true) {
-        mutex_.lock();
-        bool frames_used = frames_used_;
-        mutex_.unlock();
-        if (!frames_used) {
-          std::this_thread::sleep_for(std::chrono::duration<double>(0.002));
-          continue;
+        if (use_all_frames_) {
+          mutex_.lock();
+          bool frames_used = frames_used_;
+          mutex_.unlock();
+          if (!frames_used) {
+            std::this_thread::sleep_for(std::chrono::duration<double>(0.002));
+            continue;
+          }
         }
         timestamped_frame_t timestamped_frame;
         timestamped_frame = cameras_[i]->GetFrame();

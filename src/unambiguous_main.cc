@@ -24,9 +24,9 @@ auto main() -> int {
           //   {camera_constants.at("main_bot_front"),
           //    localization::Detector::OPENCV_CPU},
           {camera_constants.at("main_bot_left"),
-           localization::Detector::AUSTIN_GPU},
+           localization::Detector::OPENCV_CPU},
           {camera_constants.at("main_bot_right"),
-           localization::Detector::AUSTIN_GPU},
+           localization::Detector::OPENCV_CPU},
       };
 
   LOG(INFO) << "Started cameras";

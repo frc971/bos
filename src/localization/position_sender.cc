@@ -29,6 +29,9 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
   nt::DoubleTopic latency_topic = table->GetDoubleTopic("Latency");
   latency_publisher_ = latency_topic.Publish();
 
+  nt::DoubleTopic timestamp_topic_ = table->GetDoubleTopic("Timestamp");
+  timestamp_publisher_ = timestamp_topic_.Publish();
+
   nt::IntegerTopic num_tags_topic = table->GetIntegerTopic("NumTags");
   num_tags_publisher_ = num_tags_topic.Publish();
 
@@ -88,6 +91,7 @@ void PositionSender::Send(
     varience_publisher_.Set(detection.variance);
 
     latency_publisher_.Set(latency);
+    timestamp_publisher_.Set(detection.timestamp);
     num_tags_publisher_.Set(detection.num_tags);
     if (all_estimates.has_value()) {
       all_estimates_publisher_.Set(all_estimates.value());
