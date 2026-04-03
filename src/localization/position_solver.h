@@ -23,7 +23,7 @@ const std::vector<Eigen::Vector3d> kapriltag_corners_eigen = {
 
 const frc::AprilTagFieldLayout kapriltag_layout =
     frc::AprilTagFieldLayout::LoadField(
-        frc::AprilTagField::k2026RebuiltAndyMark);
+        "/root/bos/constants/calibrated_map.json");
 
 inline auto Variance(const int num_tags_detected, const double distance,
                      const double min_variance, const double scalar)
