@@ -1,94 +1,85 @@
-#!/usr/bin/env bash
-# Usage: ./rsync_between.sh <user@host:/remote/path> <local_dest>
-# Example: ./rsync_between.sh nvidia@10.9.71.11:/bos/logs/log51 ./local_logs
+#!/usr/bin/env python3
+# Usage: ./viewer.py <user@host:/remote/path>
+# Example: ./viewer.py nvidia@10.9.71.11:/bos/logs/log51/left
 
-set -euo pipefail
+import sys
+import subprocess
+import tempfile
+import os
+import cv2
 
-REMOTE="${1:-}"
-LOCAL_DEST="${2:-./synced_files}"
-CHUNK_SIZE=300
+IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp'}
+CHUNK_SIZE = 300
 
-if [[ -z "$REMOTE" ]]; then
-  echo "Usage: $0 <user@host:/remote/path> <local_dest>"
-  exit 1
-fi
+def is_image(filename):
+    return os.path.splitext(filename)[1].lower() in IMAGE_EXTS
 
-REMOTE_HOST="${REMOTE%%:*}"
-REMOTE_PATH="${REMOTE#*:}"
+def list_remote_images(host, path):
+    result = subprocess.run(
+        ['ssh', host, f"ls '{path}'"],
+        capture_output=True, text=True, check=True
+    )
+    files = result.stdout.strip().splitlines()
+    images = [f for f in files if is_image(f)]
+    # Sort numerically descending (latest timestamp first)
+    images.sort(key=lambda f: int(os.path.splitext(f)[0]) if os.path.splitext(f)[0].isdigit() else f, reverse=True)
+    return images
 
-sync_subfolder() {
-  local subfolder="$1"
-  local local_sub="${LOCAL_DEST}/${subfolder}"
+def fetch_image(host, remote_path, filename):
+    with tempfile.NamedTemporaryFile(suffix=os.path.splitext(filename)[1], delete=False) as tmp:
+        tmp_path = tmp.name
+    subprocess.run(
+        ['scp', '-q', f"{host}:{remote_path}/{filename}", tmp_path],
+        check=True
+    )
+    img = cv2.imread(tmp_path)
+    os.unlink(tmp_path)
+    return img
 
-  mkdir -p "$local_sub"
+def main():
+    if len(sys.argv) not in (2, 3):
+        print(f"Usage: {sys.argv[0]} <user@host:/remote/path>")
+        sys.exit(1)
 
-  echo ""
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "  $subfolder/ — fetching file list..."
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    host, remote_path = sys.argv[1].split(':', 1)
 
-  local all_files=()
-  while IFS= read -r filename; do
-    local seconds_part="${filename%%.*}"
-    if ! [[ "$seconds_part" =~ ^[0-9]+$ ]]; then
-      continue
-    fi
-    local ext_lower
-    ext_lower=$(echo "${filename##*.}" | tr '[:upper:]' '[:lower:]')
-    case "$ext_lower" in
-    jpg | jpeg | png | gif | bmp | tiff | webp | heic)
-      all_files+=("$filename")
-      ;;
-    esac
-  done < <(ssh "$REMOTE_HOST" "ls '${REMOTE_PATH}/${subfolder}'" | sort -t. -k1,1 -rn)
+    print(f"→ Fetching image list from {host}:{remote_path}...")
+    images = list_remote_images(host, remote_path)
+    total = len(images)
 
-  local total=${#all_files[@]}
-  echo "  Found $total image files."
+    if total == 0:
+        print("No image files found. Exiting.")
+        sys.exit(0)
 
-  if [[ $total -eq 0 ]]; then
-    echo "  No files found. Skipping $subfolder/."
-    return
-  fi
+    print(f"  Found {total} images (newest first, chunk size {CHUNK_SIZE}).")
+    print("  Press any key for next chunk, Q/Esc to quit.\n")
 
-  local offset=0
-  while [[ $offset -lt $total ]]; do
-    local chunk=("${all_files[@]:$offset:$CHUNK_SIZE}")
-    local end=$((offset + ${#chunk[@]}))
+    cv2.namedWindow("viewer", cv2.WINDOW_NORMAL)
 
-    echo ""
-    echo "  Chunk $((offset + 1))–$end of $total  [$subfolder/]"
+    offset = 0
+    while offset < total:
+        chunk = images[offset:offset + CHUNK_SIZE]
 
-    # List is sorted descending, so chunk[0] is the latest in this chunk
-    local latest="${chunk[0]}"
-    echo "  → Copying latest in chunk: $latest"
+        # Pick the lowest timestamp in this chunk (last element, since sorted descending)
+        frame = chunk[-1]
 
-    scp -q "${REMOTE_HOST}:${REMOTE_PATH}/${subfolder}/${latest}" "${local_sub}/${latest}"
-    open "${local_sub}/${latest}"
+        print(f"  Chunk {offset+1}–{offset+len(chunk)} of {total} → showing oldest in chunk: {frame}")
+        img = fetch_image(host, remote_path, frame)
 
-    offset=$end
+        if img is None:
+            print(f"  Warning: could not decode {frame}, skipping chunk.")
+        else:
+            cv2.setWindowTitle("viewer", f"{frame}  [chunk {offset//CHUNK_SIZE + 1}, frame {offset+len(chunk)}/{total}]")
+            cv2.imshow("viewer", img)
 
-    if [[ $offset -ge $total ]]; then
-      echo ""
-      echo "  ✓ Done with $subfolder/."
-      break
-    fi
+        key = cv2.waitKey(0) & 0xFF
+        if key == ord('q') or key == 27:
+            print("Quit.")
+            break
 
-    echo ""
-    read -rp "  Continue to next chunk of $subfolder/? [Y/n] " answer
-    case "$(echo "$answer" | tr '[:upper:]' '[:lower:]')" in
-    n | no)
-      echo "  Stopped at chunk ending at $end/$total."
-      return
-      ;;
-    esac
-  done
-}
+        offset += CHUNK_SIZE
 
-echo "→ Remote: $REMOTE"
-echo "→ Local:  $LOCAL_DEST"
+    cv2.destroyAllWindows()
 
-sync_subfolder "left"
-sync_subfolder "right"
-
-echo ""
-echo "✓ All done."
+if __name__ == "__main__":
+    main()
