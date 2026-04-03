@@ -8,7 +8,7 @@ import tempfile
 import os
 import cv2
 
-CHUNK_SIZE = 100
+CHUNK_SIZE = 300
 
 def get_remote_files(remote_host, remote_path, subfolder):
     result = subprocess.run(
