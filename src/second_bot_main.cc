@@ -5,6 +5,7 @@
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
+#include "src/pathing/controller.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 
@@ -67,8 +68,11 @@ auto main() -> int {
       camera_constants.at("second_bot_right").extrinsics_path.value(), 5804,
       false);
 
+  std::thread pathing_thread(pathing::RunController);
+
   LOG(INFO) << "Started estimators";
 
   // TODO find better way
   left_thread.join();
+  pathing_thread.join();
 }
