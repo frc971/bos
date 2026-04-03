@@ -21,9 +21,12 @@ const std::vector<Eigen::Vector3d> kapriltag_corners_eigen = {
     {ktag_size / 2, -ktag_size / 2, 0},
     {-ktag_size / 2, -ktag_size / 2, 0}};
 
-const frc::AprilTagFieldLayout kapriltag_layout =
-    frc::AprilTagFieldLayout::LoadField(
-        frc::AprilTagField::k2026RebuiltAndyMark);
+/**
+ * Returns a reference to the AprilTag field layout.
+ * Loads from the path specified by --apriltag_field_layout_path flag.
+ * Loaded once and cached (function-local static).
+ */
+auto GetAprilTagFieldLayout() -> const frc::AprilTagFieldLayout&;
 
 inline auto Variance(const int num_tags_detected, const double distance,
                      const double min_variance, const double scalar)
