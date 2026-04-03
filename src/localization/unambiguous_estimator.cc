@@ -278,7 +278,7 @@ auto UnambiguousEstimator::GetUsableFrames(
   int count = 0;
   for (size_t i = 0; i < frames.size(); i++) {
     if (latest_timestamp - frames[i].timestamp < kacceptable_frame_recency) {
-      streamers_[count].WriteFrame(frames[i].frame);
+      // streamers_[count].WriteFrame(frames[i].frame);
       usable_frames[i] = std::move(frames[i]);
       count++;
     }
@@ -328,10 +328,9 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
       .num_tags = num_tags,
       .invalid = invalid,
       .loss = cost};
-  everything_timer.Stop();
   prev_pose_estimate_ = std::make_optional(averaged_estimate);
   return {.pose_estimate = averaged_estimate,
-          .latency = 0,
+          .latency = everything_timer.Stop(),
           .best_cost = cost,
           .used_prev_pose = use_prev_pose_,
           .all_pose_estimates = all_pose_estimates_for_log};

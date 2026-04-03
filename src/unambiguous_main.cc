@@ -23,9 +23,11 @@ auto main() -> int {
       cameras{
           //   {camera_constants.at("main_bot_front"),
           //    localization::Detector::OPENCV_CPU},
-          {camera_constants.at("main_bot_left"),
+          {camera_constants.at("second_bot_left"),
            localization::Detector::OPENCV_CPU},
-          {camera_constants.at("main_bot_right"),
+          {camera_constants.at("second_bot_right"),
+           localization::Detector::OPENCV_CPU},
+          {camera_constants.at("second_bot_front"),
            localization::Detector::OPENCV_CPU},
       };
 
