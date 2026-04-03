@@ -2,12 +2,14 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <thread>
 #include <vector>
 #include "absl/flags/flag.h"
 #include "absl/flags/internal/flag.h"
 #include "absl/flags/parse.h"
+#include "absl/log/log.h"
 #include "frc/DataLogManager.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
@@ -26,8 +28,8 @@ ABSL_FLAG(std::string, image_folder, "",  //NOLINT
           "Path to folder of test images");
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt,  //NOLINT
           "Camera name");
-ABSL_FLAG(int, port, 5801, "Port");                      //NOLINT
-ABSL_FLAG(double, speed, 0.01, "Delay between frames");  //NOLINT
+ABSL_FLAG(int, port, 5801, "Port");                   //NOLINT
+ABSL_FLAG(double, speed, 1, "Delay between frames");  //NOLINT
 
 auto HasRegularFiles(const std::filesystem::path& path) -> bool {
   for (const auto& entry : std::filesystem::directory_iterator(path)) {
@@ -130,18 +132,16 @@ auto main(int argc, char** argv) -> int {
     }
 
     const auto& camera_constant = constants.at(camera_name);
-    localization_threads.emplace_back([&]() {
-      localization::RunLocalization(
-          std::move(camera_source),
-          std::make_unique<localization::OpenCVAprilTagDetector>(
-              frame.cols, frame.rows,
-              utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
-          std::make_unique<localization::MultiTagSolver>(camera_constant),
-          std::make_unique<localization::NetworkTableSender>(
-              camera_constant.name),
-          camera_constant.extrinsics_path.value(),
-          base_port + static_cast<int>(i), true);
-    });
+
+    localization_threads.emplace_back(
+        localization::RunLocalization, std::move(camera_source),
+        std::make_unique<localization::OpenCVAprilTagDetector>(
+            frame.cols, frame.rows,
+            utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
+        std::make_unique<localization::MultiTagSolver>(camera_constant),
+        std::make_unique<localization::NetworkTableSender>(camera_name, true),
+        camera_constant.extrinsics_path.value(),
+        base_port + static_cast<int>(i), true);
   }
 
   if (localization_threads.empty()) {
