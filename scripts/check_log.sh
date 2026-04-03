@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# Usage: ./viewer.py <user@host:/remote/path>
-# Example: ./viewer.py nvidia@10.9.71.11:/bos/logs/log51/left
+# Usage: ./sync_preview.py <user@host:/remote/path> <local_dest>
+# Example: ./sync_preview.py nvidia@10.9.71.11:/bos/logs/log51 ./local_logs
 
 import sys
 import subprocess
@@ -8,78 +8,95 @@ import tempfile
 import os
 import cv2
 
-IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp'}
-CHUNK_SIZE = 300
+CHUNK_SIZE = 100
 
-def is_image(filename):
-    return os.path.splitext(filename)[1].lower() in IMAGE_EXTS
-
-def list_remote_images(host, path):
+def get_remote_files(remote_host, remote_path, subfolder):
     result = subprocess.run(
-        ['ssh', host, f"ls '{path}'"],
+        ["ssh", remote_host, f"ls '{remote_path}/{subfolder}'"],
         capture_output=True, text=True, check=True
     )
-    files = result.stdout.strip().splitlines()
-    images = [f for f in files if is_image(f)]
-    # Sort numerically descending (latest timestamp first)
-    images.sort(key=lambda f: int(os.path.splitext(f)[0]) if os.path.splitext(f)[0].isdigit() else f, reverse=True)
-    return images
+    files = []
+    for filename in result.stdout.splitlines():
+        seconds_part = filename.split(".")[0]
+        if not seconds_part.isdigit():
+            continue
+        ext = filename.rsplit(".", 1)[-1].lower()
+        if ext in {"jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp", "heic"}:
+            files.append(filename)
+    # Sort descending by timestamp (latest first)
+    files.sort(key=lambda f: float(f.rsplit(".", 1)[0]), reverse=True)
+    return files
 
-def fetch_image(host, remote_path, filename):
-    with tempfile.NamedTemporaryFile(suffix=os.path.splitext(filename)[1], delete=False) as tmp:
-        tmp_path = tmp.name
+def scp_file(remote_host, remote_path, subfolder, filename, local_sub):
+    dest = os.path.join(local_sub, filename)
     subprocess.run(
-        ['scp', '-q', f"{host}:{remote_path}/{filename}", tmp_path],
+        ["scp", "-q", f"{remote_host}:{remote_path}/{subfolder}/{filename}", dest],
         check=True
     )
-    img = cv2.imread(tmp_path)
-    os.unlink(tmp_path)
-    return img
+    return dest
 
-def main():
-    if len(sys.argv) not in (2, 3):
-        print(f"Usage: {sys.argv[0]} <user@host:/remote/path>")
-        sys.exit(1)
+def sync_subfolder(remote_host, remote_path, subfolder, local_dest):
+    local_sub = os.path.join(local_dest, subfolder)
+    os.makedirs(local_sub, exist_ok=True)
 
-    host, remote_path = sys.argv[1].split(':', 1)
+    print(f"\n{'━' * 38}")
+    print(f"  {subfolder}/ — fetching file list...")
+    print(f"{'━' * 38}")
 
-    print(f"→ Fetching image list from {host}:{remote_path}...")
-    images = list_remote_images(host, remote_path)
-    total = len(images)
+    all_files = get_remote_files(remote_host, remote_path, subfolder)
+    total = len(all_files)
+    print(f"  Found {total} image files.")
 
     if total == 0:
-        print("No image files found. Exiting.")
-        sys.exit(0)
-
-    print(f"  Found {total} images (newest first, chunk size {CHUNK_SIZE}).")
-    print("  Press any key for next chunk, Q/Esc to quit.\n")
-
-    cv2.namedWindow("viewer", cv2.WINDOW_NORMAL)
+        print(f"  No files found. Skipping {subfolder}/.")
+        return
 
     offset = 0
     while offset < total:
-        chunk = images[offset:offset + CHUNK_SIZE]
+        chunk = all_files[offset:offset + CHUNK_SIZE]
+        end = offset + len(chunk)
 
-        # Pick the lowest timestamp in this chunk (last element, since sorted descending)
-        frame = chunk[-1]
+        print(f"\n  Chunk {offset + 1}–{end} of {total}  [{subfolder}/]")
 
-        print(f"  Chunk {offset+1}–{offset+len(chunk)} of {total} → showing oldest in chunk: {frame}")
-        img = fetch_image(host, remote_path, frame)
+        # chunk[0] is the latest in this chunk (descending sort)
+        latest = chunk[0]
+        print(f"  → Copying latest in chunk: {latest}")
 
-        if img is None:
-            print(f"  Warning: could not decode {frame}, skipping chunk.")
+        local_path = scp_file(remote_host, remote_path, subfolder, latest, local_sub)
+
+        img = cv2.imread(local_path)
+        if img is not None:
+            cv2.imshow(f"{subfolder} — {latest}  (any key: continue, ESC: stop)", img)
+            key = cv2.waitKey(0) & 0xFF
+            cv2.destroyAllWindows()
+            if key == 27:  # ESC
+                print(f"  Stopped at chunk ending at {end}/{total}.")
+                return
         else:
-            cv2.setWindowTitle("viewer", f"{frame}  [chunk {offset//CHUNK_SIZE + 1}, frame {offset+len(chunk)}/{total}]")
-            cv2.imshow("viewer", img)
+            print(f"  (Could not read image: {local_path})")
+            input("  Press Enter to continue...")
 
-        key = cv2.waitKey(0) & 0xFF
-        if key == ord('q') or key == 27:
-            print("Quit.")
-            break
+        offset = end
 
-        offset += CHUNK_SIZE
+    print(f"\n  ✓ Done with {subfolder}/.")
 
-    cv2.destroyAllWindows()
+def main():
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} <user@host:/remote/path> <local_dest>")
+        sys.exit(1)
+
+    remote = sys.argv[1]
+    local_dest = sys.argv[2] if len(sys.argv) > 2 else "./synced_files"
+
+    remote_host, remote_path = remote.split(":", 1)
+
+    print(f"→ Remote: {remote}")
+    print(f"→ Local:  {local_dest}")
+
+    sync_subfolder(remote_host, remote_path, "left", local_dest)
+    sync_subfolder(remote_host, remote_path, "right", local_dest)
+
+    print("\n✓ All done.")
 
 if __name__ == "__main__":
     main()
