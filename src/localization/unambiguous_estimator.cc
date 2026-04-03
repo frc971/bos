@@ -195,7 +195,7 @@ auto UnambiguousEstimator::SearchSolutions(
 
 void UnambiguousEstimator::Run() {
   frc::DataLogManager::Start();
-  localization::PositionSender position_sender("Left");
+  localization::PositionSender position_sender("Left", false, sim_);
   while (true) {
     latent_estimate_t pose_estimate = GetUnambiguatedEstimate();
     if (pose_estimate.invalid) {
@@ -278,7 +278,7 @@ auto UnambiguousEstimator::GetUsableFrames(
   int count = 0;
   for (size_t i = 0; i < frames.size(); i++) {
     if (latest_timestamp - frames[i].timestamp < kacceptable_frame_recency) {
-      streamers_[count].WriteFrame(usable_frames[i]->frame);
+      streamers_[count].WriteFrame(frames[i].frame);
       usable_frames[i] = std::move(frames[i]);
       count++;
     }
@@ -326,7 +326,8 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
       .variance = avg_variance,
       .timestamp = avg_timestamp,
       .num_tags = num_tags,
-      .invalid = invalid};
+      .invalid = invalid,
+      .loss = cost};
   everything_timer.Stop();
   prev_pose_estimate_ = std::make_optional(averaged_estimate);
   return {.pose_estimate = averaged_estimate,

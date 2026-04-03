@@ -10,7 +10,8 @@ constexpr auto RadianToDegree(double radian) -> double {
 
 static const int kmax_tags = 50;
 
-PositionSender::PositionSender(const std::string& camera_name, bool verbose)
+PositionSender::PositionSender(const std::string& camera_name, bool verbose,
+                               bool sim)
     : instance_(nt::NetworkTableInstance::GetDefault()), verbose_(verbose) {
   std::shared_ptr<nt::NetworkTable> table =
       instance_.GetTable("Orin/PoseEstimate/" + camera_name);
@@ -46,9 +47,34 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose)
   nt::DoubleTopic varience_topic = table->GetDoubleTopic("Varience");
   varience_publisher_ = varience_topic.Publish();
 
+  nt::DoubleTopic loss_topic = table->GetDoubleTopic("Loss");
+  loss_publisher_ = loss_topic.Publish();
+
   nt::BooleanArrayTopic rejected_tag_ids_topic =
       table->GetBooleanArrayTopic("RejectedTagId");
   rejected_tag_ids_publisher_ = rejected_tag_ids_topic.Publish();
+
+  if (sim) {
+    std::error_code ec;
+    log_.emplace("/bos/logs/sim.wpilog", ec);
+    if (ec) {
+      std::cerr << "Failed to open log: " << ec.message() << '\n';
+      std::exit(0);
+    }
+    pose3d_log_.emplace(*log_, "Pose3d");
+    all_estimates_log_.emplace(*log_, "AllEstimates");
+
+    latency_log_.emplace(*log_, "Latency");
+    timestamp_log_.emplace(*log_, "Timestamp");
+    num_tags_log_.emplace(*log_, "NumTags");
+
+    varience_log_.emplace(*log_, "Varience");
+    loss_log_.emplace(*log_, "Loss");
+
+    tag_estimation_log_.emplace(*log_, "TagEstimation");
+    tag_ids_log_.emplace(*log_, "TagIds");
+    rejected_tag_ids_log_.emplace(*log_, "RejectedTagIds");
+  }
 }
 
 void PositionSender::Send(
@@ -93,8 +119,33 @@ void PositionSender::Send(
     latency_publisher_.Set(latency);
     timestamp_publisher_.Set(detection.timestamp);
     num_tags_publisher_.Set(detection.num_tags);
+    loss_publisher_.Set(detection.loss);
     if (all_estimates.has_value()) {
       all_estimates_publisher_.Set(all_estimates.value());
+    }
+
+    if (log_) {
+      double adjusted_timestamp =
+          detection.timestamp +
+          instance_.GetServerTimeOffset().value_or(0) / 1e6;
+      auto log_time = static_cast<int64_t>(adjusted_timestamp * 1e6);
+
+      pose3d_log_->Append(detection.pose, log_time);
+
+      tag_estimation_log_->Append(tag_estimation, log_time);
+      tag_ids_log_->Append(tags, log_time);
+      rejected_tag_ids_log_->Append(rejected_tags, log_time);
+
+      varience_log_->Append(detection.variance, log_time);
+      latency_log_->Append(latency, log_time);
+      timestamp_log_->Append(detection.timestamp, log_time);
+      num_tags_log_->Append(detection.num_tags, log_time);
+      loss_log_->Append(detection.loss, log_time);
+
+      if (all_estimates.has_value()) {
+        all_estimates_log_->Append(all_estimates.value(), log_time);
+      }
+      log_->Flush();
     }
 
     if (verbose_) {

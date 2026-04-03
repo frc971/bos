@@ -10,6 +10,7 @@
 #include <networktables/NetworkTableInstance.h>
 #include <networktables/StructArrayTopic.h>
 #include <networktables/StructTopic.h>
+#include <wpi/DataLogWriter.h>
 #include "src/localization/position.h"
 #include "src/utils/pch.h"
 
@@ -17,7 +18,8 @@ namespace localization {
 // Sends position estimates from the orin to the rio. It is safe to call Send() on multiple threads because of the mutex
 class PositionSender {
  public:
-  PositionSender(const std::string& camera_name, bool verbose = false);
+  PositionSender(const std::string& camera_name, bool verbose = false,
+                 bool sim = false);
   void Send(const std::vector<localization::position_estimate_t>& detections,
             double latency,
             const std::optional<std::vector<frc::Pose3d>>& all_estimates =
@@ -33,9 +35,21 @@ class PositionSender {
   nt::DoublePublisher timestamp_publisher_;
   nt::IntegerPublisher num_tags_publisher_;
   nt::DoublePublisher varience_publisher_;
+  nt::DoublePublisher loss_publisher_;
   nt::DoubleArrayPublisher tag_estimation_publisher_;
   nt::BooleanArrayPublisher tag_ids_publisher_;
   nt::BooleanArrayPublisher rejected_tag_ids_publisher_;
+  std::optional<wpi::log::DataLogWriter> log_;
+  std::optional<wpi::log::StructLogEntry<frc::Pose3d>> pose3d_log_;
+  std::optional<wpi::log::StructArrayLogEntry<frc::Pose3d>> all_estimates_log_;
+  std::optional<wpi::log::DoubleLogEntry> latency_log_;
+  std::optional<wpi::log::DoubleLogEntry> timestamp_log_;
+  std::optional<wpi::log::IntegerLogEntry> num_tags_log_;
+  std::optional<wpi::log::DoubleLogEntry> varience_log_;
+  std::optional<wpi::log::DoubleLogEntry> loss_log_;
+  std::optional<wpi::log::DoubleArrayLogEntry> tag_estimation_log_;
+  std::optional<wpi::log::BooleanArrayLogEntry> tag_ids_log_;
+  std::optional<wpi::log::BooleanArrayLogEntry> rejected_tag_ids_log_;
 
   std::mutex mutex_;
   bool verbose_;

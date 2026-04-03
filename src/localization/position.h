@@ -37,6 +37,7 @@ using position_estimate_t = struct PositionEstimate {
   int num_tags;
   double avg_tag_dist;
   bool invalid = false;
+  double loss = 0;
   friend auto operator<<(std::ostream& os, const PositionEstimate& t)
       -> std::ostream& {
     const auto& tr = t.pose.Translation();

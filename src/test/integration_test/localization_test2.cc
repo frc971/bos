@@ -42,14 +42,14 @@ auto main(int argc, char** argv) -> int {
       cameras{{constants.at("main_bot_left"), localization::OPENCV_CPU},
               {constants.at("main_bot_right"), localization::OPENCV_CPU}};
   auto paths = std::make_optional<std::vector<std::filesystem::path>>(
-      {image_folder + "/main_bot_left", image_folder + "/main_bot_right"});
+      {image_folder + "/left", image_folder + "/right"});
 
   // std::vector<std::pair<camera::CameraConstant, localization::Detector>>
   //     cameras{{constants.at("main_bot_left"), localization::OPENCV_CPU}};
   // auto paths = std::make_optional<std::vector<std::filesystem::path>>(
   //     {image_folder + "/left"});
 
-  localization::UnambiguousEstimator estimator(cameras, std::nullopt, false,
-                                               paths);
+  localization::UnambiguousEstimator estimator(
+      cameras, std::make_optional<double>(5801), false, paths);
   estimator.Run();
 }
