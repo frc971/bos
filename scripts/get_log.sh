@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Usage: ./sync_chunks.sh <user@host:/remote/path> <local_dest>
-# Example: ./sync_chunks.sh nvidia@10.9.71.11:/bos/logs/log44 ./local_logs
+# Usage: ./get_log.sh <user@host:/remote/path> <local_dest>
+# Example: ./get_log.sh nvidia@10.9.71.11:/bos/logs/log44 ./local_logs
 
 set -euo pipefail
 
@@ -33,11 +33,11 @@ offset=0
 while [[ $offset -lt $TOTAL ]]; do
   # Slice the next chunk
   chunk=("${ALL_FILES[@]:$offset:$CHUNK_SIZE}")
-  end=$(( offset + ${#chunk[@]} ))
+  end=$((offset + ${#chunk[@]}))
 
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "  Syncing files $((offset+1))–$end of $TOTAL"
+  echo "  Syncing files $((offset + 1))–$end of $TOTAL"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
   # Build rsync --include list for this chunk
@@ -58,9 +58,9 @@ while [[ $offset -lt $TOTAL ]]; do
     if [[ -f "$candidate" ]]; then
       ext=$(echo "${f##*.}" | tr '[:upper:]' '[:lower:]')
       case "$ext" in
-        jpg|jpeg|png|gif|bmp|tiff|webp|heic)
-          latest_image="$candidate"
-          ;;
+      jpg | jpeg | png | gif | bmp | tiff | webp | heic)
+        latest_image="$candidate"
+        ;;
       esac
     fi
   done
@@ -83,9 +83,9 @@ while [[ $offset -lt $TOTAL ]]; do
   echo ""
   read -rp "Continue syncing next chunk? [Y/n] " answer
   case "$(echo "$answer" | tr '[:upper:]' '[:lower:]')" in
-    n|no)
-      echo "Stopped at $offset/$TOTAL files."
-      exit 0
-      ;;
+  n | no)
+    echo "Stopped at $offset/$TOTAL files."
+    exit 0
+    ;;
   esac
 done
