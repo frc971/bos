@@ -14,11 +14,11 @@ class MultiTagSolver : public IPositionSolver {
  public:
   MultiTagSolver(
       const std::string& intrinsics_path, const std::string& extrinsics_path,
-      const frc::AprilTagFieldLayout& layout = kapriltag_layout,
+      const frc::AprilTagFieldLayout& layout,
       const std::vector<cv::Point3d>& tag_corners = kapriltag_corners);
   MultiTagSolver(
       camera::camera_constant_t camera_constant,
-      const frc::AprilTagFieldLayout& layout = kapriltag_layout,
+      const frc::AprilTagFieldLayout& layout,
       const std::vector<cv::Point3d>& tag_corners = kapriltag_corners);
   auto EstimatePosition(const std::vector<tag_detection_t>& detections,
                         bool reject_far_tags = true)

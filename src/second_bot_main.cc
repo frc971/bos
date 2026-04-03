@@ -52,7 +52,8 @@ auto main() -> int {
           utils::ReadIntrinsics(
               camera_constants.at("second_bot_left").intrinsics_path.value())),
       std::make_unique<localization::MultiTagSolver>(
-          camera_constants.at("second_bot_left")),
+          camera_constants.at("second_bot_left"),
+          localization::GetAprilTagFieldLayout()),
       camera_constants.at("second_bot_left").extrinsics_path.value(), 5803,
       false);
 
@@ -63,7 +64,8 @@ auto main() -> int {
           utils::ReadIntrinsics(
               camera_constants.at("second_bot_right").intrinsics_path.value())),
       std::make_unique<localization::MultiTagSolver>(
-          camera_constants.at("second_bot_right")),
+          camera_constants.at("second_bot_right"),
+          localization::GetAprilTagFieldLayout()),
       camera_constants.at("second_bot_right").extrinsics_path.value(), 5804,
       false);
 
