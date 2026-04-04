@@ -19,14 +19,20 @@
 
 #include "labeling_allegretti_2019_BKE.h"
 
-#include <cassert>
-#define CHECK_EQ(x,y) { assert(x == y); }
-#define CHECK_NE(x,y) { assert(x != y); }
+#include "absl/log/check.h"
+#include "absl/log/log.h"
+
+#include "apriltag_types.h"
+#include "cuda.h"
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
 #define BLOCK_ROWS 16
 #define BLOCK_COLS 16
 
 namespace {
+
+using frc::apriltag::apriltag_size_t;
 
 //         This is a block-based algorithm.
 // Blocks are 2x2 sized, with internal pixels named as:
@@ -65,12 +71,12 @@ __device__ __forceinline__ uint8_t HasBit(const T bitmap, uint8_t pos) {
 }
 
 // Only use it with unsigned numeric types
-__device__ __forceinline__ void SetBit(uint8_t &bitmap, Info pos) {
+__device__ __forceinline__ void SetBit(uint8_t& bitmap, Info pos) {
   bitmap |= (1 << static_cast<uint8_t>(pos));
 }
 
 // Returns the root index of the UFTree
-__device__ uint32_t Find(const uint32_t *s_buf, uint32_t n) {
+__device__ uint32_t Find(const uint32_t* s_buf, uint32_t n) {
   while (s_buf[n] != n) {
     n = s_buf[n];
   }
@@ -78,7 +84,7 @@ __device__ uint32_t Find(const uint32_t *s_buf, uint32_t n) {
 }
 
 // Returns the root index of the UFTree, re-assigning ourselves as we go.
-__device__ uint32_t FindAndCompress(uint32_t *s_buf, uint32_t n) {
+__device__ uint32_t FindAndCompress(uint32_t* s_buf, uint32_t n) {
   uint32_t id = n;
   while (s_buf[n] != n) {
     n = s_buf[n];
@@ -88,7 +94,7 @@ __device__ uint32_t FindAndCompress(uint32_t *s_buf, uint32_t n) {
 }
 
 // Merges the UFTrees of a and b, linking one root to the other
-__device__ void Union(uint32_t *s_buf, uint32_t a, uint32_t b) {
+__device__ void Union(uint32_t* s_buf, uint32_t a, uint32_t b) {
   bool done;
 
   do {
@@ -136,15 +142,15 @@ __global__ void InitLabeling(const GpuImage<uint8_t> img,
   uint8_t info_right_background = 0;
 
   uint8_t buffer alignas(int)[4];
-  *(reinterpret_cast<int *>(buffer)) = 0;
+  *(reinterpret_cast<int*>(buffer)) = 0;
 
   // Read pairs of consecutive values in memory at once
   // This does not depend on endianness
-  *(reinterpret_cast<uint16_t *>(buffer)) =
-      *(reinterpret_cast<uint16_t *>(img.data + img_index));
+  *(reinterpret_cast<uint16_t*>(buffer)) =
+      *(reinterpret_cast<uint16_t*>(img.data + img_index));
 
-  *(reinterpret_cast<uint16_t *>(buffer + 2)) =
-      *(reinterpret_cast<uint16_t *>(img.data + img_index + img.step));
+  *(reinterpret_cast<uint16_t*>(buffer + 2)) =
+      *(reinterpret_cast<uint16_t*>(img.data + img_index + img.step));
 
   // P is a bitmask saying where to check.
   //
@@ -270,14 +276,14 @@ __global__ void InitLabeling(const GpuImage<uint8_t> img,
   }
 
   // Now, write everything back out to memory.
-  *reinterpret_cast<uint64_t *>(labels.data + foreground_labels_index) =
+  *reinterpret_cast<uint64_t*>(labels.data + foreground_labels_index) =
       static_cast<uint64_t>(foreground_labels_index +
                             father_offset_foreground) +
       (static_cast<uint64_t>(info_foreground) << 32) +
       (static_cast<uint64_t>(info_left_background) << 40) +
       (static_cast<uint64_t>(info_right_background) << 48);
 
-  *reinterpret_cast<uint64_t *>(labels.data + background_labels_index) =
+  *reinterpret_cast<uint64_t*>(labels.data + background_labels_index) =
       static_cast<uint64_t>(background_labels_index +
                             father_offset_left_background) +
       (static_cast<uint64_t>(background_labels_index +
@@ -350,11 +356,11 @@ __global__ void FinalLabeling(GpuImage<uint32_t> labels,
   }
 
   const uint64_t foreground_buffer =
-      *reinterpret_cast<uint64_t *>(labels.data + foreground_labels_index);
+      *reinterpret_cast<uint64_t*>(labels.data + foreground_labels_index);
   const uint32_t foreground_label = (foreground_buffer & (0xFFFFFFFF));
   const uint8_t foreground_info = (foreground_buffer >> 32) & 0xFF;
   const uint64_t background_buffer =
-      *reinterpret_cast<uint64_t *>(labels.data + background_labels_index);
+      *reinterpret_cast<uint64_t*>(labels.data + background_labels_index);
   const uint32_t background_left_label = (background_buffer & (0xFFFFFFFF));
   const uint32_t background_right_label =
       ((background_buffer >> 32) & (0xFFFFFFFF));
@@ -372,9 +378,9 @@ __global__ void FinalLabeling(GpuImage<uint32_t> labels,
     b_label = foreground_labels_index + 1;
     c_label = background_labels_index;
     d_label = background_labels_index + 1;
-    *reinterpret_cast<uint64_t *>(labels.data + foreground_labels_index) =
+    *reinterpret_cast<uint64_t*>(labels.data + foreground_labels_index) =
         (static_cast<uint64_t>(b_label) << 32) | a_label;
-    *reinterpret_cast<uint64_t *>(labels.data + background_labels_index) =
+    *reinterpret_cast<uint64_t*>(labels.data + background_labels_index) =
         (static_cast<uint64_t>(d_label) << 32) | (c_label);
     return;
   } else {
@@ -387,15 +393,15 @@ __global__ void FinalLabeling(GpuImage<uint32_t> labels,
     d_label = HasBit(foreground_info, Info::d) * foreground_label +
               HasBit(background_right_info, Info::d) * background_right_label;
 
-    *reinterpret_cast<uint64_t *>(labels.data + foreground_labels_index) =
+    *reinterpret_cast<uint64_t*>(labels.data + foreground_labels_index) =
         (static_cast<uint64_t>(b_label) << 32) | a_label;
-    *reinterpret_cast<uint64_t *>(labels.data + background_labels_index) =
+    *reinterpret_cast<uint64_t*>(labels.data + background_labels_index) =
         (static_cast<uint64_t>(d_label) << 32) | (c_label);
   }
 
   if ((foreground_info & 0xf) != 0u) {
     // We've got foreground!
-    size_t count = 0;
+    apriltag_size_t count = 0;
     if (HasBit(foreground_info, Info::a)) {
       ++count;
     }
@@ -421,7 +427,7 @@ __global__ void FinalLabeling(GpuImage<uint32_t> labels,
       (background_right_info & 0xf) != 0u &&
       background_left_label == background_right_label) {
     // They are all populated and match, go for it.
-    size_t count = 0;
+    apriltag_size_t count = 0;
     if (HasBit(background_left_info, Info::a)) {
       ++count;
     }
@@ -440,7 +446,7 @@ __global__ void FinalLabeling(GpuImage<uint32_t> labels,
   }
 
   if ((background_left_info & 0xf) != 0u) {
-    size_t count = 0;
+    apriltag_size_t count = 0;
     if (HasBit(background_left_info, Info::a)) {
       ++count;
     }
@@ -451,7 +457,7 @@ __global__ void FinalLabeling(GpuImage<uint32_t> labels,
   }
 
   if ((background_right_info & 0xf) != 0u) {
-    size_t count = 0;
+    apriltag_size_t count = 0;
     if (HasBit(background_right_info, Info::b)) {
       ++count;
     }
