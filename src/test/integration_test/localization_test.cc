@@ -18,6 +18,7 @@
 #include "src/localization/networktable_sender.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
+#include "src/localization/simulation_sender.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/log.h"
 
@@ -139,7 +140,7 @@ auto main(int argc, char** argv) -> int {
             frame.cols, frame.rows,
             utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
         std::make_unique<localization::MultiTagSolver>(camera_constant),
-        std::make_unique<localization::NetworkTableSender>(camera_name, true),
+        std::make_unique<localization::SimulationSender>(camera_name, 4971),
         camera_constant.extrinsics_path.value(),
         base_port + static_cast<int>(i), true);
   }
