@@ -74,9 +74,7 @@ auto SquareSolver::EstimatePosition(
     cv::Mat camera_to_tag = utils::MakeTransform(rvec, tvec);
     cv::Mat tag_to_camera = camera_to_tag.inv();
     cv::Mat field_to_tag = utils::EigenToCvMat(
-        localization::kapriltag_layout.GetTagPose(detection.tag_id)
-            .value()
-            .ToMatrix());
+        layout_.GetTagPose(detection.tag_id).value().ToMatrix());
     frc::Pose3d robot_pose(utils::CvMatToEigen(
         ((field_to_tag * rotate_yaw_wpilib_) * tag_to_camera) *
         camera_to_robot_));
@@ -130,9 +128,7 @@ auto SquareSolver::EstimatePositionNew(
     cv::Mat camera_to_tag = utils::MakeTransform(rvec, tvec);
     cv::Mat tag_to_camera = camera_to_tag.inv();
     cv::Mat field_to_tag = utils::EigenToCvMat(
-        localization::kapriltag_layout.GetTagPose(detection.tag_id)
-            .value()
-            .ToMatrix());
+        layout_.GetTagPose(detection.tag_id).value().ToMatrix());
     utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);
     cv::Mat field_to_robot =
         field_to_tag * rotate_yaw_cv_ * tag_to_camera * camera_to_robot_;

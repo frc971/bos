@@ -16,8 +16,9 @@ struct CameraMatrices {
 static constexpr int kmax_tags = 50;
 class JointSolver {
  public:
-  JointSolver(const std::vector<camera::camera_constant_t>& camera_constants_,
-              const frc::AprilTagFieldLayout& layout);
+  JointSolver(
+      const std::vector<camera::camera_constant_t>& camera_constants_,
+      const frc::AprilTagFieldLayout& layout = GetAprilTagFieldLayout());
   auto EstimatePosition(
       const std::map<std::string, std::vector<tag_detection_t>>&
           all_cam_detections,

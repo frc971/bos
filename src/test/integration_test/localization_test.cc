@@ -37,8 +37,7 @@ auto HasRegularFiles(const std::filesystem::path& path) -> bool {
     std::string extension = entry.path().extension().string();
     std::transform(extension.begin(), extension.end(), extension.begin(),
                    [](unsigned char c) { return std::tolower(c); });
-    if (extension == ".png" || extension == ".jpg" ||
-        extension == ".jpeg") {
+    if (extension == ".png" || extension == ".jpg" || extension == ".jpeg") {
       return true;
     }
   }
@@ -65,15 +64,14 @@ auto FindCameraFolders(const std::filesystem::path& path)
 auto ResolveCameraName(const std::string& directory_name,
                        const camera::camera_constants_t& constants)
     -> std::string {
-  std::string resolved_name =
-      directory_name.rfind("main_bot_", 0) == 0
-          ? directory_name
-          : "main_bot_" + directory_name;
+  std::string resolved_name = directory_name.rfind("main_bot_", 0) == 0
+                                  ? directory_name
+                                  : "main_bot_" + directory_name;
 
   if (!constants.contains(resolved_name)) {
     LOG(FATAL) << "Could not resolve camera constants name for directory: "
-               << directory_name << ", expected constants entry: "
-               << resolved_name;
+               << directory_name
+               << ", expected constants entry: " << resolved_name;
   }
 
   return resolved_name;
@@ -124,9 +122,8 @@ auto main(int argc, char** argv) -> int {
     }
 
     camera_sources.push_back(std::make_unique<camera::CameraSource>(
-        camera_name,
-        std::make_unique<camera::DiskCamera>(camera_folder.string(),
-                                             std::nullopt, speed)));
+        camera_name, std::make_unique<camera::DiskCamera>(
+                         camera_folder.string(), std::nullopt, speed)));
 
     camera::CameraSource& camera_source = *camera_sources.back();
     auto frame = camera_source.GetFrame();
@@ -140,8 +137,7 @@ auto main(int argc, char** argv) -> int {
         std::make_unique<localization::OpenCVAprilTagDetector>(
             frame.cols, frame.rows,
             utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
-        std::make_unique<localization::MultiTagSolver>(
-            camera_constant, localization::GetAprilTagFieldLayout()),
+        std::make_unique<localization::MultiTagSolver>(camera_constant),
         camera_constant.extrinsics_path.value(),
         base_port + static_cast<int>(i), true);
   }

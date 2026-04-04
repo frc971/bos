@@ -13,10 +13,10 @@ class SquareSolver : public IPositionSolver {
  public:
   SquareSolver(const std::string& intrinsics_path,
                const std::string& extrinsics_path,
-               frc::AprilTagFieldLayout layout = kapriltag_layout,
+               frc::AprilTagFieldLayout layout = GetAprilTagFieldLayout(),
                std::vector<cv::Point3d> tag_corners = kapriltag_corners);
   SquareSolver(camera::camera_constant_t camera_constant,
-               frc::AprilTagFieldLayout layout = kapriltag_layout,
+               frc::AprilTagFieldLayout layout = GetAprilTagFieldLayout(),
                std::vector<cv::Point3d> tag_corners = kapriltag_corners);
 
   auto EstimatePosition(const std::vector<tag_detection_t>& detections,
