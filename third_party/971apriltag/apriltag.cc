@@ -1,4 +1,7 @@
-#include "971apriltag.h"
+#include "apriltag.h"
+
+#include <thrust/iterator/constant_iterator.h>
+#include <thrust/iterator/transform_iterator.h>
 
 #include <cub/device/device_copy.cuh>
 #include <cub/device/device_radix_sort.cuh>
@@ -11,13 +14,19 @@
 #include <cub/iterator/transform_input_iterator.cuh>
 #include <vector>
 
+#include "absl/flags/flag.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "apriltag/common/g2d.h"
 
+// #include "aos/time/time.h"
 #include "labeling_allegretti_2019_BKE.h"
 #include "threshold.h"
 #include "transform_output_iterator.h"
 
-namespace frc971::apriltag {
+ABSL_FLAG(bool, use_neon, false, "Use NEON optimized threshold");  // NOLINT
+
+namespace frc::apriltag {
 namespace {
 
 typedef std::chrono::duration<float, std::milli> float_milli;
@@ -25,7 +34,7 @@ typedef std::chrono::duration<float, std::milli> float_milli;
 // Returns true if the QuadBoundaryPoint is nonzero.
 struct NonZero {
   __host__ __device__ __forceinline__ bool operator()(
-      const QuadBoundaryPoint &a) const {
+      const QuadBoundaryPoint& a) const {
     return a.nonzero();
   }
 };
@@ -33,7 +42,7 @@ struct NonZero {
 // Always returns true (only used for scratch space calcs).
 template <typename T>
 struct True {
-  __host__ __device__ __forceinline__ bool operator()(const T &) const {
+  __host__ __device__ __forceinline__ bool operator()(const T&) const {
     return true;
   }
 };
@@ -44,8 +53,8 @@ template <typename T>
 static size_t RadixSortScratchSpace(size_t elements) {
   size_t temp_storage_bytes = 0;
   QuadBoundaryPointDecomposer decomposer;
-  cub::DeviceRadixSort::SortKeys(nullptr, temp_storage_bytes, (T *)(nullptr),
-                                 (T *)(nullptr), elements, decomposer);
+  cub::DeviceRadixSort::SortKeys(nullptr, temp_storage_bytes, (T*)(nullptr),
+                                 (T*)(nullptr), elements, decomposer);
   return temp_storage_bytes;
 }
 
@@ -54,19 +63,19 @@ static size_t RadixSortScratchSpace(size_t elements) {
 // number of elements.  num_markers is the device pointer used to hold the
 // selected number of elements.
 template <typename Tin, typename Tout>
-static size_t DeviceSelectIfScratchSpace(size_t elements, int *num_markers) {
+static size_t DeviceSelectIfScratchSpace(size_t elements, int* num_markers) {
   size_t temp_storage_bytes = 0;
-  CHECK_CUDA(cub::DeviceSelect::If(nullptr, temp_storage_bytes,
-                                   (Tin *)(nullptr), (Tout *)(nullptr),
-                                   num_markers, elements, True<Tin>()));
+  CHECK_CUDA(cub::DeviceSelect::If(nullptr, temp_storage_bytes, (Tin*)(nullptr),
+                                   (Tout*)(nullptr), num_markers, elements,
+                                   True<Tin>()));
   return temp_storage_bytes;
 }
 
 // Always returns the first element (only used for scratch space calcs).
 template <typename T>
 struct CustomFirst {
-  __host__ __device__ __forceinline__ T operator()(const T &a,
-                                                   const T & /*b*/) const {
+  __host__ __device__ __forceinline__ T operator()(const T& a,
+                                                   const T& /*b*/) const {
     return a;
   }
 };
@@ -77,9 +86,8 @@ template <typename K, typename V>
 static size_t DeviceReduceByKeyScratchSpace(size_t elements) {
   size_t temp_storage_bytes = 0;
   CHECK_CUDA(cub::DeviceReduce::ReduceByKey(
-      nullptr, temp_storage_bytes, (K *)(nullptr), (K *)(nullptr),
-      (V *)(nullptr), (V *)(nullptr), (size_t *)(nullptr), CustomFirst<V>(),
-      elements));
+      nullptr, temp_storage_bytes, (K*)(nullptr), (K*)(nullptr), (V*)(nullptr),
+      (V*)(nullptr), (size_t*)(nullptr), CustomFirst<V>(), elements));
   return temp_storage_bytes;
 }
 
@@ -89,7 +97,7 @@ template <typename V>
 static size_t DeviceScanInclusiveScanScratchSpace(size_t elements) {
   size_t temp_storage_bytes = 0;
   CHECK_CUDA(cub::DeviceScan::InclusiveScan(nullptr, temp_storage_bytes,
-                                            (V *)(nullptr), (V *)(nullptr),
+                                            (V*)(nullptr), (V*)(nullptr),
                                             CustomFirst<V>(), elements));
   return temp_storage_bytes;
 }
@@ -100,28 +108,25 @@ template <typename K, typename V>
 static size_t DeviceScanInclusiveScanByKeyScratchSpace(size_t elements) {
   size_t temp_storage_bytes = 0;
   CHECK_CUDA(cub::DeviceScan::InclusiveScanByKey(
-      nullptr, temp_storage_bytes, (K *)(nullptr), (V *)(nullptr),
-      (V *)(nullptr), CustomFirst<V>(), elements));
+      nullptr, temp_storage_bytes, (K*)(nullptr), (V*)(nullptr), (V*)(nullptr),
+      CustomFirst<V>(), elements));
   return temp_storage_bytes;
 }
 
 }  // namespace
 
 GpuDetector::GpuDetector(size_t width, size_t height,
-                         apriltag_detector_t *tag_detector,
+                         apriltag_detector_t* tag_detector,
                          CameraMatrix camera_matrix,
-                         DistCoeffs distortion_coefficients)
+                         DistCoeffs distortion_coefficients,
+                         vision::ImageFormat image_format)
     : width_(width),
       height_(height),
-      decimate_(2),
       tag_detector_(tag_detector),
-      //color_image_host_(width * height * 2),
       gray_image_host_(width * height),
       color_image_device_(width * height * 2),
       gray_image_device_(width * height),
       decimated_image_device_(width / 2 * height / 2),
-      unfiltered_minmax_image_device_((width / 2 / 4 * height / 2 / 4) * 2),
-      minmax_image_device_((width / 2 / 4 * height / 2 / 4) * 2),
       thresholded_image_device_(width / 2 * height / 2),
       union_markers_device_(width / 2 * height / 2),
       union_markers_size_device_(width / 2 * height / 2),
@@ -163,17 +168,19 @@ GpuDetector::GpuDetector(size_t width, size_t height,
               cub::KeyValuePair<long, MinMaxExtents>>(kMaxBlobs)),
       temp_storage_line_fit_scan_device_(
           DeviceScanInclusiveScanByKeyScratchSpace<uint32_t, LineFitPoint>(
-              sorted_selected_blobs_device_.size())) {
+              sorted_selected_blobs_device_.size())),
+      threshold_(absl::GetFlag(FLAGS_use_neon)
+                     ? MakeNeonThreshold(image_format, width, height)
+                     : MakeThreshold(image_format, width, height)),
+      image_format_(image_format) {
   fit_quads_host_.reserve(kMaxBlobs);
   quad_corners_host_.reserve(kMaxBlobs);
-
-  CHECK(decimate_ == 1 || decimate_ == 2);
 
   CHECK_EQ(tag_detector_->quad_decimate, 2);
   CHECK(!tag_detector_->qtp.deglitch);
 
   for (int i = 0; i < zarray_size(tag_detector_->tag_families); i++) {
-    apriltag_family_t *family;
+    apriltag_family_t* family;
     zarray_get(tag_detector_->tag_families, i, &family);
     if (family->width_at_border < min_tag_width_) {
       min_tag_width_ = family->width_at_border;
@@ -189,101 +196,13 @@ GpuDetector::GpuDetector(size_t width, size_t height,
   poly0_ = g2d_polygon_create_zeros(4);
   poly1_ = g2d_polygon_create_zeros(4);
 
-  detections_ = zarray_create(sizeof(apriltag_detection_t *));
-  zarray_ensure_capacity(detections_, kMaxBlobs);
-}
-
-// decimate can be 1 or 2
-GpuDetector::GpuDetector(size_t width, size_t height,
-                         apriltag_detector_t *tag_detector,
-                         CameraMatrix camera_matrix,
-                         DistCoeffs distortion_coefficients,
-			 size_t decimate)
-    : width_(width),
-      height_(height),
-      decimate_(decimate),
-      tag_detector_(tag_detector),
-      //color_image_host_(width * height * 2),
-      gray_image_host_(width * height),
-      color_image_device_(width * height * 2),
-      gray_image_device_(width * height),
-      decimated_image_device_(width / decimate * height / decimate),
-      unfiltered_minmax_image_device_((width / decimate / 4 * height / decimate / 4) * 2),
-      minmax_image_device_((width / decimate / 4 * height / decimate / 4) * 2),
-      thresholded_image_device_(width / decimate * height / decimate),
-      union_markers_device_(width / decimate * height / decimate),
-      union_markers_size_device_(width / decimate * height / decimate),
-      union_marker_pair_device_((width / decimate - 2) * (height / decimate - 2) * 4),
-      compressed_union_marker_pair_device_(union_marker_pair_device_.size()),
-      sorted_union_marker_pair_device_(union_marker_pair_device_.size()),
-      extents_device_(union_marker_pair_device_.size()),
-      selected_extents_device_(kMaxBlobs),
-      selected_blobs_device_(union_marker_pair_device_.size()),
-      sorted_selected_blobs_device_(selected_blobs_device_.size()),
-      line_fit_points_device_(selected_blobs_device_.size()),
-      errs_device_(line_fit_points_device_.size()),
-      filtered_errs_device_(line_fit_points_device_.size()),
-      filtered_is_local_peak_device_(line_fit_points_device_.size()),
-      compressed_peaks_device_(line_fit_points_device_.size()),
-      sorted_compressed_peaks_device_(line_fit_points_device_.size()),
-      peak_extents_device_(kMaxBlobs),
-      camera_matrix_(camera_matrix),
-      distortion_coefficients_(distortion_coefficients),
-      fit_quads_device_(kMaxBlobs),
-      radix_sort_tmpstorage_device_(RadixSortScratchSpace<QuadBoundaryPoint>(
-          sorted_union_marker_pair_device_.size())),
-      temp_storage_compressed_union_marker_pair_device_(
-          DeviceSelectIfScratchSpace<QuadBoundaryPoint, QuadBoundaryPoint>(
-              union_marker_pair_device_.size(),
-              num_compressed_union_marker_pair_device_.get())),
-      temp_storage_bounds_reduce_by_key_device_(
-          DeviceReduceByKeyScratchSpace<uint64_t, MinMaxExtents>(
-              union_marker_pair_device_.size())),
-      temp_storage_dot_product_device_(
-          DeviceReduceByKeyScratchSpace<uint64_t, float>(
-              union_marker_pair_device_.size())),
-      temp_storage_compressed_filtered_blobs_device_(
-          DeviceSelectIfScratchSpace<IndexPoint, IndexPoint>(
-              union_marker_pair_device_.size(),
-              num_selected_blobs_device_.get())),
-      temp_storage_selected_extents_scan_device_(
-          DeviceScanInclusiveScanScratchSpace<
-              cub::KeyValuePair<long, MinMaxExtents>>(kMaxBlobs)),
-      temp_storage_line_fit_scan_device_(
-          DeviceScanInclusiveScanByKeyScratchSpace<uint32_t, LineFitPoint>(
-              sorted_selected_blobs_device_.size())) {
-  fit_quads_host_.reserve(kMaxBlobs);
-  quad_corners_host_.reserve(kMaxBlobs);
-
-  CHECK(decimate_ == 1 || decimate_ == 2);
-
-  CHECK_EQ(tag_detector_->quad_decimate, decimate_);
-  CHECK(!tag_detector_->qtp.deglitch);
-
-  for (int i = 0; i < zarray_size(tag_detector_->tag_families); i++) {
-    apriltag_family_t *family;
-    zarray_get(tag_detector_->tag_families, i, &family);
-    if (family->width_at_border < min_tag_width_) {
-      min_tag_width_ = family->width_at_border;
-    }
-    normal_border_ |= !family->reversed_border;
-    reversed_border_ |= family->reversed_border;
-  }
-  min_tag_width_ /= tag_detector_->quad_decimate;
-  if (min_tag_width_ < 3) {
-    min_tag_width_ = 3;
-  }
-
-  poly0_ = g2d_polygon_create_zeros(4);
-  poly1_ = g2d_polygon_create_zeros(4);
-
-  detections_ = zarray_create(sizeof(apriltag_detection_t *));
+  detections_ = zarray_create(sizeof(apriltag_detection_t*));
   zarray_ensure_capacity(detections_, kMaxBlobs);
 }
 
 GpuDetector::~GpuDetector() {
   for (int i = 0; i < zarray_size(detections_); ++i) {
-    apriltag_detection_t *det;
+    apriltag_detection_t* det;
     zarray_get(detections_, i, &det);
     apriltag_detection_destroy(det);
   }
@@ -298,11 +217,11 @@ namespace {
 // Computes a massive image of 4x QuadBoundaryPoint per pixel with a
 // QuadBoundaryPoint for each pixel pair which crosses a blob boundary.
 template <size_t kBlockWidth, size_t kBlockHeight>
-__global__ void BlobDiff(const uint8_t *thresholded_image,
-                         const uint32_t *blobs,
-                         const uint32_t *union_markers_size,
-                         QuadBoundaryPoint *result, size_t width,
-                         size_t height) {
+__global__ void BlobDiff(const uint8_t* thresholded_image,
+                         const uint32_t* blobs,
+                         const uint32_t* union_markers_size,
+                         QuadBoundaryPoint* result, apriltag_size_t width,
+                         apriltag_size_t height) {
   __shared__ uint32_t temp_blob_storage[kBlockWidth * kBlockHeight];
   __shared__ uint8_t temp_image_storage[kBlockWidth * kBlockHeight];
 
@@ -359,7 +278,7 @@ __global__ void BlobDiff(const uint8_t *thresholded_image,
   if (v0 == 127 || union_markers_size[rep0] < 25) {
 #pragma unroll
     for (size_t point_offset = 0; point_offset < 4; ++point_offset) {
-      const size_t write_address =
+      const apriltag_size_t write_address =
           (width - 2) * (height - 2) * point_offset + global_output_index;
       result[write_address] = QuadBoundaryPoint();
     }
@@ -391,7 +310,7 @@ __global__ void BlobDiff(const uint8_t *thresholded_image,
         cluster_id.set_black_to_white(v1 > v0);                          \
       }                                                                  \
     }                                                                    \
-    const size_t write_address =                                         \
+    const apriltag_size_t write_address =                                \
         (width - 2) * (height - 2) * point_offset + global_output_index; \
     result[write_address] = cluster_id;                                  \
   }
@@ -424,7 +343,7 @@ __global__ void BlobDiff(const uint8_t *thresholded_image,
       v1_block_2 != v1_block_left) {
     if (x != 1 && union_markers_size[rep_block_left] >= 25 &&
         union_markers_size[rep_block_2] >= 25) {
-      const size_t write_address =
+      const uint32_t write_address =
           (width - 2) * (height - 2) * 3 + global_output_index;
       result[write_address] = QuadBoundaryPoint();
       return;
@@ -437,7 +356,7 @@ __global__ void BlobDiff(const uint8_t *thresholded_image,
 // Masks out just the blob ID pair, rep01.
 struct MaskRep01 {
   __host__ __device__ __forceinline__ uint64_t
-  operator()(const QuadBoundaryPoint &a) const {
+  operator()(const QuadBoundaryPoint& a) const {
     return a.rep01();
   }
 };
@@ -445,7 +364,7 @@ struct MaskRep01 {
 // Masks out just the blob ID pair, rep01.
 struct MaskBlobIndex {
   __host__ __device__ __forceinline__ uint32_t
-  operator()(const IndexPoint &a) const {
+  operator()(const IndexPoint& a) const {
     return a.blob_index();
   }
 };
@@ -454,12 +373,13 @@ struct MaskBlobIndex {
 // center.
 class RewriteToIndexPoint {
  public:
-  RewriteToIndexPoint(MinMaxExtents *extents_device, size_t num_extents)
+  RewriteToIndexPoint(MinMaxExtents* extents_device,
+                      apriltag_size_t num_extents)
       : blob_finder_(extents_device, num_extents) {}
 
   __host__ __device__ __forceinline__ IndexPoint
   operator()(cub::KeyValuePair<long, QuadBoundaryPoint> pt) const {
-    size_t index = blob_finder_.FindBlobIndex(pt.key);
+    const apriltag_size_t index = blob_finder_.FindBlobIndex(pt.key);
     IndexPoint result(index, pt.value.point_bits());
     return result;
   }
@@ -470,7 +390,8 @@ class RewriteToIndexPoint {
 // Calculates Theta for a given IndexPoint
 class AddThetaToIndexPoint {
  public:
-  AddThetaToIndexPoint(MinMaxExtents *extents_device, size_t num_extents)
+  AddThetaToIndexPoint(MinMaxExtents* extents_device,
+                       apriltag_size_t num_extents)
       : blob_finder_(extents_device, num_extents) {}
   __host__ __device__ __forceinline__ IndexPoint operator()(IndexPoint a) {
     MinMaxExtents extents = blob_finder_.Get(a.blob_index());
@@ -489,7 +410,7 @@ class AddThetaToIndexPoint {
 // TODO(austin): Make something which rewrites points on the way back out to
 // memory and adds the slope.
 
-// Transforms aQuadBoundaryPoint into a single point extent for Reduce.
+// Transforms a QuadBoundaryPoint into a single point extent for Reduce.
 struct TransformQuadBoundaryPointToMinMaxExtents {
   __host__ __device__ __forceinline__ MinMaxExtents
   operator()(cub::KeyValuePair<long, QuadBoundaryPoint> pt) const {
@@ -511,7 +432,7 @@ struct TransformQuadBoundaryPointToMinMaxExtents {
 // accordingly.
 struct QuadBoundaryPointExtents {
   __host__ __device__ __forceinline__ MinMaxExtents
-  operator()(const MinMaxExtents &a, const MinMaxExtents &b) const {
+  operator()(const MinMaxExtents& a, const MinMaxExtents& b) const {
     MinMaxExtents result;
     result.min_x = std::min(a.min_x, b.min_x);
     result.max_x = std::max(a.max_x, b.max_x);
@@ -531,30 +452,31 @@ struct QuadBoundaryPointExtents {
 class NonzeroBlobs {
  public:
   __host__ __device__
-  NonzeroBlobs(const cub::KeyValuePair<long, MinMaxExtents> *extents_device)
+  NonzeroBlobs(const cub::KeyValuePair<long, MinMaxExtents>* extents_device)
       : extents_device_(extents_device) {}
 
   __host__ __device__ __forceinline__ bool operator()(
-      const IndexPoint &a) const {
+      const IndexPoint& a) const {
     return extents_device_[a.blob_index()].value.count > 0;
   }
 
  private:
-  const cub::KeyValuePair<long, MinMaxExtents> *extents_device_;
+  const cub::KeyValuePair<long, MinMaxExtents>* extents_device_;
 };
 
 // Selects blobs which are big enough, not too big, and have the right color in
 // the middle.
 class SelectBlobs {
  public:
-  SelectBlobs(const MinMaxExtents *extents_device, size_t tag_width,
+  SelectBlobs(const MinMaxExtents* extents_device, apriltag_size_t tag_width,
               bool reversed_border, bool normal_border,
-              size_t min_cluster_pixels, size_t max_cluster_pixels)
+              apriltag_size_t min_cluster_pixels,
+              apriltag_size_t max_cluster_pixels)
       : extents_device_(extents_device),
         tag_width_(tag_width),
         reversed_border_(reversed_border),
         normal_border_(normal_border),
-        min_cluster_pixels_(std::max<size_t>(24u, min_cluster_pixels)),
+        min_cluster_pixels_(std::max<apriltag_size_t>(24u, min_cluster_pixels)),
         max_cluster_pixels_(max_cluster_pixels) {}
 
   // Returns true if the blob passes the size and dot product checks and is
@@ -569,13 +491,14 @@ class SelectBlobs {
     }
 
     // Area must also be reasonable.
-    if ((extents.max_x - extents.min_x) * (extents.max_y - extents.min_y) <
+    if (static_cast<apriltag_size_t>(extents.max_x - extents.min_x) *
+            static_cast<apriltag_size_t>(extents.max_y - extents.min_y) <
         tag_width_) {
       return false;
     }
 
     // And the right side must be inside.
-    const bool quad_reversed_border = extents.dot() < 0.0;
+    const bool quad_reversed_border = extents.dot() < 0.0f;
     if (!reversed_border_ && quad_reversed_border) {
       return false;
     }
@@ -586,20 +509,13 @@ class SelectBlobs {
     return true;
   }
 
-  __host__ __device__ __forceinline__ bool operator()(
-      const IndexPoint &a) const {
-    bool result = (*this)(extents_device_[a.blob_index()]);
-
-    return result;
-  }
-
-  const MinMaxExtents *extents_device_;
-  size_t tag_width_;
+  const MinMaxExtents* extents_device_;
+  apriltag_size_t tag_width_;
 
   bool reversed_border_;
   bool normal_border_;
-  size_t min_cluster_pixels_;
-  size_t max_cluster_pixels_;
+  apriltag_size_t min_cluster_pixels_;
+  apriltag_size_t max_cluster_pixels_;
 };
 
 // Class to zero out the count (and clear the starting offset) for each extents
@@ -607,9 +523,10 @@ class SelectBlobs {
 // update zero sized blobs.
 struct TransformZeroFilteredBlobSizes {
  public:
-  TransformZeroFilteredBlobSizes(size_t tag_width, bool reversed_border,
-                                 bool normal_border, size_t min_cluster_pixels,
-                                 size_t max_cluster_pixels)
+  TransformZeroFilteredBlobSizes(apriltag_size_t tag_width,
+                                 bool reversed_border, bool normal_border,
+                                 apriltag_size_t min_cluster_pixels,
+                                 apriltag_size_t max_cluster_pixels)
       : select_blobs_(nullptr, tag_width, reversed_border, normal_border,
                       min_cluster_pixels, max_cluster_pixels) {}
 
@@ -629,8 +546,8 @@ struct TransformZeroFilteredBlobSizes {
 // out regions which don't pass the minimum filters.
 struct SumPoints {
   __host__ __device__ __forceinline__ cub::KeyValuePair<long, MinMaxExtents>
-  operator()(const cub::KeyValuePair<long, MinMaxExtents> &a,
-             const cub::KeyValuePair<long, MinMaxExtents> &b) const {
+  operator()(const cub::KeyValuePair<long, MinMaxExtents>& a,
+             const cub::KeyValuePair<long, MinMaxExtents>& b) const {
     cub::KeyValuePair<long, MinMaxExtents> result;
     if (a.key < b.key) {
       result.value.min_x = b.value.min_x;
@@ -657,17 +574,16 @@ struct SumPoints {
 };
 
 struct TransformLineFitPoint {
-  __host__ __device__ __forceinline__ LineFitPoint
-  operator()(IndexPoint p) const {
+  __device__ __forceinline__ LineFitPoint operator()(IndexPoint p) const {
     LineFitPoint result;
 
     // we now undo our fixed-point arithmetic.
     // adjust for pixel center bias
-    int delta = decimate - 1; //1;  // not sure RJS
+    constexpr int delta = 1;
     int32_t ix2 = p.x() + delta;
     int32_t iy2 = p.y() + delta;
-    int32_t ix = ix2 / decimate; //2;  // not sure RJS
-    int32_t iy = iy2 / decimate; //2;
+    int32_t ix = ix2 / 2;
+    int32_t iy = iy2 / 2;
 
     int32_t W = 1;
 
@@ -693,16 +609,19 @@ struct TransformLineFitPoint {
     result.blob_index = p.blob_index();
     return result;
   }
-
-  const uint8_t *decimated_image_device_;
+  TransformLineFitPoint(const uint8_t* decimated_image_device,
+                        int decimated_width_param, int decimated_height_param)
+      : decimated_image_device_(decimated_image_device),
+        decimated_width(decimated_width_param),
+        decimated_height(decimated_height_param) {}
+  const uint8_t* decimated_image_device_;
   int decimated_width;
   int decimated_height;
-  int decimate;
 };
 
 struct SumLineFitPoints {
   __host__ __device__ __forceinline__ LineFitPoint
-  operator()(const LineFitPoint &a, const LineFitPoint &b) const {
+  operator()(const LineFitPoint& a, const LineFitPoint& b) const {
     LineFitPoint result;
     result.Mx = a.Mx + b.Mx;
     result.My = a.My + b.My;
@@ -716,14 +635,14 @@ struct SumLineFitPoints {
 };
 
 struct ValidPeaks {
-  __host__ __device__ __forceinline__ bool operator()(const Peak &a) const {
+  __host__ __device__ __forceinline__ bool operator()(const Peak& a) const {
     return a.blob_index != Peak::kNoPeak();
   }
 };
 
 struct TransformToPeakExtents {
   __host__ __device__ __forceinline__ PeakExtents
-  operator()(const cub::KeyValuePair<long, Peak> &a) const {
+  operator()(const cub::KeyValuePair<long, Peak>& a) const {
     PeakExtents result;
     result.blob_index = a.value.blob_index;
     result.starting_offset = a.key;
@@ -733,14 +652,14 @@ struct TransformToPeakExtents {
 };
 
 struct MaskPeakExtentsByBlobId {
-  __host__ __device__ __forceinline__ uint32_t operator()(const Peak &a) const {
+  __host__ __device__ __forceinline__ uint32_t operator()(const Peak& a) const {
     return a.blob_index;
   }
 };
 
 struct MergePeakExtents {
   __host__ __device__ __forceinline__ PeakExtents
-  operator()(const PeakExtents &a, const PeakExtents &b) const {
+  operator()(const PeakExtents& a, const PeakExtents& b) const {
     PeakExtents result;
     result.blob_index = a.blob_index;
     result.starting_offset = std::min(a.starting_offset, b.starting_offset);
@@ -751,94 +670,42 @@ struct MergePeakExtents {
 
 }  // namespace
 
-void GpuDetector::DetectColor(const uint8_t *image) {
-  start_time = std::chrono::steady_clock::now();
+bool GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
+  // const aos::monotonic_clock::time_point start_time =
+  //     aos::monotonic_clock::now();
+
+  union_markers_size_device_.MemsetAsync(0u, &memset_stream_);
+  after_memset_.Record(&memset_stream_);
+
+  // Threshold the image.
   start_.Record(&stream_);
-  color_image_device_.MemcpyAsyncFrom(image, &stream_);
+  // If the image isn't already in device memory, copy it there and update the
+  // pointer.
+  if (image_device == nullptr) {
+    color_image_device_.MemcpyAsyncFrom(image, &stream_);
+    image_device = color_image_device_.get();
+  }
   after_image_memcpy_to_device_.Record(&stream_);
 
-  CHECK(decimate_ == 2);
-  // Threshold the image.
-  CudaToGreyscaleAndDecimate(
-      color_image_device_.get(), gray_image_device_.get(),
-      decimated_image_device_.get(), unfiltered_minmax_image_device_.get(),
-      minmax_image_device_.get(), thresholded_image_device_.get(), width_,
-      height_, tag_detector_->qtp.min_white_black_diff, &stream_);
+  // Now, threshold on the GPU fully.
+  threshold_->ThresholdAndDecimate(image_device, decimated_image_device_.get(),
+                                   thresholded_image_device_.get(),
+                                   tag_detector_->qtp.min_white_black_diff,
+                                   &stream_);
+
   after_threshold_.Record(&stream_);
 
-  gray_image_device_.MemcpyAsyncTo(&gray_image_host_, &stream_);
+  if (image_format_ != vision::ImageFormat::MONO8) {
+    threshold_->ToGreyscale(image_device, gray_image_device_.get(), &stream_);
+    gray_image_device_.MemcpyAsyncTo(&gray_image_host_, &stream_);
+    gray_image_host_ptr_ = gray_image_host_.get();
+  } else {
+    gray_image_host_ptr_ = image;
+  }
 
   after_memcpy_gray_.Record(&stream_);
 
-  DetectGray2(gray_image_host_.get());
-}
-
-void GpuDetector::DetectGrayHost(uint8_t *image) {
-  start_time = std::chrono::steady_clock::now();
-  start_.Record(&stream_);
-  CHECK(image);
-
-  gray_image_device_.MemcpyAsyncFrom(image, &stream_);
-  after_image_memcpy_to_device_.Record(&stream_);
-
-  if(decimate_ == 2) {
-      CudaDecimate(
-      gray_image_device_.get(),
-      decimated_image_device_.get(), unfiltered_minmax_image_device_.get(),
-      minmax_image_device_.get(), thresholded_image_device_.get(), width_,
-      height_, tag_detector_->qtp.min_white_black_diff, &stream_);
-      after_threshold_.Record(&stream_);
-  } else if(decimate_ == 1) {
-      CudaNoDecimate(
-      gray_image_device_.get(),
-      decimated_image_device_.get(), unfiltered_minmax_image_device_.get(),
-      minmax_image_device_.get(), thresholded_image_device_.get(), width_,
-      height_, tag_detector_->qtp.min_white_black_diff, &stream_);
-      after_threshold_.Record(&stream_);
-  } else CHECK(decimate_ == 2 || decimate_ == 1);
-
-  gray_image_device_.MemcpyAsyncTo(&gray_image_host_, &stream_);
-
-  after_memcpy_gray_.Record(&stream_);
-
-  DetectGray2(gray_image_host_.get());
-}
-
-void GpuDetector::DetectGray(uint8_t *image) {
-  start_time = std::chrono::steady_clock::now();
-  start_.Record(&stream_);
-  // Threshold the image.
-
-  after_image_memcpy_to_device_.Record(&stream_);
-
-  cudaStreamAttachMemAsync(stream_.get(), image, 0, cudaMemAttachGlobal);
-  if(decimate_ == 2) {
-      CudaDecimate(
-      image,
-      decimated_image_device_.get(), unfiltered_minmax_image_device_.get(),
-      minmax_image_device_.get(), thresholded_image_device_.get(), width_,
-      height_, tag_detector_->qtp.min_white_black_diff, &stream_);
-      after_threshold_.Record(&stream_);
-  } else if(decimate_ == 1) {
-      CudaNoDecimate(
-      image,
-      decimated_image_device_.get(), unfiltered_minmax_image_device_.get(),
-      minmax_image_device_.get(), thresholded_image_device_.get(), width_,
-      height_, tag_detector_->qtp.min_white_black_diff, &stream_);
-      after_threshold_.Record(&stream_);
-  } else CHECK(decimate_ == 2 || decimate_ == 1);
-
-  cudaStreamAttachMemAsync(stream_.get(), image, 0, cudaMemAttachHost);
-
-  after_memcpy_gray_.Record(&stream_);
-
-  DetectGray2(image);
-}
-
-
-void GpuDetector::DetectGray2(uint8_t *image) {
-  union_markers_size_device_.MemsetAsync(0u, &stream_);
-  after_memset_.Record(&stream_);
+  after_memset_.Synchronize();
 
   // Unionfind the image.
   LabelImage(ToGpuImage(thresholded_image_device_),
@@ -850,8 +717,8 @@ void GpuDetector::DetectGray2(uint8_t *image) {
   CHECK((width_ % 8) == 0);
   CHECK((height_ % 8) == 0);
 
-  size_t decimated_width = width_ / decimate_;
-  size_t decimated_height = height_ / decimate_;
+  size_t decimated_width = width_ / 2;
+  size_t decimated_height = height_ / 2;
 
   // TODO(austin): Tune for the global shutter camera.
   // 1280 -> 2 * 128 * 5
@@ -887,39 +754,39 @@ void GpuDetector::DetectGray2(uint8_t *image) {
     size_t temp_storage_bytes =
         temp_storage_compressed_union_marker_pair_device_.size();
     NonZero nz;
-    cudaError_t err = cub::DeviceSelect::If(
-        temp_storage_compressed_union_marker_pair_device_.get(),
-        temp_storage_bytes, union_marker_pair_device_.get(),
-        compressed_union_marker_pair_device_.get(),
-        num_compressed_union_marker_pair_device_.get(),
-        union_marker_pair_device_.size(), nz, stream_.get());
-
-    if (err != cudaSuccess) {
-        std::cerr << "DeviceSelect::If failed: " << cudaGetErrorString(err) << std::endl;
-        exit(1);
+    if (cub::DeviceSelect::If(
+            temp_storage_compressed_union_marker_pair_device_.get(),
+            temp_storage_bytes, union_marker_pair_device_.get(),
+            compressed_union_marker_pair_device_.get(),
+            num_compressed_union_marker_pair_device_.get(),
+            union_marker_pair_device_.size(), nz, stream_.get())) {
+      return false;
     }
-
 
     MaybeCheckAndSynchronize("cub::DeviceSelect::If");
   }
 
   after_compact_.Record(&stream_);
 
-  int num_compressed_union_marker_pair_host;
   {
-    num_compressed_union_marker_pair_device_.MemcpyTo(
-        &num_compressed_union_marker_pair_host);
-    CHECK_LT(static_cast<size_t>(num_compressed_union_marker_pair_host),
+    num_compressed_union_marker_pair_device_.MemcpyAsyncTo(
+        &num_compressed_union_marker_pair_host_, &stream_);
+    CHECK_LT(static_cast<size_t>(*num_compressed_union_marker_pair_host_.get()),
              union_marker_pair_device_.size());
+  }
 
+  after_num_compact_memcpy_.Record(&stream_);
+
+  {
     // Now, sort just the keys to group like points.
     size_t temp_storage_bytes = radix_sort_tmpstorage_device_.size();
     QuadBoundaryPointDecomposer decomposer;
+    after_num_compact_memcpy_.Synchronize();
     CHECK_CUDA(cub::DeviceRadixSort::SortKeys(
         radix_sort_tmpstorage_device_.get(), temp_storage_bytes,
         compressed_union_marker_pair_device_.get(),
         sorted_union_marker_pair_device_.get(),
-        num_compressed_union_marker_pair_host, decomposer,
+        *num_compressed_union_marker_pair_host_.get(), decomposer,
         QuadBoundaryPoint::kRepEndBit, QuadBoundaryPoint::kBitsInKey,
         stream_.get()));
 
@@ -928,16 +795,15 @@ void GpuDetector::DetectGray2(uint8_t *image) {
 
   after_sort_.Record(&stream_);
 
-  size_t num_quads_host = 0;
   {
     // Our next step is to compute the extents and dot product so we can filter
     // blobs.
-    cub::ArgIndexInputIterator<QuadBoundaryPoint *> value_index_input_iterator(
+    cub::ArgIndexInputIterator<QuadBoundaryPoint*> value_index_input_iterator(
         sorted_union_marker_pair_device_.get());
     TransformQuadBoundaryPointToMinMaxExtents min_max;
     cub::TransformInputIterator<MinMaxExtents,
                                 TransformQuadBoundaryPointToMinMaxExtents,
-                                cub::ArgIndexInputIterator<QuadBoundaryPoint *>>
+                                cub::ArgIndexInputIterator<QuadBoundaryPoint*>>
         value_input_iterator(value_index_input_iterator, min_max);
 
     // Don't care about the output keys...
@@ -945,7 +811,7 @@ void GpuDetector::DetectGray2(uint8_t *image) {
 
     // Provide a mask to detect keys by rep01()
     MaskRep01 mask;
-    cub::TransformInputIterator<uint64_t, MaskRep01, QuadBoundaryPoint *>
+    cub::TransformInputIterator<uint64_t, MaskRep01, QuadBoundaryPoint*>
         key_input_iterator(sorted_union_marker_pair_device_.get(), mask);
 
     // Reduction operator.
@@ -957,10 +823,11 @@ void GpuDetector::DetectGray2(uint8_t *image) {
         temp_storage_bounds_reduce_by_key_device_.get(), temp_storage_bytes,
         key_input_iterator, key_discard_iterator, value_input_iterator,
         extents_device_.get(), num_quads_device_.get(), reduce,
-        num_compressed_union_marker_pair_host, stream_.get());
+        *num_compressed_union_marker_pair_host_.get(), stream_.get());
     after_bounds_.Record(&stream_);
 
-    num_quads_device_.MemcpyTo(&num_quads_host);
+    num_quads_device_.MemcpyAsyncTo(&num_quads_host_, &stream_);
+    after_bounds_memcpy_.Record(&stream_);
   }
 
   // Longest april tag will be the full perimeter of the image.  Each point
@@ -970,7 +837,7 @@ void GpuDetector::DetectGray2(uint8_t *image) {
   //
   // Aprilrobotics has a *3 instead of a *2 here since they have duplicated
   // points in their list at this stage.
-  const size_t max_april_tag_perimeter = 4 / decimate_ * (width_ + height_);
+  const apriltag_size_t max_april_tag_perimeter = 2 * (width_ + height_);
 
   {
     // Now that we have the dot products, we need to rewrite the extents for the
@@ -979,14 +846,14 @@ void GpuDetector::DetectGray2(uint8_t *image) {
     //
     // Clear the size of non-passing extents and the starting offset of all
     // extents.
-    cub::ArgIndexInputIterator<MinMaxExtents *> value_index_input_iterator(
+    cub::ArgIndexInputIterator<MinMaxExtents*> value_index_input_iterator(
         extents_device_.get());
     TransformZeroFilteredBlobSizes rewrite(
         min_tag_width_, reversed_border_, normal_border_,
         tag_detector_->qtp.min_cluster_pixels, max_april_tag_perimeter);
     cub::TransformInputIterator<cub::KeyValuePair<long, MinMaxExtents>,
                                 TransformZeroFilteredBlobSizes,
-                                cub::ArgIndexInputIterator<MinMaxExtents *>>
+                                cub::ArgIndexInputIterator<MinMaxExtents*>>
         input_iterator(value_index_input_iterator, rewrite);
 
     // Sum the counts of everything before us, and update the offset.
@@ -998,10 +865,13 @@ void GpuDetector::DetectGray2(uint8_t *image) {
     // post-selected values.
     size_t temp_storage_bytes =
         temp_storage_selected_extents_scan_device_.size();
+
+    after_bounds_memcpy_.Synchronize();
+
     CHECK_CUDA(cub::DeviceScan::InclusiveScan(
         temp_storage_selected_extents_scan_device_.get(), temp_storage_bytes,
         input_iterator, selected_extents_device_.get(), sum_points,
-        num_quads_host));
+        *num_quads_host_.get(), stream_.get()));
 
     MaybeCheckAndSynchronize("cub::DeviceScan::InclusiveScan");
   }
@@ -1011,15 +881,16 @@ void GpuDetector::DetectGray2(uint8_t *image) {
   int num_selected_blobs_host;
   {
     // Now, copy over all points which pass our thresholds.
-    cub::ArgIndexInputIterator<QuadBoundaryPoint *> value_index_input_iterator(
+    cub::ArgIndexInputIterator<QuadBoundaryPoint*> value_index_input_iterator(
         sorted_union_marker_pair_device_.get());
-    RewriteToIndexPoint rewrite(extents_device_.get(), num_quads_host);
+    RewriteToIndexPoint rewrite(extents_device_.get(), *num_quads_host_.get());
 
     cub::TransformInputIterator<IndexPoint, RewriteToIndexPoint,
-                                cub::ArgIndexInputIterator<QuadBoundaryPoint *>>
+                                cub::ArgIndexInputIterator<QuadBoundaryPoint*>>
         input_iterator(value_index_input_iterator, rewrite);
 
-    AddThetaToIndexPoint add_theta(extents_device_.get(), num_quads_host);
+    AddThetaToIndexPoint add_theta(extents_device_.get(),
+                                   *num_quads_host_.get());
 
     TransformOutputIterator<IndexPoint, IndexPoint, AddThetaToIndexPoint>
         output_iterator(selected_blobs_device_.get(), add_theta);
@@ -1032,8 +903,9 @@ void GpuDetector::DetectGray2(uint8_t *image) {
     CHECK_CUDA(cub::DeviceSelect::If(
         temp_storage_compressed_filtered_blobs_device_.get(),
         temp_storage_bytes, input_iterator, output_iterator,
-        num_selected_blobs_device_.get(), num_compressed_union_marker_pair_host,
-        select_blobs, stream_.get()));
+        num_selected_blobs_device_.get(),
+        *num_compressed_union_marker_pair_host_.get(), select_blobs,
+        stream_.get()));
 
     MaybeCheckAndSynchronize("cub::DeviceSelect::If");
 
@@ -1066,14 +938,14 @@ void GpuDetector::DetectGray2(uint8_t *image) {
     //
     // Clear the size of non-passing extents and the starting offset of all
     // extents.
-    TransformLineFitPoint rewrite(decimated_image_device_.get(), width_ / decimate_,
-                                  height_ / decimate_, decimate_);
+    TransformLineFitPoint rewrite(decimated_image_device_.get(), width_ / 2,
+                                  height_ / 2);
     cub::TransformInputIterator<LineFitPoint, TransformLineFitPoint,
-                                IndexPoint *>
+                                IndexPoint*>
         input_iterator(sorted_selected_blobs_device_.get(), rewrite);
 
     MaskBlobIndex mask;
-    cub::TransformInputIterator<uint32_t, MaskBlobIndex, IndexPoint *>
+    cub::TransformInputIterator<uint32_t, MaskBlobIndex, IndexPoint*>
         key_iterator(sorted_selected_blobs_device_.get(), mask);
 
     // Sum the counts of everything before us, and update the offset.
@@ -1094,9 +966,9 @@ void GpuDetector::DetectGray2(uint8_t *image) {
 
   {
     FitLines(line_fit_points_device_.get(), num_selected_blobs_host,
-             selected_extents_device_.get(), num_quads_host, errs_device_.get(),
-             filtered_errs_device_.get(), filtered_is_local_peak_device_.get(),
-             &stream_);
+             selected_extents_device_.get(), *num_quads_host_.get(),
+             errs_device_.get(), filtered_errs_device_.get(),
+             filtered_is_local_peak_device_.get(), &stream_);
   }
   after_line_filter_.Record(&stream_);
 
@@ -1107,16 +979,13 @@ void GpuDetector::DetectGray2(uint8_t *image) {
     size_t temp_storage_bytes =
         temp_storage_compressed_union_marker_pair_device_.size();
     ValidPeaks peak_filter;
-
-    cudaError_t err = cub::DeviceSelect::If(
-        temp_storage_compressed_union_marker_pair_device_.get(),
-        temp_storage_bytes, filtered_is_local_peak_device_.get(),
-        compressed_peaks_device_.get(), num_compressed_peaks_device_.get(),
-        num_selected_blobs_host, peak_filter, stream_.get());
-
-    if (err != cudaSuccess) {
-        std::cerr << "DeviceSelect::If failed: " << cudaGetErrorString(err) << std::endl;
-        exit(1);
+    if (cub::DeviceSelect::If(
+            temp_storage_compressed_union_marker_pair_device_.get(),
+            temp_storage_bytes, filtered_is_local_peak_device_.get(),
+            compressed_peaks_device_.get(), num_compressed_peaks_device_.get(),
+            num_selected_blobs_host, peak_filter, stream_.get())) {
+      LOG(INFO) << "Failed";
+      return false;
     }
 
     after_peak_compression_.Record(&stream_);
@@ -1149,11 +1018,11 @@ void GpuDetector::DetectGray2(uint8_t *image) {
   {
     // Our next step is to compute the extents of each blob so we can filter
     // blobs.
-    cub::ArgIndexInputIterator<Peak *> value_index_input_iterator(
+    cub::ArgIndexInputIterator<Peak*> value_index_input_iterator(
         sorted_compressed_peaks_device_.get());
     TransformToPeakExtents transform_extents;
     cub::TransformInputIterator<PeakExtents, TransformToPeakExtents,
-                                cub::ArgIndexInputIterator<Peak *>>
+                                cub::ArgIndexInputIterator<Peak*>>
         value_input_iterator(value_index_input_iterator, transform_extents);
 
     // Don't care about the output keys...
@@ -1161,7 +1030,7 @@ void GpuDetector::DetectGray2(uint8_t *image) {
 
     // Provide a mask to detect keys by rep01()
     MaskPeakExtentsByBlobId mask;
-    cub::TransformInputIterator<uint32_t, MaskPeakExtentsByBlobId, Peak *>
+    cub::TransformInputIterator<uint32_t, MaskPeakExtentsByBlobId, Peak*>
         key_input_iterator(sorted_compressed_peaks_device_.get(), mask);
 
     // Reduction operator.
@@ -1204,19 +1073,79 @@ void GpuDetector::DetectGray2(uint8_t *image) {
     after_quad_fit_memcpy_.Synchronize();
   }
 
-  const std::chrono::steady_clock::time_point before_fit_quads =
-      std::chrono::steady_clock::now();
+  // const aos::monotonic_clock::time_point before_fit_quads =
+  //     aos::monotonic_clock::now();
   UpdateFitQuads();
   AdjustPixelCenters();
 
-  DecodeTags(image);
+  DecodeTags();
 
-  const std::chrono::steady_clock::time_point end_time =
-      std::chrono::steady_clock::now();
+  // const aos::monotonic_clock::time_point end_time = aos::monotonic_clock::now();
 
   // TODO(austin): Bring it back to the CPU and see how good we did.
 
   // Report out how long things took.
+
+  VLOG(1) << "Found " << *num_compressed_union_marker_pair_host_.get()
+          << " items";
+  VLOG(1) << "Selected " << num_selected_blobs_host << " right side out points";
+  VLOG(1) << "Found compressed runs: " << *num_quads_host_.get();
+  VLOG(1) << "Peaks " << num_compressed_peaks_host << " peaks";
+  VLOG(1) << "Peak Selected blobs " << num_quad_peaked_quads_host << " quads";
+  CudaEvent* previous_event = &start_;
+  for (auto name_event : std::vector<std::tuple<std::string_view, CudaEvent&>>{
+           {"Memcpy", after_image_memcpy_to_device_},
+           {"Threshold", after_threshold_},
+           {"Memcpy Gray", after_memcpy_gray_},
+           {"Memset", after_memset_},
+           {"Unionfinding", after_unionfinding_},
+           {"Diff", after_diff_},
+           {"Compact", after_compact_},
+           {"Memcpy Compact", after_num_compact_memcpy_},
+           {"Sort", after_sort_},
+           {"Bounds", after_bounds_},
+           {"Bounds Memcpy", after_bounds_memcpy_},
+           {"Transform Extents", after_transform_extents_},
+           {"Filter by dot product", after_filter_},
+           {"Filtered sort", after_filtered_sort_},
+           {"Line Fit", after_line_fit_},
+           {"Error Filter", after_line_filter_},
+           {"Compress Peaks", after_peak_compression_},
+           {"Memcpy Peaks", after_peak_count_memcpy_},
+           {"Sort Peaks", after_peak_sort_},
+           {"Peak Extents", after_filtered_peak_reduce_},
+           {"Memcpy num Extents", after_filtered_peak_host_memcpy_},
+           {"FitQuads", after_quad_fit_},
+       }) {
+    std::get<1>(name_event).Synchronize();
+    VLOG(1) << "    " << std::get<0>(name_event) << " "
+            << float_milli(std::get<1>(name_event).ElapsedTime(*previous_event))
+                   .count()
+            << "ms";
+    previous_event = &std::get<1>(name_event);
+  }
+  // VLOG(1) << "  FitQuads " << float_milli(end_time - before_fit_quads).count()
+  //         << "ms on host";
+
+  // VLOG(1) << "Overall "
+  //         << float_milli(previous_event->ElapsedTime(start_)).count() << "ms, "
+  //         << float_milli(end_time - start_time).count() << "ms on host, "
+  //         << (1000.0 / float_milli(previous_event->ElapsedTime(start_)).count())
+  //         << "hz";
+  // Average.  Skip the first one as the kernel is warming up and is slower.
+  if (!first_) {
+    ++execution_count_;
+    execution_duration_ += previous_event->ElapsedTime(start_);
+    VLOG(1) << "Average overall "
+            << float_milli(execution_duration_ / execution_count_).count()
+            << "ms, "
+            << (1000.0 /
+                float_milli(execution_duration_ / execution_count_).count())
+            << "hz";
+  }
+
+  first_ = false;
+  return true;
 }
 
-}  // namespace frc971::apriltag
+}  // namespace frc::apriltag

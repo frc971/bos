@@ -22,6 +22,9 @@ class SquareSolver : public IPositionSolver {
   auto EstimatePosition(const std::vector<tag_detection_t>& detections,
                         bool reject_far_tags = true)
       -> std::vector<position_estimate_t> override;
+  auto EstimatePositionAmbiguous(const std::vector<tag_detection_t>& detections,
+                                 bool reject_far_tags = true)
+      -> std::vector<std::pair<position_estimate_t, position_estimate_t>>;
   auto EstimatePositionNew(const std::vector<tag_detection_t>& detection,
                            bool reject_far_tags = true)
       -> std::vector<position_estimate_t>;
