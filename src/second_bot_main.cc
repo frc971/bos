@@ -6,6 +6,7 @@
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
 #include "src/pathing/controller.h"
+#include "src/pathing/pathfinding.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 
@@ -68,7 +69,8 @@ auto main() -> int {
       camera_constants.at("second_bot_right").extrinsics_path.value(), 5803,
       false);
 
-  std::thread pathing_thread(pathing::RunController);
+  std::thread pathing_thread(pathing::RunController,
+                             "/bos/constants/navgrid.json");
 
   LOG(INFO) << "Started estimators";
 

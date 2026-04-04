@@ -1,8 +1,8 @@
 #include "splines.h"
-#include "pathfinding.h"
 #include <frc/geometry/Pose2d.h>
-#include <vector>
 #include <units/length.h>
+#include <vector>
+#include "pathfinding.h"
 
 namespace pathing {
 
@@ -61,13 +61,17 @@ auto evaluate(double t, const std::vector<std::pair<double, double>>& controls,
   return {x, y};
 }
 
-auto createSpline(std::vector<std::vector<Node>> grid, Point start_point,
-                  Point target_point, double nodeSizeMeters)
+auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
+                  Point start_point, Point target_point, double nodeSizeMeters)
     -> std::vector<frc::Pose2d> {
-  std::vector<Node> path = BFS(grid, start_point, target_point);
+
+  std::vector<std::vector<pathing::Node>> gridCopy = grid;
+  std::vector<pathing::Node> path = BFS(gridCopy, start_point, target_point);
   std::vector<std::pair<double, double>> control_points;
-  for (const Node& node : path) {
-    control_points.emplace_back(node.x * nodeSizeMeters, node.y * nodeSizeMeters);
+  control_points.reserve(path.size());
+  for (const pathing::Node& node : path) {
+    control_points.emplace_back(node.x * nodeSizeMeters,
+                                node.y * nodeSizeMeters);
   }
 
   int p = 3;

@@ -19,9 +19,10 @@
 
 namespace pathing {
 
-auto RunController() -> void {
+auto RunController(const std::string& navgrid_path =
+                       "/root/bos/constants/navgrid.json") -> void {
 
-  std::ifstream file("/root/bos/constants/navgrid.json");
+  std::ifstream file(navgrid_path);
   if (!file.is_open()) {
     LOG(FATAL) << "Failed to open navgrid.json" << std::endl;
     return;
@@ -74,7 +75,7 @@ auto RunController() -> void {
     frc::Pose2d current_pose = pose_sub.Get();
 
     double best_dist = DBL_MAX;
-    for (int i = spline_idx; i < spline_points.size(); i++) {
+    for (size_t i = spline_idx; i < spline_points.size(); i++) {
       double ds = current_pose.Translation()
                       .Distance(spline_points[i].Translation())
                       .value();
