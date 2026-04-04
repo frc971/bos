@@ -53,7 +53,7 @@ auto GPUAprilTagDetector::GetTagDetections(
     cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2YUV_YUY2);
     cv::Mat mat_ = ToMat(gray);
     if (!gpu_detector_->Detect(mat_.data, nullptr)) {
-      LOG(WARNING) << "Gpu detector failed";
+      LOG(WARNING) << "Gpu detector failed: " << timestamped_frame.frame.size;
       return {};
     }
   } catch (const std::exception& e) {
