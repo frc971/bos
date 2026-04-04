@@ -24,3 +24,6 @@ target_link_libraries(localization_test2 PRIVATE camera localization utils)
 
 add_executable(networktable_performance_test networktable_performance_test.cc)
 target_link_libraries(networktable_performance_test PRIVATE utils localization)
+
+add_executable(pva_test pva_test.cc)
+target_link_libraries(pva_test PRIVATE utils localization vpi)
