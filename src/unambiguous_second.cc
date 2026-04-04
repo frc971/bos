@@ -12,7 +12,6 @@
 using camera::camera_constants_t;
 auto main() -> int {
   utils::StartNetworktables();
-  // TODO configure vision bot camera paths
 
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
@@ -21,14 +20,12 @@ auto main() -> int {
 
   std::vector<std::pair<camera::CameraConstant, localization::Detector>>
       cameras{
-          //   {camera_constants.at("main_bot_front"),
-          //    localization::Detector::OPENCV_CPU},
           {camera_constants.at("second_bot_left"),
-           localization::Detector::OPENCV_CPU},
+           localization::Detector::AUSTIN_GPU},
           {camera_constants.at("second_bot_right"),
-           localization::Detector::OPENCV_CPU},
+           localization::Detector::AUSTIN_GPU},
           {camera_constants.at("second_bot_front"),
-           localization::Detector::OPENCV_CPU},
+           localization::Detector::AUSTIN_GPU},
       };
 
   LOG(INFO) << "Started cameras";
