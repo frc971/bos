@@ -2,6 +2,7 @@
 #include "src/camera/camera_source.h"
 #include "src/camera/cv_camera.h"
 #include "src/localization/multi_tag_solver.h"
+#include "src/localization/nvidia_apriltag_detector.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
@@ -37,7 +38,7 @@ auto main() -> int {
 
   std::thread front_thread(
       localization::RunLocalization, std::ref(front_camera),
-      std::make_unique<localization::OpenCVAprilTagDetector>(
+      std::make_unique<localization::NvidiaAprilTagDetector>(
           front_camera.GetFrame().cols, front_camera.GetFrame().rows,
           utils::ReadIntrinsics(
               camera_constants.at("main_bot_front").intrinsics_path.value())),
