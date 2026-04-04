@@ -140,7 +140,7 @@ auto main(int argc, char** argv) -> int {
             frame.cols, frame.rows,
             utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
         std::make_unique<localization::MultiTagSolver>(camera_constant),
-        std::make_unique<localization::SimulationSender>(camera_name, 4971),
+        std::make_unique<localization::NetworkTableSender>(camera_name, true),
         camera_constant.extrinsics_path.value(),
         base_port + static_cast<int>(i), true);
   }
