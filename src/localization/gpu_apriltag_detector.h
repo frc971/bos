@@ -2,7 +2,7 @@
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include "src/localization/apriltag_detector.h"
 #include "src/utils/pch.h"
-#include "third_party/971apriltag/971apriltag.h"
+#include "third_party/971apriltag/apriltag.h"
 
 namespace localization {
 
@@ -18,9 +18,9 @@ class GPUAprilTagDetector : public IAprilTagDetector {
       -> std::vector<tag_detection_t> override;
 
  private:
-  cv::Mat camera_matrix_;
-  cv::Mat distortion_coefficients_;
+  frc::apriltag::CameraMatrix camera_matrix_;
+  frc::apriltag::DistCoeffs distortion_coefficients_;
   apriltag_detector_t* apriltag_detector_;
-  std::unique_ptr<frc971::apriltag::GpuDetector> gpu_detector_;
+  std::unique_ptr<frc::apriltag::GpuDetector> gpu_detector_;
 };
 }  // namespace localization

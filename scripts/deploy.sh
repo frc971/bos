@@ -26,5 +26,5 @@ while true; do
 done
 
 rsync -avz --delete bin "$HOST":/bos
-rsync -avz constants "$HOST":/bos
+rsync -avz --delete constants "$HOST":/bos
 ssh $HOST 'sudo systemctl restart bos.service'

@@ -84,4 +84,12 @@ auto ExtractTranslationAndRotation(const Eigen::Matrix4d& transform_mat)
 auto SeparateTranslationAndRotationMatrices(const TransformValues& combined)
     -> TransformDecomposition;
 
+inline auto PoseOffField(frc::Pose3d pose) -> bool {
+  constexpr double kerror_margin = 0.2;
+  return pose.X().value() < 0 - kerror_margin ||
+         pose.X().value() > 16.54 + kerror_margin ||
+         pose.Y().value() < 0 - kerror_margin ||
+         pose.Y().value() > 8 + kerror_margin || pose.Z().value() > kerror_margin;
+}
+
 }  // namespace utils

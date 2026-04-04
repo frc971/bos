@@ -1,14 +1,14 @@
-#pragma once
+#ifndef FRC_ORIN_CUDA_H_
+#define FRC_ORIN_CUDA_H_
 
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
-#include <cassert>
 #include <chrono>
-#include <iostream>
 #include <span>
-#include <vector>
+
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
 // CHECKs that a cuda method returned success.
 // TODO(austin): This will not handle if and else statements quite right, fix if
@@ -18,7 +18,9 @@
   LOG(FATAL) << "Check failed: " #condition " (" << cudaGetErrorString(c) \
              << ") "
 
-namespace frc971::apriltag {
+namespace frc::apriltag {
+
+class CudaEvent;
 
 // Class to manage the lifetime of a Cuda stream.  This is used to provide
 // relative ordering between kernels on the same stream.
@@ -28,11 +30,16 @@ class CudaStream {
 
   CudaStream(const CudaStream&) = delete;
   CudaStream& operator=(const CudaStream&) = delete;
+  CudaStream(const CudaStream&&) noexcept = delete;
+  CudaStream& operator=(const CudaStream&&) noexcept = delete;
 
   virtual ~CudaStream() { CHECK_CUDA(cudaStreamDestroy(stream_)); }
 
   // Returns the stream.
   cudaStream_t get() { return stream_; }
+
+  // Waits until the selected event has been triggered.
+  void Wait(CudaEvent* event);
 
  private:
   cudaStream_t stream_;
@@ -46,8 +53,13 @@ class CudaEvent {
 
   CudaEvent(const CudaEvent&) = delete;
   CudaEvent& operator=(const CudaEvent&) = delete;
+  CudaEvent(const CudaEvent&&) noexcept = delete;
+  CudaEvent& operator=(const CudaEvent&&) noexcept = delete;
 
   virtual ~CudaEvent() { CHECK_CUDA(cudaEventDestroy(event_)); }
+
+  // Returns the event.
+  cudaEvent_t get() { return event_; }
 
   // Queues up an event to be timestamped on the stream when it is executed.
   void Record(CudaStream* stream) {
@@ -83,6 +95,8 @@ class HostMemory {
   }
   HostMemory(const HostMemory&) = delete;
   HostMemory& operator=(const HostMemory&) = delete;
+  HostMemory(const HostMemory&&) noexcept = delete;
+  HostMemory& operator=(const HostMemory&&) noexcept = delete;
 
   virtual ~HostMemory() { CHECK_CUDA(cudaFreeHost(span_.data())); }
 
@@ -97,6 +111,10 @@ class HostMemory {
   void MemcpyFrom(const T* other) {
     memcpy(span_.data(), other, sizeof(T) * size());
   }
+  void MemcpyFrom(const T* other, const size_t size) {
+    memcpy(span_.data(), other, sizeof(T) * size);
+  }
+
   // Copies data to other (host memory) from this's memory.
   void MemcpyTo(const T* other) {
     memcpy(other, span_.data(), sizeof(T) * size());
@@ -117,6 +135,8 @@ class GpuMemory {
   }
   GpuMemory(const GpuMemory&) = delete;
   GpuMemory& operator=(const GpuMemory&) = delete;
+  GpuMemory(const GpuMemory&&) noexcept = delete;
+  GpuMemory& operator=(const GpuMemory&&) noexcept = delete;
 
   virtual ~GpuMemory() { CHECK_CUDA(cudaFree(memory_)); }
 
@@ -133,8 +153,22 @@ class GpuMemory {
     CHECK_CUDA(cudaMemcpyAsync(memory_, host_memory, sizeof(T) * size_,
                                cudaMemcpyHostToDevice, stream->get()));
   }
+  void MemcpyAsyncFrom(const T* host_memory, const size_t size,
+                       CudaStream* stream) {
+    CHECK_LE(size, size_);
+    CHECK_CUDA(cudaMemcpyAsync(memory_, host_memory, sizeof(T) * size,
+                               cudaMemcpyHostToDevice, stream->get()));
+  }
   void MemcpyAsyncFrom(const HostMemory<T>* host_memory, CudaStream* stream) {
-    MemcpyAsyncFrom(host_memory->get(), stream);
+    CHECK_CUDA(cudaMemcpyAsync(memory_, host_memory,
+                               sizeof(T) * host_memory->size(),
+                               cudaMemcpyHostToDevice, stream->get()));
+  }
+  void MemcpyAsyncFrom(const HostMemory<T>* host_memory, const size_t size,
+                       CudaStream* stream) {
+    CHECK_LE(size, size_);
+    CHECK_CUDA(cudaMemcpyAsync(memory_, host_memory, sizeof(T) * size,
+                               cudaMemcpyHostToDevice, stream->get()));
   }
 
   // Copies data to host memory from this memory asynchronously on the provided
@@ -196,6 +230,48 @@ class GpuMemory {
   const size_t size_;
 };
 
+// Class to manage the lifetime of page locked host memory for fast copies back
+// to host memory.
+template <typename T>
+class UnifiedMemory {
+ public:
+  // Allocates a block of memory for holding up to size objects of type T.
+  UnifiedMemory(size_t size) {
+    T* memory;
+    CHECK_CUDA(cudaMallocManaged((void**)(&memory), size * sizeof(T)));
+    span_ = std::span<T>(memory, size);
+  }
+  UnifiedMemory(const UnifiedMemory&) = delete;
+  UnifiedMemory& operator=(const UnifiedMemory&) = delete;
+  UnifiedMemory(const UnifiedMemory&&) noexcept = delete;
+  UnifiedMemory& operator=(const UnifiedMemory&&) noexcept = delete;
+
+  virtual ~UnifiedMemory() { CHECK_CUDA(cudaFree(span_.data())); }
+
+  // Returns a pointer to the memory.
+  T* get() { return span_.data(); }
+  const T* get() const { return span_.data(); }
+
+  // Returns the number of objects the memory can hold.
+  size_t size() const { return span_.size(); }
+
+  // Copies data from other (host memory) to this's memory.
+  void MemcpyFrom(const T* other) {
+    memcpy(span_.data(), other, sizeof(T) * size());
+  }
+  void MemcpyFrom(const T* other, const size_t size) {
+    memcpy(span_.data(), other, sizeof(T) * size);
+  }
+
+  // Copies data to other (host memory) from this's memory.
+  void MemcpyTo(T* other) const {
+    memcpy(other, span_.data(), sizeof(T) * size());
+  }
+
+ private:
+  std::span<T> span_;
+};
+
 // Synchronizes and CHECKs for success the last CUDA operation.
 void CheckAndSynchronize(std::string_view message = "");
 
@@ -204,4 +280,6 @@ void CheckAndSynchronize(std::string_view message = "");
 void MaybeCheckAndSynchronize();
 void MaybeCheckAndSynchronize(std::string_view message);
 
-}  // namespace frc971::apriltag
+}  // namespace frc::apriltag
+
+#endif  // FRC_ORIN_CUDA_H_

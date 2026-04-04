@@ -1,9 +1,6 @@
-//#include <thrust/iterator/constant_iterator.h>
-//#include <thrust/iterator/transform_iterator.h>
+#include <thrust/iterator/constant_iterator.h>
+#include <thrust/iterator/transform_iterator.h>
 
-#include <cstring>
-
-/*
 #include <cub/device/device_copy.cuh>
 #include <cub/device/device_radix_sort.cuh>
 #include <cub/device/device_reduce.cuh>
@@ -13,32 +10,38 @@
 #include <cub/device/device_select.cuh>
 #include <cub/iterator/discard_output_iterator.cuh>
 #include <cub/iterator/transform_input_iterator.cuh>
-*/
 #include <vector>
 
-#include "971apriltag.h"
+#include "absl/flags/flag.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
+
+// #include "aos/time/time.h"
+#include <iomanip>
+#include "apriltag.h"
 #include "labeling_allegretti_2019_BKE.h"
 #include "threshold.h"
 
+ABSL_FLAG(int32_t, debug_blob_index, 4096, "Blob to print out for");
 
 constexpr int kUndistortIterationThreshold = 100;
 constexpr double kUndistortConvergenceEpsilon = 1e-6;
 
 extern "C" {
 
-void quad_decode_index(apriltag_detector_t *td, struct quad *quad_original,
-                       image_u8_t *im, image_u8_t *im_samples,
-                       zarray_t *detections);
+void quad_decode_index(apriltag_detector_t* td, struct quad* quad_original,
+                       image_u8_t* im, image_u8_t* im_samples,
+                       zarray_t* detections);
 
-void reconcile_detections(zarray_t *detections, zarray_t *poly0,
-                          zarray_t *poly1);
+void reconcile_detections(zarray_t* detections, zarray_t* poly0,
+                          zarray_t* poly1);
 };
 
-namespace frc971::apriltag {
+namespace frc::apriltag {
 namespace {
 
-void HostFitLine(LineFitMoments moments, double *lineparam01,
-                 double *lineparam23, double *err, double *mse) {
+void HostFitLine(LineFitMoments moments, double* lineparam01,
+                 double* lineparam23, double* err, double* mse) {
   int64_t Cxx = moments.Mxx * moments.W - static_cast<int64_t>(moments.Mx) *
                                               static_cast<int64_t>(moments.Mx);
   int64_t Cxy = moments.Mxy * moments.W - static_cast<int64_t>(moments.Mx) *
@@ -93,21 +96,21 @@ void HostFitLine(LineFitMoments moments, double *lineparam01,
 
 }  // namespace
 
-const std::vector<QuadCorners> &GpuDetector::FitQuads() const {
+const std::vector<QuadCorners>& GpuDetector::FitQuads() const {
   return quad_corners_host_;
 }
 
 void GpuDetector::UpdateFitQuads() {
   quad_corners_host_.resize(0);
-  //VLOG(1) << "Considering " << fit_quads_host_.size();
-  for (const FitQuad &quad : fit_quads_host_) {
-    bool print = quad.blob_index == 4096; //absl::GetFlag(FLAGS_debug_blob_index);
+  // VLOG(1) << "Considering " << fit_quads_host_.size();
+  for (const FitQuad& quad : fit_quads_host_) {
+    bool print = quad.blob_index == absl::GetFlag(FLAGS_debug_blob_index);
     if (!quad.valid) {
       continue;
     }
     QuadCorners corners;
     corners.blob_index = quad.blob_index;
-    CHECK(normal_border_ != reversed_border_);
+    // CHECK(normal_border_ != reversed_border_);
     corners.reversed_border = reversed_border_;
 
     double lines[4][4];
@@ -115,12 +118,12 @@ void GpuDetector::UpdateFitQuads() {
       double err;
       double mse;
       HostFitLine(quad.moments[i], lines[i], lines[i] + 2, &err, &mse);
-      /*if (print) {
+      if (print) {
         LOG(INFO) << "Blob " << corners.blob_index << " mse -> " << mse
                   << " err " << err << " index " << quad.indices[i] << ", "
                   << quad.indices[(i + 1) % 4];
         LOG(INFO) << "   " << quad.moments[i];
-      }*/
+      }
     }
 
     bool bad_determinant = false;
@@ -161,9 +164,9 @@ void GpuDetector::UpdateFitQuads() {
       corners.corners[i][0] = lines[i][0] + L0 * A00;
       corners.corners[i][1] = lines[i][1] + L0 * A10;
       if (print) {
-        /*LOG(INFO) << "Calculated corner[" << i << "] -> ("
+        LOG(INFO) << "Calculated corner[" << i << "] -> ("
                   << std::setprecision(20) << corners.corners[i][0] << ", "
-                  << std::setprecision(20) << corners.corners[i][1] << ")";*/
+                  << std::setprecision(20) << corners.corners[i][1] << ")";
       }
     }
     if (bad_determinant) {
@@ -201,8 +204,8 @@ void GpuDetector::UpdateFitQuads() {
 
       if (area < 0.95 * min_tag_width_ * min_tag_width_) {
         if (print) {
-          /*LOG(INFO) << "Area of " << area << " smaller than "
-                    << 0.95 * min_tag_width_ * min_tag_width_;*/
+          LOG(INFO) << "Area of " << area << " smaller than "
+                    << 0.95 * min_tag_width_ * min_tag_width_;
         }
         continue;
       }
@@ -223,9 +226,9 @@ void GpuDetector::UpdateFitQuads() {
             sqrtf((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2));
 
         if (print) {
-          /*LOG(INFO) << "Cosdtheta -> for " << i0 << " " << i1 << " " << i2
+          LOG(INFO) << "Cosdtheta -> for " << i0 << " " << i1 << " " << i2
                     << " -> " << cos_dtheta << " threshold "
-                    << tag_detector_->qtp.cos_critical_rad;*/
+                    << tag_detector_->qtp.cos_critical_rad;
         }
 
         if (std::abs(cos_dtheta) > tag_detector_->qtp.cos_critical_rad ||
@@ -264,14 +267,14 @@ void GpuDetector::AdjustPixelCenters() {
 
   if (quad_decimate > 1) {
     if (tag_detector_->quad_decimate == 1.5) {
-      for (QuadCorners &quad : quad_corners_host_) {
+      for (QuadCorners& quad : quad_corners_host_) {
         for (int j = 0; j < 4; j++) {
           quad.corners[j][0] *= quad_decimate;
           quad.corners[j][1] *= quad_decimate;
         }
       }
     } else {
-      for (QuadCorners &quad : quad_corners_host_) {
+      for (QuadCorners& quad : quad_corners_host_) {
         for (int j = 0; j < 4; j++) {
           quad.corners[j][0] =
               (quad.corners[j][0] - 0.5f) * quad_decimate + 0.5f;
@@ -283,36 +286,40 @@ void GpuDetector::AdjustPixelCenters() {
   }
 }
 
-static inline int detection_compare_function(const void *_a, const void *_b) {
-  apriltag_detection_t *a = *(apriltag_detection_t **)_a;
-  apriltag_detection_t *b = *(apriltag_detection_t **)_b;
+static inline int detection_compare_function(const void* _a, const void* _b) {
+  apriltag_detection_t* a = *(apriltag_detection_t**)_a;
+  apriltag_detection_t* b = *(apriltag_detection_t**)_b;
   return a->id - b->id;
 }
 
 struct QuadDecodeTaskStruct {
   int i0, i1;
-  QuadCorners *quads;
-  apriltag_detector_t *td;
+  QuadCorners* quads;
+  apriltag_detector_t* td;
 
-  image_u8_t *im;
-  zarray_t *detections;
+  image_u8_t* im;
+  zarray_t* detections;
 
-  image_u8_t *im_samples;
+  image_u8_t* im_samples;
 
-  CameraMatrix *camera_matrix;
-  DistCoeffs *distortion_coefficients;
+  CameraMatrix* camera_matrix;
+  DistCoeffs* distortion_coefficients;
 };
 
 // Dewarps points from the image based on various constants
 // Algorithm mainly taken from
 // https://docs.opencv.org/4.0.0/d9/d0c/group__calib3d.html#ga7dfb72c9cf9780a347fbe3d1c47e5d5a
-void ReDistort(double *x, double *y, CameraMatrix *camera_matrix,
-               DistCoeffs *distortion_coefficients) {
+void GpuDetector::ReDistort(double* x, double* y,
+                            const CameraMatrix* camera_matrix,
+                            const DistCoeffs* distortion_coefficients) {
   double k1 = distortion_coefficients->k1;
   double k2 = distortion_coefficients->k2;
   double p1 = distortion_coefficients->p1;
   double p2 = distortion_coefficients->p2;
   double k3 = distortion_coefficients->k3;
+  double k4 = distortion_coefficients->k4;
+  double k5 = distortion_coefficients->k5;
+  double k6 = distortion_coefficients->k6;
 
   double fx = camera_matrix->fx;
   double cx = camera_matrix->cx;
@@ -324,7 +331,8 @@ void ReDistort(double *x, double *y, CameraMatrix *camera_matrix,
 
   double rSq = xP * xP + yP * yP;
 
-  double linCoef = 1 + k1 * rSq + k2 * rSq * rSq + k3 * rSq * rSq * rSq;
+  double linCoef = (1 + k1 * rSq + k2 * rSq * rSq + k3 * rSq * rSq * rSq) /
+                   (1 + k4 * rSq + k5 * rSq * rSq + k6 * rSq * rSq * rSq);
   double xPP = xP * linCoef + 2 * p1 * xP * yP + p2 * (rSq + 2 * xP * xP);
   double yPP = yP * linCoef + p1 * (rSq + 2 * yP * yP) + 2 * p2 * xP * yP;
 
@@ -334,15 +342,20 @@ void ReDistort(double *x, double *y, CameraMatrix *camera_matrix,
 
 // We're undistorting using math found from this github page
 // https://yangyushi.github.io/code/2020/03/04/opencv-undistort.html
-bool GpuDetector::UnDistort(double *u, double *v,
-                            const CameraMatrix *camera_matrix,
-                            const DistCoeffs *distortion_coefficients) {
+// Also, see for reference the source code:
+// https://github.com/opencv/opencv/blob/master/modules/calib3d/src/undistort.dispatch.cpp
+bool GpuDetector::UnDistort(double* u, double* v,
+                            const CameraMatrix* camera_matrix,
+                            const DistCoeffs* distortion_coefficients) {
   bool converged = true;
   const double k1 = distortion_coefficients->k1;
   const double k2 = distortion_coefficients->k2;
   const double p1 = distortion_coefficients->p1;
   const double p2 = distortion_coefficients->p2;
   const double k3 = distortion_coefficients->k3;
+  const double k4 = distortion_coefficients->k4;
+  const double k5 = distortion_coefficients->k5;
+  const double k6 = distortion_coefficients->k6;
 
   const double fx = camera_matrix->fx;
   const double cx = camera_matrix->cx;
@@ -367,11 +380,12 @@ bool GpuDetector::UnDistort(double *u, double *v,
     double rSq = xP * xP + yP * yP;
 
     double radial_distortion =
-        1 + (k1 * rSq) + (k2 * rSq * rSq) + (k3 * rSq * rSq * rSq);
+        (1 + (k1 * rSq) + (k2 * rSq * rSq) + (k3 * rSq * rSq * rSq)) /
+        (1 + (k4 * rSq) + (k5 * rSq * rSq) + (k6 * rSq * rSq * rSq));
 
     double radial_distortion_inv = 1 / radial_distortion;
 
-    double tangential_dx = 2 * p1 * xP * yP + p2 * (rSq + k3 * rSq * rSq * rSq);
+    double tangential_dx = 2 * p1 * xP * yP + p2 * (rSq + 2 * xP * xP);
     double tangential_dy = p1 * (rSq + 2 * yP * yP) + 2 * p2 * xP * yP;
 
     xP = (x0 - tangential_dx) * radial_distortion_inv;
@@ -387,16 +401,14 @@ bool GpuDetector::UnDistort(double *u, double *v,
            std::abs(yP - prev_y) > kUndistortConvergenceEpsilon);
 
   if (iterations < kUndistortIterationThreshold) {
-    //VLOG(1) << "Took " << iterations << " iterations to reach convergence.";
+    // VLOG(1) << "Took " << iterations << " iterations to reach convergence.";
   } else {
-	  /*
-    VLOG(1) << "Took " << iterations
-            << " iterations and didn't reach convergence with "
-            << " (xP, yP): "
-            << " (" << xP << ", " << yP << ")"
-            << " vs. (prev_x, prev_y): "
-            << " (" << prev_x << ", " << prev_y << ")";
-	    */
+    // VLOG(1) << "Took " << iterations
+    //         << " iterations and didn't reach convergence with "
+    //         << " (xP, yP): "
+    //         << " (" << xP << ", " << yP << ")"
+    //         << " vs. (prev_x, prev_y): "
+    //         << " (" << prev_x << ", " << prev_y << ")";
   }
 
   *u = xP * fx + cx;
@@ -406,9 +418,9 @@ bool GpuDetector::UnDistort(double *u, double *v,
 }
 
 // Mostly stolen from aprilrobotics, but modified to implement the dewarp.
-void RefineEdges(apriltag_detector_t *td, image_u8_t *im_orig,
-                 struct quad *quad, CameraMatrix *camera_matrix,
-                 DistCoeffs *distortion_coefficients) {
+void RefineEdges(apriltag_detector_t* td, image_u8_t* im_orig,
+                 struct quad* quad, CameraMatrix* camera_matrix,
+                 DistCoeffs* distortion_coefficients) {
   double lines[4][4];  // for each line, [Ex Ey nx ny]
 
   for (int edge = 0; edge < 4; edge++) {
@@ -496,7 +508,8 @@ void RefineEdges(apriltag_detector_t *td, image_u8_t *im_orig,
       }
 
       // what was the average point along the line?
-      if (Mcount == 0) continue;
+      if (Mcount == 0)
+        continue;
 
       double n0 = Mn / Mcount;
 
@@ -555,7 +568,7 @@ void RefineEdges(apriltag_detector_t *td, image_u8_t *im_orig,
       double px = lines[i][0] + L0 * A00;
       double py = lines[i][1] + L0 * A10;
 
-      ReDistort(&px, &py, camera_matrix, distortion_coefficients);
+      GpuDetector::ReDistort(&px, &py, camera_matrix, distortion_coefficients);
       quad->p[(i + 1) & 3][0] = px;
       quad->p[(i + 1) & 3][1] = py;
     } else {
@@ -566,10 +579,10 @@ void RefineEdges(apriltag_detector_t *td, image_u8_t *im_orig,
   }
 }
 
-void GpuDetector::QuadDecodeTask(void *_u) {
-  QuadDecodeTaskStruct *task = reinterpret_cast<QuadDecodeTaskStruct *>(_u);
-  apriltag_detector_t *td = task->td;
-  image_u8_t *im = task->im;
+void GpuDetector::QuadDecodeTask(void* _u) {
+  QuadDecodeTaskStruct* task = reinterpret_cast<QuadDecodeTaskStruct*>(_u);
+  apriltag_detector_t* td = task->td;
+  image_u8_t* im = task->im;
 
   for (int quadidx = task->i0; quadidx < task->i1; quadidx++) {
     struct quad quad_original;
@@ -586,7 +599,7 @@ void GpuDetector::QuadDecodeTask(void *_u) {
     }
 
     if (td->debug) {
-      image_u8_t *im_quads = image_u8_copy(im);
+      image_u8_t* im_quads = image_u8_copy(im);
       image_u8_darken(im_quads);
       image_u8_darken(im_quads);
 
@@ -615,10 +628,15 @@ void GpuDetector::QuadDecodeTask(void *_u) {
 
     quad_decode_index(td, &quad_original, im, task->im_samples,
                       task->detections);
+
+    if (quad_original.H)
+      matd_destroy(quad_original.H);
+    if (quad_original.Hinv)
+      matd_destroy(quad_original.Hinv);
   }
 }
 
-void GpuDetector::DecodeTags(uint8_t * image) {
+void GpuDetector::DecodeTags() {
   size_t chunksize =
       1 + quad_corners_host_.size() /
               (APRILTAG_TASKS_PER_THREAD_TARGET * tag_detector_->nthreads);
@@ -627,7 +645,7 @@ void GpuDetector::DecodeTags(uint8_t * image) {
       (quad_corners_host_.size() / chunksize + 1));
 
   for (int i = 0; i < zarray_size(detections_); ++i) {
-    apriltag_detection_t *det;
+    apriltag_detection_t* det;
     zarray_get(detections_, i, &det);
     apriltag_detection_destroy(det);
   }
@@ -638,8 +656,7 @@ void GpuDetector::DecodeTags(uint8_t * image) {
       .width = static_cast<int32_t>(width_),
       .height = static_cast<int32_t>(height_),
       .stride = static_cast<int32_t>(width_),
-      //.buf = gray_image_host_.get(),
-      .buf = image,
+      .buf = const_cast<uint8_t*>(gray_image_host_ptr_),
   };
 
   int ntasks = 0;
@@ -666,4 +683,4 @@ void GpuDetector::DecodeTags(uint8_t * image) {
   zarray_sort(detections_, detection_compare_function);
 }
 
-}  // namespace frc971::apriltag
+}  // namespace frc::apriltag
