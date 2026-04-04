@@ -24,7 +24,7 @@ CscoreStreamer::CscoreStreamer(const std::string& name, uint port, uint fps,
     : CscoreStreamer(name, port, fps, frame.cols * ratio, frame.rows * ratio,
                      verbose) {}
 
-void CscoreStreamer::WriteFrame(cv::Mat& mat) {
+void CscoreStreamer::WriteFrame(const cv::Mat& mat) {
   cv::Mat frame;
   cv::resize(mat, frame, cv::Size(width_, height_));
   if (frame.channels() == 4) {

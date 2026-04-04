@@ -3,7 +3,6 @@
 #include <vpi/algo/AprilTags.h>
 #include "src/localization/apriltag_detector.h"
 #include "src/utils/pch.h"
-#include "third_party/971apriltag/971apriltag.h"
 
 namespace localization {
 

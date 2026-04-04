@@ -1,14 +1,16 @@
 #include "line_fit_filter.h"
 
 #include <cub/block/block_reduce.cuh>
+#include <cub/iterator/transform_input_iterator.cuh>
 #include <cub/warp/warp_merge_sort.cuh>
+#include <cuda/std/tuple>
 #include <iomanip>
 
 #include "cuda.h"
 
 // #define DEBUG_BLOB_NUMBER 401
 
-namespace frc971::apriltag {
+namespace frc::apriltag {
 
 static_assert(sizeof(LineFitPoint) == 40, "Size of LineFitPoint changed");
 static_assert(sizeof(int4) == 16, "Size of int4 changed");
@@ -67,9 +69,9 @@ template <size_t kThreads>
 class ErrorCalculator {
  public:
   __host__ __device__ ErrorCalculator(
-      const LineFitPoint *line_fit_points_device, size_t points,
-      const cub::KeyValuePair<long, MinMaxExtents> *selected_extents_device,
-      TempStorage *storage)
+      const LineFitPoint* line_fit_points_device, size_t points,
+      const cub::KeyValuePair<long, MinMaxExtents>* selected_extents_device,
+      TempStorage* storage)
       : line_fit_points_device_(line_fit_points_device),
         points_(points),
         selected_extents_device_(selected_extents_device),
@@ -94,8 +96,8 @@ class ErrorCalculator {
       // corrupted.  For arrays which are multiples of kPointsPerBlock long,
       // this will have no issues.
       if (i + global_index <= points_ * sizeof(LineFitPoint) / kLoadSize) {
-        *(reinterpret_cast<int4 *>(storage_->tmp_storage) + i + threadIdx.x) =
-            *(reinterpret_cast<const int4 *>(line_fit_points_device_) +
+        *(reinterpret_cast<int4*>(storage_->tmp_storage) + i + threadIdx.x) =
+            *(reinterpret_cast<const int4*>(line_fit_points_device_) +
               global_index + i);
       }
     }
@@ -217,8 +219,8 @@ class ErrorCalculator {
 
   // Calculates the line fit error centered on the provided blob index in the
   // current extent.
-  /* __host__ RJS */  __device__ double CalculateError(ssize_t blob_index,
-                                            bool print = false) const {
+  __device__ double CalculateError(ssize_t blob_index,
+                                   bool print = false) const {
     // Index into the blob list for the current key.
     const size_t i0 = (blob_index + 2 * count_ - ksz_) % count_;
     const size_t i1 = (blob_index + count_ + ksz_) % count_;
@@ -314,11 +316,11 @@ class ErrorCalculator {
   }
 
  private:
-  const LineFitPoint *line_fit_points_device_;
+  const LineFitPoint* line_fit_points_device_;
   size_t points_;
-  const cub::KeyValuePair<long, MinMaxExtents> *selected_extents_device_;
+  const cub::KeyValuePair<long, MinMaxExtents>* selected_extents_device_;
 
-  TempStorage *storage_;
+  TempStorage* storage_;
 
   // Start and end location of the LineFitPoint cache in tmp_storage_.
   const uint32_t global_block_index_cache_start_ =
@@ -340,10 +342,10 @@ class ErrorCalculator {
 };
 
 template <size_t kThreads>
-  __global__ void DoFitLines(
-    const LineFitPoint *line_fit_points_device, size_t points,
-    const cub::KeyValuePair<long, MinMaxExtents> *selected_extents_device,
-    double *errs_device, double *filtered_errs_device, Peak *peaks_device) {
+__global__ void DoFitLines(
+    const LineFitPoint* line_fit_points_device, size_t points,
+    const cub::KeyValuePair<long, MinMaxExtents>* selected_extents_device,
+    double* errs_device, double* filtered_errs_device, Peak* peaks_device) {
   __shared__ TempStorage storage;
 
   ErrorCalculator<kThreads> calculator(line_fit_points_device, points,
@@ -402,8 +404,7 @@ template <size_t kThreads>
                calculator.global_block_index_end() + kBeforeBuffer) {
       // Now we are solidly in the middle of the block.  Make sure anything
       // computed after the end of the buffer uses the extents of the end.
-      calculator.LoadExtents(//std::min<uint32_t>(
-      				ullmin(
+      calculator.LoadExtents(std::min<uint32_t>(
           calculator.global_block_index_size() - 1, i - kErrorsBuffer));
       size_t target_index = calculator.BlobIndex(i - kErrorsBuffer);
 
@@ -466,7 +467,7 @@ template <size_t kThreads>
   for (size_t i = threadIdx.x; i < kPointsPerBlock; i += blockDim.x) {
     // The peak finder needs 1 more filtered error in each direction.
     ssize_t target_index;
-    double *destination;
+    double* destination;
     if (i < kErrorsBuffer) {
       if (i < kErrorsBuffer - 2) {
         continue;
@@ -597,17 +598,17 @@ template <size_t kThreads>
 }
 
 void FitLines(
-    const LineFitPoint *line_fit_points_device, size_t points,
-    const cub::KeyValuePair<long, MinMaxExtents> *selected_extents_device,
-    size_t num_extents, double *errs_device, double *filtered_errs_device,
-    Peak *peaks_device, CudaStream *stream) {
+    const LineFitPoint* line_fit_points_device, size_t points,
+    const cub::KeyValuePair<long, MinMaxExtents>* selected_extents_device,
+    size_t num_extents, double* errs_device, double* filtered_errs_device,
+    Peak* peaks_device, CudaStream* stream) {
   constexpr size_t kThreads = 128;
   const size_t kBlocks = (points + kPointsPerBlock - 2 * kErrorsBuffer - 1) /
                          (kPointsPerBlock - 2 * kErrorsBuffer);
 
-  /*VLOG(1) << "Spawning with " << kThreads << " threads, and " << kBlocks
+  VLOG(1) << "Spawning with " << kThreads << " threads, and " << kBlocks
           << " blocks for " << num_extents << " blob_ids and " << points
-          << " points";*/
+          << " points";
   DoFitLines<kThreads><<<kBlocks, kThreads, 0, stream->get()>>>(
       line_fit_points_device, points, selected_extents_device, errs_device,
       filtered_errs_device, peaks_device);
@@ -748,7 +749,7 @@ __device__ __host__ cuda::std::pair<uint, uint> GetM0M1(uint tid) {
 }
 
 __device__ __forceinline__ LineFitMoments
-ReadMoments(const LineFitPoint *line_fit_points_device, size_t blob_point_count,
+ReadMoments(const LineFitPoint* line_fit_points_device, size_t blob_point_count,
             size_t index0, size_t index1) {
   LineFitMoments result;
 
@@ -800,8 +801,8 @@ ReadMoments(const LineFitPoint *line_fit_points_device, size_t blob_point_count,
   return result;
 }
 
-__device__ void FitLine(LineFitMoments moments, double *lineparam01,
-                        double *lineparam23, double *err, double *mse,
+__device__ void FitLine(LineFitMoments moments, double* lineparam01,
+                        double* lineparam23, double* err, double* mse,
                         bool print = false) {
   if (print) {
     printf(
@@ -877,9 +878,9 @@ __device__ void FitLine(LineFitMoments moments, double *lineparam01,
 }
 
 __device__ __forceinline__ void FitLine(
-    const LineFitPoint *line_fit_points_device, size_t blob_point_count,
-    size_t index0, size_t index1, double *lineparam01, double *lineparam23,
-    double *err, double *mse, bool print = false) {
+    const LineFitPoint* line_fit_points_device, size_t blob_point_count,
+    size_t index0, size_t index1, double* lineparam01, double* lineparam23,
+    double* err, double* mse, bool print = false) {
   LineFitMoments moments =
       ReadMoments(line_fit_points_device, blob_point_count, index0, index1);
   FitLine(moments, lineparam01, lineparam23, err, mse, print);
@@ -894,10 +895,10 @@ struct QuadFitStorage {
 class QuadFitCalculator {
  public:
   __host__ __device__ QuadFitCalculator(
-      const Peak *peaks_device, const PeakExtents *peak_extents,
-      const LineFitPoint *line_fit_points_device,
-      const cub::KeyValuePair<long, MinMaxExtents> *selected_extents_device,
-      float max_line_fit_mse, double max_dot, QuadFitStorage *storage)
+      const Peak* peaks_device, const PeakExtents* peak_extents,
+      const LineFitPoint* line_fit_points_device,
+      const cub::KeyValuePair<long, MinMaxExtents>* selected_extents_device,
+      float max_line_fit_mse, double max_dot, QuadFitStorage* storage)
       : peaks_device_(peaks_device),
         extents_(peak_extents[blockIdx.x]),
         selected_extent_(selected_extents_device[extents_.blob_index].value),
@@ -921,26 +922,26 @@ class QuadFitCalculator {
   }
 
   __device__ __forceinline__ void FitLine(size_t index0, size_t index1,
-                                          double *lineparam01,
-                                          double *lineparam23, double *err,
-                                          double *mse,
+                                          double* lineparam01,
+                                          double* lineparam23, double* err,
+                                          double* mse,
                                           bool print = false) const {
     if (print) {
       printf("Block %d Thread %d   Fitting line %d, %d\n", blockIdx.x,
              threadIdx.x, (int)index0, (int)index1);
     }
-    ::frc971::apriltag::FitLine(line_fit_points_device_, selected_extent_.count,
-                                index0, index1, lineparam01, lineparam23, err,
-                                mse, print);
+    ::frc::apriltag::FitLine(line_fit_points_device_, selected_extent_.count,
+                             index0, index1, lineparam01, lineparam23, err, mse,
+                             print);
   }
 
   __device__ __forceinline__ LineFitMoments ReadMoments(size_t index0,
                                                         size_t index1) {
-    return ::frc971::apriltag::ReadMoments(
-        line_fit_points_device_, selected_extent_.count, index0, index1);
+    return ::frc::apriltag::ReadMoments(line_fit_points_device_,
+                                        selected_extent_.count, index0, index1);
   }
 
-  /*__host__ RJS */ __device__ void ComputeM0M1Fit() {
+  __device__ void ComputeM0M1Fit() {
     if (extents_.count < 4) {
       return;
     }
@@ -980,8 +981,7 @@ class QuadFitCalculator {
 
   __host__ __device__ int blob_index() const { return extents_.blob_index; }
 
-  /*__host__ RJS */  __device__ double FitLines(uint m0, uint m1, uint m2,
-                                      uint m3) const {
+  __device__ double FitLines(uint m0, uint m1, uint m2, uint m3) const {
     const bool print =
 #ifdef DEBUG_BLOB_NUMBER
         (blob_index() == DEBUG_BLOB_NUMBER &&
@@ -1005,7 +1005,7 @@ class QuadFitCalculator {
       return err;
     }
 
-    const double *paramsm0m123 = storage_->lineparams23m0m1[m0][m1 - 1];
+    const double* paramsm0m123 = storage_->lineparams23m0m1[m0][m1 - 1];
 
     double errm1m2;
     double msem1m2;
@@ -1055,17 +1055,19 @@ class QuadFitCalculator {
     return errm0m1 + errm1m2 + errm2m3 + errm3m0;
   }
 
-  __host__ __device__ size_t peaks_count() const { return extents_.count; }
+  __host__ __device__ size_t peaks_count() const {
+    return extents_.count;
+  }
 
  private:
-  const Peak *peaks_device_;
+  const Peak* peaks_device_;
   const PeakExtents extents_;
   const MinMaxExtents selected_extent_;
 
-  const LineFitPoint *line_fit_points_device_;
+  const LineFitPoint* line_fit_points_device_;
   const float max_line_fit_mse_;
   const double max_dot_;
-  QuadFitStorage *storage_;
+  QuadFitStorage* storage_;
 };
 
 struct QuadError {
@@ -1077,8 +1079,8 @@ struct QuadError {
 };
 
 struct MinQuadError {
-  __host__ __device__ QuadError operator()(const QuadError &a,
-                                           const QuadError &b) {
+  __host__ __device__ QuadError operator()(const QuadError& a,
+                                           const QuadError& b) {
     if (a.error <= b.error) {
       return a;
     } else {
@@ -1093,12 +1095,12 @@ struct CustomLess {
   }
 };
 
- __global__ void DoFitQuads(
-    const Peak *peaks_device, const PeakExtents *peak_extents,
-    const LineFitPoint *line_fit_points_device,
-    const cub::KeyValuePair<long, MinMaxExtents> *selected_extents_device,
+__global__ void DoFitQuads(
+    const Peak* peaks_device, const PeakExtents* peak_extents,
+    const LineFitPoint* line_fit_points_device,
+    const cub::KeyValuePair<long, MinMaxExtents>* selected_extents_device,
     float max_line_fit_mse, double cos_critical_rad,
-    FitQuad *fit_quads_device) {
+    FitQuad* fit_quads_device) {
   __shared__ QuadFitStorage storage;
   // Specialize BlockReduce for a 1D block of 128 threads of type int
   typedef cub::BlockReduce<QuadError, MaxRankedIndex()> BlockReduce;
@@ -1201,26 +1203,26 @@ struct CustomLess {
 }
 
 void FitQuads(
-    const Peak *peaks_device, size_t /*peaks*/, const PeakExtents *peak_extents,
-    size_t num_extents, const LineFitPoint *line_fit_points_device, int nmaxima,
-    const cub::KeyValuePair<long, MinMaxExtents> *selected_extents_device,
-    float max_line_fit_mse, double cos_critical_rad, FitQuad *fit_quads_device,
-    CudaStream *stream) {
+    const Peak* peaks_device, size_t /*peaks*/, const PeakExtents* peak_extents,
+    size_t num_extents, const LineFitPoint* line_fit_points_device, int nmaxima,
+    const cub::KeyValuePair<long, MinMaxExtents>* selected_extents_device,
+    float max_line_fit_mse, double cos_critical_rad, FitQuad* fit_quads_device,
+    CudaStream* stream) {
   constexpr size_t kThreads = MaxRankedIndex();
   const size_t kBlocks = num_extents;
-  /*VLOG(1) << "Spawning with " << kThreads << " threads, and " << kBlocks
-          << " blocks for " << num_extents << " blob_ids";*/
+  VLOG(1) << "Spawning with " << kThreads << " threads, and " << kBlocks
+          << " blocks for " << num_extents << " blob_ids";
   CHECK_EQ(nmaxima, kNMaxima)
       << ": Kernel is compiled and optimized for a fixed nmaxima, please "
-        "recompile if you want to change it.";
+         "recompile if you want to change it.";
   DoFitQuads<<<kBlocks, kThreads, 0, stream->get()>>>(
       peaks_device, peak_extents, line_fit_points_device,
       selected_extents_device, max_line_fit_mse, cos_critical_rad,
       fit_quads_device);
 }
 
-std::ostream &operator<<(std::ostream &os,
-                         const frc971::apriltag::LineFitMoments &moments) {
+std::ostream& operator<<(std::ostream& os,
+                         const frc::apriltag::LineFitMoments& moments) {
   os << "{Mx:" << std::setprecision(20) << moments.Mx / 2.
      << ", My:" << std::setprecision(20) << moments.My / 2.
      << ", Mxx:" << std::setprecision(20) << moments.Mxx / 4.
@@ -1231,4 +1233,4 @@ std::ostream &operator<<(std::ostream &os,
   return os;
 }
 
-}  // namespace frc971::apriltag
+}  // namespace frc::apriltag

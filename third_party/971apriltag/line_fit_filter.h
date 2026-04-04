@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FRC_ORIN_LINE_FIT_FILTER_H_
+#define FRC_ORIN_LINE_FIT_FILTER_H_
 
 #include <cub/util_type.cuh>
 
@@ -7,7 +8,7 @@
 #include <cuda/std/tuple>
 #include "cuda.h"
 
-namespace frc971::apriltag {
+namespace frc::apriltag {
 
 // Class to hold the extents of a blob of points.
 struct MinMaxExtents {
@@ -40,24 +41,25 @@ struct MinMaxExtents {
   int64_t pxgx_plus_pygy_sum;
 
   // Center location of the blob using the aprilrobotics algorithm.
-  __host__ __device__ double cx() const {
-    return (min_x + max_x) * 0.5f + 0.05118;
+  __host__ __device__ float cx() const {
+    return (min_x + max_x) * 0.5f + 0.05118f;
   }
-  __host__ __device__ double cy() const {
-    return (min_y + max_y) * 0.5f + -0.028581;
+  __host__ __device__ float cy() const {
+    return (min_y + max_y) * 0.5f + -0.028581f;
   }
 
   __host__ __device__ float dot() const {
-    return static_cast<double>(pxgx_plus_pygy_sum * 2 -
-                               (min_x + max_x) * gx_sum -
-                               (min_y + max_y) * gy_sum) *
-               0.5 -
-           0.05118 * static_cast<double>(gx_sum) +
-           0.028581 * static_cast<double>(gy_sum);
+    return static_cast<float>(pxgx_plus_pygy_sum * 2 -
+                              (min_x + max_x) * gx_sum -
+                              (min_y + max_y) * gy_sum) *
+               0.5f -
+           0.05118f * static_cast<float>(gx_sum) +
+           0.028581f * static_cast<float>(gy_sum);
   }
 };
 
-struct /*__align__(16)*/ LineFitPoint {
+// __align__(16) struct LineFitPoint { // TODO Charlie
+struct LineFitPoint {
   // TODO(austin): How much precision do we actually need?  The less, the
   // faster...  The less memory too, the faster.
   //
@@ -93,7 +95,7 @@ struct LineFitMoments {
 };
 
 std::ostream& operator<<(std::ostream& os,
-                         const frc971::apriltag::LineFitMoments& moments);
+                         const frc::apriltag::LineFitMoments& moments);
 
 struct Peak {
   static constexpr uint16_t kNoPeak() { return 0xffff; }
@@ -160,4 +162,6 @@ constexpr size_t MaxRankedIndex() {
   return 210;
 }
 
-}  // namespace frc971::apriltag
+}  // namespace frc::apriltag
+
+#endif  // FRC_ORIN_LINE_FIT_FILTER_H_

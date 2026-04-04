@@ -38,8 +38,7 @@ auto SelectCameraConfig(const std::string& choice,
     if (std::filesystem::is_directory(
             absl::GetFlag(FLAGS_folder_path).value())) {
       return std::make_unique<camera::DiskCamera>(
-          absl::GetFlag(FLAGS_folder_path).value(),
-          camera::GetCameraConstants()[choice]);
+          absl::GetFlag(FLAGS_folder_path).value(), camera::GetCameraConstants()[choice]);
     } else {
       LOG(WARNING) << "You entered in an invalid camera";
     }

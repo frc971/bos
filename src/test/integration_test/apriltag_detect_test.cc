@@ -35,7 +35,7 @@ auto main(int argc, char* argv[]) -> int {
 
   camera::CscoreStreamer streamer("tag_estimator_test", 5801, 30, frame);
 
-  localization::NvidiaAprilTagDetector detector(
+  localization::GPUAprilTagDetector detector(
       frame.cols, frame.rows,
       utils::ReadIntrinsics(camera_constant.intrinsics_path.value()));
 
