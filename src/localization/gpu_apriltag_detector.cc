@@ -21,9 +21,11 @@ auto ToMat(const cv::Mat& image) -> cv::Mat {
 GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
                                          const nlohmann::json& intrinsics,
                                          bool verbose)
-    : camera_matrix_(utils::CameraMatrixFromJson<cv::Mat>(intrinsics)),
+    : camera_matrix_(
+          utils::CameraMatrixFromJson<frc::apriltag::CameraMatrix>(intrinsics)),
       distortion_coefficients_(
-          utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics)) {
+          utils::DistortionCoefficientsFromJson<frc::apriltag::DistCoeffs>(
+              intrinsics)) {
 
   LOG(INFO) << image_width << " " << image_height;
 
@@ -53,7 +55,11 @@ auto GPUAprilTagDetector::GetTagDetections(
     cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2YUV_YUY2);
     cv::Mat mat_ = ToMat(gray);
     if (!gpu_detector_->Detect(mat_.data, nullptr)) {
-      LOG(WARNING) << "Gpu detector failed: " << timestamped_frame.frame.size;
+      LOG(INFO) << "Gpu detector failed! Restarting";
+      gpu_detector_ = std::make_unique<frc::apriltag::GpuDetector>(
+          timestamped_frame.frame.cols, timestamped_frame.frame.rows,
+          apriltag_detector_, camera_matrix_, distortion_coefficients_,
+          vision::ImageFormat::YUYV422);
       return {};
     }
   } catch (const std::exception& e) {

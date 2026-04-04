@@ -32,7 +32,6 @@ auto main() -> int {
                                         fmt::format("{}/right", log_path)));
 
   LOG(INFO) << "Started cameras";
-  std::this_thread::sleep_for(std::chrono::seconds(5));
   LOG(INFO) << "Starting estimators";
 
   std::thread front_thread(
