@@ -11,7 +11,7 @@
 
 using camera::camera_constants_t;
 auto main() -> int {
-  utils::StartNetworktables();
+  utils::StartNetworktables(9971);
   // TODO configure vision bot camera paths
 
   std::string log_path = frc::DataLogManager::GetLogDir();
