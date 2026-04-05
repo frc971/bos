@@ -145,7 +145,6 @@ auto MultiTagSolver::EstimatePositionAmbiguous(
     const auto& ambiguous_solution =
         single_tag_solver.EstimatePositionAmbiguous(detections);
     if (ambiguous_solution.empty()) {
-      std::cout << "Squaresolve failed" << std::endl;
       return std::nullopt;
     }
     return std::make_optional(ambiguous_estimate_t{
