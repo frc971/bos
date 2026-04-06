@@ -5,7 +5,6 @@
 #include "src/utils/pch.h"
 
 namespace localization {
-// Sends position estimates from the orin to the rio. It is safe to call Send() on multiple threads because of the mutex
 class SimulationSender : public IPositionSender {
  public:
   SimulationSender(const std::string& name, int port);
