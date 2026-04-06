@@ -760,6 +760,15 @@ bool GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
             compressed_union_marker_pair_device_.get(),
             num_compressed_union_marker_pair_device_.get(),
             union_marker_pair_device_.size(), nz, stream_.get())) {
+      int dev = -1;
+      cudaGetDevice(&dev);
+      LOG(WARNING) << "FAILED";
+      LOG(WARNING) << "Current device: " << dev;
+
+      int count = 0;
+      cudaGetDeviceCount(&count);
+      LOG(WARNING) << "Device count: " << count;
+
       return false;
     }
 
@@ -984,7 +993,14 @@ bool GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
             temp_storage_bytes, filtered_is_local_peak_device_.get(),
             compressed_peaks_device_.get(), num_compressed_peaks_device_.get(),
             num_selected_blobs_host, peak_filter, stream_.get())) {
-      LOG(INFO) << "Failed";
+      int dev = -1;
+      cudaGetDevice(&dev);
+      LOG(WARNING) << "FAILED";
+      LOG(WARNING) << "Current device: " << dev;
+
+      int count = 0;
+      cudaGetDeviceCount(&count);
+      LOG(WARNING) << "Device count: " << count;
       return false;
     }
 
