@@ -123,26 +123,28 @@ auto main(int argc, char** argv) -> int {
       LOG(FATAL) << "Unknown camera name: " << camera_name;
     }
 
-    auto camera_source = std::make_unique<camera::CameraSource>(
-        camera_name, std::make_unique<camera::DiskCamera>(
-                         camera_folder.string(), std::nullopt, speed));
-
-    auto frame = camera_source->GetFrame();
-    if (frame.empty()) {
-      LOG(FATAL) << "No readable images found in folder: " << camera_folder;
-    }
-
-    const auto& camera_constant = constants.at(camera_name);
-
-    localization_threads.emplace_back(
-        localization::RunLocalization, std::move(camera_source),
-        std::make_unique<localization::OpenCVAprilTagDetector>(
-            frame.cols, frame.rows,
-            utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
-        std::make_unique<localization::MultiTagSolver>(camera_constant),
-        std::make_unique<localization::NetworkTableSender>(camera_name, true),
-        camera_constant.extrinsics_path.value(),
-        base_port + static_cast<int>(i), true);
+    localization_threads.emplace_back([camera_name, camera_folder, speed,
+                                       constants, base_port, i] {
+      auto camera_source = std::make_unique<camera::CameraSource>(
+          camera_name, std::make_unique<camera::DiskCamera>(
+                           camera_folder.string(), std::nullopt, speed));
+      auto frame = camera_source->GetFrame();
+      if (frame.empty()) {
+        LOG(FATAL) << "No readable images found in folder: " << camera_folder;
+      }
+      const auto& camera_constant = constants.at(camera_name);
+      std::vector<std::unique_ptr<localization::IPositionSender>> senders;
+      senders.emplace_back(std::make_unique<localization::NetworkTableSender>(
+          camera_name, true));
+      localization::RunLocalization(
+          std::move(camera_source),
+          std::make_unique<localization::OpenCVAprilTagDetector>(
+              frame.cols, frame.rows,
+              utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
+          std::make_unique<localization::MultiTagSolver>(camera_constant),
+          std::move(senders), camera_constant.extrinsics_path.value(),
+          base_port + i, true);
+    });
   }
 
   if (localization_threads.empty()) {

@@ -38,6 +38,9 @@ auto main() -> int {
   std::this_thread::sleep_for(std::chrono::seconds(2));
   LOG(INFO) << "Starting estimators";
 
+  std::vector<std::unique_ptr<localization::IPositionSender>> left_sender;
+  left_sender.emplace_back(std::make_unique<localization::NetworkTableSender>(
+      camera_constants.at("second_bot_left").name));
   std::thread left_thread([&]() {
     localization::RunLocalization(
         std::move(left_camera),
@@ -47,12 +50,14 @@ auto main() -> int {
                                       .intrinsics_path.value())),
         std::make_unique<localization::MultiTagSolver>(
             camera_constants.at("second_bot_left")),
-        std::make_unique<localization::NetworkTableSender>(
-            camera_constants.at("second_bot_left").name),
+        std::move(left_sender),
         camera_constants.at("second_bot_left").extrinsics_path.value(), 5802,
         false);
   });
 
+  std::vector<std::unique_ptr<localization::IPositionSender>> right_sender;
+  right_sender.emplace_back(std::make_unique<localization::NetworkTableSender>(
+      camera_constants.at("second_bot_left").name));
   std::thread right_thread([&]() {
     localization::RunLocalization(
         std::move(right_camera),
@@ -62,8 +67,7 @@ auto main() -> int {
                                       .intrinsics_path.value())),
         std::make_unique<localization::MultiTagSolver>(
             camera_constants.at("second_bot_right")),
-        std::make_unique<localization::NetworkTableSender>(
-            camera_constants.at("second_bot_right").name),
+        std::move(right_sender),
         camera_constants.at("second_bot_right").extrinsics_path.value(), 5803,
         false);
   });
