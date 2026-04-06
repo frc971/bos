@@ -55,14 +55,16 @@ auto GPUAprilTagDetector::GetTagDetections(
     cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2YUV_YUY2);
     cv::Mat mat_ = ToMat(gray);
     if (!gpu_detector_->Detect(mat_.data, nullptr)) {
-      LOG(INFO) << "Gpu detector failed! Restarting";
-      gpu_detector_ = std::make_unique<frc::apriltag::GpuDetector>(
-          timestamped_frame.frame.cols, timestamped_frame.frame.rows,
-          apriltag_detector_, camera_matrix_, distortion_coefficients_,
-          vision::ImageFormat::YUYV422);
+      LOG(INFO) << "Gpu detector failed!";
+      // return {};
+      // gpu_detector_ = std::make_unique<frc::apriltag::GpuDetector>(
+      //     timestamped_frame.frame.cols, timestamped_frame.frame.rows,
+      //     apriltag_detector_, camera_matrix_, distortion_coefficients_,
+      //     vision::ImageFormat::YUYV422);
       return {};
     }
   } catch (const std::exception& e) {
+    LOG(INFO) << "Caught: " << e.what();
     return {};
   }
   const zarray_t* raw_detections = gpu_detector_->Detections();
