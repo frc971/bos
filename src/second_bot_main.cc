@@ -16,32 +16,19 @@ auto main() -> int {
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
 
-  LOG(INFO) << "Starting cameras";
-  camera::CameraSource front_camera =
-      camera::CameraSource("Front", std::make_unique<camera::CVCamera>(
-                                        camera_constants.at("second_bot_front"),
-                                        fmt::format("{}/front", log_path)));
-
-  auto left_camera = std::make_unique<camera::CameraSource>(
-      "Left",
-      std::make_unique<camera::CVCamera>(camera_constants.at("second_bot_left"),
-                                         fmt::format("{}/left", log_path)));
-  cv::Mat left_camera_frame = left_camera->GetFrame();
-
-  auto right_camera = std::make_unique<camera::CameraSource>(
-      "Right", std::make_unique<camera::CVCamera>(
-                   camera_constants.at("second_bot_right"),
-                   fmt::format("{}/right", log_path)));
-  cv::Mat right_camera_frame = right_camera->GetFrame();
-
-  LOG(INFO) << "Started cameras";
-  std::this_thread::sleep_for(std::chrono::seconds(2));
   LOG(INFO) << "Starting estimators";
 
-  std::vector<std::unique_ptr<localization::IPositionSender>> left_sender;
-  left_sender.emplace_back(std::make_unique<localization::NetworkTableSender>(
-      camera_constants.at("second_bot_left").name));
   std::thread left_thread([&]() {
+    auto left_camera = std::make_unique<camera::CameraSource>(
+        "Left", std::make_unique<camera::CVCamera>(
+                    camera_constants.at("second_bot_left"),
+                    fmt::format("{}/left", log_path)));
+    cv::Mat left_camera_frame = left_camera->GetFrame();
+
+    std::vector<std::unique_ptr<localization::IPositionSender>> left_sender;
+    left_sender.emplace_back(std::make_unique<localization::NetworkTableSender>(
+        camera_constants.at("second_bot_left").name));
+
     localization::RunLocalization(
         std::move(left_camera),
         std::make_unique<localization::GPUAprilTagDetector>(
@@ -55,10 +42,18 @@ auto main() -> int {
         false);
   });
 
-  std::vector<std::unique_ptr<localization::IPositionSender>> right_sender;
-  right_sender.emplace_back(std::make_unique<localization::NetworkTableSender>(
-      camera_constants.at("second_bot_right").name));
   std::thread right_thread([&]() {
+    auto right_camera = std::make_unique<camera::CameraSource>(
+        "Right", std::make_unique<camera::CVCamera>(
+                     camera_constants.at("second_bot_right"),
+                     fmt::format("{}/right", log_path)));
+    cv::Mat right_camera_frame = right_camera->GetFrame();
+
+    std::vector<std::unique_ptr<localization::IPositionSender>> right_sender;
+    right_sender.emplace_back(
+        std::make_unique<localization::NetworkTableSender>(
+            camera_constants.at("second_bot_right").name));
+
     localization::RunLocalization(
         std::move(right_camera),
         std::make_unique<localization::GPUAprilTagDetector>(
