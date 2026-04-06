@@ -20,7 +20,7 @@ auto main() -> int {
   camera::CameraSource front_camera =
       camera::CameraSource("Front", std::make_unique<camera::CVCamera>(
                                         camera_constants.at("second_bot_front"),
-                                        fmt::format({"{}/front"}, log_path)));
+                                        fmt::format("{}/front", log_path)));
 
   auto left_camera = std::make_unique<camera::CameraSource>(
       "Left",
@@ -57,7 +57,7 @@ auto main() -> int {
 
   std::vector<std::unique_ptr<localization::IPositionSender>> right_sender;
   right_sender.emplace_back(std::make_unique<localization::NetworkTableSender>(
-      camera_constants.at("second_bot_left").name));
+      camera_constants.at("second_bot_right").name));
   std::thread right_thread([&]() {
     localization::RunLocalization(
         std::move(right_camera),
