@@ -18,6 +18,8 @@ class GPUAprilTagDetector : public IAprilTagDetector {
       -> std::vector<tag_detection_t> override;
 
  private:
+  static constexpr bool restart_detector_on_cuda_error = true;
+  bool cuda_failure_ = false;
   frc::apriltag::CameraMatrix camera_matrix_;
   frc::apriltag::DistCoeffs distortion_coefficients_;
   apriltag_detector_t* apriltag_detector_;
