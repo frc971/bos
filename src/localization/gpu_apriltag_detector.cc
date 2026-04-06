@@ -49,9 +49,6 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
 auto GPUAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame)
     -> std::vector<tag_detection_t> {
-  if (!restart_detector_on_cuda_error && cuda_failure_) {
-    return {};
-  }
   CHECK(!timestamped_frame.frame.empty());
   try {
     CHECK(timestamped_frame.frame.channels() == 3);
@@ -68,8 +65,6 @@ auto GPUAprilTagDetector::GetTagDetections(
             timestamped_frame.frame.cols, timestamped_frame.frame.rows,
             apriltag_detector_, camera_matrix_, distortion_coefficients_,
             vision::ImageFormat::YUYV422);
-      } else {
-        cuda_failure_ = true;
       }
       return {};
     }
