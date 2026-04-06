@@ -20,6 +20,7 @@
 #include "apriltag/common/g2d.h"
 
 // #include "aos/time/time.h"
+#include "absl/status/status.h"
 #include "labeling_allegretti_2019_BKE.h"
 #include "threshold.h"
 #include "transform_output_iterator.h"
@@ -670,7 +671,8 @@ struct MergePeakExtents {
 
 }  // namespace
 
-bool GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
+absl::Status GpuDetector::Detect(const uint8_t* image,
+                                 const uint8_t* image_device) {
   // const aos::monotonic_clock::time_point start_time =
   //     aos::monotonic_clock::now();
 
@@ -714,8 +716,11 @@ bool GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
 
   after_unionfinding_.Record(&stream_);
 
-  CHECK((width_ % 8) == 0);
-  CHECK((height_ % 8) == 0);
+  if ((width_ % 8) != 0 || (height_ % 8) != 0) {
+    return absl::InvalidArgumentError(
+        "Dimensions: width: " + std::to_string(width_) +
+        " and height: " + std::to_string(height_) + " are unusable");
+  }
 
   size_t decimated_width = width_ / 2;
   size_t decimated_height = height_ / 2;
@@ -754,12 +759,14 @@ bool GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
     size_t temp_storage_bytes =
         temp_storage_compressed_union_marker_pair_device_.size();
     NonZero nz;
-    if (cub::DeviceSelect::If(
-            temp_storage_compressed_union_marker_pair_device_.get(),
-            temp_storage_bytes, union_marker_pair_device_.get(),
-            compressed_union_marker_pair_device_.get(),
-            num_compressed_union_marker_pair_device_.get(),
-            union_marker_pair_device_.size(), nz, stream_.get())) {
+    auto cuda_status = cub::DeviceSelect::If(
+        temp_storage_compressed_union_marker_pair_device_.get(),
+        temp_storage_bytes, union_marker_pair_device_.get(),
+        compressed_union_marker_pair_device_.get(),
+        num_compressed_union_marker_pair_device_.get(),
+        union_marker_pair_device_.size(), nz, stream_.get());
+    if (cuda_status) {
+      LOG(WARNING) << "Received cuda status: " << cuda_status;
       int dev = -1;
       cudaGetDevice(&dev);
       LOG(WARNING) << "FAILED";
@@ -769,7 +776,7 @@ bool GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
       cudaGetDeviceCount(&count);
       LOG(WARNING) << "Device count: " << count;
 
-      return false;
+      return absl::UnknownError("Could not select cuda device");
     }
 
     MaybeCheckAndSynchronize("cub::DeviceSelect::If");
@@ -988,11 +995,13 @@ bool GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
     size_t temp_storage_bytes =
         temp_storage_compressed_union_marker_pair_device_.size();
     ValidPeaks peak_filter;
-    if (cub::DeviceSelect::If(
-            temp_storage_compressed_union_marker_pair_device_.get(),
-            temp_storage_bytes, filtered_is_local_peak_device_.get(),
-            compressed_peaks_device_.get(), num_compressed_peaks_device_.get(),
-            num_selected_blobs_host, peak_filter, stream_.get())) {
+    auto cuda_status = cub::DeviceSelect::If(
+        temp_storage_compressed_union_marker_pair_device_.get(),
+        temp_storage_bytes, filtered_is_local_peak_device_.get(),
+        compressed_peaks_device_.get(), num_compressed_peaks_device_.get(),
+        num_selected_blobs_host, peak_filter, stream_.get());
+    if (cuda_status) {
+      LOG(WARNING) << "Received cuda status: " << cuda_status;
       int dev = -1;
       cudaGetDevice(&dev);
       LOG(WARNING) << "FAILED";
@@ -1001,7 +1010,7 @@ bool GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
       int count = 0;
       cudaGetDeviceCount(&count);
       LOG(WARNING) << "Device count: " << count;
-      return false;
+      return absl::UnknownError("Could not select cuda device");
     }
 
     after_peak_compression_.Record(&stream_);
@@ -1161,7 +1170,7 @@ bool GpuDetector::Detect(const uint8_t* image, const uint8_t* image_device) {
   }
 
   first_ = false;
-  return true;
+  return absl::OkStatus();
 }
 
 }  // namespace frc::apriltag
