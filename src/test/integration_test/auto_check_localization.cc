@@ -1,83 +1,99 @@
 #include <iostream>
-#include <fstream>
 #include <map>
 #include <string>
-#include <variant>
 #include <vector>
-#include <cmath>
 
 #include "wpi/DataLogReader.h"
-#include "wpi/json.h"
-#include "frc/geometry/Pose3d.h"
-#include "frc/geometry/Rotation3d.h"
+#include "wpi/MemoryBuffer.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 
-using NTValue = std::variant<double, float, int64_t, bool, std::string,
-                             std::vector<double>, std::vector<float>,
-                             std::vector<int64_t>, frc::Pose3d>;
-
-
-bool decode_record(const wpi::log::DataLogRecord& record,
-                   const wpi::log::StartRecordData& start_data,
-                   NTValue& out_value) {
-
-    if (auto d = record.GetValue<double>()) {
-        out_value = *d;
-    } else if (auto f = record.GetValue<float>()) {
-        out_value = *f;
-    } else if (auto i = record.GetValue<int64_t>()) {
-        out_value = *i;
-    } else if (auto b = record.GetValue<bool>()) {
-        out_value = *b;
-    } else if (auto s = record.GetValue<std::string>()) {
-        out_value = *s;
-    } else if (auto arr_d = record.GetValue<std::vector<double>>()) {
-        out_value = *arr_d;
-    } else if (auto arr_f = record.GetValue<std::vector<float>>()) {
-        out_value = *arr_f;
-    } else if (auto arr_i = record.GetValue<std::vector<int64_t>>()) {
-        out_value = *arr_i;
-    } else {
-        // fallback: treat raw as Pose3d if needed
-        if (auto raw = record.GetValue<frc::Pose3d>()) {
-            out_value = *raw;
-        } else {
-            return false;
-        }
-    }
-    return true;
-}
+ABSL_FLAG(std::string, input_file, "", "Path to the wpilog file");
+ABSL_FLAG(std::string, entry_name, "NT:/Orin/PoseEstimate/Left/Pose3d",
+          "Name of the entry to extract");
 
 int main(int argc, char** argv) {
-    absl::ParseCommandLine(argc, argv);
+  absl::ParseCommandLine(argc, argv);
 
-    std::string log_path = "path_to_log.dlog";
-    wpi::log::DataLogReader reader(log_path);
+  const std::string file_path = absl::GetFlag(FLAGS_input_file);
+  const std::string target_entry = absl::GetFlag(FLAGS_entry_name);
 
-    std::map<std::string, std::vector<std::pair<int64_t, NTValue>>> nt_timeseries;
+  if (file_path.empty()) {
+    std::cerr << "Error: --input_file flag is required\n";
+    return 1;
+  }
 
-    for (const auto& record : reader) {
-        if (record.type != wpi::log::RecordType::kData) continue;
+  // Load the wpilog file into a MemoryBuffer
+  std::error_code ec;
+  auto buffer = wpi::MemoryBuffer::GetFileAsStream(file_path, ec);
+  if (ec) {
+    std::cerr << "Error: Could not open file " << file_path << ": "
+              << ec.message() << "\n";
+    return 1;
+  }
 
-        NTValue value;
-        if (!decode_record(record, reader.GetStart(record.name), value)) continue;
+  // Create the DataLogReader
+  wpi::log::DataLogReader reader(std::move(buffer));
+  if (!reader.IsValid()) {
+    std::cerr << "Error: Data log is invalid\n";
+    return 1;
+  }
 
-        nt_timeseries[std::string(record.name)].emplace_back(record.timestamp, value);
-    }
+  std::cout << "Data log version: 0x" << std::hex << reader.GetVersion()
+            << std::dec << "\n";
+  std::cout << "Processing log: " << file_path << "\n\n";
 
-    double delta_rot_threshold = 0.05;
-    for (auto& [name, series] : nt_timeseries) {
-        for (auto& [timestamp, val] : series) {
-            if (std::holds_alternative<frc::Pose3d>(val)) {
-                auto pose = std::get<frc::Pose3d>(val);
-                auto rpy = pose.Rotation().ToYawPitchRoll();
-                if (std::abs(rpy[0]) > delta_rot_threshold) {
-                    std::cout << "Yaw exceeded threshold at " << timestamp << "\n";
-                }
-            }
+  // Map entry IDs to their start record data
+  std::map<int, wpi::log::StartRecordData> entry_map;
+  int target_entry_id = -1;
+
+  // First pass: build entry map and find target entry
+  for (const auto& record : reader) {
+    if (record.IsStart()) {
+      wpi::log::StartRecordData start_data;
+      if (record.GetStartData(&start_data)) {
+        entry_map[start_data.entry] = start_data;
+
+        if (std::string(start_data.name) == target_entry) {
+          target_entry_id = start_data.entry;
+          std::cout << "Found target entry: " << start_data.name << "\n";
+          std::cout << "  Entry ID: " << target_entry_id << "\n";
+          std::cout << "  Type: " << start_data.type << "\n\n";
         }
+      }
     }
+  }
 
+  if (target_entry_id == -1) {
+    std::cout << "Target entry '" << target_entry << "' not found in log\n";
     return 0;
+  }
+
+  // Second pass: extract Pose3d data for target entry
+  std::cout << "Pose3d records for '" << target_entry << "':\n";
+  int record_count = 0;
+
+  // Reload the reader for the second pass
+  buffer = wpi::MemoryBuffer::GetFileAsStream(file_path, ec);
+  if (ec) {
+    std::cerr << "Error: Could not reopen file\n";
+    return 1;
+  }
+  wpi::log::DataLogReader reader2(std::move(buffer));
+
+  for (const auto& record : reader2) {
+    if (!record.IsControl() && record.GetEntry() == target_entry_id) {
+      record_count++;
+      const int64_t timestamp = record.GetTimestamp();
+      auto raw_data = record.GetRaw();
+
+      std::cout << "[" << record_count << "] Timestamp: " << timestamp
+                << " us, Size: " << raw_data.size() << " bytes\n";
+    }
+  }
+
+  std::cout << "\n";
+  std::cout << "Total Pose3d records: " << record_count << "\n";
+
+  return 0;
 }
