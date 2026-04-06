@@ -17,9 +17,10 @@ auto main() -> int {
   camera_constants_t camera_constants = camera::GetCameraConstants();
 
   LOG(INFO) << "Starting cameras";
-  // camera::CameraSource front_camera =
-  //     camera::CameraSource("Front", std::make_unique<camera::CVCamera>(
-  //                                       camera_constants.at("main_bot_front")));
+  camera::CameraSource front_camera =
+      camera::CameraSource("Front", std::make_unique<camera::CVCamera>(
+                                        camera_constants.at("second_bot_front"),
+                                        fmt::format({"{}/front"}, log_path)));
 
   auto left_camera = std::make_unique<camera::CameraSource>(
       "Left",
@@ -66,6 +67,8 @@ auto main() -> int {
         camera_constants.at("second_bot_right").extrinsics_path.value(), 5803,
         false);
   });
+
+  // TODO front camera
 
   LOG(INFO) << "Started estimators";
 

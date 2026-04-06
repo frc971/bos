@@ -1,91 +1,81 @@
 #!/usr/bin/env bash
-# Usage: ./sync_chunks.sh <user@host:/remote/path> <local_dest>
-# Example: ./sync_chunks.sh nvidia@10.9.71.11:/bos/logs/log44 ./local_logs
+# Usage: ./rsync_between.sh <user@host:/remote/path> <local_dest> <start_seconds> <end_seconds>
+# Remote path should contain left/ and right/ subdirectories
+# Filenames are expected in <seconds>.<microseconds>.jpg format (e.g. 100.091057.jpg)
+# Example: ./rsync_between.sh nvidia@10.9.71.11:/bos/logs/log51 ./local_logs 50 450
 
 set -euo pipefail
 
-REMOTE="${1:-nvidia@10.9.71.11:/bos/logs/log44}"
+REMOTE="${1:-}"
 LOCAL_DEST="${2:-./synced_files}"
-CHUNK_SIZE=300
+START_TIME="${3:-}"
+END_TIME="${4:-}"
 
-# Parse user@host and remote path
+if [[ -z "$REMOTE" || -z "$START_TIME" || -z "$END_TIME" ]]; then
+  echo "Usage: $0 <user@host:/remote/path> <local_dest> <start_seconds> <end_seconds>"
+  exit 1
+fi
+
 REMOTE_HOST="${REMOTE%%:*}"
 REMOTE_PATH="${REMOTE#*:}"
 
-mkdir -p "$LOCAL_DEST"
+sync_subfolder() {
+  local subfolder="$1"
+  local remote_sub="${REMOTE_HOST}:${REMOTE_PATH}/${subfolder}"
+  local local_sub="${LOCAL_DEST}/${subfolder}"
 
-echo "→ Fetching file list from $REMOTE..."
-ALL_FILES=()
-while IFS= read -r line; do
-  ALL_FILES+=("$line")
-done < <(ssh "$REMOTE_HOST" "ls '$REMOTE_PATH'" | sort -t. -k1,1 -rn)
-
-TOTAL=${#ALL_FILES[@]}
-echo "  Found $TOTAL files."
-
-if [[ $TOTAL -eq 0 ]]; then
-  echo "No files found. Exiting."
-  exit 0
-fi
-
-offset=0
-
-while [[ $offset -lt $TOTAL ]]; do
-  # Slice the next chunk
-  chunk=("${ALL_FILES[@]:$offset:$CHUNK_SIZE}")
-  end=$(( offset + ${#chunk[@]} ))
+  mkdir -p "$local_sub"
 
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "  Syncing files $((offset+1))–$end of $TOTAL"
+  echo "  Syncing $subfolder/"
+  echo "  Filtering for timestamps between $START_TIME and $END_TIME (seconds)"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-  # Build rsync --include list for this chunk
-  include_args=()
-  for f in "${chunk[@]}"; do
+  local matched=()
+  while IFS= read -r filename; do
+    local seconds_part="${filename%%.*}"
+    if ! [[ "$seconds_part" =~ ^[0-9]+$ ]]; then
+      continue
+    fi
+    if [[ $seconds_part -ge $START_TIME && $seconds_part -le $END_TIME ]]; then
+      local ext_lower
+      ext_lower=$(echo "${filename##*.}" | tr '[:upper:]' '[:lower:]')
+      case "$ext_lower" in
+      jpg | jpeg | png | gif | bmp | tiff | webp | heic)
+        matched+=("$filename")
+        ;;
+      esac
+    fi
+  done < <(ssh "$REMOTE_HOST" "ls '${REMOTE_PATH}/${subfolder}'" | sort -t. -k1,1 -n)
+
+  local total=${#matched[@]}
+  echo "  Found $total matching image files."
+
+  if [[ $total -eq 0 ]]; then
+    echo "  No files matched. Skipping $subfolder/."
+    return
+  fi
+
+  local include_args=()
+  for f in "${matched[@]}"; do
     include_args+=(--include="$f")
   done
 
   rsync -avz --progress \
     "${include_args[@]}" \
     --exclude='*' \
-    "${REMOTE}/" "$LOCAL_DEST/"
+    "${remote_sub}/" "$local_sub/"
 
-  # Show the last downloaded image (lowest timestamp = last in reverse-sorted chunk)
-  latest_image=""
-  for f in "${chunk[@]}"; do
-    candidate="$LOCAL_DEST/$f"
-    if [[ -f "$candidate" ]]; then
-      ext=$(echo "${f##*.}" | tr '[:upper:]' '[:lower:]')
-      case "$ext" in
-        jpg|jpeg|png|gif|bmp|tiff|webp|heic)
-          latest_image="$candidate"
-          ;;
-      esac
-    fi
-  done
+  echo "  ✓ $total images synced to $local_sub"
+}
 
-  if [[ -n "$latest_image" ]]; then
-    echo "  Opening latest image: $latest_image"
-    open "$latest_image"
-  else
-    echo "  (No image files in this chunk to preview)"
-  fi
+echo "→ Remote: $REMOTE"
+echo "→ Local:  $LOCAL_DEST"
+echo "→ Range:  $START_TIME → $END_TIME seconds"
 
-  offset=$end
+sync_subfolder "left"
+sync_subfolder "right"
 
-  if [[ $offset -ge $TOTAL ]]; then
-    echo ""
-    echo "✓ All $TOTAL files synced."
-    break
-  fi
-
-  echo ""
-  read -rp "Continue syncing next chunk? [Y/n] " answer
-  case "$(echo "$answer" | tr '[:upper:]' '[:lower:]')" in
-    n|no)
-      echo "Stopped at $offset/$TOTAL files."
-      exit 0
-      ;;
-  esac
-done
+echo ""
+echo "✓ All done. Both folders synced to $LOCAL_DEST"

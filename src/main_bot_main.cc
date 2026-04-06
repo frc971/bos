@@ -3,6 +3,7 @@
 #include "src/camera/cv_camera.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/networktable_sender.h"
+#include "src/localization/nvidia_apriltag_detector.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
