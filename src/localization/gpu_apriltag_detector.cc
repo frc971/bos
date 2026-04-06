@@ -28,6 +28,8 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
           utils::DistortionCoefficientsFromJson<frc::apriltag::DistCoeffs>(
               intrinsics)) {
 
+  CHECK(image_height != 0);
+  CHECK(image_width != 0);
   LOG(INFO) << image_width << " " << image_height;
 
   apriltag_detector_ = apriltag_detector_create();
