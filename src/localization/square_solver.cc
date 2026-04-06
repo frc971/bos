@@ -66,7 +66,7 @@ auto SquareSolver::EstimatePosition(
                  distortion_coefficients_, rvec, tvec, false,
                  cv::SOLVEPNP_IPPE_SQUARE);
 
-    if (reject_far_tags && cv::norm(tvec) > 5.0) {
+    if (reject_far_tags && cv::norm(tvec) > kmax_tag_distance) {
       continue;
     }
 
@@ -166,8 +166,8 @@ auto SquareSolver::EstimatePositionAmbiguous(
     auto est1 = build_estimate(rvecs[0], tvecs[0]);
     auto est2 = build_estimate(rvecs[1], tvecs[1]);
 
-    if (reject_far_tags &&
-        (cv::norm(tvecs[0]) > 5.0 && cv::norm(tvecs[1]) > 5.0)) {
+    if (reject_far_tags && (cv::norm(tvecs[0]) > kmax_tag_distance &&
+                            cv::norm(tvecs[1]) > kmax_tag_distance)) {
       continue;
     }
 
@@ -204,7 +204,7 @@ auto SquareSolver::EstimatePositionNew(
     }
 
     double distance = cv::norm(tvec);
-    if (reject_far_tags && distance > 5.0) {
+    if (reject_far_tags && distance > kmax_tag_distance) {
       continue;
     }
 

@@ -50,9 +50,11 @@ UnambiguousEstimator::UnambiguousEstimator(
           img_dir_paths.value()[i], cameras[i].first, 10,
           interesting_timestamp_start_ - 1, interesting_timestamp_end_));
     } else {
-      icameras.push_back(std::make_unique<camera::CVCamera>(
-          cameras[i].first,
-          fmt::format("{}/{}", log_path, cameras[i].first.name)));
+      const std::string camera_log_dest =
+          fmt::format("{}/{}", log_path, cameras[i].first.name);
+      icameras.push_back(std::make_unique<camera::CVCamera>(cameras[i].first,
+                                                            camera_log_dest));
+      std::cout << "Logging to destination: " << camera_log_dest << std::endl;
     }
   }
   sources_ = std::make_unique<camera::MultiCameraSource>(icameras, sim_);
