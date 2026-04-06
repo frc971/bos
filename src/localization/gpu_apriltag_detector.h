@@ -18,8 +18,8 @@ class GPUAprilTagDetector : public IAprilTagDetector {
       -> std::vector<tag_detection_t> override;
 
  private:
-  cv::Mat camera_matrix_;
-  cv::Mat distortion_coefficients_;
+  frc::apriltag::CameraMatrix camera_matrix_;
+  frc::apriltag::DistCoeffs distortion_coefficients_;
   apriltag_detector_t* apriltag_detector_;
   std::unique_ptr<frc::apriltag::GpuDetector> gpu_detector_;
 };

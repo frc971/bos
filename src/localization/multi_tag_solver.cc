@@ -91,7 +91,7 @@ auto MultiTagSolver::EstimatePosition(
     cv::solvePnP(kapriltag_corners, detection.corners, camera_matrix_,
                  distortion_coefficients_, rvec_tag, tvec_tag, false,
                  cv::SOLVEPNP_IPPE_SQUARE);
-    if (reject_far_tags && cv::norm(tvec_tag) > 5.0) {
+    if (reject_far_tags && cv::norm(tvec_tag) > kmax_tag_distance) {
       rejected_tag_ids.push_back(detection.tag_id);
       continue;
     }
@@ -145,7 +145,6 @@ auto MultiTagSolver::EstimatePositionAmbiguous(
     const auto& ambiguous_solution =
         single_tag_solver.EstimatePositionAmbiguous(detections);
     if (ambiguous_solution.empty()) {
-      std::cout << "Squaresolve failed" << std::endl;
       return std::nullopt;
     }
     return std::make_optional(ambiguous_estimate_t{
