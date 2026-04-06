@@ -78,8 +78,7 @@ NetworkTableSender::NetworkTableSender(const std::string& camera_name,
 }
 
 void NetworkTableSender::Send(
-    const std::vector<localization::position_estimate_t>& detections,
-    const std::optional<std::vector<frc::Pose3d>>& all_estimates) {
+    const std::vector<localization::position_estimate_t>& detections) {
   mutex_.lock();
   for (auto& detection : detections) {
     std::array<double, 8> tag_estimation{
@@ -119,9 +118,6 @@ void NetworkTableSender::Send(
     timestamp_publisher_.Set(detection.timestamp);
     num_tags_publisher_.Set(detection.num_tags);
     loss_publisher_.Set(detection.loss);
-    if (all_estimates.has_value()) {
-      all_estimates_publisher_.Set(all_estimates.value());
-    }
 
     if (log_) {
       double adjusted_timestamp =
@@ -141,9 +137,6 @@ void NetworkTableSender::Send(
       num_tags_log_->Append(detection.num_tags, log_time);
       loss_log_->Append(detection.loss, log_time);
 
-      if (all_estimates.has_value()) {
-        all_estimates_log_->Append(all_estimates.value(), log_time);
-      }
       log_->Flush();
     }
 

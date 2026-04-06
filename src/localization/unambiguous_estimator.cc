@@ -203,8 +203,7 @@ void UnambiguousEstimator::Run() {
       continue;
     }
     position_sender.Send(
-        std::vector<position_estimate_t>{pose_estimate.pose_estimate},
-        pose_estimate.latency, pose_estimate.all_pose_estimates);
+        std::vector<position_estimate_t>{pose_estimate.pose_estimate});
   }
 }
 
