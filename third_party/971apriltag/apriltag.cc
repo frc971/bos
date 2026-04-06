@@ -739,7 +739,11 @@ absl::Status GpuDetector::Detect(const uint8_t* image,
                 (decimated_height + threads.y - 2) / (threads.y - 1), 1);
 
     //  Make sure we fit in our mask.
-    CHECK_LT(width_ * height_, static_cast<size_t>(1 << 22));
+    if (width_ * height_ >= static_cast<size_t>(1 << 22)) {
+      return absl::InvalidArgumentError(
+          "Image has too many pixels, cols: " + std::to_string(width_) +
+          " rows: " + std::to_string(height_));
+    }
 
     BlobDiff<kBlockWidth, kBlockHeight><<<blocks, threads, 0, stream_.get()>>>(
         thresholded_image_device_.get(), union_markers_device_.get(),
@@ -787,8 +791,13 @@ absl::Status GpuDetector::Detect(const uint8_t* image,
   {
     num_compressed_union_marker_pair_device_.MemcpyAsyncTo(
         &num_compressed_union_marker_pair_host_, &stream_);
-    CHECK_LT(static_cast<size_t>(*num_compressed_union_marker_pair_host_.get()),
-             union_marker_pair_device_.size());
+    if (static_cast<size_t>(*num_compressed_union_marker_pair_host_.get()) >=
+        union_marker_pair_device_.size()) {
+      return absl::UnknownError(
+          "Impossible increase in markers: device: " +
+          std::to_string(union_marker_pair_device_.size()) + " host: " +
+          std::to_string(*num_compressed_union_marker_pair_host_.get()));
+    }
   }
 
   after_num_compact_memcpy_.Record(&stream_);
