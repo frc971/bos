@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <deque>
+#include <iostream>
 #include <vector>
 
 namespace pathing {
@@ -77,6 +78,13 @@ auto BFS(std::vector<std::vector<Node>>& field, Point start_point,
     field[rcurrent->y][rcurrent->x].path = true;
   }
   std::reverse(rpath.begin(), rpath.end());
+
+  std::cout << "BFS path (" << start_point.x << "," << start_point.y << ") -> ("
+            << end_point.x << "," << end_point.y << "): ";
+  for (const auto& node : rpath) {
+    std::cout << "(" << node.x << "," << node.y << ") ";
+  }
+  std::cout << std::endl;
 
   return rpath;
 }
