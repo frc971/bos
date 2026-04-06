@@ -36,7 +36,6 @@ void SimulationSender::Send(
 
   cv::Mat canvas = field_image_.clone();
   for (const auto& detection : detections) {
-    LOG(INFO) << detection.pose.X().value() << detection.pose.Y().value();
     DrawArrow(
         canvas,
         cv::Point(field_image_.cols * (detection.pose.X().value() / 16.46),
