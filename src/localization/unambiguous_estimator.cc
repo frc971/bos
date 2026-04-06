@@ -32,16 +32,9 @@ UnambiguousEstimator::UnambiguousEstimator(
     std::vector<std::pair<camera::camera_constant_t, Detector>>& cameras,
     std::optional<uint> port_start, bool verbose,
     std::optional<std::vector<std::filesystem::path>> img_dir_paths)
-    : port_start_(port_start),
-      prev_timestamps_(cameras.size()),
-      sim_(img_dir_paths.has_value()) {
+    : port_start_(port_start), sim_(img_dir_paths.has_value()) {
   std::string log_path = frc::DataLogManager::GetLogDir();
   auto camera_constants = camera::GetCameraConstants();
-  detectors_.reserve(cameras.size());
-  solvers_.reserve(cameras.size());
-  if (port_start.has_value()) {
-    streamers_.reserve(cameras.size());
-  }
   std::cout << "Initializing cameras" << std::endl;
   std::vector<std::unique_ptr<camera::ICamera>> icameras;
   for (size_t i = 0; i < cameras.size(); i++) {
@@ -57,31 +50,47 @@ UnambiguousEstimator::UnambiguousEstimator(
       std::cout << "Logging to destination: " << camera_log_dest << std::endl;
     }
   }
-  sources_ = std::make_unique<camera::MultiCameraSource>(icameras, sim_);
-  std::cout << "Initialized cameras" << std::endl;
+  std::cout << "Initialized cameras, testing frames" << std::endl;
   std::this_thread::sleep_for(std::chrono::duration<double>(2));
-  std::cout << "Initializing estimators and streamers" << std::endl;
+  std::vector<std::unique_ptr<camera::ICamera>> usable_icameras;
+  std::vector<size_t> used_camera_indices;
+  for (size_t i = 0; i < icameras.size(); i++) {
+    if (icameras[i]->GetFrame().frame.empty()) {
+      std::cout << "NOT USING CAMERA: "
+                << icameras[i]->GetCameraConstant().name;
+    } else {
+      usable_icameras.push_back(std::move(icameras[i]));
+      used_camera_indices.push_back(i);
+    }
+  }
+  size_t num_usable_cameras = usable_icameras.size();
+  prev_timestamps_ = std::vector<double>(num_usable_cameras);
+  sources_ = std::make_unique<camera::MultiCameraSource>(usable_icameras, sim_);
   std::vector<cv::Mat> first_frames = sources_->GetCVFrames();
-  for (size_t i = 0; i < cameras.size(); i++) {
-    switch (cameras[i].second) {
+  std::cout << "Initializing estimators and streamers" << std::endl;
+  for (size_t i = 0; i < num_usable_cameras; i++) {
+    size_t original_index = used_camera_indices[i];
+    switch (cameras[original_index].second) {
       case OPENCV_CPU:
         detectors_.push_back(std::make_unique<OpenCVAprilTagDetector>(
             first_frames[i].cols, first_frames[i].rows,
-            utils::ReadIntrinsics(cameras[i].first.intrinsics_path.value())));
+            utils::ReadIntrinsics(
+                cameras[original_index].first.intrinsics_path.value())));
         break;
       case AUSTIN_GPU:
         detectors_.push_back(std::make_unique<GPUAprilTagDetector>(
             first_frames[i].cols, first_frames[i].rows,
-            utils::ReadIntrinsics(cameras[i].first.intrinsics_path.value())));
+            utils::ReadIntrinsics(
+                cameras[original_index].first.intrinsics_path.value())));
         break;
       default:
         LOG(FATAL) << "Invalid solver type";
         return;
     }
-    solvers_.emplace_back(cameras[i].first);
+    solvers_.emplace_back(cameras[original_index].first);
     if (port_start.has_value()) {
-      streamers_.emplace_back(cameras[i].first.name, port_start.value() + i, 30,
-                              1080, 1080);
+      streamers_.emplace_back(cameras[original_index].first.name,
+                              port_start.value() + i, 30, 1080, 1080);
     }
   }
   std::cout << "Initialized estimators and streamers" << std::endl;
