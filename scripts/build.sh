@@ -21,8 +21,8 @@ else
   BUILD_DIR="${NAME}-build"
 fi
 
+mkdir -p /bos
 cp -r constants /bos
 git submodule update --init --progress --depth 1
 cmake -DENABLE_CLANG_TIDY=OFF -DCMAKE_BUILD_TYPE=Release -B "$BUILD_DIR" -G Ninja .
 cmake --build "$BUILD_DIR"
-mkdir -p /bos
