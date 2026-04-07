@@ -146,20 +146,6 @@ auto SquareSolver::ComputeRobotPose(const cv::Mat& tvec, const cv::Mat& rvec,
       localization::kapriltag_layout.GetTagPose(tag_id).value().ToMatrix());
   cv::Mat field_to_robot =
       field_to_tag * rotate_yaw_wpilib_ * tag_to_camera * camera_to_robot_;
-  // LOG(INFO) << "Field to tag:"
-  //           << field_to_tag << "\nrotate\n"
-  //           << rotate_yaw_wpilib_ << "\ntag_to_camera\n"
-  //           << tag_to_camera << "\ncamera_to_robot\n"
-  //           << camera_to_robot_;
-  // LOG(INFO) << "Field to tag";
-  // utils::PrintTransformationMatrix(field_to_tag);
-  // LOG(INFO) << "Rotation";
-  // utils::PrintTransformationMatrix(rotate_yaw_wpilib_);
-  // LOG(INFO) << "Tag2cam";
-  // utils::PrintTransformationMatrix(tag_to_camera);
-  // LOG(INFO) << "cam2robot";
-  // utils::PrintTransformationMatrix(camera_to_robot_);
-
   return frc::Pose3d{utils::CvMatToEigen(field_to_robot)};
 }
 }  // namespace localization
