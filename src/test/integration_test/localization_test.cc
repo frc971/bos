@@ -126,17 +126,17 @@ auto main(int argc, char** argv) -> int {
 
     localization_threads.emplace_back([camera_name, camera_folder, speed,
                                        constants, base_port, i] {
+      const auto& camera_constant = constants.at(camera_name);
       auto camera_source = std::make_unique<camera::CameraSource>(
           camera_name, std::make_unique<camera::DiskCamera>(
-                           camera_folder.string(), std::nullopt, speed));
+                           camera_folder.string(), camera_constant, speed));
       auto frame = camera_source->GetFrame();
       if (frame.empty()) {
         LOG(FATAL) << "No readable images found in folder: " << camera_folder;
       }
-      const auto& camera_constant = constants.at(camera_name);
       std::vector<std::unique_ptr<localization::IPositionSender>> senders;
       senders.emplace_back(std::make_unique<localization::NetworkTableSender>(
-          camera_name, true));
+          camera_name, false, true));
       senders.emplace_back(std::make_unique<localization::SimulationSender>(
           camera_name, base_port + i - 1000));
       localization::RunLocalization(
