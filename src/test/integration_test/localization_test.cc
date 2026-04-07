@@ -136,7 +136,7 @@ auto main(int argc, char** argv) -> int {
       }
       std::vector<std::unique_ptr<localization::IPositionSender>> senders;
       senders.emplace_back(std::make_unique<localization::NetworkTableSender>(
-          camera_name, true));
+          camera_name, false, true));
       senders.emplace_back(std::make_unique<localization::SimulationSender>(
           camera_name, base_port + i - 1000));
       localization::RunLocalization(
