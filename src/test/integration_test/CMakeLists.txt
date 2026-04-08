@@ -29,4 +29,4 @@ add_executable(pva_test pva_test.cc)
 target_link_libraries(pva_test PRIVATE utils localization vpi)
 
 add_executable(auto_check_localization auto_check_localization.cc)
-target_link_libraries(auto_check_localization PRIVATE camera localization utils absl::flags absl::flags_parse wpiutil wpilibc wpimath ntcore cameraserver cscore)
+target_link_libraries(auto_check_localization PRIVATE camera localization utils)
