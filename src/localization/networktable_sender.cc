@@ -1,4 +1,4 @@
-#include "position_sender.h"
+#include "networktable_sender.h"
 #include "frc/DataLogManager.h"
 #include "src/localization/position.h"
 
@@ -10,8 +10,8 @@ constexpr auto RadianToDegree(double radian) -> double {
 
 static const int kmax_tags = 50;
 
-PositionSender::PositionSender(const std::string& camera_name, bool verbose,
-                               bool sim)
+NetworkTableSender::NetworkTableSender(const std::string& camera_name,
+                                       bool verbose, bool sim)
     : instance_(nt::NetworkTableInstance::GetDefault()), verbose_(verbose) {
   std::shared_ptr<nt::NetworkTable> table =
       instance_.GetTable("Orin/PoseEstimate/" + camera_name);
@@ -77,10 +77,8 @@ PositionSender::PositionSender(const std::string& camera_name, bool verbose,
   }
 }
 
-void PositionSender::Send(
-    const std::vector<localization::position_estimate_t>& detections,
-    double latency,
-    const std::optional<std::vector<frc::Pose3d>>& all_estimates) {
+void NetworkTableSender::Send(
+    const std::vector<localization::position_estimate_t>& detections) {
   mutex_.lock();
   for (auto& detection : detections) {
     std::array<double, 8> tag_estimation{
@@ -91,7 +89,7 @@ void PositionSender::Send(
         detection.timestamp +
             instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
         static_cast<double>(detection.num_tags),
-        latency,
+        detection.latency,
         detection.avg_tag_dist};
 
     std::array<int, kmax_tags> tags{};
@@ -116,13 +114,10 @@ void PositionSender::Send(
     rejected_tag_ids_publisher_.Set(rejected_tags);
     varience_publisher_.Set(detection.variance);
 
-    latency_publisher_.Set(latency);
+    latency_publisher_.Set(detection.latency);
     timestamp_publisher_.Set(detection.timestamp);
     num_tags_publisher_.Set(detection.num_tags);
     loss_publisher_.Set(detection.loss);
-    if (all_estimates.has_value()) {
-      all_estimates_publisher_.Set(all_estimates.value());
-    }
 
     if (log_) {
       double adjusted_timestamp =
@@ -137,14 +132,11 @@ void PositionSender::Send(
       rejected_tag_ids_log_->Append(rejected_tags, log_time);
 
       varience_log_->Append(detection.variance, log_time);
-      latency_log_->Append(latency, log_time);
+      latency_log_->Append(detection.latency, log_time);
       timestamp_log_->Append(detection.timestamp, log_time);
       num_tags_log_->Append(detection.num_tags, log_time);
       loss_log_->Append(detection.loss, log_time);
 
-      if (all_estimates.has_value()) {
-        all_estimates_log_->Append(all_estimates.value(), log_time);
-      }
       log_->Flush();
     }
 

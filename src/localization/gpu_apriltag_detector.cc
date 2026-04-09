@@ -1,5 +1,6 @@
 #include "src/localization/gpu_apriltag_detector.h"
 #include <opencv2/calib3d.hpp>
+#include "absl/status/status.h"
 #include "apriltag/apriltag.h"
 #include "apriltag/tag36h11.h"
 #include "src/utils/constants_from_json.h"
@@ -27,6 +28,8 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
           utils::DistortionCoefficientsFromJson<frc::apriltag::DistCoeffs>(
               intrinsics)) {
 
+  CHECK(image_height != 0);
+  CHECK(image_width != 0);
   LOG(INFO) << image_width << " " << image_height;
 
   apriltag_detector_ = apriltag_detector_create();
@@ -54,15 +57,22 @@ auto GPUAprilTagDetector::GetTagDetections(
     cv::Mat gray;
     cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2YUV_YUY2);
     cv::Mat mat_ = ToMat(gray);
-    if (!gpu_detector_->Detect(mat_.data, nullptr)) {
-      LOG(INFO) << "Gpu detector failed! Restarting";
-      gpu_detector_ = std::make_unique<frc::apriltag::GpuDetector>(
-          timestamped_frame.frame.cols, timestamped_frame.frame.rows,
-          apriltag_detector_, camera_matrix_, distortion_coefficients_,
-          vision::ImageFormat::YUYV422);
+    absl::Status detection_status = gpu_detector_->Detect(mat_.data, nullptr);
+    if (!detection_status.ok()) {
+      LOG(WARNING) << "Gpu detector failed! Error: "
+                   << detection_status.message();
+      if (restart_detector_on_cuda_error) {
+        LOG(WARNING) << "Restarting GPU detector";
+        gpu_detector_ = std::make_unique<frc::apriltag::GpuDetector>(
+            timestamped_frame.frame.cols, timestamped_frame.frame.rows,
+            apriltag_detector_, camera_matrix_, distortion_coefficients_,
+            vision::ImageFormat::YUYV422);
+      }
       return {};
     }
   } catch (const std::exception& e) {
+    LOG(WARNING) << "Returning no detections because of exception: "
+                 << e.what();
     return {};
   }
   const zarray_t* raw_detections = gpu_detector_->Detections();
