@@ -4,6 +4,7 @@
 #include <deque>
 #include <iostream>
 #include <vector>
+#include "src/utils/log.h"
 
 namespace pathing {
 
@@ -27,7 +28,7 @@ auto BFS(std::vector<std::vector<Node>>& field, Point start_point,
   std::vector<std::pair<int, int>> dirs = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1},
                                            {0, 1},   {1, -1}, {1, 0},  {1, 1}};
 
-  while (!path_completed) {
+  while (!path_completed && !queue.empty()) {
 
     Node current = *queue.front();
     int cx = current.x;
@@ -69,13 +70,20 @@ auto BFS(std::vector<std::vector<Node>>& field, Point start_point,
     }
   }
 
-  Node* rcurrent = &field[end.x][end.y];
+  if (!path_completed) {
+    LOG(INFO) << "path couldn't be completed";
+    return {};
+  }
+
+  Node* rcurrent = &field[end.y][end.x];
   std::vector<Node> rpath = {};
-  while (rcurrent->x != start->x && rcurrent->y != start->y) {
+  while (rcurrent != nullptr &&
+         !(rcurrent->x == start->x && rcurrent->y == start->y)) {
     rpath.push_back(*rcurrent);
-    Node* temp = rcurrent;
-    rcurrent = temp->parent;
-    field[rcurrent->y][rcurrent->x].path = true;
+    rcurrent = rcurrent->parent;
+    if (rcurrent != nullptr) {
+      field[rcurrent->y][rcurrent->x].path = true;
+    }
   }
   std::reverse(rpath.begin(), rpath.end());
 

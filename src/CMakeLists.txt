@@ -22,7 +22,7 @@ add_subdirectory(test)
 add_subdirectory(pathing)
 
 add_executable(main_bot_main main_bot_main.cc)
-target_link_libraries(main_bot_main PRIVATE camera localization utils)
+target_link_libraries(main_bot_main PRIVATE camera localization utils pathing)
 
 add_executable(second_bot_main second_bot_main.cc)
 target_link_libraries(second_bot_main PRIVATE camera localization utils pathing)

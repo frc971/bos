@@ -14,6 +14,10 @@ struct Node {
   bool path = false;
   char readble;
   Node* parent = nullptr;
+
+  auto operator==(const Node& other) const -> bool {
+    return x == other.x && y == other.y;
+  }
 };
 
 struct Point {

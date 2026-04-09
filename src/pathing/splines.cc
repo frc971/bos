@@ -3,6 +3,7 @@
 #include <units/length.h>
 #include <vector>
 #include "pathfinding.h"
+#include "src/utils/log.h"
 
 namespace pathing {
 
@@ -67,6 +68,12 @@ auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
 
   std::vector<std::vector<pathing::Node>> gridCopy = grid;
   std::vector<pathing::Node> path = BFS(gridCopy, start_point, target_point);
+
+  if (path.empty()) {
+    LOG(INFO) << "BFS returned no path";
+    return {};
+  }
+
   std::vector<std::pair<double, double>> control_points;
   control_points.reserve(path.size());
   for (const pathing::Node& node : path) {
@@ -75,7 +82,7 @@ auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
   }
 
   int p = 3;
-  if (control_points.size() < 4) {
+  if ((int)control_points.size() <= p) {
     p = control_points.size() - 1;
   }
   std::vector<double> knots = knot_vector(control_points.size(), p);

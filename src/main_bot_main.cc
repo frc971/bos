@@ -6,6 +6,7 @@
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
+#include "src/pathing/controller.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 
@@ -36,16 +37,16 @@ auto main() -> int {
   std::this_thread::sleep_for(std::chrono::seconds(2));
   LOG(INFO) << "Starting estimators";
 
-  std::thread front_thread(
-      localization::RunLocalization, std::ref(front_camera),
-      std::make_unique<localization::NvidiaAprilTagDetector>(
-          front_camera.GetFrame().cols, front_camera.GetFrame().rows,
-          utils::ReadIntrinsics(
-              camera_constants.at("main_bot_front").intrinsics_path.value())),
-      std::make_unique<localization::MultiTagSolver>(
-          camera_constants.at("main_bot_front")),
-      camera_constants.at("main_bot_front").extrinsics_path.value(), 4971,
-      false);
+  //   std::thread front_thread(
+  //       localization::RunLocalization, std::ref(front_camera),
+  //       std::make_unique<localization::NvidiaAprilTagDetector>(
+  //           front_camera.GetFrame().cols, front_camera.GetFrame().rows,
+  //           utils::ReadIntrinsics(
+  //               camera_constants.at("main_bot_front").intrinsics_path.value())),
+  //       std::make_unique<localization::MultiTagSolver>(
+  //           camera_constants.at("main_bot_front")),
+  //       camera_constants.at("main_bot_front").extrinsics_path.value(), 4971,
+  //       false);
 
   std::thread left_thread(
       localization::RunLocalization, std::ref(left_camera),
@@ -71,6 +72,12 @@ auto main() -> int {
 
   LOG(INFO) << "Started estimators";
 
+  std::thread pathing_thread(pathing::RunController,
+                             "/bos/constants/navgrid.json");
+
+  LOG(INFO) << "pathing started";
+
   // TODO find better way
   left_thread.join();
+  pathing_thread.join();
 }
