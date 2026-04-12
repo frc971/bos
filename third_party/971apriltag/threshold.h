@@ -52,11 +52,10 @@ class Threshold {
 
   // Converts to grayscale, decimates, and thresholds an image on the provided
   // stream.
-  virtual void ThresholdAndDecimate(const uint8_t* color_image,
-                                    uint8_t* decimated_image,
-                                    uint8_t* thresholded_image,
-                                    apriltag_size_t min_white_black_diff,
-                                    CudaStream* stream) = 0;
+  virtual void ThresholdNoDecimate(const uint8_t* color_image, uint8_t* image,
+                                   uint8_t* thresholded_image,
+                                   apriltag_size_t min_white_black_diff,
+                                   CudaStream* stream) = 0;
 
   virtual ~Threshold() = default;
 };

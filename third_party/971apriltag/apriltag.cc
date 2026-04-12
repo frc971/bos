@@ -127,7 +127,6 @@ GpuDetector::GpuDetector(size_t width, size_t height,
       gray_image_host_(width * height),
       color_image_device_(width * height * 2),
       gray_image_device_(width * height),
-      decimated_image_device_(width / 2 * height / 2),
       thresholded_image_device_(width / 2 * height / 2),
       union_markers_device_(width / 2 * height / 2),
       union_markers_size_device_(width / 2 * height / 2),
@@ -588,14 +587,12 @@ struct TransformLineFitPoint {
 
     int32_t W = 1;
 
-    if (ix > 0 && ix + 1 < decimated_width && iy > 0 &&
-        iy + 1 < decimated_height) {
-      int32_t grad_x = decimated_image_device_[iy * decimated_width + ix + 1] -
-                       decimated_image_device_[iy * decimated_width + ix - 1];
+    if (ix > 0 && ix + 1 < width && iy > 0 && iy + 1 < height) {
+      int32_t grad_x = image_device_[iy * width + ix + 1] -
+                       image_device_[iy * width + ix - 1];
 
-      int32_t grad_y =
-          decimated_image_device_[(iy + 1) * decimated_width + ix] -
-          decimated_image_device_[(iy - 1) * decimated_width + ix];
+      int32_t grad_y = image_device_[(iy + 1) * width + ix] -
+                       image_device_[(iy - 1) * width + ix];
 
       // XXX Tunable. How to shape the gradient magnitude?
       W = hypotf(grad_x, grad_y) + 1;
@@ -610,14 +607,12 @@ struct TransformLineFitPoint {
     result.blob_index = p.blob_index();
     return result;
   }
-  TransformLineFitPoint(const uint8_t* decimated_image_device,
-                        int decimated_width_param, int decimated_height_param)
-      : decimated_image_device_(decimated_image_device),
-        decimated_width(decimated_width_param),
-        decimated_height(decimated_height_param) {}
-  const uint8_t* decimated_image_device_;
-  int decimated_width;
-  int decimated_height;
+  TransformLineFitPoint(const uint8_t* image_device, int width_param,
+                        int height_param)
+      : image_device_(image_device), width(width_param), height(height_param) {}
+  const uint8_t* image_device_;
+  int width;
+  int height;
 };
 
 struct SumLineFitPoints {
@@ -690,10 +685,9 @@ absl::Status GpuDetector::Detect(const uint8_t* image,
   after_image_memcpy_to_device_.Record(&stream_);
 
   // Now, threshold on the GPU fully.
-  threshold_->ThresholdAndDecimate(image_device, decimated_image_device_.get(),
-                                   thresholded_image_device_.get(),
-                                   tag_detector_->qtp.min_white_black_diff,
-                                   &stream_);
+  threshold_->ThresholdNoDecimate(
+      image_device, gray_image_device_.get(), thresholded_image_device_.get(),
+      tag_detector_->qtp.min_white_black_diff, &stream_);
 
   after_threshold_.Record(&stream_);
 
@@ -722,9 +716,6 @@ absl::Status GpuDetector::Detect(const uint8_t* image,
         " and height: " + std::to_string(height_) + " are unusable");
   }
 
-  size_t decimated_width = width_ / 2;
-  size_t decimated_height = height_ / 2;
-
   // TODO(austin): Tune for the global shutter camera.
   // 1280 -> 2 * 128 * 5
   // 720 -> 2 * 8 * 5 * 9
@@ -735,8 +726,8 @@ absl::Status GpuDetector::Detect(const uint8_t* image,
     constexpr size_t kBlockHeight = 16;
     dim3 threads(kBlockWidth, kBlockHeight, 1);
     // Overlap 1 on each side in x, and 1 in y.
-    dim3 blocks((decimated_width + threads.x - 3) / (threads.x - 2),
-                (decimated_height + threads.y - 2) / (threads.y - 1), 1);
+    dim3 blocks((width_ + threads.x - 3) / (threads.x - 2),
+                (height_ + threads.y - 2) / (threads.y - 1), 1);
 
     //  Make sure we fit in our mask.
     if (width_ * height_ >= static_cast<size_t>(1 << 22)) {
@@ -748,7 +739,7 @@ absl::Status GpuDetector::Detect(const uint8_t* image,
     BlobDiff<kBlockWidth, kBlockHeight><<<blocks, threads, 0, stream_.get()>>>(
         thresholded_image_device_.get(), union_markers_device_.get(),
         union_markers_size_device_.get(), union_marker_pair_device_.get(),
-        decimated_width, decimated_height);
+        width_, height_);
     MaybeCheckAndSynchronize("BlobDiff");
   }
 
@@ -963,8 +954,7 @@ absl::Status GpuDetector::Detect(const uint8_t* image,
     //
     // Clear the size of non-passing extents and the starting offset of all
     // extents.
-    TransformLineFitPoint rewrite(decimated_image_device_.get(), width_ / 2,
-                                  height_ / 2);
+    TransformLineFitPoint rewrite(gray_image_device_.get(), width_, height_);
     cub::TransformInputIterator<LineFitPoint, TransformLineFitPoint,
                                 IndexPoint*>
         input_iterator(sorted_selected_blobs_device_.get(), rewrite);
