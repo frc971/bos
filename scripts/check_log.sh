@@ -93,8 +93,8 @@ def main():
     print(f"→ Remote: {remote}")
     print(f"→ Local:  {local_dest}")
 
-    sync_subfolder(remote_host, remote_path, "left", local_dest)
-    sync_subfolder(remote_host, remote_path, "right", local_dest)
+    sync_subfolder(remote_host, remote_path, "second_bot_left", local_dest)
+    sync_subfolder(remote_host, remote_path, "second_bot_right", local_dest)
 
     print("\n✓ All done.")
 
