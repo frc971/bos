@@ -57,10 +57,10 @@ auto GPUAprilTagDetector::GetTagDetections(
     cv::Mat mat_ = ToMat(gray);
     absl::Status detection_status = gpu_detector_->Detect(mat_.data, nullptr);
     if (!detection_status.ok()) {
-      LOG(WARNING) << "Gpu detector failed! Error: "
-                   << detection_status.message();
+      // LOG(WARNING) << "Gpu detector failed! Error: "
+      // << detection_status.message();
       if (restart_detector_on_cuda_error) {
-        LOG(WARNING) << "Restarting GPU detector";
+        // LOG(WARNING) << "Restarting GPU detector";
         gpu_detector_ = std::make_unique<frc::apriltag::GpuDetector>(
             timestamped_frame.frame.cols, timestamped_frame.frame.rows,
             apriltag_detector_, camera_matrix_, distortion_coefficients_,
