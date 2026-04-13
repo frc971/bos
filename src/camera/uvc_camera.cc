@@ -88,9 +88,6 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
       },
       this, 0);
 
-  // res = uvc_start_streaming(
-  //     device_handle_, &ctrl, [](uvc_frame_t* frame, void* ptr) {}, nullptr,
-  //     this, 0);  // this number very important, don't change
   if (res != 0) {
     status = absl::AbortedError("Unable to create context for camera: " +
                                 camera_constant.name);
