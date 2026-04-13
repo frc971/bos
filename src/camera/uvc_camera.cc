@@ -31,6 +31,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
           cvCreateImageHeader(cvSize(bgr->width, bgr->height), IPL_DEPTH_8U, 3);
       cvSetData(ipl_image, bgr->data, bgr->width * 3);
       img = cv::cvarrToMat(ipl_image, true);
+      uvc_free_frame(bgr);
       break;
     }
     default:
@@ -103,9 +104,16 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
 auto UVCCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t copied_timestamped_frame;
   mutex_.lock();
-  frame_buffer.frame.copyTo(copied_timestamped_frame.frame);
-  copied_timestamped_frame.invalid = frame_buffer.invalid;
-  copied_timestamped_frame.timestamp = frame_buffer.timestamp;
+  if (frame_buffer.frame.empty()) {
+    backup_image_.copyTo(copied_timestamped_frame.frame);
+    copied_timestamped_frame.invalid = true;
+    copied_timestamped_frame.timestamp =
+        frc::Timer::GetFPGATimestamp().to<double>();
+  } else {
+    frame_buffer.frame.copyTo(copied_timestamped_frame.frame);
+    copied_timestamped_frame.invalid = frame_buffer.invalid;
+    copied_timestamped_frame.timestamp = frame_buffer.timestamp;
+  }
   mutex_.unlock();
   return copied_timestamped_frame;
 }
@@ -123,6 +131,13 @@ auto UVCCamera::Restart() -> void {
   uvc_print_stream_ctrl(&ctrl_, stderr);
   LOG(INFO) << "-----------------------------------";
   uvc_start_streaming(device_handle_, &ctrl_, callback, this, 0);
+}
+
+UVCCamera::~UVCCamera() {
+  uvc_stop_streaming(device_handle_);
+  uvc_close(device_handle_);
+  uvc_unref_device(device_);
+  uvc_exit(context_);
 }
 
 }  // namespace camera
