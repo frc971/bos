@@ -14,6 +14,7 @@ class UVCCamera : public ICamera {
             std::optional<std::string> log_path = std::nullopt);
   auto GetFrame() -> timestamped_frame_t override;
   auto Restart() -> void override;
+  ~UVCCamera() override;
   [[nodiscard]] auto GetCameraConstant() const -> camera_constant_t override;
 
  public:
@@ -23,7 +24,12 @@ class UVCCamera : public ICamera {
   uvc_context_t* context_;
   uvc_device_t* device_;
   uvc_device_handle_t* device_handle_;
+  timestamped_frame_t frame_buffer;
+  uvc_stream_ctrl_t ctrl_;
   std::mutex mutex_;
+
+ private:
+  auto StartCamera(uvc_stream_ctrl_t ctrl) -> void;
 };
 
 }  // namespace camera
