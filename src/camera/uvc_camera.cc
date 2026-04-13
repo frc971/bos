@@ -5,16 +5,6 @@
 #include "src/utils/pch.h"
 
 namespace camera {
-// void frame_callback(uvc_frame_t* frame, void* ptr, const camera_constant_t& ) {
-//   uvc_frame_t* bgr;
-//   uvc_error_t ret;
-//   IplImage* ipl_image;
-//
-//   bgr = uvc_allocate_frame(frame->width * frame->height * 3);
-//   if (!bgr) {
-//     LOG(WARNING) << "Camera "
-//   }
-// }
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
                      absl::Status& status, std::optional<std::string> log_path)
