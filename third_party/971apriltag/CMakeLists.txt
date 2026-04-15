@@ -14,7 +14,7 @@ target_link_libraries(971apriltag_cuda_dep PUBLIC apriltag absl::log absl::check
 set_source_files_properties(threshold.cc PROPERTIES LANGUAGE CUDA)
 
 add_library(971apriltag_threshold_dep threshold.cc fatal_neon_threshold.cc)
-target_link_libraries(971apriltag_threshold_dep PUBLIC apriltag absl::log absl::check 971apriltag_dep)
+target_link_libraries(971apriltag_threshold_dep PUBLIC absl::log absl::check 971apriltag_dep)
 
 add_library(971apriltag 
   apriltag.cc

@@ -14,10 +14,10 @@ add_compile_options(-Wno-c99-designator)
 
 add_subdirectory(utils)
 add_subdirectory(camera)
-#add_subdirectory(gamepiece)
+add_subdirectory(gamepiece)
 add_subdirectory(localization)
 add_subdirectory(calibration)
-#add_subdirectory(yolo)
+add_subdirectory(yolo)
 add_subdirectory(pathing)
 add_subdirectory(test)
 

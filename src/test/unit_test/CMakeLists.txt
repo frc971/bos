@@ -16,5 +16,3 @@ add_executable(matrix  matrix.cc)
 target_link_libraries(matrix PRIVATE localization utils GTest::gtest_main CUDA::cudart)
 
 include(GoogleTest)
-gtest_discover_tests(multi_tag_test)
-gtest_discover_tests(square_solve_test)
