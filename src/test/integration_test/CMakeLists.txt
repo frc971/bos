@@ -4,9 +4,6 @@ target_link_libraries(apriltag_detect_test PRIVATE cscore camera localization ut
 add_executable(intrinsics_test intrinsics_test.cc)
 target_link_libraries(intrinsics_test PRIVATE camera utils)
 
-add_executable(yolo_test yolo_test.cc)
-target_link_libraries(yolo_test PRIVATE camera yolo utils)
-
 add_executable(path_plan_test path_plan_test.cc)
 target_link_libraries(path_plan_test PRIVATE utils)
 
