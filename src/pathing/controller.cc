@@ -27,7 +27,7 @@ auto RunController(const std::string& navgrid_path =
 
   std::ifstream file(navgrid_path);
   if (!file.is_open()) {
-    LOG(FATAL) << "Failed to open navgrid.json" << std::endl;
+    LOG(FATAL) << "Failed to open navgrid.json";
     return;
   }
 
@@ -60,8 +60,6 @@ auto RunController(const std::string& navgrid_path =
 
   auto vx_pub = inst.GetDoubleTopic("/pathing/vx").Publish();
   auto vy_pub = inst.GetDoubleTopic("/pathing/vy").Publish();
-  // vx_pub.Set(1.0);
-  // vy_pub.Set(1.0);
 
   std::vector<frc::Pose2d> spline_points;
   int spline_idx = 0;
@@ -158,9 +156,6 @@ auto RunController(const std::string& navgrid_path =
 
     double vx = (dx / dist);
     double vy = (dy / dist);
-
-    // double vx = -0.5;
-    // double vy = -0.5;
 
     LOG(INFO) << vx << vy << "controller";
 
