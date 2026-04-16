@@ -35,6 +35,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
       break;
     }
     default:
+      LOG(WARNING) << "Unknown frame format";
       break;
   }
   if (img.empty()) {
@@ -87,15 +88,14 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
       camera_constant_.frame_width.value(),
       camera_constant_.frame_height.value(), camera_constant_.fps.value());
   if (res != 0) {
-    status = absl::AbortedError("Unable to create context for camera: " +
+    status = absl::AbortedError("Unable to get stream format for camera: " +
                                 camera_constant.name);
     return;
   }
   uvc_print_stream_ctrl(&ctrl_, stderr);
   res = uvc_start_streaming(device_handle_, &ctrl_, callback, this, 0);
-
   if (res != 0) {
-    status = absl::AbortedError("Unable to create context for camera: " +
+    status = absl::AbortedError("Unable to start streaming for camera: " +
                                 camera_constant.name);
     return;
   }
