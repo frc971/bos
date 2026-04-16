@@ -15,6 +15,10 @@ target_link_libraries(general_solver_test PRIVATE localization utils GTest::gtes
 add_executable(matrix  matrix.cc)
 target_link_libraries(matrix PRIVATE localization utils GTest::gtest_main)
 
+add_executable(failing_test failing_test.cc)
+target_link_libraries(failing_test PRIVATE localization utils GTest::gtest_main)
+
+
 include(GoogleTest)
 gtest_discover_tests(multi_tag_test)
 gtest_discover_tests(square_solve_test)

@@ -27,5 +27,3 @@ target_link_libraries(networktable_performance_test PRIVATE utils localization)
 
 add_executable(pva_test pva_test.cc)
 target_link_libraries(pva_test PRIVATE utils localization vpi)
-
-add_executable(failing_test failing_test.cc)
