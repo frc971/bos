@@ -8,12 +8,14 @@
 #include <future>
 #include <unordered_set>
 #include <utility>
+#include "absl/status/status.h"
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/disk_camera.h"
 #include "src/camera/multi_camera_source.h"
+#include "src/camera/uvc_camera.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/networktable_sender.h"
@@ -53,8 +55,18 @@ UnambiguousEstimator::UnambiguousEstimator(
     } else {
       const std::string camera_log_dest =
           fmt::format("{}/{}", log_path, cameras[i].first.name);
-      icameras.push_back(std::make_unique<camera::CVCamera>(cameras[i].first,
-                                                            camera_log_dest));
+      if (cameras[i].first.serial_id.has_value()) {
+        absl::Status status;
+        icameras.push_back(std::make_unique<camera::UVCCamera>(
+            cameras[i].first, status, camera_log_dest));
+        if (!status.ok()) {
+          LOG(WARNING) << "Unable to create uvc camera for unambiguous solver: "
+                       << status.message();
+        }
+      } else {
+        icameras.push_back(std::make_unique<camera::CVCamera>(cameras[i].first,
+                                                              camera_log_dest));
+      }
       std::cout << "Logging to destination: " << camera_log_dest << std::endl;
     }
   }
