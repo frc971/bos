@@ -6,6 +6,9 @@
 
 namespace camera {
 
+const cv::Mat UVCCamera::backup_image_ =
+    cv::imread("/bos/constants/dont_worry_about_it.jpg");
+
 void callback(uvc_frame_t* frame, void* ptr) {
   auto ptr_ = static_cast<UVCCamera*>(ptr);
   cv::Mat img;
@@ -138,6 +141,10 @@ UVCCamera::~UVCCamera() {
   uvc_close(device_handle_);
   uvc_unref_device(device_);
   uvc_exit(context_);
+}
+
+auto UVCCamera::GetCameraConstant() const -> camera_constant_t {
+  return camera_constant_;
 }
 
 }  // namespace camera
