@@ -16,14 +16,24 @@
 #include "src/utils/log.h"
 
 // for reference, example command:
-// ./build/src/test/integration_test/l2calization_test --camera_name=main_bot_right --image_folder=logs/log181/right --speed=0.5
+// ./build/src/test/integration_test/l2calization_test --robot=main_bot --camera_name=right --image_folder=logs/log181/right --speed=0.5
 
 ABSL_FLAG(std::string, image_folder, "",  //NOLINT
           "Path to folder of test images");
+ABSL_FLAG(std::string, robot, "main_bot",  // NOLINT
+          "Robot name used to select robot-specific camera constants");
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt,  //NOLINT
           "Camera name");
 ABSL_FLAG(int, port, 5801, "Port");                      //NOLINT
 ABSL_FLAG(double, speed, 0.01, "Delay between frames");  //NOLINT
+
+namespace {
+
+auto GetRobotCameraConstantsPath(const std::string& robot) -> std::string {
+  return "/bos/constants/" + robot + "/camera_constants.json";
+}
+
+}  // namespace
 
 auto main(int argc, char** argv) -> int {
 
@@ -36,16 +46,15 @@ auto main(int argc, char** argv) -> int {
     LOG(FATAL) << "Folder empty or doesn't exist";
   }
 
-  auto constants = camera::GetCameraConstants();
+  auto constants = camera::GetCameraConstants(
+      GetRobotCameraConstantsPath(absl::GetFlag(FLAGS_robot)));
 
-  std::vector<std::pair<camera::CameraConstant, localization::Detector>>
-      cameras{{constants.at("main_bot_left"), localization::OPENCV_CPU},
-              {constants.at("main_bot_right"), localization::OPENCV_CPU}};
+  std::vector<camera::CameraConstant> cameras{constants.at("left"),
+                                              constants.at("right")};
   auto paths = std::make_optional<std::vector<std::filesystem::path>>(
       {image_folder + "/left", image_folder + "/right"});
 
-  // std::vector<std::pair<camera::CameraConstant, localization::Detector>>
-  //     cameras{{constants.at("main_bot_left"), localization::OPENCV_CPU}};
+  // std::vector<camera::CameraConstant> cameras{constants.at("left")};
   // auto paths = std::make_optional<std::vector<std::filesystem::path>>(
   //     {image_folder + "/left"});
 

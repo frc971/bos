@@ -3,10 +3,38 @@
 #include "absl/flags/flag.h"
 
 ABSL_FLAG(std::string, camera_constants_path,            // NOLINT
-          "/bos/constants/camera_constants.json",        // NOTLINT
-          "Path to the json file of camera constants");  //NOLINT
+          "/bos/constants/shared_camera_constants.json", // NOLINT
+          "Path to the json file of camera constants");  // NOLINT
 
 namespace camera {
+
+namespace {
+
+auto ParseCameraBackend(std::string_view backend) -> CameraBackend {
+  if (backend == "uvc") {
+    return CameraBackend::kUvc;
+  }
+  if (backend == "opencv") {
+    return CameraBackend::kOpenCv;
+  }
+  LOG(WARNING) << "Unknown camera backend: " << backend
+               << ", defaulting to opencv";
+  return CameraBackend::kOpenCv;
+}
+
+auto ParseDetectorBackend(std::string_view backend) -> DetectorBackend {
+  if (backend == "gpu") {
+    return DetectorBackend::kGpu;
+  }
+  if (backend == "cpu") {
+    return DetectorBackend::kCpu;
+  }
+  LOG(WARNING) << "Unknown detector backend: " << backend
+               << ", defaulting to cpu";
+  return DetectorBackend::kCpu;
+}
+
+}  // namespace
 
 auto GetCameraConstants() -> camera_constants_t {
   return GetCameraConstants(absl::GetFlag(FLAGS_camera_constants_path));
@@ -38,6 +66,17 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
     camera_constant_t camera_constant{
         .name = camera_config.value("name", std::string{})};
 
+    if (camera_config.contains("camera_backend") &&
+        !camera_config["camera_backend"].is_null()) {
+      camera_constant.camera_backend =
+          ParseCameraBackend(camera_config["camera_backend"].get<std::string>());
+    }
+    if (camera_config.contains("detector_backend") &&
+        !camera_config["detector_backend"].is_null()) {
+      camera_constant.detector_backend =
+          ParseDetectorBackend(
+              camera_config["detector_backend"].get<std::string>());
+    }
     if (camera_config.contains("pipeline") &&
         !camera_config["pipeline"].is_null()) {
       camera_constant.pipeline = camera_config["pipeline"];

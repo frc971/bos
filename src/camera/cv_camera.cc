@@ -19,16 +19,22 @@ auto FileSystemAlmostFull() {
 
 CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
     : camera_constant_(c),
-      cap_(cv::VideoCapture(c.pipeline.value())),
-      pipeline_(c.pipeline.value()),
+      cap_(cv::VideoCapture()),
+      pipeline_(c.pipeline.value_or("")),
       log_path_(std::move(log_path)) {
+  PCHECK(c.pipeline.has_value()) << "Pipeline needs value";
+  const auto open_capture = [&]() {
+    if (c.camera_backend == CameraBackend::kUvc) {
+      return cv::VideoCapture(pipeline_, cv::CAP_V4L2);
+    }
+    return cv::VideoCapture(pipeline_);
+  };
   cap_.release();
-  cap_ = cv::VideoCapture(pipeline_);
+  cap_ = open_capture();
   if (FileSystemAlmostFull()) {
     log_path_ = std::nullopt;
     LOG(WARNING) << "Filesystem almost full! Not logging any frames";
   }
-  PCHECK(c.pipeline.has_value()) << "Pipeline needs value";
 
   LOG(INFO) << c.pipeline.value();
 
@@ -92,7 +98,11 @@ auto CVCamera::Restart() -> void {
   cap_.release();
   std::this_thread::sleep_for(std::chrono::seconds(3));
   LOG(INFO) << "Restarting camera with pipeline: " << pipeline_;
-  cap_ = cv::VideoCapture(pipeline_);
+  if (camera_constant_.camera_backend == CameraBackend::kUvc) {
+    cap_ = cv::VideoCapture(pipeline_, cv::CAP_V4L2);
+  } else {
+    cap_ = cv::VideoCapture(pipeline_);
+  }
   std::this_thread::sleep_for(std::chrono::seconds(3));
 }
 

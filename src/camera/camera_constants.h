@@ -5,11 +5,16 @@
 #include "src/utils/pch.h"
 namespace camera {
 
+enum class CameraBackend { kOpenCv, kUvc };
+enum class DetectorBackend { kCpu, kGpu };
+
 using camera_constant_t = struct CameraConstant {
   std::string name;
   std::optional<std::string> pipeline = std::nullopt;
   std::optional<std::string> intrinsics_path = std::nullopt;
   std::optional<std::string> extrinsics_path = std::nullopt;
+  CameraBackend camera_backend = CameraBackend::kOpenCv;
+  DetectorBackend detector_backend = DetectorBackend::kCpu;
   std::optional<double> backlight = std::nullopt;
   std::optional<double> frame_width = std::nullopt;
   std::optional<double> frame_height = std::nullopt;
@@ -24,6 +29,11 @@ using camera_constant_t = struct CameraConstant {
        << "\tintrinsics_path: " << c.intrinsics_path.value_or("NO INTRINSICS")
        << "\textrinsics_path: " << c.extrinsics_path.value_or("NO EXTRINSICS")
        << "\tname: " << c.name << '\n';
+
+    os << '\t' << "Camera Backend: "
+       << (c.camera_backend == CameraBackend::kUvc ? "uvc" : "opencv");
+    os << '\t' << "Detector Backend: "
+       << (c.detector_backend == DetectorBackend::kGpu ? "gpu" : "cpu");
 
     const auto print = [&](std::string_view label, const auto& opt) {
       if (opt)

@@ -14,6 +14,7 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/disk_camera.h"
+#include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/networktable_sender.h"
 #include "src/localization/opencv_apriltag_detector.h"
@@ -23,15 +24,38 @@
 #include "src/utils/log.h"
 
 // Example command:
-// ./build/src/test/integration_test/localization_test --camera_name=main_bot_right --image_folder=logs/log181/right --speed=0.5
+// ./build/src/test/integration_test/localization_test --robot=main_bot --camera_name=right --image_folder=logs/log181/right --speed=0.5
 // To each camera has two streams. 1. Raw video stream, 2. Position estimate stream. The port for raw video stream is 580x and the port for position estimate stream is 480x. x is different for each camera. It starts at 1 and counts up. For example, to view the third camera's position estimate stream, go to localhost:4803
 
 ABSL_FLAG(std::string, image_folder, "",  //NOLINT
           "Path to folder of test images");
+ABSL_FLAG(std::string, robot, "main_bot",  // NOLINT
+          "Robot name used to select robot-specific camera constants");
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt,  //NOLINT
           "Camera name");
 ABSL_FLAG(int, port, 5801, "Port");                   //NOLINT
 ABSL_FLAG(double, speed, 1, "Delay between frames");  //NOLINT
+
+namespace {
+
+auto GetRobotCameraConstantsPath(const std::string& robot) -> std::string {
+  return "/bos/constants/" + robot + "/camera_constants.json";
+}
+
+auto MakeDetector(const camera::camera_constant_t& camera_constant,
+                  int image_width, int image_height)
+    -> std::unique_ptr<localization::IAprilTagDetector> {
+  const auto intrinsics =
+      utils::ReadIntrinsics(camera_constant.intrinsics_path.value());
+  if (camera_constant.detector_backend == camera::DetectorBackend::kGpu) {
+    return std::make_unique<localization::GPUAprilTagDetector>(
+        image_width, image_height, intrinsics);
+  }
+  return std::make_unique<localization::OpenCVAprilTagDetector>(
+      image_width, image_height, intrinsics);
+}
+
+}  // namespace
 
 auto HasRegularFiles(const std::filesystem::path& path) -> bool {
   for (const auto& entry : std::filesystem::directory_iterator(path)) {
@@ -69,17 +93,28 @@ auto FindCameraFolders(const std::filesystem::path& path)
 auto ResolveCameraName(const std::string& directory_name,
                        const camera::camera_constants_t& constants)
     -> std::string {
-  std::string resolved_name = directory_name.rfind("main_bot_", 0) == 0
-                                  ? directory_name
-                                  : "main_bot_" + directory_name;
-
-  if (!constants.contains(resolved_name)) {
-    LOG(FATAL) << "Could not resolve camera constants name for directory: "
-               << directory_name
-               << ", expected constants entry: " << resolved_name;
+  if (constants.contains(directory_name)) {
+    return directory_name;
   }
 
-  return resolved_name;
+  constexpr std::string_view kPrefixes[] = {"main_bot_", "second_bot_",
+                                            "turret_bot_"};
+  for (std::string_view prefix : kPrefixes) {
+    if (directory_name.rfind(prefix, 0) != 0) {
+      continue;
+    }
+    const std::string stripped = directory_name.substr(prefix.size());
+    if (constants.contains(stripped)) {
+      return stripped;
+    }
+  }
+
+  if (!constants.contains(directory_name)) {
+    LOG(FATAL) << "Could not resolve camera constants name for directory: "
+               << directory_name;
+  }
+
+  return directory_name;
 }
 
 auto main(int argc, char** argv) -> int {
@@ -96,7 +131,8 @@ auto main(int argc, char** argv) -> int {
   }
 
   auto camera_folders = FindCameraFolders(image_root_path);
-  auto constants = camera::GetCameraConstants();
+  auto constants = camera::GetCameraConstants(
+      GetRobotCameraConstantsPath(absl::GetFlag(FLAGS_robot)));
   std::optional<std::string> camera_name_override =
       absl::GetFlag(FLAGS_camera_name);
   if (camera_name_override.has_value() && camera_folders.size() > 1) {
@@ -140,10 +176,8 @@ auto main(int argc, char** argv) -> int {
       senders.emplace_back(std::make_unique<localization::SimulationSender>(
           camera_name, base_port + i - 1000));
       localization::RunLocalization(
-          std::move(camera_source),
-          std::make_unique<localization::OpenCVAprilTagDetector>(
-              frame.cols, frame.rows,
-              utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
+          std::move(camera_source), MakeDetector(camera_constant, frame.cols,
+                                                 frame.rows),
           std::make_unique<localization::MultiTagSolver>(camera_constant),
           std::move(senders), camera_constant.extrinsics_path.value(),
           base_port + i, true);
