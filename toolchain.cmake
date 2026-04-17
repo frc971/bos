@@ -25,3 +25,4 @@ include_directories(SYSTEM ${TARGET_FS}/usr/local/include)
 include_directories(SYSTEM /l4t/targetfs/usr/local/cuda-12.6/targets/aarch64-linux/include)
 
 set(CMAKE_CUDA_HOST_COMPILER aarch64-linux-gnu-g++)
+set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.6/bin/nvcc)
