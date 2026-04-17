@@ -27,8 +27,8 @@ if [ "$(pwd)" != "/bos" ]; then
 fi
 git submodule update --init --progress --depth 1
 ARCH=$(uname -m)
+echo "$ARCH"
 if [[ "$ARCH" == "x86_64" ]]; then
-	echo asdf
 	cmake -DENABLE_CLANG_TIDY=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=toolchain.cmake -B "$BUILD_DIR" -G Ninja .
 else
 	cmake -DENABLE_CLANG_TIDY=OFF -DCMAKE_BUILD_TYPE=Release -B "$BUILD_DIR" -G Ninja .
