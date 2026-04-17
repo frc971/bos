@@ -55,7 +55,7 @@ auto GPUAprilTagDetector::GetTagDetections(
   try {
     CHECK(timestamped_frame.frame.channels() == 3);
     cv::Mat gray;
-    cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2YUV_YUY2);
+    cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2YUV_YUYV);
     cv::Mat mat_ = ToMat(gray);
     absl::Status detection_status = gpu_detector_->Detect(mat_.data, nullptr);
     if (!detection_status.ok()) {

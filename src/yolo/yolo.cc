@@ -4,13 +4,14 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
-#include <opencv2/core/cuda.hpp>
-#include <opencv2/cudaarithm.hpp>
 #include <opencv2/opencv.hpp>
 #include <ostream>
 #include <vector>
-#include "opencv2/cudawarping.hpp"
 #include "src/utils/pch.h"
+#include <opencv2/core/cuda.hpp>
+#include <opencv2/cudaimgproc.hpp>
+#include <opencv2/cudawarping.hpp>
+#include <opencv2/cudaarithm.hpp>
 
 namespace yolo {
 auto loadEngineFile(const std::string& filename) -> std::vector<char> {

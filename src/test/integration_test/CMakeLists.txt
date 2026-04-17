@@ -4,9 +4,6 @@ target_link_libraries(apriltag_detect_test PRIVATE cscore camera localization ut
 add_executable(intrinsics_test intrinsics_test.cc)
 target_link_libraries(intrinsics_test PRIVATE camera utils)
 
-add_executable(yolo_test yolo_test.cc)
-target_link_libraries(yolo_test PRIVATE camera yolo utils)
-
 add_executable(path_plan_test path_plan_test.cc)
 target_link_libraries(path_plan_test PRIVATE utils)
 
@@ -27,3 +24,7 @@ target_link_libraries(networktable_performance_test PRIVATE utils localization)
 
 add_executable(pva_test pva_test.cc)
 target_link_libraries(pva_test PRIVATE utils localization vpi)
+
+find_package(CUDAToolkit REQUIRED)
+add_executable(yolo_test yolo_test.cc)
+target_link_libraries(yolo_test PRIVATE camera yolo utils CUDA::cudart)
