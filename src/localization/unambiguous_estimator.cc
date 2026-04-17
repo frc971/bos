@@ -16,6 +16,7 @@
 #include "src/camera/multi_camera_source.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/multi_tag_solver.h"
+#include "src/localization/networktable_sender.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/position_sender.h"
 #include "src/localization/position_solver.h"
@@ -50,9 +51,11 @@ UnambiguousEstimator::UnambiguousEstimator(
           img_dir_paths.value()[i], cameras[i].first, 10,
           interesting_timestamp_start_ - 1, interesting_timestamp_end_));
     } else {
-      icameras.push_back(std::make_unique<camera::CVCamera>(
-          cameras[i].first,
-          fmt::format("{}/{}", log_path, cameras[i].first.name)));
+      const std::string camera_log_dest =
+          fmt::format("{}/{}", log_path, cameras[i].first.name);
+      icameras.push_back(std::make_unique<camera::CVCamera>(cameras[i].first,
+                                                            camera_log_dest));
+      std::cout << "Logging to destination: " << camera_log_dest << std::endl;
     }
   }
   sources_ = std::make_unique<camera::MultiCameraSource>(icameras, sim_);
@@ -195,15 +198,14 @@ auto UnambiguousEstimator::SearchSolutions(
 
 void UnambiguousEstimator::Run() {
   frc::DataLogManager::Start();
-  localization::PositionSender position_sender("Left", false, sim_);
+  localization::NetworkTableSender position_sender("Left", false, sim_);
   while (true) {
     latent_estimate_t pose_estimate = GetUnambiguatedEstimate();
     if (pose_estimate.invalid) {
       continue;
     }
     position_sender.Send(
-        std::vector<position_estimate_t>{pose_estimate.pose_estimate},
-        pose_estimate.latency, pose_estimate.all_pose_estimates);
+        std::vector<position_estimate_t>{pose_estimate.pose_estimate});
   }
 }
 
