@@ -49,9 +49,7 @@ auto RunController(const std::string& navgrid_path =
   }
 
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
-  auto current_sub =
-      inst.GetStructTopic<frc::Pose3d>("/Orin/PoseEstimate/Left/Pose3d")
-          .Subscribe({});
+  auto current_sub = localization::PositionReceiver();
   auto target_sub =
       inst.GetStructTopic<frc::Pose2d>("/pathing/target").Subscribe({});
 

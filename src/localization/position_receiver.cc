@@ -5,7 +5,7 @@ namespace localization {
 PositionReceiver::PositionReceiver() {
   auto instance = nt::NetworkTableInstance::GetDefault();
   nt::StructTopic<frc::Pose3d> pose3d_topic =
-      instance.GetStructTopic<frc::Pose3d>("/Pose/robotPose");
+      instance.GetStructTopic<frc::Pose3d>("/Orin/PoseEstimate/Left/Pose3d");
   pose3d_subscriber_ = pose3d_topic.Subscribe({});
 }
 
