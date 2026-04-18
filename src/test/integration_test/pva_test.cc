@@ -191,7 +191,8 @@ auto main(int argc, char* argv[]) -> int {
                                 VPI_BACKEND_CPU | VPI_BACKEND_PVA, &poses));
 
     // Create the payload for AprilTag Detector algorithm
-    CHECK_STATUS(vpiCreateAprilTagDetector(backend, cvImage.cols, cvImage.rows,
+    CHECK_STATUS(vpiCreateAprilTagDetector(backend, cvImage.cols,
+                                           cvImage.rows,  // NOLINT
                                            &apritagDecodeParams, &payload));
 
     // AprilTagPoseEstimation parameters
