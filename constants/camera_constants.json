@@ -88,37 +88,31 @@
       "exposure": null
     },
     {
-      "pipeline": "nvarguscamerasrc sensor-id=0 aelock=true exposuretimerange=\"100000 200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, format=NV12 ! nvvidconv ! video/x-raw, format=BGRx ! queue ! appsink",
+      "name": "second_bot_front",
       "intrinsics_path": "/bos/constants/second_bot/front_intrinsics.json",
       "extrinsics_path": "/bos/constants/second_bot/front_extrinsics.json",
-      "name": "second_bot_front",
-      "backlight": null,
-      "frame_width": null,
-      "frame_height": null,
-      "fps": null,
-      "exposure": null
+      "frame_width": 1280,
+      "frame_height": 800,
+      "fps": 100.0,
+      "serial_id": "secondfront"
     },
     {
-      "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.3:1.0-video-index0",
+      "name": "second_bot_right",
       "intrinsics_path": "/bos/constants/second_bot/right_intrinsics.json",
       "extrinsics_path": "/bos/constants/second_bot/right_extrinsics.json",
-      "name": "second_bot_right",
-      "backlight": null,
       "frame_width": 1280,
       "frame_height": 800,
-      "fps": 60.0,
-      "exposure": null
+      "fps": 100.0,
+      "serial_id": "secondright"
     },
     {
-      "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.1:1.0-video-index0",
+      "name": "second_bot_left",
       "intrinsics_path": "/bos/constants/second_bot/left_intrinsics.json",
       "extrinsics_path": "/bos/constants/second_bot/left_extrinsics.json",
-      "name": "second_bot_left",
-      "backlight": null,
       "frame_width": 1280,
       "frame_height": 800,
-      "fps": 60.0,
-      "exposure": null
+      "fps": 100.0,
+      "serial_id": "secondleft"
     }
   ]
 }

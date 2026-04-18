@@ -17,6 +17,9 @@ using camera_constant_t = struct CameraConstant {
   std::optional<double> exposure = std::nullopt;  // Nullopt = auto exposure
   std::optional<double> brightness = std::nullopt;
   std::optional<double> sharpness = std::nullopt;
+  std::optional<uint32_t> max_frame_size = std::nullopt;    // uvc only
+  std::optional<uint32_t> max_payload_size = std::nullopt;  // uvc only
+  std::optional<std::string> serial_id = std::nullopt;      // uvc only
 
   friend auto operator<<(std::ostream& os, const CameraConstant& c)
       -> std::ostream& {

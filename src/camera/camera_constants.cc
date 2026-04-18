@@ -77,6 +77,18 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
         !camera_config["sharpness"].is_null()) {
       camera_constant.sharpness = camera_config["sharpness"];
     }
+    if (camera_config.contains("serial_id") &&
+        !camera_config["serial_id"].is_null()) {
+      camera_constant.serial_id = camera_config["serial_id"];
+    }
+    if (camera_config.contains("max_frame_size") &&
+        !camera_config["max_frame_size"].is_null()) {
+      camera_constant.max_frame_size = camera_config["max_frame_size"];
+    }
+    if (camera_config.contains("max_payload_size") &&
+        !camera_config["max_payload_size"].is_null()) {
+      camera_constant.max_payload_size = camera_config["max_payload_size"];
+    }
     camera_constants.insert({camera_constant.name, camera_constant});
   }
   return camera_constants;

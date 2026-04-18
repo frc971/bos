@@ -74,8 +74,8 @@ echo "→ Remote: $REMOTE"
 echo "→ Local:  $LOCAL_DEST"
 echo "→ Range:  $START_TIME → $END_TIME seconds"
 
-sync_subfolder "left"
-sync_subfolder "right"
+sync_subfolder "second_bot_left"
+sync_subfolder "second_bot_right"
 
 echo ""
 echo "✓ All done. Both folders synced to $LOCAL_DEST"
