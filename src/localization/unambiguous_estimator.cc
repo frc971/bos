@@ -8,12 +8,14 @@
 #include <future>
 #include <unordered_set>
 #include <utility>
+#include "absl/status/status.h"
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/disk_camera.h"
 #include "src/camera/multi_camera_source.h"
+#include "src/camera/uvc_camera.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/networktable_sender.h"
@@ -53,8 +55,18 @@ UnambiguousEstimator::UnambiguousEstimator(
     } else {
       const std::string camera_log_dest =
           fmt::format("{}/{}", log_path, cameras[i].first.name);
-      icameras.push_back(std::make_unique<camera::CVCamera>(cameras[i].first,
-                                                            camera_log_dest));
+      if (cameras[i].first.serial_id.has_value()) {
+        absl::Status status;
+        icameras.push_back(std::make_unique<camera::UVCCamera>(
+            cameras[i].first, status, camera_log_dest));
+        if (!status.ok()) {
+          LOG(WARNING) << "Unable to create uvc camera for unambiguous solver: "
+                       << status.message();
+        }
+      } else {
+        icameras.push_back(std::make_unique<camera::CVCamera>(cameras[i].first,
+                                                              camera_log_dest));
+      }
       std::cout << "Logging to destination: " << camera_log_dest << std::endl;
     }
   }
@@ -277,12 +289,10 @@ auto UnambiguousEstimator::GetUsableFrames(
         frame.timestamp > interesting_timestamp_start_ &&
         frame.timestamp < interesting_timestamp_end_;
   }
-  int count = 0;
   for (size_t i = 0; i < frames.size(); i++) {
     if (latest_timestamp - frames[i].timestamp < kacceptable_frame_recency) {
-      streamers_[count].WriteFrame(frames[i].frame);
+      streamers_[i].WriteFrame(frames[i].frame);
       usable_frames[i] = std::move(frames[i]);
-      count++;
     }
   }
 
@@ -323,16 +333,18 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   avg_timestamp /= best_solution.size();
   avg_variance /= best_solution.size();
   const int num_tags = tag_ids.size();
+  double latency = everything_timer.Stop();
   position_estimate_t averaged_estimate = {
       .pose = WeightedAveragePose(best_solution),
       .variance = avg_variance,
       .timestamp = avg_timestamp,
       .num_tags = num_tags,
+      .latency = latency,
       .invalid = invalid,
       .loss = cost};
   prev_pose_estimate_ = std::make_optional(averaged_estimate);
   return {.pose_estimate = averaged_estimate,
-          .latency = everything_timer.Stop(),
+          .latency = latency,
           .best_cost = cost,
           .used_prev_pose = use_prev_pose_,
           .all_pose_estimates = all_pose_estimates_for_log};
