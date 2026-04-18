@@ -37,7 +37,8 @@ UnambiguousEstimator::UnambiguousEstimator(
     std::optional<std::vector<std::filesystem::path>> img_dir_paths)
     : port_start_(port_start),
       prev_timestamps_(cameras.size()),
-      sim_(img_dir_paths.has_value()) {
+      sim_(img_dir_paths.has_value()),
+      nt_instance_(nt::NetworkTableInstance::GetDefault()) {
   std::string log_path = frc::DataLogManager::GetLogDir();
   auto camera_constants = camera::GetCameraConstants();
   detectors_.reserve(cameras.size());
@@ -72,6 +73,8 @@ UnambiguousEstimator::UnambiguousEstimator(
   }
   sources_ = std::make_unique<camera::MultiCameraSource>(icameras, sim_);
   std::cout << "Initialized cameras" << std::endl;
+  std::shared_ptr<nt::NetworkTable> table =
+      nt_instance_.GetTable("Orin/PoseEstimate/Left");  // TODO change to joint
   std::this_thread::sleep_for(std::chrono::duration<double>(2));
   std::cout << "Initializing estimators and streamers" << std::endl;
   std::vector<cv::Mat> first_frames = sources_->GetCVFrames();
@@ -92,6 +95,9 @@ UnambiguousEstimator::UnambiguousEstimator(
         return;
     }
     solvers_.emplace_back(cameras[i].first);
+    nt::BooleanTopic camera_status_topic =
+        table->GetBooleanTopic(cameras[i].first.name + " status");
+    camera_status_publishers_.push_back(camera_status_topic.Publish());
     if (port_start.has_value()) {
       streamers_.emplace_back(cameras[i].first.name, port_start.value() + i, 30,
                               1080, 1080);
@@ -230,8 +236,10 @@ auto UnambiguousEstimator::GetAmbiguousEstimates()
   std::vector<ambiguous_estimate_t> estimates;
   for (size_t i = 0; i < usable_frames.size(); ++i) {
     if (!usable_frames[i].has_value()) {
+      camera_status_publishers_[i].Set(false);
       continue;
     }
+    camera_status_publishers_[i].Set(true);
     if (sim_ && usable_frames[i]->invalid) {
       frc::DataLogManager::Stop();
       std::cout << "Stopped log" << std::endl;
@@ -290,8 +298,9 @@ auto UnambiguousEstimator::GetUsableFrames(
         frame.timestamp < interesting_timestamp_end_;
   }
   for (size_t i = 0; i < frames.size(); i++) {
-    if (latest_timestamp - frames[i].timestamp < kacceptable_frame_recency) {
-      streamers_[i].WriteFrame(frames[i].frame);
+    streamers_[i].WriteFrame(frames[i].frame);
+    if (!frames[i].invalid &&
+        latest_timestamp - frames[i].timestamp < kacceptable_frame_recency) {
       usable_frames[i] = std::move(frames[i]);
     }
   }
