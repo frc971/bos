@@ -22,7 +22,8 @@ class MultiCameraSource {
   std::vector<timestamped_frame_t> timestamped_frames_;
   std::vector<std::thread> camera_threads_;
   std::mutex mutex_;
-  std::vector<double> last_frame_time_;
+  const bool use_all_frames_;
+  bool frames_used_ = true;  // only for when use_all_frames_ is true
 };
 
 }  // namespace camera
