@@ -10,15 +10,17 @@ auto main(int argc, char* argv[]) -> int {
   std::unique_ptr<camera::ICamera> camera =
       camera::SelectCameraConfig(camera::GetCameraConstants());
 
+  camera::timestamped_frame_t timestamped_frame;
+  camera->GetFrame(&timestamped_frame);
   camera::CscoreStreamer streamer("focus_calibrate", 5801, 30,
-                                  camera->GetFrame().frame);
+                                  timestamped_frame.frame);
 
-  cv::Mat frame, gray, laplace;
+  cv::Mat gray, laplace;
   while (true) {
-    frame = camera->GetFrame().frame;
-    streamer.WriteFrame(frame);
+    camera->GetFrame(&timestamped_frame);
+    streamer.WriteFrame(timestamped_frame.frame);
 
-    cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
+    cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
     cv::Laplacian(gray, laplace, CV_64F);
     cv::Scalar mean, stddev;
     cv::meanStdDev(laplace, mean, stddev, cv::Mat());

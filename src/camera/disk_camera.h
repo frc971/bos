@@ -29,7 +29,7 @@ class DiskCamera : public ICamera {
              std::optional<camera_constant_t> camera_constant = std::nullopt,
              double speed = 1.0, std::optional<double> start = std::nullopt,
              std::optional<double> end = std::nullopt);
-  auto GetFrame() -> timestamped_frame_t override;
+  void GetFrame(timestamped_frame_t* output) override;
   auto Restart() -> void override;
   auto IsDone() -> bool override { return image_paths_.empty(); }
   [[nodiscard]] auto GetCameraConstant() const -> camera_constant_t override;

@@ -104,25 +104,22 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
   }
 }
 
-auto UVCCamera::GetFrame() -> timestamped_frame_t {
-  timestamped_frame_t copied_timestamped_frame;
+void UVCCamera::GetFrame(timestamped_frame_t* output) {
   while (frame_index_ == previous_frame_index_) {
     std::this_thread::yield();
   }
   mutex_.try_lock();
   if (frame_buffer.frame.empty()) {
-    backup_image_.copyTo(copied_timestamped_frame.frame);
-    copied_timestamped_frame.invalid = true;
-    copied_timestamped_frame.timestamp =
-        frc::Timer::GetFPGATimestamp().to<double>();
+    backup_image_.copyTo(output->frame);
+    output->invalid = true;
+    output->timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   } else {
-    frame_buffer.frame.copyTo(copied_timestamped_frame.frame);
-    copied_timestamped_frame.invalid = frame_buffer.invalid;
-    copied_timestamped_frame.timestamp = frame_buffer.timestamp;
+    frame_buffer.frame.copyTo(output->frame);
+    output->invalid = frame_buffer.invalid;
+    output->timestamp = frame_buffer.timestamp;
   }
   mutex_.unlock();
   previous_frame_index_ = frame_index_;
-  return copied_timestamped_frame;
 }
 
 auto UVCCamera::Restart() -> void {

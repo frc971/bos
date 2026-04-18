@@ -28,8 +28,8 @@ using timestamped_frame_t = struct TimestampedFrame {
 
 class ICamera {
  public:
-  virtual auto GetFrame() -> timestamped_frame_t = 0;
-  virtual auto Restart() -> void = 0;
+  virtual void GetFrame(timestamped_frame_t* output) = 0;
+  virtual void Restart() = 0;
   [[nodiscard]] virtual auto GetCameraConstant() const -> camera_constant_t = 0;
   virtual auto IsDone() -> bool { return false; }
   virtual ~ICamera() = default;

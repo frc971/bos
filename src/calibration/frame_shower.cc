@@ -18,17 +18,18 @@ auto main(int argc, char* argv[]) -> int {
   std::unique_ptr<camera::ICamera> camera = camera::SelectCameraConfig(
       absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
 
+  camera::timestamped_frame_t timestamped_frame;
+  camera->GetFrame(&timestamped_frame);
   camera::CscoreStreamer streamer("frame_shower",
                                   absl::GetFlag(FLAGS_port).value_or(5801), 30,
-                                  camera->GetFrame().frame);
+                                  timestamped_frame.frame);
 
   LOG(INFO) << "Camera opened successfully" << std::endl;
 
-  cv::Mat frame = camera->GetFrame().frame;
-  LOG(INFO) << "Size of frame: " << frame.size;
+  LOG(INFO) << "Size of frame: " << timestamped_frame.frame.size;
   while (true) {
-    frame = camera->GetFrame().frame;
-    streamer.WriteFrame(frame);
+    camera->GetFrame(&timestamped_frame);
+    streamer.WriteFrame(timestamped_frame.frame);
   }
   return 0;
 }

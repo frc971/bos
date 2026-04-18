@@ -55,27 +55,25 @@ DiskCamera::DiskCamera(std::string image_folder_path,
   }
   image_paths_ = std::move(normalized);
 }
-auto DiskCamera::GetFrame() -> timestamped_frame_t {
+void DiskCamera::GetFrame(timestamped_frame_t* output) {
   if (image_paths_.empty()) {
     std::cout << "Finished reading all frames from DiskCamera. Folder path: "
               << image_folder_path_ << std::endl;
     frc::DataLogManager::Stop();
-    return {.invalid = true};
+    output->invalid = true;
+    return;
   }
 
   double recorded_ts = image_paths_.top().timestamp;
   std::cout << "Recorded ts: " << recorded_ts + start_.value_or(0) << std::endl;
-  timestamped_frame_t timestamped_frame{
-      .frame = cv::imread(image_paths_.top().path),
-      .timestamp = recorded_ts + start_.value_or(0)};
+  output->frame = cv::imread(image_paths_.top().path);
+  output->timestamp = recorded_ts + start_.value_or(0);
   image_paths_.pop();
 
   if (!image_paths_.empty()) {
     double delta = image_paths_.top().timestamp - recorded_ts;
     std::this_thread::sleep_for(std::chrono::duration<double>(delta / speed_));
   }
-
-  return timestamped_frame;
 }
 
 auto DiskCamera::Restart() -> void {}
