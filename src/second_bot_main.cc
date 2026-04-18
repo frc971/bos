@@ -1,6 +1,8 @@
+#include "absl/status/status.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/cv_camera.h"
+#include "src/camera/uvc_camera.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/networktable_sender.h"
 #include "src/localization/opencv_apriltag_detector.h"
@@ -18,11 +20,13 @@ auto main() -> int {
 
   LOG(INFO) << "Starting estimators";
 
+  absl::Status status;
   std::thread left_thread([&]() {
     auto left_camera = std::make_unique<camera::CameraSource>(
-        "Left", std::make_unique<camera::CVCamera>(
-                    camera_constants.at("second_bot_left"),
+        "Left", std::make_unique<camera::UVCCamera>(
+                    camera_constants.at("second_bot_left"), status,
                     fmt::format("{}/left", log_path)));
+    std::this_thread::sleep_for(std::chrono::duration<double>(1.0));
     cv::Mat left_camera_frame = left_camera->GetFrame();
 
     std::vector<std::unique_ptr<localization::IPositionSender>> left_sender;
@@ -44,9 +48,10 @@ auto main() -> int {
 
   std::thread right_thread([&]() {
     auto right_camera = std::make_unique<camera::CameraSource>(
-        "Right", std::make_unique<camera::CVCamera>(
-                     camera_constants.at("second_bot_right"),
+        "Right", std::make_unique<camera::UVCCamera>(
+                     camera_constants.at("second_bot_right"), status,
                      fmt::format("{}/right", log_path)));
+    std::this_thread::sleep_for(std::chrono::duration<double>(1.0));
     cv::Mat right_camera_frame = right_camera->GetFrame();
 
     std::vector<std::unique_ptr<localization::IPositionSender>> right_sender;

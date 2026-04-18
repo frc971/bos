@@ -289,12 +289,10 @@ auto UnambiguousEstimator::GetUsableFrames(
         frame.timestamp > interesting_timestamp_start_ &&
         frame.timestamp < interesting_timestamp_end_;
   }
-  int count = 0;
   for (size_t i = 0; i < frames.size(); i++) {
     if (latest_timestamp - frames[i].timestamp < kacceptable_frame_recency) {
-      streamers_[count].WriteFrame(frames[i].frame);
+      streamers_[i].WriteFrame(frames[i].frame);
       usable_frames[i] = std::move(frames[i]);
-      count++;
     }
   }
 

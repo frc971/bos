@@ -16,7 +16,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
     case UVC_COLOR_FORMAT_MJPEG: {
       char* data = static_cast<char*>(frame->data);
       std::vector<uchar> buffer(data, data + frame->data_bytes);
-      img = cv::imdecode(buffer, cv::IMREAD_GRAYSCALE);
+      img = cv::imdecode(buffer, cv::IMREAD_COLOR);
       break;
     }
     case UVC_COLOR_FORMAT_YUYV: {
@@ -52,12 +52,16 @@ void callback(uvc_frame_t* frame, void* ptr) {
   ptr_->frame_buffer.timestamp =
       frc::Timer::GetFPGATimestamp()
           .to<double>();  // TODO: Use more accurate timestamp
+  ptr_->camera_index_ = frame->sequence;
   ptr_->mutex_.unlock();
 }
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
                      absl::Status& status, std::optional<std::string> log_path)
-    : camera_constant_(camera_constant), log_path_(std::move(log_path)) {
+    : camera_constant_(camera_constant),
+      log_path_(std::move(log_path)),
+      camera_index_(-1),
+      prev_camera_index_(-1) {
   if (!camera_constant.serial_id.has_value()) {
     status = absl::InvalidArgumentError(fmt::format(
         "Must provide a serial id for uvc camera {}", camera_constant.name));
@@ -107,6 +111,9 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
 
 auto UVCCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t copied_timestamped_frame;
+  while (camera_index_ == prev_camera_index_) {
+    std::this_thread::yield();
+  }
   mutex_.lock();
   if (frame_buffer.frame.empty()) {
     backup_image_.copyTo(copied_timestamped_frame.frame);
@@ -119,6 +126,7 @@ auto UVCCamera::GetFrame() -> timestamped_frame_t {
     copied_timestamped_frame.timestamp = frame_buffer.timestamp;
   }
   mutex_.unlock();
+  prev_camera_index_ = camera_index_;
   return copied_timestamped_frame;
 }
 
