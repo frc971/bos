@@ -1,4 +1,5 @@
 #pragma once
+#include <networktables/BooleanTopic.h>
 #include <wpi/DataLogWriter.h>
 #include "multi_tag_solver.h"
 #include "src/camera/camera.h"
@@ -60,5 +61,7 @@ class UnambiguousEstimator {
   const bool sim_;
   static constexpr double kuse_prev_pose_threshold = 100;  // tune
   bool use_prev_pose_ = false;
+  nt::NetworkTableInstance nt_instance_;
+  std::vector<nt::BooleanPublisher> camera_status_publishers_;
 };
 }  // namespace localization
