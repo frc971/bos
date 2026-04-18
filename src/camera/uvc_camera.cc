@@ -52,6 +52,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
   ptr_->frame_buffer.timestamp =
       frc::Timer::GetFPGATimestamp()
           .to<double>();  // TODO: Use more accurate timestamp
+  ptr_->frame_index_ = frame->sequence;
   ptr_->mutex_.unlock();
 }
 
@@ -107,6 +108,9 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
 
 auto UVCCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t copied_timestamped_frame;
+  while (frame_index_ == previous_frame_index_) {
+    std::this_thread::yield();
+  }
   mutex_.lock();
   if (frame_buffer.frame.empty()) {
     backup_image_.copyTo(copied_timestamped_frame.frame);
@@ -119,6 +123,7 @@ auto UVCCamera::GetFrame() -> timestamped_frame_t {
     copied_timestamped_frame.timestamp = frame_buffer.timestamp;
   }
   mutex_.unlock();
+  previous_frame_index_ = frame_index_;
   return copied_timestamped_frame;
 }
 
