@@ -15,7 +15,7 @@ CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera,
         return;
       }
       timestamped_frame_t timestamped_frame;
-      camera_->GetFrame(&timestamped_frame_);
+      camera_->GetFrame(&timestamped_frame);
       mutex_.lock();
       timestamped_frame_ = timestamped_frame;
       mutex_.unlock();
