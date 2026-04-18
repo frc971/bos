@@ -35,7 +35,9 @@ UnambiguousEstimator::UnambiguousEstimator(
     std::vector<std::pair<camera::camera_constant_t, Detector>>& cameras,
     std::optional<uint> port_start, bool verbose,
     std::optional<std::vector<std::filesystem::path>> img_dir_paths)
-    : port_start_(port_start), sim_(img_dir_paths.has_value()) {
+    : port_start_(port_start),
+      prev_timestamps_(cameras.size()),
+      sim_(img_dir_paths.has_value()) {
   std::string log_path = frc::DataLogManager::GetLogDir();
   auto camera_constants = camera::GetCameraConstants();
   detectors_.reserve(cameras.size());
@@ -237,6 +239,7 @@ auto UnambiguousEstimator::GetAmbiguousEstimates()
       std::cout << "Stopped log" << std::endl;
       throw std::runtime_error("DONE");
     }
+    prev_timestamps_[i] = usable_frames[i]->timestamp;
 
     std::vector<tag_detection_t> detections =
         detectors_[i]->GetTagDetections(usable_frames[i].value());
