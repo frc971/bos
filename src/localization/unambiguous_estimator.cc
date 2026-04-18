@@ -207,9 +207,11 @@ auto UnambiguousEstimator::SearchSolutions(
 }
 
 void UnambiguousEstimator::Run() {
+  std::cout << "Run" << std::endl;
   frc::DataLogManager::Start();
   localization::NetworkTableSender position_sender("Left", false, sim_);
   while (true) {
+    std::cout << "Running" << std::endl;
     latent_estimate_t pose_estimate = GetUnambiguatedEstimate();
     if (pose_estimate.invalid) {
       continue;
@@ -338,8 +340,10 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
       .invalid = invalid,
       .loss = cost};
   prev_pose_estimate_ = std::make_optional(averaged_estimate);
+  double latency = everything_timer.Stop();
+  LOG(INFO) << "Latency: " << latency;
   return {.pose_estimate = averaged_estimate,
-          .latency = everything_timer.Stop(),
+          .latency = latency,
           .best_cost = cost,
           .used_prev_pose = use_prev_pose_,
           .all_pose_estimates = all_pose_estimates_for_log};
