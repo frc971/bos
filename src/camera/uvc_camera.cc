@@ -16,7 +16,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
     case UVC_COLOR_FORMAT_MJPEG: {
       char* data = static_cast<char*>(frame->data);
       std::vector<uchar> buffer(data, data + frame->data_bytes);
-      img = cv::imdecode(buffer, cv::IMREAD_GRAYSCALE);
+      img = cv::imdecode(buffer, cv::IMREAD_COLOR);
       break;
     }
     case UVC_COLOR_FORMAT_YUYV: {

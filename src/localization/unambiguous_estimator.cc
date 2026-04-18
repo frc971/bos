@@ -209,11 +209,9 @@ auto UnambiguousEstimator::SearchSolutions(
 }
 
 void UnambiguousEstimator::Run() {
-  std::cout << "Run" << std::endl;
   frc::DataLogManager::Start();
   localization::NetworkTableSender position_sender("Left", false, sim_);
   while (true) {
-    std::cout << "Running" << std::endl;
     latent_estimate_t pose_estimate = GetUnambiguatedEstimate();
     if (pose_estimate.invalid) {
       continue;
@@ -291,12 +289,10 @@ auto UnambiguousEstimator::GetUsableFrames(
         frame.timestamp > interesting_timestamp_start_ &&
         frame.timestamp < interesting_timestamp_end_;
   }
-  int count = 0;
   for (size_t i = 0; i < frames.size(); i++) {
     if (latest_timestamp - frames[i].timestamp < kacceptable_frame_recency) {
-      streamers_[count].WriteFrame(frames[i].frame);
+      streamers_[i].WriteFrame(frames[i].frame);
       usable_frames[i] = std::move(frames[i]);
-      count++;
     }
   }
 
@@ -337,16 +333,16 @@ auto UnambiguousEstimator::GetUnambiguatedEstimate() -> latent_estimate_t {
   avg_timestamp /= best_solution.size();
   avg_variance /= best_solution.size();
   const int num_tags = tag_ids.size();
+  double latency = everything_timer.Stop();
   position_estimate_t averaged_estimate = {
       .pose = WeightedAveragePose(best_solution),
       .variance = avg_variance,
       .timestamp = avg_timestamp,
       .num_tags = num_tags,
+      .latency = latency,
       .invalid = invalid,
       .loss = cost};
   prev_pose_estimate_ = std::make_optional(averaged_estimate);
-  double latency = everything_timer.Stop();
-  LOG(INFO) << "Latency: " << latency;
   return {.pose_estimate = averaged_estimate,
           .latency = latency,
           .best_cost = cost,
