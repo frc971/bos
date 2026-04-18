@@ -11,12 +11,12 @@ const cv::Mat UVCCamera::backup_image_ =
 
 void callback(uvc_frame_t* frame, void* ptr) {
   auto ptr_ = static_cast<UVCCamera*>(ptr);
-  cv::Mat img;
+  ptr_->mutex_.try_lock();
   switch (frame->frame_format) {
     case UVC_COLOR_FORMAT_MJPEG: {
       char* data = static_cast<char*>(frame->data);
       std::vector<uchar> buffer(data, data + frame->data_bytes);
-      img = cv::imdecode(buffer, cv::IMREAD_COLOR);
+      ptr_->frame_buffer.frame = cv::imdecode(buffer, cv::IMREAD_COLOR);
       break;
     }
     case UVC_COLOR_FORMAT_YUYV: {
@@ -33,7 +33,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
       ipl_image =
           cvCreateImageHeader(cvSize(bgr->width, bgr->height), IPL_DEPTH_8U, 3);
       cvSetData(ipl_image, bgr->data, bgr->width * 3);
-      img = cv::cvarrToMat(ipl_image, true);
+      ptr_->frame_buffer.frame = cv::cvarrToMat(ipl_image, true);
       uvc_free_frame(bgr);
       break;
     }
@@ -41,13 +41,11 @@ void callback(uvc_frame_t* frame, void* ptr) {
       LOG(WARNING) << "Unknown frame format";
       break;
   }
-  if (img.empty()) {
+  if (ptr_->frame_buffer.frame.empty()) {
     LOG(WARNING) << "Failed to decode frame from camera "
                  << ptr_->camera_constant_.name;
     return;
   }
-  ptr_->mutex_.lock();
-  img.copyTo(ptr_->frame_buffer.frame);
   ptr_->frame_buffer.invalid = false;
   ptr_->frame_buffer.timestamp =
       frc::Timer::GetFPGATimestamp()
@@ -111,7 +109,7 @@ auto UVCCamera::GetFrame() -> timestamped_frame_t {
   while (frame_index_ == previous_frame_index_) {
     std::this_thread::yield();
   }
-  mutex_.lock();
+  mutex_.try_lock();
   if (frame_buffer.frame.empty()) {
     backup_image_.copyTo(copied_timestamped_frame.frame);
     copied_timestamped_frame.invalid = true;
