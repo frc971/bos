@@ -97,7 +97,7 @@ UnambiguousEstimator::UnambiguousEstimator(
     solvers_.emplace_back(cameras[i].first);
     nt::BooleanTopic camera_status_topic =
         table->GetBooleanTopic(cameras[i].first.name + " status");
-    camera_status_publishers_[i] = camera_status_topic.Publish();
+    camera_status_publishers_.push_back(camera_status_topic.Publish());
     if (port_start.has_value()) {
       streamers_.emplace_back(cameras[i].first.name, port_start.value() + i, 30,
                               1080, 1080);
