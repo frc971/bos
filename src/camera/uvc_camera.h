@@ -27,8 +27,7 @@ class UVCCamera : public ICamera {
   timestamped_frame_t frame_buffer;
   uvc_stream_ctrl_t ctrl_;
   std::mutex mutex_;
-  int frame_index_;
-  int previous_frame_index_;
+  std::binary_semaphore frame_gate_;
 
  private:
   auto StartCamera(uvc_stream_ctrl_t ctrl) -> void;
