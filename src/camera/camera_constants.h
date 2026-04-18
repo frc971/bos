@@ -20,6 +20,7 @@ using camera_constant_t = struct CameraConstant {
   std::optional<uint32_t> max_frame_size = std::nullopt;    // uvc only
   std::optional<uint32_t> max_payload_size = std::nullopt;  // uvc only
   std::optional<std::string> serial_id = std::nullopt;      // uvc only
+  std::optional<bool> use_cpu = std::nullopt;               // uvc only
 
   friend auto operator<<(std::ostream& os, const CameraConstant& c)
       -> std::ostream& {

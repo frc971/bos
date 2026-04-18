@@ -1,0 +1,32 @@
+#pragma once
+#include "src/camera/camera.h"
+#include "src/camera/disk_camera.h"
+#include "src/localization/apriltag_detector.h"
+#include "src/localization/position.h"
+#include "src/localization/position_solver.h"
+#include "src/utils/pch.h"
+namespace localization {
+
+class MultiCameraDetector {
+ public:
+  MultiCameraDetector(std::vector<camera::camera_constant_t> camera_constants);
+  [[nodiscard]] auto GetTagDetections()
+      -> std::vector<std::vector<tag_detection_t>>;
+  [[nodiscard]] auto GetCVFrames() -> std::vector<cv::Mat>;
+  [[nodiscard]] inline auto NumCameras() -> double { return cameras_.size(); }
+  ~MultiCameraDetector();
+
+ private:
+  std::vector<camera::camera_constant_t> camera_constants_;
+  std::vector<std::unique_ptr<camera::ICamera>> cameras_;
+  std::vector<std::unique_ptr<IAprilTagDetector>> detectors_;
+  std::vector<double>
+      invalid_frame_start_times_;  // time since the frame has not been old
+  std::vector<camera::timestamped_frame_t> timestamped_frames_;
+  std::vector<std::vector<tag_detection_t>> tag_detections_;
+  std::vector<std::thread> camera_threads_;
+  std::mutex mutex_;
+  std::atomic<bool> run_cameras_{true};
+};
+
+}  // namespace localization

@@ -89,6 +89,10 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
         !camera_config["max_payload_size"].is_null()) {
       camera_constant.max_payload_size = camera_config["max_payload_size"];
     }
+    if (camera_config.contains("use_cpu") &&
+        !camera_config["use_cpu"].is_null()) {
+      camera_constant.use_cpu = camera_config["use_cpu"];
+    }
     camera_constants.insert({camera_constant.name, camera_constant});
   }
   return camera_constants;
