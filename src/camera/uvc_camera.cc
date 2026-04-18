@@ -11,7 +11,7 @@ const cv::Mat UVCCamera::backup_image_ =
 
 void callback(uvc_frame_t* frame, void* ptr) {
   auto ptr_ = static_cast<UVCCamera*>(ptr);
-  ptr_->mutex_.try_lock();
+  ptr_->mutex_.lock();
   switch (frame->frame_format) {
     case UVC_COLOR_FORMAT_MJPEG: {
       char* data = static_cast<char*>(frame->data);
@@ -108,7 +108,7 @@ void UVCCamera::GetFrame(timestamped_frame_t* output) {
   while (frame_index_ == previous_frame_index_) {
     std::this_thread::yield();
   }
-  mutex_.try_lock();
+  mutex_.lock();
   if (frame_buffer.frame.empty()) {
     backup_image_.copyTo(output->frame);
     output->invalid = true;
