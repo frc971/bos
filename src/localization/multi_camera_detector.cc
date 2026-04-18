@@ -12,12 +12,16 @@ namespace localization {
 MultiCameraDetector::MultiCameraDetector(
     std::vector<camera::camera_constant_t> camera_constants)
     : camera_constants_(std::move(camera_constants)),
+      last_write_times_(camera_constants_.size()),
       timestamped_frames_(camera_constants_.size()),
       tag_detections_(camera_constants_.size()) {
   std::string log_path = frc::DataLogManager::GetLogDir();
   cameras_.reserve(camera_constants_.size());
   camera_threads_.reserve(camera_constants_.size());
+  streamers_.reserve(camera_constants_.size());
   for (size_t i = 0; i < camera_constants_.size(); i++) {
+    streamers_.emplace_back(camera_constants_[i].name, 5801 + i, 30, 1080,
+                            1080);
     const std::string camera_log_dest =
         fmt::format("{}/{}", log_path, camera_constants_[i].name);
     if (camera_constants_[i].serial_id.has_value()) {
@@ -44,30 +48,16 @@ MultiCameraDetector::MultiCameraDetector(
           camera_constants_[i].frame_width.value(),
           camera_constants_[i].frame_height.value(), intrinsics));
     }
-    camera_threads_.emplace_back([this, i]() -> void {
-      while (run_cameras_) {
-        camera::timestamped_frame_t timestamped_frame;
-        timestamped_frame = cameras_[i]->GetFrame();
-        if (timestamped_frame.invalid) {
-          continue;  // this is ok because GetFrame is blocking
-        }
-        std::vector<localization::tag_detection_t> detections =
-            detectors_[i]->GetTagDetections(timestamped_frame);
-        mutex_.lock();
-        timestamped_frames_[i] = std::move(timestamped_frame);
-        tag_detections_[i] = std::move(detections);
-        mutex_.unlock();
-      }
-    });
   }
 }
 
 auto MultiCameraDetector::GetTagDetections()
     -> std::vector<std::vector<tag_detection_t>> {
   std::vector<std::vector<tag_detection_t>> tag_detections;
-  mutex_.lock();
-  tag_detections = tag_detections_;
-  mutex_.unlock();
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    tag_detections = tag_detections_;
+  }
   return tag_detections;
 }
 
@@ -75,11 +65,12 @@ auto MultiCameraDetector::GetTagDetections()
 auto MultiCameraDetector::GetCVFrames() -> std::vector<cv::Mat> {
   std::vector<cv::Mat> frames;
   frames.reserve(cameras_.size());
-  mutex_.lock();
-  for (size_t i = 0; i < cameras_.size(); i++) {
-    frames.push_back(timestamped_frames_[i].frame.clone());
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    for (size_t i = 0; i < cameras_.size(); i++) {
+      frames.push_back(timestamped_frames_[i].frame.clone());
+    }
   }
-  mutex_.unlock();
   return frames;
 }
 
@@ -88,6 +79,32 @@ MultiCameraDetector::~MultiCameraDetector() {
   for (auto& t : camera_threads_) {
     if (t.joinable())
       t.join();
+  }
+}
+
+void MultiCameraDetector::StartThreads() {
+  for (size_t i = 0; i < cameras_.size(); i++) {
+    camera_threads_.emplace_back([this, i]() -> void {
+      while (run_cameras_) {
+        camera::timestamped_frame_t timestamped_frame;
+        timestamped_frame = cameras_[i]->GetFrame();
+        if (timestamped_frame.invalid) {
+          continue;  // this is ok because GetFrame is blocking
+        }
+        if (timestamped_frame.timestamp - last_write_times_[i] >
+            1.0 / kenforced_streamer_fps) {
+          streamers_[i].WriteFrame(timestamped_frame.frame);
+          last_write_times_[i] = timestamped_frame.timestamp;
+        }
+        std::vector<localization::tag_detection_t> detections =
+            detectors_[i]->GetTagDetections(timestamped_frame);
+        {
+          std::lock_guard<std::mutex> lock(mutex_);
+          timestamped_frames_[i] = std::move(timestamped_frame);
+          tag_detections_[i] = std::move(detections);
+        }
+      }
+    });
   }
 }
 
