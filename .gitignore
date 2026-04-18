@@ -14,5 +14,9 @@ image.tar
 bin/*
 build
 logs/
+*.wpilog
 bos_logs/
-position_log.wpilog
+wpilib-install
+*.jpg
+interesting_frames/
+*build*/

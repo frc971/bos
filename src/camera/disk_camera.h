@@ -2,6 +2,7 @@
 #include <chrono>
 #include <queue>
 #include "src/camera/camera.h"
+#include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/utils/pch.h"
 #include "src/utils/timer.h"
@@ -24,17 +25,23 @@ struct CompareTimestampedFramePath {
 // Can be used to testing
 class DiskCamera : public ICamera {
  public:
-  DiskCamera(std::string image_folder_path);
+  DiskCamera(std::string image_folder_path,
+             std::optional<camera_constant_t> camera_constant = std::nullopt,
+             double speed = 1.0, std::optional<double> start = std::nullopt,
+             std::optional<double> end = std::nullopt);
   auto GetFrame() -> timestamped_frame_t override;
   auto Restart() -> void override;
+  auto IsDone() -> bool override { return image_paths_.empty(); }
+  [[nodiscard]] auto GetCameraConstant() const -> camera_constant_t override;
 
  private:
+  const double speed_;
+  const std::optional<double> start_, end_;
+  std::optional<camera_constant_t> camera_constant_;
   std::string image_folder_path_;
   std::priority_queue<TimestampedFramePath, std::vector<TimestampedFramePath>,
                       CompareTimestampedFramePath>
       image_paths_;
-  std::chrono::time_point<std::chrono::steady_clock> start_time_ =
-      std::chrono::steady_clock::now();
 };
 
 }  // namespace camera

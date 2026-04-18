@@ -18,6 +18,18 @@
     },
     {
       "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.1:1.0-video-index0",
+      "intrinsics_path": "/bos/constants/misc/dev_orin_intrinsics.json",
+      "extrinsics_path": "/bos/constants/misc/dev_orin_extrinsics.json",
+      "name": "dev_orin"
+    },
+    {
+      "pipeline": "",
+      "intrinsics_path": "/bos/constants/misc/dummy_camera_intrinsics.json",
+      "extrinsics_path": "/bos/constants/misc/dummy_camera_extrinsics.json",
+      "name": "default_usb0"
+    },
+    {
+      "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.1:1.0-video-index0",
       "intrinsics_path": "/bos/constants/fiddler/usb_camera0_intrinsics.json",
       "extrinsics_path": "/bos/constants/fiddler/usb_camera0_extrinsics.json",
       "name": "fiddler_usb0"
@@ -76,16 +88,31 @@
       "exposure": null
     },
     {
-      "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.1:1.0-video-index0",
-      "intrinsics_path": "/bos/constants/misc/dev_orin_intrinsics.json",
-      "extrinsics_path": "/bos/constants/misc/dev_orin_extrinsics.json",
-      "name": "dev_orin"
+      "name": "second_bot_front",
+      "intrinsics_path": "/bos/constants/second_bot/front_intrinsics.json",
+      "extrinsics_path": "/bos/constants/second_bot/front_extrinsics.json",
+      "frame_width": 1280,
+      "frame_height": 800,
+      "fps": 100.0,
+      "serial_id": "secondfront"
     },
     {
-      "pipeline": "",
-      "intrinsics_path": "/bos/constants/misc/dummy_camera_intrinsics.json",
-      "extrinsics_path": "/bos/constants/misc/dummy_camera_extrinsics.json",
-      "name": "default_usb0"
+      "name": "second_bot_right",
+      "intrinsics_path": "/bos/constants/second_bot/right_intrinsics.json",
+      "extrinsics_path": "/bos/constants/second_bot/right_extrinsics.json",
+      "frame_width": 1280,
+      "frame_height": 800,
+      "fps": 100.0,
+      "serial_id": "secondright"
+    },
+    {
+      "name": "second_bot_left",
+      "intrinsics_path": "/bos/constants/second_bot/left_intrinsics.json",
+      "extrinsics_path": "/bos/constants/second_bot/left_extrinsics.json",
+      "frame_width": 1280,
+      "frame_height": 800,
+      "fps": 100.0,
+      "serial_id": "secondleft"
     }
   ]
 }

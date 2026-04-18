@@ -1,9 +1,10 @@
 #include "src/localization/gpu_apriltag_detector.h"
 #include <opencv2/calib3d.hpp>
+#include "absl/status/status.h"
 #include "apriltag/apriltag.h"
 #include "apriltag/tag36h11.h"
 #include "src/utils/constants_from_json.h"
-#include "third_party/971apriltag/971apriltag.h"
+#include "third_party/971apriltag/apriltag.h"
 
 namespace localization {
 using json = nlohmann::json;
@@ -12,12 +13,20 @@ constexpr auto RadianToDegree(double radian) -> double {
   return radian * (180 / M_PI);
 }
 
+auto ToMat(const cv::Mat& image) -> cv::Mat {
+  cv::Mat color_image(cv::Size(image.cols, image.rows), CV_8UC2,
+                      (void*)image.data);
+  return color_image;
+}
+
 GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
                                          const nlohmann::json& intrinsics,
                                          bool verbose)
-    : camera_matrix_(utils::CameraMatrixFromJson<cv::Mat>(intrinsics)),
+    : camera_matrix_(
+          utils::CameraMatrixFromJson<frc::apriltag::CameraMatrix>(intrinsics)),
       distortion_coefficients_(
-          utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics)) {
+          utils::DistortionCoefficientsFromJson<frc::apriltag::DistCoeffs>(
+              intrinsics)) {
 
   LOG(INFO) << image_width << " " << image_height;
 
@@ -30,33 +39,42 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
   apriltag_detector_->qtp.min_white_black_diff = 4;
   apriltag_detector_->debug = false;
 
-  gpu_detector_ = std::make_unique<frc971::apriltag::GpuDetector>(
+  gpu_detector_ = std::make_unique<frc::apriltag::GpuDetector>(
       image_width, image_height, apriltag_detector_,
-      utils::CameraMatrixFromJson<frc971::apriltag::CameraMatrix>(intrinsics),
-      utils::DistortionCoefficientsFromJson<frc971::apriltag::DistCoeffs>(
-          intrinsics));
+      utils::CameraMatrixFromJson<frc::apriltag::CameraMatrix>(intrinsics),
+      utils::DistortionCoefficientsFromJson<frc::apriltag::DistCoeffs>(
+          intrinsics),
+      vision::ImageFormat::YUYV422);
 }
 auto GPUAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame)
     -> std::vector<tag_detection_t> {
+  CHECK(!timestamped_frame.frame.empty());
   try {
-    if (timestamped_frame.frame.channels() == 1) {
-      gpu_detector_->DetectGrayHost(
-          (unsigned char*)timestamped_frame.frame.ptr());
-    } else if (timestamped_frame.frame.channels() == 3) {
-      cv::Mat gray;
-      cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2GRAY);
-      gpu_detector_->DetectGrayHost((unsigned char*)gray.ptr());
-    } else {
-      LOG(ERROR) << "Unknown frame type";
+    CHECK(timestamped_frame.frame.channels() == 3);
+    cv::Mat gray;
+    cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2YUV_YUY2);
+    cv::Mat mat_ = ToMat(gray);
+    absl::Status detection_status = gpu_detector_->Detect(mat_.data, nullptr);
+    if (!detection_status.ok()) {
+      // LOG(WARNING) << "Gpu detector failed! Error: "
+      // << detection_status.message();
+      if (restart_detector_on_cuda_error) {
+        // LOG(WARNING) << "Restarting GPU detector";
+        gpu_detector_ = std::make_unique<frc::apriltag::GpuDetector>(
+            timestamped_frame.frame.cols, timestamped_frame.frame.rows,
+            apriltag_detector_, camera_matrix_, distortion_coefficients_,
+            vision::ImageFormat::YUYV422);
+      }
+      return {};
     }
   } catch (const std::exception& e) {
-    LOG(WARNING) << "Caught exception: " << e.what();
+    LOG(WARNING) << "Returning no detections because of exception: "
+                 << e.what();
     return {};
   }
   const zarray_t* raw_detections = gpu_detector_->Detections();
   std::vector<tag_detection_t> tag_detections;
-
   if (zarray_size(raw_detections)) {
     for (int i = 0; i < zarray_size(raw_detections); ++i) {
       apriltag_detection_t* gpu_detection;

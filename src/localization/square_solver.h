@@ -19,12 +19,14 @@ class SquareSolver : public IPositionSolver {
                frc::AprilTagFieldLayout layout = kapriltag_layout,
                std::vector<cv::Point3d> tag_corners = kapriltag_corners);
 
+  auto EstimatePositionAmbiguous(const std::vector<tag_detection_t>& detections,
+                                 bool reject_far_tags = true)
+      -> std::vector<std::pair<position_estimate_t, position_estimate_t>>;
   auto EstimatePosition(const std::vector<tag_detection_t>& detections,
                         bool reject_far_tags = true)
       -> std::vector<position_estimate_t> override;
-  auto EstimatePositionNew(const std::vector<tag_detection_t>& detection,
-                           bool reject_far_tags = true)
-      -> std::vector<position_estimate_t>;
+  auto ComputeRobotPose(const cv::Mat& tvec, const cv::Mat& rvec, int tag_id)
+      -> frc::Pose3d;
 
  private:
   static constexpr double kvariance_scalar_ = 1.0;
@@ -34,8 +36,6 @@ class SquareSolver : public IPositionSolver {
   cv::Mat camera_matrix_;
   cv::Mat distortion_coefficients_;
   cv::Mat camera_to_robot_;
-  cv::Mat invert_translation_;
   cv::Mat rotate_yaw_wpilib_;
-  cv::Mat rotate_yaw_cv_;
 };
 }  // namespace localization

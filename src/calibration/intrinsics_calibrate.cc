@@ -1,3 +1,4 @@
+#include <memory>
 #include <utility>
 
 #include "absl/flags/flag.h"
@@ -68,11 +69,8 @@ auto WriteIntrinsicToFile(cv::Mat camera_matrix, cv::Mat dist_coeffs,
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  camera::camera_constant_t camera_constant = camera::SelectCameraConfig(
+  std::unique_ptr<camera::ICamera> camera = camera::SelectCameraConfig(
       absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
-
-  std::unique_ptr<camera::ICamera> camera =
-      std::make_unique<camera::CVCamera>(camera_constant);
 
   camera::CameraSource source("camera", std::move(camera));
   camera::CscoreStreamer streamer("intrinsics_calibrate",
@@ -96,19 +94,16 @@ auto main(int argc, char* argv[]) -> int {
       std::ref(detection_results), std::ref(capture_frames),
       std::ref(log_image));
 
-  bool run = true;
-  while (run) {
-    char key;
-    std::cin >> key;
-    switch (key) {
-      case 'q':
-        run = false;
-      case 'c':
-        log_image.store(true);
-        break;
-      default:
-        std::cout << "Received invalid key!\n";
+  while (true) {
+    std::string input;
+    std::getline(std::cin, input);
+    if (input == "q") {
+      break;
     }
+    if (input.empty()) {
+      log_image.store(true);
+    }
+    std::cout << "Received invalid key!\n";
   }
 
   capture_frames.store(false);

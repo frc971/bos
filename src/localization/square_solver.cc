@@ -28,10 +28,7 @@ SquareSolver::SquareSolver(const std::string& intrinsics_path,
   cv::Mat rvec_cv = (cv::Mat_<double>(3, 1) << 0, std::numbers::pi, 0);
   cv::Mat rvec_wpi = (cv::Mat_<double>(3, 1) << 0, 0, std::numbers::pi);
   cv::Mat tvec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
-  rotate_yaw_cv_ = utils::MakeTransform(rvec_cv, tvec);
   rotate_yaw_wpilib_ = utils::MakeTransform(rvec_wpi, tvec);
-  invert_translation_ = cv::Mat::eye(4, 4, CV_64F) * -1;
-  invert_translation_.at<double>(3, 3) = 1;
 }
 
 SquareSolver::SquareSolver(camera::camera_constant_t camera_constant,
@@ -41,12 +38,16 @@ SquareSolver::SquareSolver(camera::camera_constant_t camera_constant,
                    camera_constant.extrinsics_path.value(), std::move(layout),
                    std::move(tag_corners)) {}
 
-auto SquareSolver::EstimatePosition(
+auto SquareSolver::EstimatePositionAmbiguous(
     const std::vector<tag_detection_t>& detections, const bool reject_far_tags)
-    -> std::vector<position_estimate_t> {
-  std::vector<position_estimate_t> position_estimates;
+    -> std::vector<std::pair<position_estimate_t, position_estimate_t>> {
+
+  std::vector<std::pair<position_estimate_t, position_estimate_t>>
+      position_estimates;
   position_estimates.reserve(detections.size());
+
   for (const auto& detection : detections) {
+
     if (reject_far_tags) {
       const auto& c = detection.corners;
       const double area = 0.5 * std::abs((c[0].x - c[2].x) * (c[1].y - c[3].y) -
@@ -55,48 +56,46 @@ auto SquareSolver::EstimatePosition(
         continue;
       }
     }
-    cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output rotation vector
-    cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64FC1);  // output translation vector
-    cv::solvePnP(tag_corners_, detection.corners, camera_matrix_,
-                 distortion_coefficients_, rvec, tvec, false,
-                 cv::SOLVEPNP_IPPE_SQUARE);
 
-    if (reject_far_tags && cv::norm(tvec) > 5.0) {
+    std::vector<cv::Mat> rvecs;
+    std::vector<cv::Mat> tvecs;
+
+    cv::solvePnPGeneric(tag_corners_, detection.corners, camera_matrix_,
+                        distortion_coefficients_, rvecs, tvecs, false,
+                        cv::SOLVEPNP_IPPE_SQUARE);
+
+    if (rvecs.size() < 2 || tvecs.size() < 2) {
       continue;
     }
 
-    const double translation_x = tvec.ptr<double>()[2];
-    const double translation_y = tvec.ptr<double>()[0];
+    auto build_estimate = [&](const cv::Mat& rvec,
+                              const cv::Mat& tvec) -> position_estimate_t {
+      const double distance = cv::norm(tvec);
+      return position_estimate_t{
+          .tag_ids = {detection.tag_id},
+          .rejected_tag_ids = {},
+          .pose = ComputeRobotPose(tvec, rvec, detection.tag_id),
+          .variance = Variance(1, distance, kvariance_min_, kvariance_scalar_),
+          .timestamp = detection.timestamp,
+          .num_tags = 1,
+          .avg_tag_dist = distance};
+    };
 
-    utils::ConvertOpencvCoordinateToWpilib(tvec);
-    utils::ConvertOpencvCoordinateToWpilib(rvec);
+    auto est1 = build_estimate(rvecs[0], tvecs[0]);
+    auto est2 = build_estimate(rvecs[1], tvecs[1]);
 
-    cv::Mat camera_to_tag = utils::MakeTransform(rvec, tvec);
-    cv::Mat tag_to_camera = camera_to_tag.inv();
-    cv::Mat field_to_tag = utils::EigenToCvMat(
-        localization::kapriltag_layout.GetTagPose(detection.tag_id)
-            .value()
-            .ToMatrix());
-    frc::Pose3d robot_pose(utils::CvMatToEigen(
-        ((field_to_tag * rotate_yaw_wpilib_) * tag_to_camera) *
-        camera_to_robot_));
+    if (reject_far_tags && est1.avg_tag_dist > kmax_tag_distance &&
+        est2.avg_tag_dist > kmax_tag_distance) {
+      continue;
+    }
 
-    const double distance = std::hypot(translation_x, translation_y);
-
-    position_estimates.push_back(position_estimate_t{
-        .tag_ids = {detection.tag_id},
-        .rejected_tag_ids = {},  // TODO
-        .pose = robot_pose,
-        .variance = Variance(1, distance, kvariance_min_, kvariance_scalar_),
-        .timestamp = detection.timestamp,
-        .num_tags = 1,
-        .avg_tag_dist = distance});
+    position_estimates.emplace_back(est1, est2);
   }
 
   return position_estimates;
 }
 
-auto SquareSolver::EstimatePositionNew(
+auto SquareSolver::EstimatePosition(
     const std::vector<tag_detection_t>& detections, const bool reject_far_tags)
     -> std::vector<position_estimate_t> {
   std::vector<position_estimate_t> position_estimates;
@@ -123,31 +122,30 @@ auto SquareSolver::EstimatePositionNew(
     }
 
     double distance = cv::norm(tvec);
-    if (reject_far_tags && distance > 5.0) {
+    if (reject_far_tags && distance > kmax_tag_distance) {
       continue;
     }
-
-    cv::Mat camera_to_tag = utils::MakeTransform(rvec, tvec);
-    cv::Mat tag_to_camera = camera_to_tag.inv();
-    cv::Mat field_to_tag = utils::EigenToCvMat(
-        localization::kapriltag_layout.GetTagPose(detection.tag_id)
-            .value()
-            .ToMatrix());
-    utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);
-    cv::Mat field_to_robot =
-        field_to_tag * rotate_yaw_cv_ * tag_to_camera * camera_to_robot_;
-    utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
-
-    frc::Pose3d robot_pose(utils::CvMatToEigen(field_to_robot));
 
     position_estimates.push_back(position_estimate_t{
         .tag_ids = {detection.tag_id},
         .rejected_tag_ids = {},  // TODO
-        .pose = robot_pose,
+        .pose = ComputeRobotPose(tvec, rvec, detection.tag_id),
         .variance = distance * distance,
         .timestamp = detection.timestamp,
     });
   }
   return position_estimates;
+}
+
+auto SquareSolver::ComputeRobotPose(const cv::Mat& tvec, const cv::Mat& rvec,
+                                    int tag_id) -> frc::Pose3d {
+  cv::Mat camera_to_tag = utils::MakeTransform(rvec, tvec);
+  cv::Mat tag_to_camera = camera_to_tag.inv();
+  utils::ChangeBasis(tag_to_camera, utils::CV_TO_WPI);
+  cv::Mat field_to_tag = utils::EigenToCvMat(
+      localization::kapriltag_layout.GetTagPose(tag_id).value().ToMatrix());
+  cv::Mat field_to_robot =
+      field_to_tag * rotate_yaw_wpilib_ * tag_to_camera * camera_to_robot_;
+  return frc::Pose3d{utils::CvMatToEigen(field_to_robot)};
 }
 }  // namespace localization
