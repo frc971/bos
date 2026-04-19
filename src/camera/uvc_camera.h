@@ -29,6 +29,7 @@ class UVCCamera : public ICamera {
   std::mutex mutex_;
   int frame_index_;
   int previous_frame_index_;
+  static constexpr cv::ImreadModes read_type = cv::IMREAD_COLOR;
 
  private:
   auto StartCamera(uvc_stream_ctrl_t ctrl) -> void;
