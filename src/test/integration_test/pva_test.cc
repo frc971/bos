@@ -175,10 +175,10 @@ auto main(int argc, char* argv[]) -> int {
     // We now wrap the loaded image into a VPIImage object to be used by VPI.
     // VPI won't make a copy of it, so the original
     // image must be in scope at all times.
-    CHECK_STATUS(
+    CHECK_STATUS(                                                // NOLINT
         vpiImageCreateWrapperOpenCVMat(cvImage, 0, &imgInput));  // NOLINT
-    CHECK_STATUS(vpiImageCreate(cvImage.cols, cvImage.rows,
-                                VPI_IMAGE_FORMAT_U8,  // NOLINT
+    CHECK_STATUS(vpiImageCreate(cvImage.cols, cvImage.rows,      // NOLINT
+                                VPI_IMAGE_FORMAT_U8,             // NOLINT
                                 0, &imgGrayscale));
 
     const int maxDetections = 64;
@@ -191,7 +191,8 @@ auto main(int argc, char* argv[]) -> int {
                                 VPI_BACKEND_CPU | VPI_BACKEND_PVA, &poses));
 
     // Create the payload for AprilTag Detector algorithm
-    CHECK_STATUS(vpiCreateAprilTagDetector(backend, cvImage.cols, cvImage.rows,
+    CHECK_STATUS(vpiCreateAprilTagDetector(backend, cvImage.cols,  // NOLINT
+                                           cvImage.rows,           // NOLINT
                                            &apritagDecodeParams, &payload));
 
     // AprilTagPoseEstimation parameters
@@ -204,9 +205,9 @@ auto main(int argc, char* argv[]) -> int {
     // Processing stage
 
     // First convert input to grayscale
-    CHECK_STATUS(vpiSubmitConvertImageFormat(stream, VPI_BACKEND_CPU,
-                                             imgInput,              // NOLINT
-                                             imgGrayscale, NULL));  // NOLINT
+    CHECK_STATUS(vpiSubmitConvertImageFormat(stream, VPI_BACKEND_CPU,  // NOLINT
+                                             imgInput,                 // NOLINT
+                                             imgGrayscale, NULL));     // NOLINT
 
     // Then get AprilTag detections
     CHECK_STATUS(vpiSubmitAprilTagDetector(  // NOLINT
