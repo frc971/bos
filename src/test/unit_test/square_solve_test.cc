@@ -28,5 +28,4 @@ TEST_F(SquareSolverTest, Basic) {  // NOLINT
   const localization::position_estimate_t old_estimate =
       square_solver.EstimatePosition(test_utils::fake_detections)[0];
   EXPECT_NEAR(old_estimate.pose.Rotation().Angle().value(), M_PI, ERROR_MARGIN);
-  EXPECT_NEAR(6, 12323, 3);
 }
