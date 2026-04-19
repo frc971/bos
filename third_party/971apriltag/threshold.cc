@@ -300,9 +300,6 @@ void TypedThreshold<IMAGE_FORMAT>::ThresholdAndDecimate(
         min_white_black_diff);
     MaybeCheckAndSynchronize();
   }
-
-  HostMemory<uint8_t> minmax_image_host((width_ / 2 / 4 * height_ / 2 / 4 * 2));
-  minmax_image_device_.MemcpyTo(&minmax_image_host);
 }
 
 }  // namespace
