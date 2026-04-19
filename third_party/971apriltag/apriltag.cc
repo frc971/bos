@@ -770,15 +770,15 @@ absl::Status GpuDetector::Detect(const uint8_t* image,
         num_compressed_union_marker_pair_device_.get(),
         union_marker_pair_device_.size(), nz, stream_.get());
     if (cuda_status) {
-      LOG(WARNING) << "Received cuda status: " << cuda_status;
+      // LOG(WARNING) << "Received cuda status: " << cuda_status;
       int dev = -1;
       cudaGetDevice(&dev);
-      LOG(WARNING) << "FAILED";
-      LOG(WARNING) << "Current device: " << dev;
+      // LOG(WARNING) << "FAILED";
+      // LOG(WARNING) << "Current device: " << dev;
 
       int count = 0;
       cudaGetDeviceCount(&count);
-      LOG(WARNING) << "Device count: " << count;
+      // LOG(WARNING) << "Device count: " << count;
 
       return absl::UnknownError("Could not select cuda device");
     }

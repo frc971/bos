@@ -5,10 +5,12 @@
 #include <string>
 #include "absl/flags/flag.h"
 #include "absl/flags/internal/flag.h"
+#include "absl/status/status.h"
 #include "cv_camera.h"
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/disk_camera.h"
+#include "src/camera/uvc_camera.h"
 #include "src/utils/log.h"
 
 ABSL_FLAG(std::optional<std::string>, folder_path, std::nullopt,  // NOLINT
@@ -38,13 +40,23 @@ auto SelectCameraConfig(const std::string& choice,
     if (std::filesystem::is_directory(
             absl::GetFlag(FLAGS_folder_path).value())) {
       return std::make_unique<camera::DiskCamera>(
-          absl::GetFlag(FLAGS_folder_path).value(), camera::GetCameraConstants()[choice]);
+          absl::GetFlag(FLAGS_folder_path).value(),
+          camera::GetCameraConstants()[choice]);
     } else {
       LOG(WARNING) << "You entered in an invalid camera";
     }
   }
   if (camera_constants.contains(choice)) {
-
+    if (camera_constants.at(choice).serial_id.has_value()) {
+      LOG(INFO) << "Initializing via uvc";
+      absl::Status status;
+      auto camera =
+          std::make_unique<UVCCamera>(camera_constants.at(choice), status);
+      if (!status.ok()) {
+        LOG(WARNING) << "Failed to select camera via uvc: " << status.message();
+      }
+      return camera;
+    }
     return std::make_unique<camera::CVCamera>(
         camera::GetCameraConstants()[choice]);
   } else {
