@@ -12,6 +12,7 @@ namespace fs = std::filesystem;
 
 namespace utils {
 
+// Publishes logname such as log32 to networktables so we can easily find match logs
 static void PublishLogName() {
   std::string path = frc::DataLogManager::GetLogDir();
   auto instance = nt::NetworkTableInstance::GetDefault();
@@ -51,7 +52,4 @@ auto GetNewLogPath(const std::string& log_dir) -> std::string {
   fs::create_directory(log_path);
   return log_path;
 }
-
-// Publishes logname such as log32 to networktables so we can easily find match logs
-
 }  // namespace utils
