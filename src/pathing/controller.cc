@@ -1,16 +1,10 @@
-#include "controller.h"
-#include <frc/geometry/Pose2d.h>
-#include <frc/geometry/Pose3d.h>
-#include <frc/geometry/Translation3d.h>
-#include <networktables/BooleanTopic.h>
 #include <networktables/DoubleTopic.h>
-#include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
 #include <networktables/StructTopic.h>
-#include <networktables/Topic.h>
-#include <cfloat>
+#include <networktables/BooleanTopic.h>
+#include <algorithm>
 #include <chrono>
-#include <climits>
+#include <cmath>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <thread>
@@ -18,15 +12,16 @@
 #include "src/localization/position_receiver.h"
 #include "src/pathing/splines.h"
 #include "src/utils/log.h"
-#include "src/utils/nt_utils.h"
 
 namespace pathing {
 
 auto RunController(const std::string& navgrid_path =
                        "/root/bos/constants/navgrid.json") -> void {
+  const int lookahead_offset_ = 2;
 
   std::ifstream file(navgrid_path);
   if (!file.is_open()) {
+    LOG(FATAL) << "Failed to open navgrid.json" << std::endl;
     LOG(FATAL) << "Failed to open navgrid.json";
     return;
   }
@@ -39,7 +34,7 @@ auto RunController(const std::string& navgrid_path =
   double nodeSizeMeters = data["nodeSizeMeters"];
 
   std::vector<std::vector<pathing::Node>> grid(
-      GRID_H, std::vector<pathing::Node>(GRID_W));
+    GRID_H, std::vector<pathing::Node>(GRID_W));
   for (int y = 0; y < GRID_H; ++y) {
     for (int x = 0; x < GRID_W; ++x) {
       grid[y][x].x = x;
@@ -47,105 +42,92 @@ auto RunController(const std::string& navgrid_path =
       grid[y][x].obstacle = data["grid"][y][x];
     }
   }
-
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
-  auto current_sub = localization::PositionReceiver();
+  auto current_sub =
+      inst.GetStructTopic<frc::Pose3d>("/Orin/PoseEstimate/main_bot_left/Pose3d")
+          .Subscribe({});
   auto target_sub =
       inst.GetStructTopic<frc::Pose2d>("/pathing/target").Subscribe({});
 
   auto enabled_sub = inst.GetBooleanTopic("/pathing/enabled").Subscribe(false);
-  auto max_speed_sub = inst.GetDoubleTopic("/pathing/max_speed").Subscribe(1.0);
 
   auto vx_pub = inst.GetDoubleTopic("/pathing/vx").Publish();
   auto vy_pub = inst.GetDoubleTopic("/pathing/vy").Publish();
+  auto next_pose_sub = inst.GetStructTopic<frc::Pose2d>("/pathing/nextPose").Publish();
 
   std::vector<frc::Pose2d> spline_points;
-  int spline_idx = 0;
-  pathing::Point prev_target_pt{.x = -1, .y = -1};
-  pathing::Point prev_start_pt{.x = -1, .y = -1};
 
   while (true) {
     if (!enabled_sub.Get()) {
-      LOG(INFO) << "pathing disabled, enabled=" << enabled_sub.Get();
-      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      vx_pub.Set(0.0);
+      vy_pub.Set(0.0);
+      spline_points.clear();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
     frc::Pose3d current_pose = current_sub.Get();
     frc::Pose2d target_pose = target_sub.Get();
 
-    LOG(INFO) << current_pose.X().value() << " " << current_pose.Y().value();
-    LOG(INFO) << "spline idx: " << spline_idx << " with len "
-              << spline_points.size();
-
-    pathing::Point start_pt{
+    Point start_pt{
         .x = (int)(current_pose.X().value() / nodeSizeMeters),
         .y = (int)(current_pose.Y().value() / nodeSizeMeters)};
-    pathing::Point target_pt{
+    Point target_pt{
         .x = (int)(target_pose.X().value() / nodeSizeMeters),
         .y = (int)(target_pose.Y().value() / nodeSizeMeters)};
+    start_pt.x = std::clamp(start_pt.x, 0, GRID_W - 1);
+    start_pt.y = std::clamp(st  art_pt.y, 0, GRID_H - 1);
+    target_pt.x = std::clamp(target_pt.x, 0, GRID_W - 1);
+    target_pt.y = std::clamp(target_pt.y, 0, GRID_H - 1);
 
     frc::Translation3d t3d(target_pose.X(), target_pose.Y(), 0_m);
     if (current_pose.Translation().Distance(t3d).value() < nodeSizeMeters) {
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);
+      spline_points.clear();
       std::this_thread::sleep_for(std::chrono::milliseconds(20));
       continue;
     }
 
-    if (target_pt.x != prev_target_pt.x || target_pt.y != prev_target_pt.y ||
-        start_pt.x != prev_start_pt.x || start_pt.y != prev_start_pt.y ||
-        spline_points.empty()) {
-      spline_points =
-          pathing::createSpline(grid, start_pt, target_pt, nodeSizeMeters);
-      spline_idx = 0;
-      prev_target_pt = target_pt;
-      prev_start_pt = start_pt;
-    }
-
-    if (!spline_points.empty() && spline_idx == 0) {
-      LOG(INFO) << "spline[0]=(" << spline_points[0].X().value() << ","
-                << spline_points[0].Y().value() << ") spline[last]=("
-                << spline_points.back().X().value() << ","
-                << spline_points.back().Y().value() << ") start_grid=("
-                << start_pt.x << "," << start_pt.y << ") target_grid=("
-                << target_pt.x << "," << target_pt.y << ")";
+    if (spline_points.empty()) {
+      std::vector<frc::Pose2d> new_spline =
+          createSpline(grid, start_pt, target_pt, nodeSizeMeters);
+      if (!new_spline.empty()) {
+        spline_points = new_spline;
+      }
     }
 
     if (spline_points.empty()) {
-      LOG(INFO) << "spline empty";
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);
       std::this_thread::sleep_for(std::chrono::milliseconds(20));
       continue;
     }
 
-    while (spline_idx + 1 < (int)spline_points.size()) {
-      frc::Translation3d curr3d(spline_points[spline_idx].X(),
-                                spline_points[spline_idx].Y(), 0_m);
-      frc::Translation3d next3d(spline_points[spline_idx + 1].X(),
-                                spline_points[spline_idx + 1].Y(), 0_m);
-      double ds_curr = current_pose.Translation().Distance(curr3d).value();
-      double ds_next = current_pose.Translation().Distance(next3d).value();
-      if (ds_next < ds_curr) {
-        spline_idx++;
-      } else {
-        break;
+    int closest_idx = 0;
+    {
+      frc::Translation3d first3d(spline_points[0].X(), spline_points[0].Y(), 0_m);
+      double best_dist = current_pose.Translation().Distance(first3d).value();
+      for (int i = 1; i < (int)spline_points.size(); ++i) {
+        frc::Translation3d p3d(spline_points[i].X(), spline_points[i].Y(), 0_m);
+        double d = current_pose.Translation().Distance(p3d).value();
+        if (d < best_dist) {
+          best_dist = d;
+          closest_idx = i;
+        }
       }
     }
 
     int lookahead_idx =
-        std::min(spline_idx + 10, (int)spline_points.size() - 1);
-    if (lookahead_idx <= 0) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(20));
-      continue;
-    }
-    frc::Pose2d lookahead = spline_points[lookahead_idx];
+        std::min(closest_idx + lookahead_offset_, (int)spline_points.size() - 1);
 
+    frc::Pose2d lookahead = spline_points[lookahead_idx];
     double dx = lookahead.X().value() - current_pose.X().value();
     double dy = lookahead.Y().value() - current_pose.Y().value();
+
+    next_pose_sub.Set(lookahead);
+
     double dist = std::sqrt(dx * dx + dy * dy);
     if (dist < 1e-6) {
-      LOG(INFO) << "bad distance: " << dist;
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);
       std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -154,8 +136,6 @@ auto RunController(const std::string& navgrid_path =
 
     double vx = (dx / dist);
     double vy = (dy / dist);
-
-    LOG(INFO) << vx << vy << "controller";
 
     vx_pub.Set(vx);
     vy_pub.Set(vy);

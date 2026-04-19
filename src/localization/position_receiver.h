@@ -1,6 +1,8 @@
 #pragma once
 
 #include <frc/geometry/Pose3d.h>
+#include <networktables/DoubleArrayTopic.h>
+#include <networktables/DoubleTopic.h>
 #include <networktables/StructTopic.h>
 #include "src/utils/pch.h"
 
@@ -9,10 +11,10 @@ namespace localization {
 class PositionReceiver {
  public:
   PositionReceiver();
-  auto Get() -> frc::Pose3d;
+  auto Get() -> frc::Pose2d;
 
  private:
-  nt::StructSubscriber<frc::Pose3d> pose3d_subscriber_;
+  nt::DoubleArraySubscriber pose3d_subscriber_;
 
   std::mutex mutex_;
 };

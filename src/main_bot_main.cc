@@ -102,5 +102,6 @@ auto main() -> int {
 
   // TODO find better way
   left_thread.join();
+  right_thread.join();
   pathing_thread.join();
 }
