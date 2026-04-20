@@ -132,7 +132,7 @@ auto JointSolver::EstimatePosition(
 
       if (counter % 10000 == 0 && !printed) {
         printed = true;
-        std::cout << "loss: " << loss << std::endl;
+        // std::cout << "loss: " << loss << std::endl;
       }
 
       const Eigen::Vector3d d_projection(
