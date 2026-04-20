@@ -69,6 +69,8 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
                           camera_config);
     SetConstant<uint32_t>("max_payload_size", camera_constant.max_payload_size,
                           camera_config);
+    SetConstant<double>("stream_ratio", camera_constant.stream_ratio,
+                        camera_config);
     camera_constants.insert({camera_constant.name, camera_constant});
   }
   return camera_constants;

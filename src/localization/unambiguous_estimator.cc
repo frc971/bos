@@ -100,7 +100,10 @@ UnambiguousEstimator::UnambiguousEstimator(
     camera_status_publishers_.push_back(camera_status_topic.Publish());
     if (port_start.has_value()) {
       streamers_.emplace_back(cameras[i].first.name, port_start.value() + i, 30,
-                              1080, 1080);
+                              cameras[i].first.frame_width.value_or(1080) *
+                                  cameras[i].first.stream_ratio.value_or(1),
+                              cameras[i].first.frame_height.value_or(1080) *
+                                  cameras[i].first.stream_ratio.value_or(1));
     }
   }
   std::cout << "Initialized estimators and streamers" << std::endl;
