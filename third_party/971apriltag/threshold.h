@@ -36,7 +36,7 @@ BytesPerPixel(const vision::ImageFormat image_format) {
     case vision::ImageFormat::BGRA8:
       return 4;
     case vision::ImageFormat::MJPEG:
-      asm("trap;");
+      return 0;
   }
   return 0;
 }
