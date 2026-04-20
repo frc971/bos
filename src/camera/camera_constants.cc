@@ -21,6 +21,16 @@ void SetConstant(const std::string_view config_name, std::optional<T>& config,
   }
 }
 
+auto StringToDetectorType(const std::string& detector_type) -> DetectorType {
+  if (detector_type == "austin_gpu") {
+    return AUSTIN_GPU;
+  }
+  if (detector_type == "opencv_cpu") {
+    return OPENCV_CPU;
+  }
+  return INVALID;
+}
+
 auto GetCameraConstants(const std::string& path) -> camera_constants_t {
   camera_constants_t camera_constants;
   std::ifstream f(path);
@@ -71,6 +81,12 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
                           camera_config);
     SetConstant<double>("stream_ratio", camera_constant.stream_ratio,
                         camera_config);
+
+    if (camera_config.contains("detector_type") &&
+        !camera_config["detector_type"].is_null()) {
+      camera_constant.detector_type =
+          StringToDetectorType(camera_config["detector_type"]);
+    }
     camera_constants.insert({camera_constant.name, camera_constant});
   }
   return camera_constants;

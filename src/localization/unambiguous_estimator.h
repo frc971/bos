@@ -14,7 +14,6 @@
 #include "src/utils/pch.h"
 
 namespace localization {
-enum Detector { OPENCV_CPU, AUSTIN_GPU };
 using latent_estimate_t = struct LatentEstimate {
   position_estimate_t pose_estimate;
   double latency;
@@ -25,11 +24,11 @@ using latent_estimate_t = struct LatentEstimate {
 };
 class UnambiguousEstimator {
  public:
-  UnambiguousEstimator(
-      std::vector<std::pair<camera::camera_constant_t, Detector>>& cameras,
-      std::optional<uint> port_start = std::nullopt, bool verbose = false,
-      std::optional<std::vector<std::filesystem::path>> img_dir_paths =
-          std::nullopt);
+  UnambiguousEstimator(std::vector<camera::camera_constant_t>& cameras,
+                       std::optional<uint> port_start = std::nullopt,
+                       bool verbose = false,
+                       std::optional<std::vector<std::filesystem::path>>
+                           img_dir_paths = std::nullopt);
   void Run();
   static bool log_interesting_timestamp_;
 

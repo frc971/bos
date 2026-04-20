@@ -5,6 +5,8 @@
 #include "src/utils/pch.h"
 namespace camera {
 
+enum DetectorType { OPENCV_CPU, AUSTIN_GPU, INVALID };
+
 using camera_constant_t = struct CameraConstant {
   std::string name;
   std::optional<std::string> pipeline = std::nullopt;
@@ -21,6 +23,7 @@ using camera_constant_t = struct CameraConstant {
   std::optional<uint32_t> max_payload_size = std::nullopt;  // uvc only
   std::optional<std::string> serial_id = std::nullopt;      // uvc only
   std::optional<double> stream_ratio = std::nullopt;
+  DetectorType detector_type = INVALID;
 
   friend auto operator<<(std::ostream& os, const CameraConstant& c)
       -> std::ostream& {

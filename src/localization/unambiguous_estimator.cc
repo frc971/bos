@@ -32,7 +32,7 @@ namespace localization {
 bool UnambiguousEstimator::log_interesting_timestamp_ = false;
 
 UnambiguousEstimator::UnambiguousEstimator(
-    std::vector<std::pair<camera::camera_constant_t, Detector>>& cameras,
+    std::vector<camera::camera_constant_t>& cameras,
     std::optional<uint> port_start, bool verbose,
     std::optional<std::vector<std::filesystem::path>> img_dir_paths)
     : port_start_(port_start),
@@ -51,22 +51,22 @@ UnambiguousEstimator::UnambiguousEstimator(
   for (size_t i = 0; i < cameras.size(); i++) {
     if (sim_) {
       icameras.push_back(std::make_unique<camera::DiskCamera>(
-          img_dir_paths.value()[i], cameras[i].first, 10,
+          img_dir_paths.value()[i], cameras[i], 10,
           interesting_timestamp_start_ - 1, interesting_timestamp_end_));
     } else {
       const std::string camera_log_dest =
-          fmt::format("{}/{}", log_path, cameras[i].first.name);
-      if (cameras[i].first.serial_id.has_value()) {
+          fmt::format("{}/{}", log_path, cameras[i].name);
+      if (cameras[i].serial_id.has_value()) {
         absl::Status status;
         icameras.push_back(std::make_unique<camera::UVCCamera>(
-            cameras[i].first, status, camera_log_dest));
+            cameras[i], status, camera_log_dest));
         if (!status.ok()) {
           LOG(WARNING) << "Unable to create uvc camera for unambiguous solver: "
                        << status.message();
         }
       } else {
-        icameras.push_back(std::make_unique<camera::CVCamera>(cameras[i].first,
-                                                              camera_log_dest));
+        icameras.push_back(
+            std::make_unique<camera::CVCamera>(cameras[i], camera_log_dest));
       }
       std::cout << "Logging to destination: " << camera_log_dest << std::endl;
     }
@@ -79,31 +79,45 @@ UnambiguousEstimator::UnambiguousEstimator(
   std::cout << "Initializing estimators and streamers" << std::endl;
   std::vector<cv::Mat> first_frames = sources_->GetCVFrames();
   for (size_t i = 0; i < cameras.size(); i++) {
-    switch (cameras[i].second) {
-      case OPENCV_CPU:
-        detectors_.push_back(std::make_unique<OpenCVAprilTagDetector>(
-            first_frames[i].cols, first_frames[i].rows,
-            utils::ReadIntrinsics(cameras[i].first.intrinsics_path.value())));
-        break;
-      case AUSTIN_GPU:
-        detectors_.push_back(std::make_unique<GPUAprilTagDetector>(
-            first_frames[i].cols, first_frames[i].rows,
-            utils::ReadIntrinsics(cameras[i].first.intrinsics_path.value())));
-        break;
-      default:
-        LOG(FATAL) << "Invalid solver type";
-        return;
+    camera::camera_constant_t& camera = cameras[i];
+    PCHECK(camera.intrinsics_path.has_value())
+        << "Camera " << camera.name << " does not have intrinsics_path";
+    PCHECK(camera.extrinsics_path.has_value())
+        << "Camera " << camera.name << " does not have extrinsics_path";
+
+    if (!camera.frame_width.has_value() || !camera.frame_height.has_value()) {
+      camera.frame_height = first_frames[i].rows;
+      camera.frame_width = first_frames[i].cols;
     }
-    solvers_.emplace_back(cameras[i].first);
+
+    switch (camera.detector_type) {
+      case camera::DetectorType::OPENCV_CPU:
+        detectors_.push_back(std::make_unique<OpenCVAprilTagDetector>(
+            camera.frame_width.value(), camera.frame_height.value(),
+            utils::ReadIntrinsics(camera.intrinsics_path.value())));
+        break;
+      case camera::DetectorType::AUSTIN_GPU:
+        detectors_.push_back(std::make_unique<GPUAprilTagDetector>(
+            camera.frame_width.value(), camera.frame_height.value(),
+            utils::ReadIntrinsics(camera.intrinsics_path.value())));
+        break;
+      case camera::DetectorType::INVALID:  // If invalid default to cpu
+        LOG(WARNING)
+            << "Invalid detector type! Using opencv's apriltag detector";
+        detectors_.push_back(std::make_unique<OpenCVAprilTagDetector>(
+            camera.frame_width.value(), camera.frame_height.value(),
+            utils::ReadIntrinsics(camera.intrinsics_path.value())));
+        break;
+    }
+    solvers_.emplace_back(camera);
     nt::BooleanTopic camera_status_topic =
-        table->GetBooleanTopic(cameras[i].first.name + " status");
+        table->GetBooleanTopic(camera.name + " status");
     camera_status_publishers_.push_back(camera_status_topic.Publish());
     if (port_start.has_value()) {
-      streamers_.emplace_back(cameras[i].first.name, port_start.value() + i, 30,
-                              cameras[i].first.frame_width.value_or(1080) *
-                                  cameras[i].first.stream_ratio.value_or(1),
-                              cameras[i].first.frame_height.value_or(1080) *
-                                  cameras[i].first.stream_ratio.value_or(1));
+      streamers_.emplace_back(
+          camera.name, port_start.value() + i, camera.fps.value_or(30),
+          camera.frame_width.value_or(1080) * camera.stream_ratio.value_or(1),
+          camera.frame_height.value_or(1080) * camera.stream_ratio.value_or(1));
     }
   }
   std::cout << "Initialized estimators and streamers" << std::endl;
