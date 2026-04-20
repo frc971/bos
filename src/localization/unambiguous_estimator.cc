@@ -32,20 +32,16 @@ namespace localization {
 bool UnambiguousEstimator::log_interesting_timestamp_ = false;
 
 UnambiguousEstimator::UnambiguousEstimator(
-    std::vector<camera::camera_constant_t>& cameras,
-    std::optional<uint> port_start, bool verbose,
+    std::vector<camera::camera_constant_t>& cameras, bool verbose,
     std::optional<std::vector<std::filesystem::path>> img_dir_paths)
-    : port_start_(port_start),
-      prev_timestamps_(cameras.size()),
+    : prev_timestamps_(cameras.size()),
       sim_(img_dir_paths.has_value()),
       nt_instance_(nt::NetworkTableInstance::GetDefault()) {
   std::string log_path = frc::DataLogManager::GetLogDir();
   auto camera_constants = camera::GetCameraConstants();
   detectors_.reserve(cameras.size());
   solvers_.reserve(cameras.size());
-  if (port_start.has_value()) {
-    streamers_.reserve(cameras.size());
-  }
+  streamers_.reserve(cameras.size());
   std::cout << "Initializing cameras" << std::endl;
   std::vector<std::unique_ptr<camera::ICamera>> icameras;
   for (size_t i = 0; i < cameras.size(); i++) {
@@ -113,12 +109,15 @@ UnambiguousEstimator::UnambiguousEstimator(
     nt::BooleanTopic camera_status_topic =
         table->GetBooleanTopic(camera.name + " status");
     camera_status_publishers_.push_back(camera_status_topic.Publish());
-    if (port_start.has_value()) {
-      streamers_.emplace_back(
-          camera.name, port_start.value() + i, camera.fps.value_or(30),
-          camera.frame_width.value_or(1080) * camera.stream_ratio.value_or(1),
-          camera.frame_height.value_or(1080) * camera.stream_ratio.value_or(1));
-    }
+    streamers_.push_back(camera.port.has_value()
+                             ? std::make_optional<camera::CscoreStreamer>(
+                                   camera.name, camera.port.value(),
+                                   camera.fps.value_or(30),
+                                   camera.frame_width.value_or(1080) *
+                                       camera.stream_ratio.value_or(1),
+                                   camera.frame_height.value_or(1080) *
+                                       camera.stream_ratio.value_or(1))
+                             : std::nullopt);
   }
   std::cout << "Initialized estimators and streamers" << std::endl;
 }
@@ -315,7 +314,9 @@ auto UnambiguousEstimator::GetUsableFrames(
         frame.timestamp < interesting_timestamp_end_;
   }
   for (size_t i = 0; i < frames.size(); i++) {
-    streamers_[i].WriteFrame(frames[i].frame);
+    if (streamers_[i].has_value()) {
+      streamers_[i].value().WriteFrame(frames[i].frame);
+    }
     if (!frames[i].invalid &&
         latest_timestamp - frames[i].timestamp < kacceptable_frame_recency) {
       usable_frames[i] = std::move(frames[i]);

@@ -26,7 +26,6 @@ auto main() -> int {
 
   LOG(INFO) << "Loaded constants";
 
-  localization::UnambiguousEstimator localizer(cameras,
-                                               std::make_optional<uint>(5801));
+  localization::UnambiguousEstimator localizer(cameras);
   localizer.Run();
 }

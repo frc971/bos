@@ -32,6 +32,7 @@
       "frame_height": null,
       "fps": null,
       "exposure": null,
+      "port": 5803,
       "detector_type": "austin_gpu"
     },
     {
@@ -44,6 +45,7 @@
       "frame_height": 800,
       "fps": 60.0,
       "exposure": null,
+      "port": 5802,
       "detector_type": "austin_gpu"
     },
     {
@@ -56,6 +58,7 @@
       "frame_height": 800,
       "fps": 60.0,
       "exposure": null,
+      "port": 5801,
       "detector_type": "austin_gpu"
     },
     {
@@ -68,6 +71,7 @@
       "serial_id": "secondfront",
       "max_payload_size": 1024,
       "stream_ratio": 0.5,
+      "port": 5803,
       "detector_type": "austin_gpu"
     },
     {
@@ -80,6 +84,7 @@
       "serial_id": "secondright",
       "max_payload_size": 1024,
       "stream_ratio": 0.5,
+      "port": 5802,
       "detector_type": "austin_gpu"
     },
     {
@@ -92,6 +97,7 @@
       "serial_id": "secondleft",
       "max_payload_size": 1024,
       "stream_ratio": 0.5,
+      "port": 5801,
       "detector_type": "austin_gpu"
     }
   ]

@@ -81,6 +81,7 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
                           camera_config);
     SetConstant<double>("stream_ratio", camera_constant.stream_ratio,
                         camera_config);
+    SetConstant<uint>("port", camera_constant.port, camera_config);
 
     if (camera_config.contains("detector_type") &&
         !camera_config["detector_type"].is_null()) {
