@@ -108,9 +108,6 @@ class GpuDetector {
   void CopyGrayTo(uint8_t* output) const {
     gray_image_device_.MemcpyTo(output);
   }
-  void CopyDecimatedTo(uint8_t* output) const {
-    decimated_image_device_.MemcpyTo(output);
-  }
   void CopyThresholdedTo(uint8_t* output) const {
     thresholded_image_device_.MemcpyTo(output);
   }
@@ -310,8 +307,6 @@ class GpuDetector {
   GpuMemory<uint8_t> color_image_device_;
   // Full size gray scale image.
   GpuMemory<uint8_t> gray_image_device_;
-  // Half resolution, gray, decimated image.
-  UnifiedMemory<uint8_t> decimated_image_device_;
   // Intermediates for thresholding.
   UnifiedMemory<uint8_t> thresholded_image_device_;
 
