@@ -24,6 +24,6 @@ class GPUAprilTagDetector : public IAprilTagDetector {
   apriltag_detector_t* apriltag_detector_;
   std::unique_ptr<frc::apriltag::GpuDetector> gpu_detector_;
   static constexpr vision::ImageFormat image_format =
-      vision::ImageFormat::YUYV422;
+      vision::ImageFormat::MONO8;
 };
 }  // namespace localization
