@@ -11,9 +11,9 @@ using camera_constant_t = struct CameraConstant {
   std::optional<std::string> intrinsics_path = std::nullopt;
   std::optional<std::string> extrinsics_path = std::nullopt;
   std::optional<double> backlight = std::nullopt;
-  std::optional<double> frame_width = std::nullopt;
-  std::optional<double> frame_height = std::nullopt;
-  std::optional<double> fps = std::nullopt;
+  std::optional<uint> frame_width = std::nullopt;
+  std::optional<uint> frame_height = std::nullopt;
+  std::optional<uint> fps = std::nullopt;
   std::optional<double> exposure = std::nullopt;  // Nullopt = auto exposure
   std::optional<double> brightness = std::nullopt;
   std::optional<double> sharpness = std::nullopt;

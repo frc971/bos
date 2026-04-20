@@ -54,11 +54,11 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
     SetConstant<std::string>("extrinsics_path", camera_constant.extrinsics_path,
                              camera_config);
     SetConstant<double>("backlight", camera_constant.backlight, camera_config);
-    SetConstant<double>("frame_width", camera_constant.frame_width,
-                        camera_config);
-    SetConstant<double>("frame_height", camera_constant.frame_height,
-                        camera_config);
-    SetConstant<double>("fps", camera_constant.fps, camera_config);
+    SetConstant<uint>("frame_width", camera_constant.frame_width,
+                      camera_config);
+    SetConstant<uint>("frame_height", camera_constant.frame_height,
+                      camera_config);
+    SetConstant<uint>("fps", camera_constant.fps, camera_config);
     SetConstant<double>("exposure", camera_constant.exposure, camera_config);
     SetConstant<double>("brightness", camera_constant.brightness,
                         camera_config);
