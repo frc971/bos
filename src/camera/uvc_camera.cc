@@ -95,7 +95,10 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
     return;
   }
   uvc_print_stream_ctrl(&ctrl_, stderr);
-  ctrl_.dwMaxPayloadTransferSize = 1024;
+  ctrl_.dwMaxPayloadTransferSize =
+      camera_constant.max_payload_size.value_or(ctrl_.dwMaxPayloadTransferSize);
+  ctrl_.dwMaxVideoFrameSize =
+      camera_constant.max_frame_size.value_or(ctrl_.dwMaxVideoFrameSize);
   res = uvc_start_streaming(device_handle_, &ctrl_, callback, this, 0);
   if (res != 0) {
     status = absl::AbortedError("Unable to start streaming for camera: " +
