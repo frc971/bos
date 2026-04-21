@@ -27,6 +27,7 @@ find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(vpi REQUIRED)
 find_package(libuvc REQUIRED)
+find_package(XAD REQUIRED)
 
 add_subdirectory(third_party/json)
 add_subdirectory(third_party/971apriltag)
