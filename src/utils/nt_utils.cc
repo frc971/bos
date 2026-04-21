@@ -15,10 +15,11 @@ namespace utils {
 // Publishes logname such as log32 to networktables so we can easily find match logs
 static void PublishLogName() {
   std::string path = frc::DataLogManager::GetLogDir();
-  auto instance = nt::NetworkTableInstance::GetDefault();
-  std::shared_ptr<nt::NetworkTable> table = instance.GetTable("Orin/");
-  nt::StringTopic log_name_topic = table->GetStringTopic("LogName");
-  auto log_name_publisher = log_name_topic.Publish();
+  static auto log_name_publisher =
+      nt::NetworkTableInstance::GetDefault()
+          .GetTable("Orin/")
+          ->GetStringTopic("LogName")
+          .Publish();
   log_name_publisher.Set(path);
 }
 
