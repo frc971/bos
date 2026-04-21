@@ -16,21 +16,16 @@ auto main() -> int {
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
 
-  LOG(INFO) << "Starting cameras";
+  LOG(INFO) << "Loading constants";
 
-  std::vector<std::pair<camera::CameraConstant, localization::Detector>>
-      cameras{
-          {camera_constants.at("second_bot_left"),
-           localization::Detector::AUSTIN_GPU},
-          {camera_constants.at("second_bot_right"),
-           localization::Detector::AUSTIN_GPU},
-          {camera_constants.at("second_bot_front"),
-           localization::Detector::AUSTIN_GPU},
-      };
+  std::vector<camera::camera_constant_t> cameras = {
+      camera_constants.at("second_bot_left"),
+      camera_constants.at("second_bot_right"),
+      camera_constants.at("second_bot_front"),
+  };
 
-  LOG(INFO) << "Started cameras";
+  LOG(INFO) << "Loaded constants";
 
-  localization::UnambiguousEstimator localizer(cameras,
-                                               std::make_optional<uint>(5801));
+  localization::UnambiguousEstimator localizer(cameras);
   localizer.Run();
 }

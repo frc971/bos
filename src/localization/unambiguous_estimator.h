@@ -14,7 +14,6 @@
 #include "src/utils/pch.h"
 
 namespace localization {
-enum Detector { OPENCV_CPU, AUSTIN_GPU };
 using latent_estimate_t = struct LatentEstimate {
   position_estimate_t pose_estimate;
   double latency;
@@ -25,11 +24,10 @@ using latent_estimate_t = struct LatentEstimate {
 };
 class UnambiguousEstimator {
  public:
-  UnambiguousEstimator(
-      std::vector<std::pair<camera::camera_constant_t, Detector>>& cameras,
-      std::optional<uint> port_start = std::nullopt, bool verbose = false,
-      std::optional<std::vector<std::filesystem::path>> img_dir_paths =
-          std::nullopt);
+  UnambiguousEstimator(std::vector<camera::camera_constant_t>& cameras,
+                       bool verbose = false,
+                       std::optional<std::vector<std::filesystem::path>>
+                           img_dir_paths = std::nullopt);
   void Run();
   static bool log_interesting_timestamp_;
 
@@ -50,11 +48,10 @@ class UnambiguousEstimator {
   static constexpr double interesting_timestamp_start_ = 0;  // 13.265;
   static constexpr double interesting_timestamp_end_ = 600;
 
-  std::vector<camera::CscoreStreamer> streamers_;
+  std::vector<std::optional<camera::CscoreStreamer>> streamers_;
   std::unique_ptr<camera::MultiCameraSource> sources_;
   std::vector<std::unique_ptr<IAprilTagDetector>> detectors_;
   std::vector<MultiTagSolver> solvers_;
-  const std::optional<uint> port_start_;
   std::mutex mutex_;
   std::vector<double> prev_timestamps_;
   std::optional<position_estimate_t> prev_pose_estimate_ = std::nullopt;
