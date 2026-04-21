@@ -17,7 +17,7 @@ TEST(PathingTest, BFSPath) {  //NOLINT
       {.x = 19, .y = 17}, {.x = 20, .y = 16}, {.x = 21, .y = 15},
       {.x = 22, .y = 14}};
 
-  std::ifstream file("/root/bos/constants/navgrid.json");
+  std::ifstream file("/home/ci/actions-runner/_work/bos/bos/constants/navgrid.json");
 
   nlohmann::json json = nlohmann::json::parse(file);
   file.close();
