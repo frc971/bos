@@ -22,7 +22,7 @@ MultiCameraSource::MultiCameraSource(
           }
         }
         timestamped_frame_t timestamped_frame;
-        timestamped_frame = cameras_[i]->GetFrame();
+        cameras_[i]->GetFrame(&timestamped_frame);
         mutex_.lock();
         timestamped_frames_[i] = timestamped_frame;
         frames_used_ = false;

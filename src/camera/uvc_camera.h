@@ -12,7 +12,7 @@ class UVCCamera : public ICamera {
  public:
   UVCCamera(const CameraConstant& camera_constant, absl::Status& status,
             std::optional<std::string> log_path = std::nullopt);
-  auto GetFrame() -> timestamped_frame_t override;
+  void GetFrame(timestamped_frame_t* output) override;
   auto Restart() -> void override;
   ~UVCCamera() override;
   [[nodiscard]] auto GetCameraConstant() const -> camera_constant_t override;

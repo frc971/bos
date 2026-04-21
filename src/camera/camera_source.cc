@@ -7,7 +7,7 @@ CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera,
     : name_(std::move(name)),
       camera_(std::move(camera)),
       simulation_(simulation) {
-  timestamped_frame_ = camera_->GetFrame();
+  camera_->GetFrame(&timestamped_frame_);
   thread_ = std::thread([this] {
     while (true) {
       if (camera_->IsDone()) {
@@ -15,7 +15,7 @@ CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera,
         return;
       }
       timestamped_frame_t timestamped_frame;
-      timestamped_frame = camera_->GetFrame();
+      camera_->GetFrame(&timestamped_frame);
       mutex_.lock();
       timestamped_frame_ = timestamped_frame;
       mutex_.unlock();

@@ -63,29 +63,26 @@ CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
   }
 }
 
-auto CVCamera::GetFrame() -> timestamped_frame_t {
-  timestamped_frame_t timestamped_frame;
+void CVCamera::GetFrame(timestamped_frame_t* output) {
   cv::Mat raw_image;
   if (!cap_.grab()) {
     Restart();
     LOG(WARNING) << "Restarting camera";
   }
-  timestamped_frame.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
+  output->timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   cap_.retrieve(raw_image);
 
-  raw_image.copyTo(timestamped_frame.frame);
+  raw_image.copyTo(output->frame);
 
-  if (timestamped_frame.frame.empty()) {
-    timestamped_frame.frame = backup_image_;
+  if (output->frame.empty()) {
+    output->frame = backup_image_;
   }
-  if (timestamped_frame.frame.channels() == 4) {
-    cv::cvtColor(timestamped_frame.frame, timestamped_frame.frame,
-                 cv::COLOR_BGRA2BGR);
+  if (output->frame.channels() == 4) {
+    cv::cvtColor(output->frame, output->frame, cv::COLOR_BGRA2BGR);
   }
   if (log_path_.has_value()) {
-    WriteFrame(log_path_.value(), timestamped_frame);
+    WriteFrame(log_path_.value(), *output);
   }
-  return timestamped_frame;
 }
 
 auto CVCamera::Restart() -> void {

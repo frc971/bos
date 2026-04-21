@@ -20,9 +20,11 @@ auto main() -> int {
   yolo::Yolo model(model_info.path, model_info.color, true);
   std::unique_ptr<camera::ICamera> camera =
       camera::SelectCameraConfig(camera::GetCameraConstants());
+  camera::timestamped_frame_t timestamped_frame;
+  camera->GetFrame(&timestamped_frame);
 
   camera::CscoreStreamer streamer("yolo_test", 5801, 30,
-                                  camera->GetFrame().frame);
+                                  timestamped_frame.frame);
 
   std::vector<cv::Rect> bboxes(MAX_DETECTIONS);
   std::vector<float> confidences(MAX_DETECTIONS);
@@ -30,9 +32,9 @@ auto main() -> int {
 
   // Chopped because I screwed up on the dataset, and technically the model outputs "CORAL", "coral", "ALGAE" or "algae"
   while (true) {
-    cv::Mat frame;
     utils::Timer timer("yolo");
-    frame = camera->GetFrame().frame;
+    camera->GetFrame(&timestamped_frame);
+    cv::Mat& frame = timestamped_frame.frame;
     if (frame.empty()) {
       std::cout << "Couldn't fetch frame properly" << std::endl;
       return 1;
