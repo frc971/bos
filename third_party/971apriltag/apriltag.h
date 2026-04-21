@@ -91,7 +91,7 @@ class GpuDetector {
   // with and height, using the provided detector options.
   GpuDetector(size_t width, size_t height, apriltag_detector_t* tag_detector,
               CameraMatrix camera_matrix, DistCoeffs distortion_coefficients,
-              vision::ImageFormat image_format = vision::ImageFormat::YUYV422);
+              vision::ImageFormat image_format);
   virtual ~GpuDetector();
 
   size_t width() const { return width_; }

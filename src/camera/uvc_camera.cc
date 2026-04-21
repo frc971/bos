@@ -11,12 +11,12 @@ const cv::Mat UVCCamera::backup_image_ =
 
 void callback(uvc_frame_t* frame, void* ptr) {
   auto ptr_ = static_cast<UVCCamera*>(ptr);
-  ptr_->mutex_.try_lock();
+  ptr_->mutex_.lock();
   switch (frame->frame_format) {
     case UVC_COLOR_FORMAT_MJPEG: {
       char* data = static_cast<char*>(frame->data);
       std::vector<uchar> buffer(data, data + frame->data_bytes);
-      ptr_->frame_buffer.frame = cv::imdecode(buffer, cv::IMREAD_COLOR);
+      ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
       break;
     }
     case UVC_COLOR_FORMAT_YUYV: {
@@ -95,7 +95,10 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
     return;
   }
   uvc_print_stream_ctrl(&ctrl_, stderr);
-  ctrl_.dwMaxPayloadTransferSize = 1024;
+  ctrl_.dwMaxPayloadTransferSize =
+      camera_constant.max_payload_size.value_or(ctrl_.dwMaxPayloadTransferSize);
+  ctrl_.dwMaxVideoFrameSize =
+      camera_constant.max_frame_size.value_or(ctrl_.dwMaxVideoFrameSize);
   res = uvc_start_streaming(device_handle_, &ctrl_, callback, this, 0);
   if (res != 0) {
     status = absl::AbortedError("Unable to start streaming for camera: " +
@@ -109,7 +112,7 @@ auto UVCCamera::GetFrame() -> timestamped_frame_t {
   while (frame_index_ == previous_frame_index_) {
     std::this_thread::yield();
   }
-  mutex_.try_lock();
+  mutex_.lock();
   if (frame_buffer.frame.empty()) {
     backup_image_.copyTo(copied_timestamped_frame.frame);
     copied_timestamped_frame.invalid = true;

@@ -24,23 +24,21 @@ namespace frc::apriltag {
 // Returns the number of bytes per pixel.
 constexpr __device__ apriltag_size_t
 BytesPerPixel(const vision::ImageFormat image_format) {
-  return 2;  // Charlie hardcode to YUYV422
-  // switch (image_format) {
-  //   case vision::ImageFormat::MONO8:
-  //     return 1;
-  //   case vision::ImageFormat::MONO16:
-  //     return 2;
-  //   case vision::ImageFormat::YUYV422:
-  //     return 2;
-  //   case vision::ImageFormat::BGR8:
-  //     return 3;
-  //   case vision::ImageFormat::BGRA8:
-  //     return 4;
-  //   case vision::ImageFormat::MJPEG:
-  //     asm("trap;");
-  // }
-  // asm("trap;");
-  // return 0;
+  switch (image_format) {
+    case vision::ImageFormat::MONO8:
+      return 1;
+    case vision::ImageFormat::MONO16:
+      return 2;
+    case vision::ImageFormat::YUYV422:
+      return 2;
+    case vision::ImageFormat::BGR8:
+      return 3;
+    case vision::ImageFormat::BGRA8:
+      return 4;
+    case vision::ImageFormat::MJPEG:
+      return 0;  // MJPEG not supported
+  }
+  return 0;
 }
 
 class Threshold {
