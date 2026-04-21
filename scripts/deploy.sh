@@ -27,4 +27,4 @@ done
 
 rsync -avh --delete bin "$HOST":/bos
 rsync -avh --delete constants "$HOST":/bos
-ssh $HOST 'sudo systemctl restart bos.service'
+# ssh $HOST 'sudo systemctl restart bos.service'

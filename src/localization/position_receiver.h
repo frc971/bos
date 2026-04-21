@@ -1,5 +1,6 @@
 #pragma once
 
+#include <frc/geometry/Pose2d.h>
 #include <frc/geometry/Pose3d.h>
 #include <networktables/DoubleArrayTopic.h>
 #include <networktables/DoubleTopic.h>
@@ -14,7 +15,7 @@ class PositionReceiver {
   auto Get() -> frc::Pose2d;
 
  private:
-  nt::DoubleArraySubscriber pose3d_subscriber_;
+  nt::StructSubscriber<frc::Pose2d> pose2d_subscriber_;
 
   std::mutex mutex_;
 };

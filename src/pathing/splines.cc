@@ -88,8 +88,9 @@ auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
   std::vector<double> knots = knot_vector(control_points.size(), p);
 
   std::vector<frc::Pose2d> spline_points;
-  for (double t = 0; t <= 1; t += 0.01) {
-    auto [x, y] = evaluate(t, control_points, knots, p);
+  for (int t = 0; t <= 100; t += 1) {
+    double t_real = t / 100;
+    auto [x, y] = evaluate(t_real, control_points, knots, p);
     spline_points.emplace_back(units::meter_t{x}, units::meter_t{y}, 0_rad);
   }
 

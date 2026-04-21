@@ -1,6 +1,7 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/cv_camera.h"
+#include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/networktable_sender.h"
 #include "src/localization/nvidia_apriltag_detector.h"
@@ -21,29 +22,6 @@ auto main() -> int {
 
   LOG(INFO) << "Starting estimators";
 
-  std::thread front_thread([&]() {
-    auto front_camera = std::make_unique<camera::CameraSource>(
-        "Front", std::make_unique<camera::CVCamera>(
-                     camera_constants.at("main_bot_front")));
-    cv::Mat front_camera_frame = front_camera->GetFrame();
-    std::vector<std::unique_ptr<localization::IPositionSender>> front_sender;
-    front_sender.emplace_back(
-        std::make_unique<localization::NetworkTableSender>(
-            camera_constants.at("main_bot_front").name));
-
-    localization::RunLocalization(
-        std::move(front_camera),
-        std::make_unique<localization::OpenCVAprilTagDetector>(
-            front_camera_frame.cols, front_camera_frame.rows,
-            utils::ReadIntrinsics(
-                camera_constants.at("main_bot_front").intrinsics_path.value())),
-        std::make_unique<localization::MultiTagSolver>(
-            camera_constants.at("main_bot_front")),
-        std::move(front_sender),
-        camera_constants.at("main_bot_front").extrinsics_path.value(), 5801,
-        false);
-  });
-
   std::thread left_thread([&]() {
     auto left_camera = std::make_unique<camera::CameraSource>(
         "Left",
@@ -57,7 +35,7 @@ auto main() -> int {
 
     localization::RunLocalization(
         std::move(left_camera),
-        std::make_unique<localization::OpenCVAprilTagDetector>(
+        std::make_unique<localization::GPUAprilTagDetector>(
             left_camera_frame.cols, left_camera_frame.rows,
             utils::ReadIntrinsics(
                 camera_constants.at("main_bot_left").intrinsics_path.value())),
@@ -82,7 +60,7 @@ auto main() -> int {
 
     localization::RunLocalization(
         std::move(right_camera),
-        std::make_unique<localization::OpenCVAprilTagDetector>(
+        std::make_unique<localization::GPUAprilTagDetector>(
             right_camera_frame.cols, right_camera_frame.rows,
             utils::ReadIntrinsics(
                 camera_constants.at("main_bot_right").intrinsics_path.value())),
