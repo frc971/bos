@@ -17,7 +17,7 @@ namespace pathing {
 
 auto RunController(const std::string& navgrid_path =
                        "/root/bos/constants/navgrid.json") -> void {
-  const int lookahead_offset_ = 30;
+  const int lookahead_offset_ = 10;
 
   std::ifstream file(navgrid_path);
   if (!file.is_open()) {
@@ -94,6 +94,9 @@ auto RunController(const std::string& navgrid_path =
           createSpline(grid, start_pt, target_pt, nodeSizeMeters);
       if (!new_spline.empty()) {
         spline_points = new_spline;
+        for (const auto& p : spline_points) {
+          LOG(INFO) << "spline pt: " << p.X().value() << " " << p.Y().value();
+        }
       }
     }
 

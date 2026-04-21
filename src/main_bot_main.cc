@@ -35,7 +35,7 @@ auto main() -> int {
 
     localization::RunLocalization(
         std::move(left_camera),
-        std::make_unique<localization::GPUAprilTagDetector>(
+        std::make_unique<localization::OpenCVAprilTagDetector>(
             left_camera_frame.cols, left_camera_frame.rows,
             utils::ReadIntrinsics(
                 camera_constants.at("main_bot_left").intrinsics_path.value())),
@@ -60,7 +60,7 @@ auto main() -> int {
 
     localization::RunLocalization(
         std::move(right_camera),
-        std::make_unique<localization::GPUAprilTagDetector>(
+        std::make_unique<localization::OpenCVAprilTagDetector>(
             right_camera_frame.cols, right_camera_frame.rows,
             utils::ReadIntrinsics(
                 camera_constants.at("main_bot_right").intrinsics_path.value())),
