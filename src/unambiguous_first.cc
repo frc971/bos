@@ -1,3 +1,4 @@
+#include <thread>
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/cv_camera.h"
@@ -6,6 +7,7 @@
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
 #include "src/localization/unambiguous_estimator.h"
+#include "src/pathing/controller.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 
@@ -26,5 +28,11 @@ auto main() -> int {
   LOG(INFO) << "Loaded constants";
 
   localization::UnambiguousEstimator localizer(cameras);
-  localizer.Run();
+
+  LOG(INFO) << "starting pathing";
+  std::jthread pathing_thread(
+      [&]() { pathing::RunController("/bos/constants/navgrid.json"); });
+  LOG(INFO) << "starting pathing";
+
+  std::jthread([&] { localizer.Run(); });
 }

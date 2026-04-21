@@ -17,7 +17,8 @@ namespace pathing {
 
 auto RunController(const std::string& navgrid_path =
                        "/root/bos/constants/navgrid.json") -> void {
-  const int lookahead_offset_ = 10;
+  const int lookahead_offset_ = 50;
+  const double speed_ = 1.0;
 
   std::ifstream file(navgrid_path);
   if (!file.is_open()) {
@@ -148,8 +149,8 @@ auto RunController(const std::string& navgrid_path =
         continue;
       }
 
-      double vx = (dx / dist);
-      double vy = (dy / dist);
+      double vx = (dx / dist) * speed_;
+      double vy = (dy / dist) * speed_;
 
       vx_pub.Set(vx);
       vy_pub.Set(vy);
