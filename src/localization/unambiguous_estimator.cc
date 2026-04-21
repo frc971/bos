@@ -113,8 +113,8 @@ auto UnambiguousEstimator::Cost(const frc::Pose3d& a, const frc::Pose3d& b)
   frc::Rotation3d delta = a.Rotation() - b.Rotation();
   double rotation = delta.Angle().value();
 
-  constexpr double kRotationWeight = 3.0;  // tune
-  return translation + kRotationWeight * rotation;
+  constexpr double krotation_weight = 0.1;  // tune
+  return translation + krotation_weight * rotation;
 }
 
 auto UnambiguousEstimator::ComputeCost(
