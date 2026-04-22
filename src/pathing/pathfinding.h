@@ -1,18 +1,19 @@
-#include <climits>
+#pragma once
+
+#include <sys/types.h>
+#include <cfloat>
 #include <string>
 #include <vector>
-
-#pragma once
 
 namespace pathing {
 
 struct Node {
-  int x, y;
-  int cost = INT_MAX;
+  uint x, y;
+  double cost = DBL_MAX;
   bool visited = false;
   bool obstacle = false;
+  char readable;
   bool path = false;
-  char readble;
   Node* parent = nullptr;
 
   auto operator==(const Node& other) const -> bool {
@@ -21,7 +22,7 @@ struct Node {
 };
 
 struct Point {
-  int x, y;
+  uint x, y;
 };
 
 auto BFS(std::vector<std::vector<Node>>& field, Point start_point,

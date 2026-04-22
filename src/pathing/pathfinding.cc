@@ -3,6 +3,7 @@
 #include <cmath>
 #include <deque>
 #include <iostream>
+#include <utility>
 #include <vector>
 #include "src/utils/log.h"
 
@@ -18,8 +19,8 @@ auto BFS(std::vector<std::vector<Node>>& field, Point start_point,
   start->visited = true;
   start->cost = 0;
 
-  std::deque<Node*> queue;
-  queue.push_back(start);
+  std::deque<Point> queue;
+  queue.push_back(start_point);
 
   Node end = {.x = end_point.x, .y = end_point.y};
 
@@ -29,11 +30,10 @@ auto BFS(std::vector<std::vector<Node>>& field, Point start_point,
                                            {0, 1},   {1, -1}, {1, 0},  {1, 1}};
 
   while (!path_completed && !queue.empty()) {
-
-    Node current = *queue.front();
-    int cx = current.x;
-    int cy = current.y;
-    current = field[cy][cx];
+    const Point current_point = queue.front();
+    int cx = current_point.x;
+    int cy = current_point.y;
+    Node& current = field[cy][cx];
     queue.pop_front();
 
     for (std::pair<int, int> dir : dirs) {
@@ -53,7 +53,7 @@ auto BFS(std::vector<std::vector<Node>>& field, Point start_point,
               neighbor->visited = true;
               neighbor->parent = &field[cy][cx];
 
-              queue.push_back(neighbor);
+              queue.push_back({.x = nx, .y = ny});
               if (ny == end.y && nx == end.x) {
                 path_completed = true;
 

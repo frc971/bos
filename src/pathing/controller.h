@@ -1,8 +1,8 @@
+#pragma once
+
 #include <string>
 namespace pathing {
 
-#pragma once
-
-auto RunController(const std::string& navgrid_path) -> void;
+auto RunController(const std::string& navgrid_path, bool verbose) -> void;
 
 }  // namespace pathing

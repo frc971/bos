@@ -7,7 +7,7 @@
 
 namespace pathing {
 
-auto knot_vector(int n, int p) -> std::vector<double> {
+auto KnotVector(int n, int p) -> std::vector<double> {
   int length = n + p + 1;
 
   std::vector<double> knots(length);
@@ -52,6 +52,10 @@ auto basis(int i, int p, double t, const std::vector<double>& knots) -> double {
 auto evaluate(double t, const std::vector<std::pair<double, double>>& controls,
               const std::vector<double>& knots, int p)
     -> std::pair<double, double> {
+  if (t >= knots.back()) {
+    return controls.back();
+  }
+
   int n = static_cast<int>(controls.size());
   double x = 0.0, y = 0.0;
   for (int i = 0; i < n; ++i) {
@@ -81,11 +85,18 @@ auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
                                 node.y * nodeSizeMeters);
   }
 
-  int p = 3;
-  if ((int)control_points.size() <= p) {
-    p = control_points.size() - 1;
+  uint numControls = control_points.size();
+
+  if (numControls < 4) {
+    return {};
   }
-  std::vector<double> knots = knot_vector(control_points.size(), p);
+
+  uint p = 3;
+  if (numControls <= p) {
+    p = numControls - 1;
+  }
+
+  std::vector<double> knots = KnotVector(numControls, p);
 
   std::vector<frc::Pose2d> spline_points;
   for (int t = 0; t <= 1000; t += 1) {

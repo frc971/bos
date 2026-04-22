@@ -9,7 +9,7 @@
 
 auto main(int argc, char* argv[]) -> int {
 
-  std::vector<double> result = pathing::knot_vector(15, 3);
+  std::vector<double> result = pathing::KnotVector(15, 3);
   for (double res : result) {
     std::cout << res << std::endl;
   }
@@ -47,11 +47,11 @@ auto main(int argc, char* argv[]) -> int {
 
     for (int y = 0; y < GRID_H; ++y) {
       for (int x = 0; x < GRID_W; ++x) {
-        pathing::Node n = {.x = x, .y = y};
+        pathing::Node n = {.x = (uint)x, .y = (uint)y};
         n.obstacle = data["grid"][y][x];
-        n.readble = '-';
+        n.readable = '-';
         if (n.obstacle) {
-          n.readble = '#';
+          n.readable = '#';
         }
         field[y][x] = n;
       }
@@ -60,8 +60,8 @@ auto main(int argc, char* argv[]) -> int {
     double vision_estimate_x = 2.21643;
     double vision_estimate_y = 5.21322;
 
-    pathing::Point start = {.x = (int)(vision_estimate_x / nodeSizeMeters),
-                            .y = (int)(vision_estimate_y / nodeSizeMeters)};
+    pathing::Point start = {.x = (uint)(vision_estimate_x / nodeSizeMeters),
+                            .y = (uint)(vision_estimate_y / nodeSizeMeters)};
     pathing::Point end = {.x = 22, .y = 14};
     std::vector<pathing::Node> result = pathing::BFS(field, start, end);
     if (std::count(argstrings.begin(), argstrings.end(), "-v")) {
@@ -74,13 +74,13 @@ auto main(int argc, char* argv[]) -> int {
         intermediate.append(std::to_string(n.y));
         intermediate.append("), ");
         readable.append(intermediate);
-        field[n.y][n.x].readble = '*';
+        field[n.y][n.x].readable = '*';
       }
       std::cout << readable << std::endl;
 
       for (int y = 0; y < GRID_H; ++y) {
         for (int x = 0; x < GRID_W; ++x) {
-          std::cout << field[y][x].readble;
+          std::cout << field[y][x].readable;
         }
         std::cout << std::endl;
       }
@@ -98,6 +98,9 @@ auto main(int argc, char* argv[]) -> int {
     }
 
     cv::Mat display;
+
+    /* Uncomment the following lines to display the grid, else it will just be displayed in console.*/
+
     // cv::resize(mat, display, cv::Size(450, 450), 0, 0, cv::INTER_NEAREST);
     // cv::imshow("Grid", display);
     // cv::waitKey();

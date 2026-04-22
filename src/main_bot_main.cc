@@ -74,7 +74,7 @@ auto main() -> int {
   LOG(INFO) << "Started estimators";
 
   std::thread pathing_thread(pathing::RunController,
-                             "/bos/constants/navgrid.json");
+                             "/bos/constants/navgrid.json", false);
 
   LOG(INFO) << "pathing started";
 

@@ -72,7 +72,7 @@ auto main() -> int {
   // TODO front camera
 
   std::thread pathing_thread(pathing::RunController,
-                             "/bos/constants/navgrid.json");
+                             "/bos/constants/navgrid.json", false);
 
   LOG(INFO) << "Started estimators";
 

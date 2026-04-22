@@ -17,9 +17,7 @@ PositionReceiver::PositionReceiver() {
 }
 
 auto PositionReceiver::Get() -> frc::Pose2d {
-  auto pose = pose2d_subscriber_.Get();
-
-  return pose;
+  return pose2d_subscriber_.Get();
 }
 
 }  // namespace localization

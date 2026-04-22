@@ -1,13 +1,13 @@
+#pragma once
+
 #include <frc/geometry/Pose2d.h>
 #include <climits>
 #include <vector>
 #include "pathfinding.h"
 
-#pragma once
-
 namespace pathing {
 
-auto knot_vector(int n, int p) -> std::vector<double>;
+auto KnotVector(int n, int p) -> std::vector<double>;
 
 auto basis(int i, int p, double t, const std::vector<double>& knots) -> double;
 

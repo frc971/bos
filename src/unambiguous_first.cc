@@ -31,7 +31,7 @@ auto main() -> int {
 
   LOG(INFO) << "starting pathing";
   std::jthread pathing_thread(
-      [&]() { pathing::RunController("/bos/constants/navgrid.json"); });
+      [&]() { pathing::RunController("/bos/constants/navgrid.json", false); });
   LOG(INFO) << "starting pathing";
 
   std::jthread([&] { localizer.Run(); });
