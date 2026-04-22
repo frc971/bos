@@ -71,14 +71,12 @@ auto RunController(
     frc::Pose2d current_pose = current_sub.Get();
 
     frc::Pose2d target_pose = target_sub.Get();
-    Point start_pt{.x = static_cast<uint>(
-                       (int)(current_pose.X().value() / nodeSizeMeters)),
-                   .y = static_cast<uint>(
-                       (int)(current_pose.Y().value() / nodeSizeMeters))};
+    Point start_pt{
+        .x = static_cast<uint>(current_pose.X().value() / nodeSizeMeters),
+        .y = static_cast<uint>(current_pose.Y().value() / nodeSizeMeters)};
     Point target_pt{
-        .x = static_cast<uint>((int)(target_pose.X().value() / nodeSizeMeters)),
-        .y =
-            static_cast<uint>((int)(target_pose.Y().value() / nodeSizeMeters))};
+        .x = static_cast<uint>(target_pose.X().value() / nodeSizeMeters),
+        .y = static_cast<uint>(target_pose.Y().value() / nodeSizeMeters)};
 
     start_pt.x = std::clamp(static_cast<int>(start_pt.x), 0, GRID_W - 1);
 
