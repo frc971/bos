@@ -64,7 +64,7 @@ auto RunController(
       vy_pub.Set(0.0);
 
       spline_points.clear();
-      std::this_thread::yield();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
 
@@ -93,7 +93,7 @@ auto RunController(
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);
       spline_points.clear();
-      std::this_thread::yield();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
 
@@ -113,7 +113,7 @@ auto RunController(
     if (spline_points.empty()) {
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);
-      std::this_thread::yield();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
 
     } else {
@@ -167,7 +167,7 @@ auto RunController(
       if (dist < 1e-6) {
         vx_pub.Set(0.0);
         vy_pub.Set(0.0);
-        std::this_thread::yield();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         continue;
       }
 
