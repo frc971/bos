@@ -37,8 +37,8 @@ auto BFS(std::vector<std::vector<Node>>& field, Point start_point,
     queue.pop_front();
 
     for (std::pair<int, int> dir : dirs) {
-      int nx = current.x + dir.first;
-      int ny = current.y + dir.second;
+      uint nx = current.x + dir.first;
+      uint ny = current.y + dir.second;
 
       if (nx >= 0 && nx < field[0].size()) {
         if (ny >= 0 && ny < field.size()) {
