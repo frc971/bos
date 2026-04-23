@@ -45,8 +45,8 @@ JointSolver::JointSolver(
   for (const camera::camera_constant_t& camera_constant : camera_constants_) {
     const nlohmann::json intrinsics_json =
         utils::ReadIntrinsics(camera_constant.intrinsics_path.value());
-    const auto camera_matrix =
-        utils::CameraMatrixFromJson<Eigen::Matrix3d>(intrinsics_json);
+    const auto camera_matrix = utils::CameraMatrixFromJson<Eigen::Matrix3d>(
+        intrinsics_json);  // TOOD CameraMatrixFromJson<Eigen::Matrix3d> now returns inwpilib coords. Joint solver is broken anyway so this is fine for now.
     const Eigen::Matrix<double, 3, 4> image_to_camera = camera_matrix * pi;
     const Eigen::Matrix4d camera_to_robot =
         utils::ExtrinsicsJsonToCameraToRobot(
