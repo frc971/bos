@@ -15,6 +15,7 @@ namespace fs = std::filesystem;
 using camera::camera_constant_t;
 using camera::GetCameraConstants;
 using camera::timestamped_frame_t;
+using localization::kapriltag_layout;
 using localization::OpenCVAprilTagDetector;
 using localization::position_estimate_t;
 using localization::SquareSolver;
@@ -37,6 +38,30 @@ const Eigen::Matrix<double, 4, 4> rotate_yaw =
   0, 0, 0, 1).finished();
 // clang-format on
 
+class ForwardTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    camera_constant_ = GetCameraConstants().at("second_bot_right");
+    camera_constant_.extrinsics_path =
+        "/bos/constants/misc/dev_orin_extrinsics.json";
+
+    square_solver_ = std::make_unique<SquareSolver>(camera_constant_);
+    detector_ = std::make_unique<OpenCVAprilTagDetector>(
+        camera_constant_.frame_height.value(),
+        camera_constant_.frame_height.value(),
+        ReadIntrinsics(camera_constant_.intrinsics_path.value()));
+    camera_matrix_ = CameraMatrixFromJson<Eigen::Matrix3d>(
+        ReadIntrinsics(camera_constant_.intrinsics_path.value()));
+  }
+
+  void TearDown() override {}
+
+  camera_constant_t camera_constant_;
+  std::unique_ptr<SquareSolver> square_solver_;
+  std::unique_ptr<OpenCVAprilTagDetector> detector_;
+  Eigen::Matrix3d camera_matrix_;
+};
+
 auto ProjectPoints(const frc::Pose3d& camera_pose, const frc::Pose3d& tag_pose,
                    const Eigen::Matrix3d& camera_matrix, int corner_index)
     -> Eigen::Vector3d {
@@ -47,8 +72,41 @@ auto ProjectPoints(const frc::Pose3d& camera_pose, const frc::Pose3d& tag_pose,
   Eigen::Vector3d projected_points =
       camera_matrix * PI * camera_to_tag *
       localization::kapriltag_corners_eigen_homogenized[corner_index];
-  projected_points /= projected_points[0];
-  return projected_points;
+  auto normalized_points = projected_points / projected_points[0];
+  return normalized_points;
+}
+
+auto CalculateDerivative(const frc::Pose3d& camera_pose,
+                         const frc::Pose3d& tag_pose,
+                         const Eigen::Matrix3d& camera_matrix,
+                         const Eigen::Vector3d& image_point, int corner_index)
+    -> Eigen::Matrix4d {
+  auto feild_to_camera = camera_pose.ToMatrix();
+  auto feild_to_tag = tag_pose.ToMatrix();
+  auto camera_to_tag = feild_to_camera.inverse() * feild_to_tag * rotate_yaw;
+
+  Eigen::Vector3d projected_point =
+      camera_matrix * PI * camera_to_tag *
+      localization::kapriltag_corners_eigen_homogenized[corner_index];
+  auto normalized_point = projected_point / projected_point[0];
+
+  auto normalized_points_d = normalized_point - image_point;
+
+  // clang-format off
+  auto projected_point_d = (Eigen::Vector3d() << 
+    -normalized_points_d[1] * projected_point[1] / (projected_point[0] * projected_point[0])
+    -normalized_points_d[2] * projected_point[2] / (projected_point[0] * projected_point[0]),
+    normalized_points_d[1] / projected_point[0],
+    normalized_points_d[2] / projected_point[0]
+  ).finished();
+  // clang-format on
+
+  auto camera_matrix_xd = camera_matrix.transpose() * projected_point_d;
+  auto PI_xd = PI.transpose() * camera_matrix_xd;
+  auto camera_to_tag_d =
+      PI_xd * localization::kapriltag_corners_eigen_homogenized[corner_index]
+                  .transpose();
+  return camera_to_tag_d;
 }
 
 // TODO: Tolerance is quite high. Find out what causes the loss in precision
@@ -58,21 +116,7 @@ void CheckIsEqual(cv::Point2d image_point, Eigen::Vector3d projected_points,
   EXPECT_NEAR(image_point.y, projected_points[2], tolerance);
 }
 
-TEST(ForwardTest, Basic) {  // NOLINT
-  camera_constant_t camera_constant =
-      GetCameraConstants().at("second_bot_right");
-  camera_constant.extrinsics_path =
-      "/bos/constants/misc/dev_orin_extrinsics.json";
-  CHECK(camera_constant.intrinsics_path.has_value());
-
-  SquareSolver square_solver(camera_constant);
-  const auto detector = std::make_unique<OpenCVAprilTagDetector>(
-      camera_constant.frame_width.value(), camera_constant.frame_height.value(),
-      ReadIntrinsics(camera_constant.intrinsics_path.value()));
-
-  const auto camera_matrix = CameraMatrixFromJson<Eigen::Matrix3d>(
-      utils::ReadIntrinsics(camera_constant.intrinsics_path.value()));
-
+TEST_F(ForwardTest, ProjectTest) {  // NOLINT
   // [u, v] = camera_matrix * PI * camera_to_tag * tag_corners
   // feild_to_camera = feild_to_tag * 180_yaw * camera_to_tag.inv
   // feild_to_camera * camera_to_tag = feild_to_tag * 180_yaw
@@ -88,21 +132,47 @@ TEST(ForwardTest, Basic) {  // NOLINT
     cv::Mat image = cv::imread(image_paths[i]);
     timestamped_frame_t timestamped_frame{
         .frame = std::move(image), .timestamp = 0, .invalid = false};
-    auto detections = detector->GetTagDetections(timestamped_frame);
+    auto detections = detector_->GetTagDetections(timestamped_frame);
     if (detections.empty()) {
       continue;
     }
     auto detection = detections[0];
 
     auto square_solver_solution =
-        square_solver.EstimatePosition({detection})[0];
+        square_solver_->EstimatePosition({detection})[0];
 
     for (int j = 0; j < 4; j++) {
-      auto projected_points = ProjectPoints(
-          square_solver_solution.pose,
-          localization::kapriltag_layout.GetTagPose(detection.tag_id).value(),
-          camera_matrix, j);
+      auto projected_points =
+          ProjectPoints(square_solver_solution.pose,
+                        kapriltag_layout.GetTagPose(detection.tag_id).value(),
+                        camera_matrix_, j);
       CheckIsEqual(detection.corners[j], projected_points);
     }
   }
+}
+
+TEST_F(ForwardTest, TestDerrivative) {  // NOLINT
+  cv::Mat image = cv::imread("/bos-logs/log181/right/7.047703.jpg");
+  timestamped_frame_t timestamped_frame{
+      .frame = std::move(image), .timestamp = 0, .invalid = false};
+  auto detections = detector_->GetTagDetections(timestamped_frame);
+  auto detection = detections[0];
+
+  auto square_solver_solution =
+      square_solver_->EstimatePosition({detection})[0];
+
+  Eigen::Matrix4d camera_to_tag_d = Eigen::Matrix4d::Zero();
+  for (int camera_index = 0; camera_index < 4; camera_index++) {
+    auto image_point =
+        (Eigen::Vector3d() << 1, detection.corners[camera_index].x,
+         detection.corners[camera_index].y)
+            .finished();
+
+    camera_to_tag_d += CalculateDerivative(
+        square_solver_solution.pose,
+        kapriltag_layout.GetTagPose(detection.tag_id).value(), camera_matrix_,
+        image_point, camera_index);
+  }
+
+  LOG(INFO) << "derrivative\n" << camera_to_tag_d;
 }
