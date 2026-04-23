@@ -21,7 +21,7 @@ MultiCameraDetector::MultiCameraDetector(
   streamers_.reserve(camera_constants_.size());
   for (size_t i = 0; i < camera_constants_.size(); i++) {
     streamers_.emplace_back(camera_constants_[i].name, 5801 + i, 30, 1080,
-                            1080);
+                            1080);  // TODO move constants to steamer class
     const std::string camera_log_dest =
         fmt::format("{}/{}", log_path, camera_constants_[i].name);
     if (camera_constants_[i].serial_id.has_value()) {

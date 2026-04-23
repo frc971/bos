@@ -37,9 +37,7 @@ auto main() -> int {
                                       .intrinsics_path.value())),
         std::make_unique<localization::MultiTagSolver>(
             camera_constants.at("second_bot_left")),
-        std::move(left_sender),
-        camera_constants.at("second_bot_left").extrinsics_path.value(), 5802,
-        false);
+        std::move(left_sender), false);
   });
 
   std::thread right_thread([&]() {
@@ -62,9 +60,7 @@ auto main() -> int {
                                       .intrinsics_path.value())),
         std::make_unique<localization::MultiTagSolver>(
             camera_constants.at("second_bot_right")),
-        std::move(right_sender),
-        camera_constants.at("second_bot_right").extrinsics_path.value(), 5803,
-        false);
+        std::move(right_sender), false);
   });
 
   // TODO front camera

@@ -8,8 +8,7 @@ namespace localization {
 class SimulationSender : public IPositionSender {
  public:
   SimulationSender(const std::string& name, int port);
-  void Send(const std::vector<localization::position_estimate_t>& detections)
-      override;
+  void Send(const localization::position_estimate_t& detection) override;
   ~SimulationSender() override = default;
 
  private:

@@ -6,8 +6,12 @@
 namespace localization {
 class IPositionSender {
  public:
-  virtual auto Send(
-      const std::vector<localization::position_estimate_t>& detections)
+  void Send(const std::vector<localization::position_estimate_t>& detections) {
+    for (const auto& detection : detections) {
+      Send(detection);
+    }
+  }
+  virtual auto Send(const localization::position_estimate_t& detection)
       -> void = 0;
   virtual ~IPositionSender() = default;
 };

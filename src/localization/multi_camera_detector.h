@@ -29,7 +29,7 @@ class MultiCameraDetector {
   std::vector<std::thread> camera_threads_;
   std::mutex mutex_;
   std::atomic<bool> run_cameras_{true};
-  static constexpr double kenforced_streamer_fps = 30.0;
+  static constexpr int kenforced_streamer_fps = 30;
 };
 
 }  // namespace localization

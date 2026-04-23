@@ -39,9 +39,7 @@ auto main() -> int {
                 camera_constants.at("main_bot_front").intrinsics_path.value())),
         std::make_unique<localization::MultiTagSolver>(
             camera_constants.at("main_bot_front")),
-        std::move(front_sender),
-        camera_constants.at("main_bot_front").extrinsics_path.value(), 5801,
-        false);
+        std::move(front_sender), false);
   });
 
   std::thread left_thread([&]() {
@@ -63,9 +61,7 @@ auto main() -> int {
                 camera_constants.at("main_bot_left").intrinsics_path.value())),
         std::make_unique<localization::MultiTagSolver>(
             camera_constants.at("main_bot_left")),
-        std::move(left_sender),
-        camera_constants.at("main_bot_left").extrinsics_path.value(), 5802,
-        false);
+        std::move(left_sender), false);
   });
 
   std::thread right_thread([&]() {
@@ -88,9 +84,7 @@ auto main() -> int {
                 camera_constants.at("main_bot_right").intrinsics_path.value())),
         std::make_unique<localization::MultiTagSolver>(
             camera_constants.at("main_bot_right")),
-        std::move(right_sender),
-        camera_constants.at("main_bot_right").extrinsics_path.value(), 5803,
-        false);
+        std::move(right_sender), false);
   });
 
   LOG(INFO) << "Started estimators";
