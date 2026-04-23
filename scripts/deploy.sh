@@ -5,8 +5,15 @@ cmake --build build
 HOST="$1"
 
 if [ -z "$HOST" ]; then
-  echo "Usage: $0 <host>"
+  echo "Usage: $0 <host> <restart>"
   exit 1
+fi
+
+RESTART="$2"
+if [ "$RESTART" == "true" ]; then
+  RESTART=true
+else
+  RESTART=false
 fi
 
 ./scripts/copy_to_bin.sh
@@ -27,4 +34,6 @@ done
 
 rsync -avh --delete bin "$HOST":/bos
 rsync -avh --delete constants "$HOST":/bos
-ssh $HOST 'sudo systemctl restart bos.service'
+if [ "$RESTART" = true ]; then
+  ssh "$HOST" 'sudo systemctl restart bos.service'
+fi

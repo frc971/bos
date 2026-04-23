@@ -1,17 +1,23 @@
 #include "src/localization/position_receiver.h"
+#include <frc/geometry/Pose2d.h>
+#include <frc/geometry/Pose3d.h>
+#include <networktables/DoubleArrayTopic.h>
+#include <networktables/StructTopic.h>
+#include <units/length.h>
+#include "src/utils/log.h"
 
 namespace localization {
 
 PositionReceiver::PositionReceiver() {
   auto instance = nt::NetworkTableInstance::GetDefault();
-  std::shared_ptr<nt::NetworkTable> table = instance.GetTable("");
-  nt::StructTopic<frc::Pose3d> pose3d_topic =
-      table->GetStructTopic<frc::Pose3d>("Pose3d");
-  pose3d_subscriber_ = pose3d_topic.Subscribe({});
+  auto pose_table = instance.GetTable("DriveState");
+  nt::StructTopic<frc::Pose2d> pose2d_topic =
+      pose_table->GetStructTopic<frc::Pose2d>("Pose");
+  pose2d_subscriber_ = pose2d_topic.Subscribe({});
 }
 
-auto PositionReceiver::Get() -> frc::Pose3d {
-  return pose3d_subscriber_.Get();
+auto PositionReceiver::Get() -> frc::Pose2d {
+  return pose2d_subscriber_.Get();
 }
 
 }  // namespace localization
