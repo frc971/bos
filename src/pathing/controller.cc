@@ -86,8 +86,8 @@ auto RunController(
 
     target_pt.y = std::clamp(static_cast<int>(target_pt.y), 0, GRID_H - 1);
 
-    frc::Translation2d t3d(target_pose.X(), target_pose.Y());
-    if (current_pose.Translation().Distance(t3d).value() < nodeSizeMeters) {
+    frc::Translation2d t2d(target_pose.X(), target_pose.Y());
+    if (current_pose.Translation().Distance(t2d).value() < nodeSizeMeters) {
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);
       spline_points.clear();
