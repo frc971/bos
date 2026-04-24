@@ -23,6 +23,47 @@ using localization::tag_detection_t;
 using utils::CameraMatrixFromJson;
 using utils::ReadIntrinsics;
 
+using transform3d_t = struct Transfrom3d {
+  // Translation in meters, rotation in radians
+  double t_x;
+  double t_y;
+  double t_z;
+  double r_x;
+  double r_y;
+  double r_z;
+
+  Transfrom3d(frc::Pose3d pose)
+      : t_x(pose.Translation().X().value()),
+        t_y(pose.Translation().Y().value()),
+        t_z(pose.Translation().Z().value()),
+        r_x(pose.Rotation().X().value()),
+        r_y(pose.Rotation().Y().value()),
+        r_z(pose.Rotation().Z().value()) {}
+
+  Transfrom3d(frc::Transform3d pose)
+      : t_x(pose.Translation().X().value()),
+        t_y(pose.Translation().Y().value()),
+        t_z(pose.Translation().Z().value()),
+        r_x(pose.Rotation().X().value()),
+        r_y(pose.Rotation().Y().value()),
+        r_z(pose.Rotation().Z().value()) {}
+
+  auto ToEigen() -> Eigen::Matrix4d {
+    Eigen::Matrix4d m = Eigen::Matrix4d::Identity();
+
+    // Rotation: ZYX euler convention (common for robot poses)
+    Eigen::Matrix3d rot = (Eigen::AngleAxisd(r_z, Eigen::Vector3d::UnitZ()) *
+                           Eigen::AngleAxisd(r_y, Eigen::Vector3d::UnitY()) *
+                           Eigen::AngleAxisd(r_x, Eigen::Vector3d::UnitX()))
+                              .toRotationMatrix();
+
+    m.block<3, 3>(0, 0) = rot;
+    m.block<3, 1>(0, 3) = Eigen::Vector3d{t_x, t_y, t_z};
+
+    return m;
+  }
+};
+
 // clang-format off
 const Eigen::Matrix<double, 3, 4> PI =
     (Eigen::Matrix<double, 3, 4>() << 
@@ -175,4 +216,23 @@ TEST_F(ForwardTest, TestDerrivative) {  // NOLINT
   }
 
   LOG(INFO) << "derrivative\n" << camera_to_tag_d;
+}
+
+TEST_F(ForwardTest, TestTranfrom3d) {  // NOLINT
+  cv::Mat image = cv::imread("/bos-logs/log181/right/7.047703.jpg");
+  timestamped_frame_t timestamped_frame{
+      .frame = std::move(image), .timestamp = 0, .invalid = false};
+  auto detections = detector_->GetTagDetections(timestamped_frame);
+  auto detection = detections[0];
+
+  auto square_solver_solution =
+      square_solver_->EstimatePosition({detection})[0];
+
+  transform3d_t transform(square_solver_solution.pose);
+
+  LOG(INFO) << "pose.ToMatrix()\n" << square_solver_solution.pose.ToMatrix();
+  LOG(INFO) << "transform.ToEigen()\n" << transform.ToEigen();
+
+  EXPECT_TRUE(square_solver_solution.pose.ToMatrix().isApprox(
+      transform.ToEigen(), 1e-9));
 }
