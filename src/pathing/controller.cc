@@ -5,7 +5,6 @@
 #include <cmath>
 #include "splines.h"
 #include "src/localization/position_receiver.h"
-#include "src/pathing/splines.h"
 #include "src/utils/log.h"
 #include "src/utils/pch.h"
 
@@ -90,7 +89,6 @@ auto RunController(
     if (result.points.empty()) {
       result = createSpline(grid, start_pt, target_pt, nodeSizeMeters);
       if (!result.points.empty()) {
-        result.points = result.points;
         if (verbose) {
           for (const auto& p : result.points) {
             LOG(INFO) << "spline pt: " << p.X().value() << " " << p.Y().value();

@@ -142,7 +142,7 @@ auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
       p = numControls - 1;
     }
 
-    std::vector<double> knots = KnotVector(numControls, p);
+    knots = KnotVector(numControls, p);
 
     for (int t = 0; t <= 1000; t += 1) {
       double t_real = t / 1000.0;
