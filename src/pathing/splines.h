@@ -11,6 +11,7 @@ namespace pathing {
 struct SplineResult {
   std::vector<frc::Pose2d> points;
   std::vector<std::pair<double, double>> controls;
+  std::vector<std::pair<double, double>> first_deriv_controls;
   std::vector<double> knots;
   std::vector<double> params;
   uint p;

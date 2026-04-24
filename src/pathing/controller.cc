@@ -127,11 +127,12 @@ auto RunController(
                   << " Spline size: " << result.points.size();
       }
 
-      std::pair<double, double> derivative =
-          EvaluateDerivative(result.params[closest_idx], result.controls,
-                             result.knots, result.p, 1);
-
-      auto [dx, dy] = derivative;
+      auto [dx_raw, dy_raw] =
+          EvaluatePosition(result.params[closest_idx],
+                           result.first_deriv_controls, result.knots,
+                           result.p - 1);
+      double dx = dx_raw * result.p;
+      double dy = dy_raw * result.p;
 
       if (verbose) {
         LOG(INFO) << "current " << current_pose.X().value() << " "
@@ -152,7 +153,6 @@ auto RunController(
       double vx = (dx / mag) * speed_;
       double vy = (dy / mag) * speed_;
 
-      // NOTE: we need to test whether to divide vx and vy by dist to normalize speeds or not,
       vx_pub.Set(vx);
       vy_pub.Set(vy);
       if (verbose) {

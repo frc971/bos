@@ -139,27 +139,28 @@ auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
   for (const pathing::Node& node : path) {
     control_points.emplace_back(node.x * nodeSizeMeters,
                                 node.y * nodeSizeMeters);
-    uint numControls = control_points.size();
-
-    if (numControls < 4) {
-      return {};
-    }
-
-    p = 3;
-    if (numControls <= p) {
-      p = numControls - 1;
-    }
-
-    knots = KnotVector(numControls, p);
-
-    for (int t = 0; t <= 1000; t += 1) {
-      double t_real = t / 1000.0;
-      auto [x, y] = EvaluatePosition(t_real, control_points, knots, p);
-      spline_points.emplace_back(units::meter_t{x}, units::meter_t{y}, 0_rad);
-      spline_params.emplace_back(t_real);
-    }
   }
-  return {spline_points, control_points, knots, spline_params, p};
 
-}  // namespace pathing
+  uint numControls = control_points.size();
+  if (numControls < 4) {
+    return {};
+  }
+
+  p = 3;
+  if (numControls <= p) {
+    p = numControls - 1;
+  }
+
+  knots = KnotVector(numControls, p);
+
+  for (int t = 0; t <= 1000; t += 1) {
+    double t_real = t / 1000.0;
+    auto [x, y] = EvaluatePosition(t_real, control_points, knots, p);
+    spline_points.emplace_back(units::meter_t{x}, units::meter_t{y}, 0_rad);
+    spline_params.emplace_back(t_real);
+  }
+  auto first_deriv_controls = FiniteDifferences(control_points, knots, p, 1);
+  return {spline_points, control_points, first_deriv_controls,
+          knots,         spline_params,  p};
+}
 }  // namespace pathing
