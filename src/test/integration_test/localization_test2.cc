@@ -54,13 +54,13 @@ auto FindCameraFolders(const std::filesystem::path& path)
     -> std::vector<std::filesystem::path> {
   std::vector<std::filesystem::path> camera_folders;
   for (const auto& entry : std::filesystem::directory_iterator(path)) {
+    std::cout << "Considering dir: " << entry.path() << std::endl;
     if (entry.is_directory()) {
       camera_folders.push_back(entry.path());
+    } else {
+      std::cout << "Rejected dir for being a file: " << entry.path()
+                << std::endl;
     }
-  }
-
-  if (camera_folders.empty()) {
-    camera_folders.push_back(path);
   }
 
   std::sort(camera_folders.begin(), camera_folders.end());
@@ -70,9 +70,9 @@ auto FindCameraFolders(const std::filesystem::path& path)
 auto ResolveCameraName(const std::string& directory_name,
                        const camera::camera_constants_t& constants)
     -> std::string {
-  std::string resolved_name = directory_name.rfind("main_bot_", 0) == 0
+  std::string resolved_name = directory_name.rfind("second_bot_", 0) == 0
                                   ? directory_name
-                                  : "main_bot_" + directory_name;
+                                  : "second_bot_" + directory_name;
 
   if (!constants.contains(resolved_name)) {
     LOG(FATAL) << "Could not resolve camera constants name for directory: "
@@ -107,9 +107,6 @@ auto main(int argc, char** argv) -> int {
   std::vector<camera::camera_constant_t> camera_constants;
   camera_constants.reserve(camera_folders.size());
 
-  const int base_port = absl::GetFlag(FLAGS_port);
-  const double speed = absl::GetFlag(FLAGS_speed);
-
   for (auto& camera_folder : camera_folders) {
     if (!HasRegularFiles(camera_folder)) {
       LOG(WARNING) << "Skipping empty camera folder: " << camera_folder;
@@ -124,12 +121,12 @@ auto main(int argc, char** argv) -> int {
       LOG(FATAL) << "Unknown camera name: " << camera_name;
     }
 
-    constants.at(camera_name);
+    camera_constants.push_back(constants.at(camera_name));
   }
-  std::thread thread([camera_constants] {
-    localization::MultiCameraDetector detector_source(camera_constants);
-    std::vector<std::unique_ptr<localization::IPositionSender>> senders;
-    senders.emplace_back();
+  std::jthread thread([camera_constants, camera_folders] {
+    localization::MultiCameraDetector detector_source(camera_constants,
+                                                      camera_folders);
+    LOG(INFO) << "Created camera source";
     localization::RunJointLocalization(
         detector_source,
         std::make_unique<localization::UnambiguousEstimator>(camera_constants),

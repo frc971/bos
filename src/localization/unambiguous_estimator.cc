@@ -32,7 +32,7 @@ namespace localization {
 UnambiguousEstimator::UnambiguousEstimator(
     const std::vector<camera::camera_constant_t>& camera_constants,
     bool verbose)
-    : verbose_(verbose) {
+    : prev_timestamps_(camera_constants.size()), verbose_(verbose) {
   solvers_.reserve(camera_constants.size());
   for (const auto& camera_constant : camera_constants) {
     solvers_.emplace_back(camera_constant);
@@ -200,8 +200,9 @@ auto UnambiguousEstimator::GetFilteredDetections(
     }
   }
   for (size_t i = 0; i < detection_batches.size(); i++) {
-    if (latest_timestamp - detection_batches[i][0].timestamp <
-        kacceptable_frame_recency) {
+    if (!detection_batches[i].empty() &&
+        latest_timestamp - detection_batches[i][0].timestamp <
+            kacceptable_frame_recency) {
       usable_detections[i] = std::move(detection_batches[i]);
     }
   }

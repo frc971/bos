@@ -10,7 +10,9 @@ namespace localization {
 
 class MultiCameraDetector {
  public:
-  MultiCameraDetector(std::vector<camera::camera_constant_t> camera_constants);
+  MultiCameraDetector(std::vector<camera::camera_constant_t> camera_constants,
+                      std::optional<std::vector<std::filesystem::path>>
+                          image_paths = std::nullopt);
   [[nodiscard]] auto GetTagDetections()
       -> std::vector<std::vector<tag_detection_t>>;
   [[nodiscard]] auto GetCVFrames() -> std::vector<cv::Mat>;
@@ -26,9 +28,10 @@ class MultiCameraDetector {
   std::vector<double> last_write_times_;
   std::vector<camera::timestamped_frame_t> timestamped_frames_;
   std::vector<std::vector<tag_detection_t>> tag_detections_;
-  std::vector<std::thread> camera_threads_;
+  std::vector<std::jthread> camera_threads_;
   std::mutex mutex_;
   std::atomic<bool> run_cameras_{true};
+  std::binary_semaphore has_new_detections_{false};
   static constexpr int kenforced_streamer_fps = 30;
 };
 

@@ -60,7 +60,8 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
     std::cout << "Finished reading all frames from DiskCamera. Folder path: "
               << image_folder_path_ << std::endl;
     frc::DataLogManager::Stop();
-    return {.invalid = true};
+    LOG(INFO) << "Reached the end of the file list";
+    std::exit(0);
   }
 
   double recorded_ts = image_paths_.top().timestamp;
