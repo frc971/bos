@@ -48,9 +48,6 @@ auto RunController(
 
   auto vx_pub = inst.GetDoubleTopic("/pathing/vx").Publish();
   auto vy_pub = inst.GetDoubleTopic("/pathing/vy").Publish();
-  auto next_pose_sub =
-      inst.GetStructTopic<frc::Pose2d>("/pathing/nextPose").Publish();
-
   SplineResult result;
 
   while (true) {
