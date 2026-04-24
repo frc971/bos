@@ -32,6 +32,10 @@ auto FiniteDifferences(const std::vector<std::pair<double, double>>& controls,
     return controls;
   }
 
+  if (controls.size() <= 1 || k >= static_cast<int>(controls.size())) {
+    return {};
+  }
+
   std::vector<std::pair<double, double>> ret;
   ret.reserve(controls.size() - 1);
 
@@ -98,6 +102,10 @@ auto EvaluateDerivative(double t,
                         const std::vector<std::pair<double, double>>& controls,
                         const std::vector<double>& knots, int p, int k)
     -> std::pair<double, double> {
+  if (k < 0 || k > p || controls.size() <= static_cast<size_t>(k)) {
+    return {0.0, 0.0};
+  }
+
   std::vector<std::pair<double, double>> first_diffs =
       FiniteDifferences(controls, knots, p, k);
   auto [x, y] = EvaluatePosition(t, first_diffs, knots, p - k);
