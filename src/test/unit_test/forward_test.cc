@@ -497,19 +497,20 @@ TEST_F(ForwardTest, TestBackpropagation) {  // NOLINT
     for (int corner_index = 0; corner_index < 4; corner_index++) {
       camera_to_tag.CalculateMatrix();
       camera_to_tag.RegisterInputs(tape);
+      const auto camera_to_tag_eigen = camera_to_tag.ToEigen();
       auto image_point = (Eigen::Vector3d() << 1,
                           detection.corners[corner_index].x / NORMALIZATION,
                           detection.corners[corner_index].y / NORMALIZATION)
                              .finished();
 
-      auto camera_to_tag_d = CalculateDerivative(camera_to_tag.ToEigen(),
-                                                 normalized_camera_matrix_,
-                                                 image_point, corner_index);
+      auto camera_to_tag_d =
+          CalculateDerivative(camera_to_tag_eigen, normalized_camera_matrix_,
+                              image_point, corner_index);
       camera_to_tag.RegisterOutputs(tape);
       derrivative =
           derrivative + camera_to_tag.BackPropagate(camera_to_tag_d, tape);
 
-      loss += CalculateLoss(camera_to_tag.ToEigen(), normalized_camera_matrix_,
+      loss += CalculateLoss(camera_to_tag_eigen, normalized_camera_matrix_,
                             image_point, corner_index);
       tape.newRecording();
     }
