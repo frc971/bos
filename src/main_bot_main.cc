@@ -1,12 +1,14 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/cv_camera.h"
+#include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/networktable_sender.h"
 #include "src/localization/nvidia_apriltag_detector.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
+#include "src/pathing/controller.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 
@@ -19,30 +21,6 @@ auto main() -> int {
   camera_constants_t camera_constants = camera::GetCameraConstants();
 
   LOG(INFO) << "Starting estimators";
-
-  std::thread front_thread([&]() {
-    auto front_camera = std::make_unique<camera::CameraSource>(
-        "Front", std::make_unique<camera::CVCamera>(
-                     camera_constants.at("main_bot_front")));
-    cv::Mat front_camera_frame = front_camera->GetFrame();
-
-    std::vector<std::unique_ptr<localization::IPositionSender>> front_sender;
-    front_sender.emplace_back(
-        std::make_unique<localization::NetworkTableSender>(
-            camera_constants.at("main_bot_front").name));
-
-    localization::RunLocalization(
-        std::move(front_camera),
-        std::make_unique<localization::OpenCVAprilTagDetector>(
-            front_camera_frame.cols, front_camera_frame.rows,
-            utils::ReadIntrinsics(
-                camera_constants.at("main_bot_front").intrinsics_path.value())),
-        std::make_unique<localization::MultiTagSolver>(
-            camera_constants.at("main_bot_front")),
-        std::move(front_sender),
-        camera_constants.at("main_bot_front").extrinsics_path.value(), 5801,
-        false);
-  });
 
   std::thread left_thread([&]() {
     auto left_camera = std::make_unique<camera::CameraSource>(
@@ -95,6 +73,13 @@ auto main() -> int {
 
   LOG(INFO) << "Started estimators";
 
+  std::thread pathing_thread(pathing::RunController,
+                             "/bos/constants/navgrid.json", false);
+
+  LOG(INFO) << "pathing started";
+
   // TODO find better way
   left_thread.join();
+  right_thread.join();
+  pathing_thread.join();
 }

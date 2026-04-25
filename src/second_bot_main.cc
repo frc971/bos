@@ -6,12 +6,14 @@
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
+#include "src/pathing/controller.h"
+#include "src/pathing/pathfinding.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 
 using camera::camera_constants_t;
 auto main() -> int {
-  utils::StartNetworktables();
+  utils::StartNetworktables(9971);
 
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
@@ -69,7 +71,11 @@ auto main() -> int {
 
   // TODO front camera
 
+  std::thread pathing_thread(pathing::RunController,
+                             "/bos/constants/navgrid.json", false);
+
   LOG(INFO) << "Started estimators";
 
   left_thread.join();
+  pathing_thread.join();
 }

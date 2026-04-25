@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
+
+set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.6/bin/nvcc")
+
 project(BOS CXX C CUDA)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -38,3 +41,4 @@ FetchContent_MakeAvailable(googletest)
 
 add_compile_options(-Wno-psabi)
 add_subdirectory(src)
+
