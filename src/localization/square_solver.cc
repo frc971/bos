@@ -62,7 +62,19 @@ auto SquareSolver::EstimatePositionAmbiguous(
 
     cv::solvePnPGeneric(tag_corners_, detection.corners, camera_matrix_,
                         distortion_coefficients_, rvecs, tvecs, false,
-                        cv::SOLVEPNP_IPPE_SQUARE);
+                        cv::SOLVEPNP_ITERATIVE);
+
+    cv::solvePnPGeneric(tag_corners_, detection.corners, camera_matrix_,
+                        distortion_coefficients_, rvecs, tvecs, true,
+                        cv::SOLVEPNP_ITERATIVE);
+
+    cv::solvePnPGeneric(tag_corners_, detection.corners, camera_matrix_,
+                        distortion_coefficients_, rvecs, tvecs, true,
+                        cv::SOLVEPNP_ITERATIVE);
+
+    cv::solvePnPGeneric(tag_corners_, detection.corners, camera_matrix_,
+                        distortion_coefficients_, rvecs, tvecs, true,
+                        cv::SOLVEPNP_ITERATIVE);
 
     if (rvecs.size() < 2 || tvecs.size() < 2) {
       continue;
@@ -115,7 +127,7 @@ auto SquareSolver::EstimatePosition(
     try {
       cv::solvePnP(tag_corners_, detection.corners, camera_matrix_,
                    distortion_coefficients_, rvec, tvec, false,
-                   cv::SOLVEPNP_IPPE_SQUARE);
+                   cv::SOLVEPNP_ITERATIVE);
     } catch (std::exception& e) {
       LOG(WARNING) << "Caught solve pnp exception:\n" << e.what();
       return {};

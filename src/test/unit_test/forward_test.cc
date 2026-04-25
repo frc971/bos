@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include <XAD/StdCompatibility.hpp>
+#include <XAD/XAD.hpp>
 #include <filesystem>
 #include "src/localization/joint_solver.h"
 #include "src/localization/opencv_apriltag_detector.h"
@@ -8,7 +10,10 @@
 #include "src/utils/transform.h"
 
 #define IMAGE_STRIDE 4
-#define LOG_PATH "/bos-logs/log181/left"
+#define LOG_PATH "/bos-logs/log181/right"
+#define LR 0.01
+#define EPOCHS 100
+#define NORMALIZATION 100
 
 namespace fs = std::filesystem;
 
@@ -23,46 +28,177 @@ using localization::tag_detection_t;
 using utils::CameraMatrixFromJson;
 using utils::ReadIntrinsics;
 
-using transform3d_t = struct Transfrom3d {
-  // Translation in meters, rotation in radians
-  double t_x;
-  double t_y;
-  double t_z;
-  double r_x;
-  double r_y;
-  double r_z;
+using transform3d_derrivative_t = struct Transfrom3dDerrivative {
+  double t_x = 0;
+  double t_y = 0;
+  double t_z = 0;
+  double r_x = 0;
+  double r_y = 0;
+  double r_z = 0;
 
-  Transfrom3d(frc::Pose3d pose)
-      : t_x(pose.Translation().X().value()),
-        t_y(pose.Translation().Y().value()),
-        t_z(pose.Translation().Z().value()),
-        r_x(pose.Rotation().X().value()),
-        r_y(pose.Rotation().Y().value()),
-        r_z(pose.Rotation().Z().value()) {}
-
-  Transfrom3d(frc::Transform3d pose)
-      : t_x(pose.Translation().X().value()),
-        t_y(pose.Translation().Y().value()),
-        t_z(pose.Translation().Z().value()),
-        r_x(pose.Rotation().X().value()),
-        r_y(pose.Rotation().Y().value()),
-        r_z(pose.Rotation().Z().value()) {}
-
-  auto ToEigen() -> Eigen::Matrix4d {
-    Eigen::Matrix4d m = Eigen::Matrix4d::Identity();
-
-    // Rotation: ZYX euler convention (common for robot poses)
-    Eigen::Matrix3d rot = (Eigen::AngleAxisd(r_z, Eigen::Vector3d::UnitZ()) *
-                           Eigen::AngleAxisd(r_y, Eigen::Vector3d::UnitY()) *
-                           Eigen::AngleAxisd(r_x, Eigen::Vector3d::UnitX()))
-                              .toRotationMatrix();
-
-    m.block<3, 3>(0, 0) = rot;
-    m.block<3, 1>(0, 3) = Eigen::Vector3d{t_x, t_y, t_z};
-
-    return m;
+  auto operator+(const Transfrom3dDerrivative other) -> Transfrom3dDerrivative {
+    return Transfrom3dDerrivative{.t_x = t_x + other.t_x,
+                                  .t_y = t_y + other.t_y,
+                                  .t_z = t_z + other.t_z,
+                                  .r_x = r_x + other.r_x,
+                                  .r_y = r_y + other.r_y,
+                                  .r_z = r_z + other.r_z};
   }
 };
+
+auto operator<<(std::ostream& os, const Transfrom3dDerrivative& v)
+    -> std::ostream& {
+  os << "tx: " << v.t_x << "\n";
+  os << "ty: " << v.t_y << "\n";
+  os << "tz: " << v.t_z << "\n";
+
+  os << "rx: " << v.r_x << "\n";
+  os << "ry: " << v.r_y << "\n";
+  os << "rz: " << v.r_z << "\n";
+  return os;
+}
+
+struct DifferntiableTransform3d {
+  using mode = xad::adj<double>;
+  using tape_type = mode::tape_type;
+  using AD = mode::active_type;
+
+  // Translation in meters, rotation in radians
+  AD t_x;
+  AD t_y;
+  AD t_z;
+  AD r_x;
+  AD r_y;
+  AD r_z;
+  std::array<std::array<AD, 4>, 4> matrix;
+  tape_type tape;
+
+  DifferntiableTransform3d(frc::Pose3d pose)
+      : t_x(pose.Translation().X().value()),
+        t_y(pose.Translation().Y().value()),
+        t_z(pose.Translation().Z().value()),
+        r_x(pose.Rotation().X().value()),
+        r_y(pose.Rotation().Y().value()),
+        r_z(pose.Rotation().Z().value()) {
+    RegisterInputs();
+    RegisterOutputs();
+  }
+
+  DifferntiableTransform3d(frc::Transform3d pose)
+      : t_x(pose.Translation().X().value()),
+        t_y(pose.Translation().Y().value()),
+        t_z(pose.Translation().Z().value()),
+        r_x(pose.Rotation().X().value()),
+        r_y(pose.Rotation().Y().value()),
+        r_z(pose.Rotation().Z().value()) {}
+
+  void Update(transform3d_derrivative_t derrivative) {
+    t_x -= derrivative.t_x * LR;
+    t_y -= derrivative.t_y * LR;
+    t_z -= derrivative.t_z * LR;
+
+    r_x -= derrivative.r_x * LR;
+    r_y -= derrivative.r_y * LR;
+    r_z -= derrivative.r_z * LR;
+  }
+
+  void RegisterInputs() {
+    tape.registerInput(r_x);
+    tape.registerInput(r_y);
+    tape.registerInput(r_z);
+
+    tape.registerInput(t_x);
+    tape.registerInput(t_y);
+    tape.registerInput(t_z);
+  }
+
+  void RegisterOutputs() {
+    for (int i = 0; i < 4; i++) {
+      for (int j = 0; j < 4; j++) {
+        tape.registerOutput(matrix[i][j]);
+      }
+    }
+  }
+
+  auto ToEigen() -> Eigen::Matrix4d {
+    // clang-format off
+    return (Eigen::Matrix<double, 4, 4>() << 
+      matrix[0][0].value(), matrix[0][1].value(), matrix[0][2].value(), matrix[0][3].value(),
+      matrix[1][0].value(), matrix[1][1].value(), matrix[1][2].value(), matrix[1][3].value(),
+      matrix[2][0].value(), matrix[2][1].value(), matrix[2][2].value(), matrix[2][3].value(),
+      matrix[3][0].value(), matrix[3][1].value(), matrix[3][2].value(), matrix[3][3].value())
+      .finished();
+    // clang-format on
+  }
+  void CalculateMatrix() {
+    tape.newRecording();
+    RegisterInputs();
+
+    AD cos_x = xad::cos(r_x);
+    AD cos_y = xad::cos(r_y);
+    AD cos_z = xad::cos(r_z);
+
+    AD sin_x = xad::sin(r_x);
+    AD sin_y = xad::sin(r_y);
+    AD sin_z = xad::sin(r_z);
+
+    // Rotation
+    matrix[0][0] = cos_z * cos_y;
+    matrix[0][1] = cos_z * sin_y * sin_x - sin_z * cos_x;
+    matrix[0][2] = cos_z * sin_y * cos_x + sin_z * sin_x;
+
+    matrix[1][0] = sin_z * cos_y;
+    matrix[1][1] = sin_z * sin_y * sin_x + cos_z * cos_x;
+    matrix[1][2] = sin_z * sin_y * cos_x - cos_z * sin_x;
+
+    matrix[2][0] = -sin_y;
+    matrix[2][1] = cos_y * sin_x;
+    matrix[2][2] = cos_y * cos_x;
+
+    // Translation
+    matrix[0][3] = t_x;
+    matrix[1][3] = t_y;
+    matrix[2][3] = t_z;
+
+    matrix[3][0] = 0;
+    matrix[3][1] = 0;
+    matrix[3][2] = 0;
+    matrix[3][3] = 1;
+  }
+
+  auto BackPropagate(const Eigen::Matrix4d& next_derrivative)
+      -> transform3d_derrivative_t {
+    for (int i = 0; i < 4; i++) {
+      for (int j = 0; j < 4; j++) {
+        tape.registerOutput(matrix[i][j]);
+        derivative(matrix[i][j]) = next_derrivative(i, j);
+      }
+    }
+    tape.computeAdjoints();
+    transform3d_derrivative_t derrivative{
+        .t_x = xad::derivative(t_x),
+        .t_y = xad::derivative(t_y),
+        .t_z = xad::derivative(t_z),
+        .r_x = xad::derivative(r_x),
+        .r_y = xad::derivative(r_y),
+        .r_z = xad::derivative(r_z),
+    };
+    tape.clearDerivatives();
+    return derrivative;
+  }
+};
+
+auto operator<<(std::ostream& os, const DifferntiableTransform3d& v)
+    -> std::ostream& {
+  os << "tx: " << v.t_x << "\n";
+  os << "ty: " << v.t_y << "\n";
+  os << "tz: " << v.t_z << "\n";
+
+  os << "rx: " << v.r_x << "\n";
+  os << "ry: " << v.r_y << "\n";
+  os << "rz: " << v.r_z << "\n";
+  return os;
+}
 
 // clang-format off
 const Eigen::Matrix<double, 3, 4> PI =
@@ -93,6 +229,8 @@ class ForwardTest : public ::testing::Test {
         ReadIntrinsics(camera_constant_.intrinsics_path.value()));
     camera_matrix_ = CameraMatrixFromJson<Eigen::Matrix3d>(
         ReadIntrinsics(camera_constant_.intrinsics_path.value()));
+    normalized_camera_matrix_ = camera_matrix_ / NORMALIZATION;
+    normalized_camera_matrix_(0, 0) = 1;
   }
 
   void TearDown() override {}
@@ -101,6 +239,7 @@ class ForwardTest : public ::testing::Test {
   std::unique_ptr<SquareSolver> square_solver_;
   std::unique_ptr<OpenCVAprilTagDetector> detector_;
   Eigen::Matrix3d camera_matrix_;
+  Eigen::Matrix3d normalized_camera_matrix_;
 };
 
 auto ProjectPoints(const frc::Pose3d& camera_pose, const frc::Pose3d& tag_pose,
@@ -110,21 +249,31 @@ auto ProjectPoints(const frc::Pose3d& camera_pose, const frc::Pose3d& tag_pose,
   auto feild_to_tag = tag_pose.ToMatrix();
   auto camera_to_tag = feild_to_camera.inverse() * feild_to_tag * rotate_yaw;
 
-  Eigen::Vector3d projected_points =
+  Eigen::Vector3d projected_point =
       camera_matrix * PI * camera_to_tag *
       localization::kapriltag_corners_eigen_homogenized[corner_index];
-  auto normalized_points = projected_points / projected_points[0];
-  return normalized_points;
+  auto normalized_point = projected_point / projected_point[0];
+  return normalized_point;
 }
 
-auto CalculateDerivative(const frc::Pose3d& camera_pose,
-                         const frc::Pose3d& tag_pose,
+auto CalculateLoss(const Eigen::Matrix4d& camera_to_tag,
+                   const Eigen::Matrix3d& camera_matrix,
+                   const Eigen::Vector3d& image_point, int corner_index)
+    -> double {
+  Eigen::Vector3d projected_point =
+      camera_matrix * PI * camera_to_tag *
+      localization::kapriltag_corners_eigen_homogenized[corner_index];
+  auto normalized_point = projected_point / projected_point[0];
+
+  auto normalized_points_d = normalized_point - image_point;
+
+  return normalized_points_d.array().square().sum();
+}
+
+auto CalculateDerivative(const Eigen::Matrix4d& camera_to_tag,
                          const Eigen::Matrix3d& camera_matrix,
                          const Eigen::Vector3d& image_point, int corner_index)
     -> Eigen::Matrix4d {
-  auto feild_to_camera = camera_pose.ToMatrix();
-  auto feild_to_tag = tag_pose.ToMatrix();
-  auto camera_to_tag = feild_to_camera.inverse() * feild_to_tag * rotate_yaw;
 
   Eigen::Vector3d projected_point =
       camera_matrix * PI * camera_to_tag *
@@ -135,15 +284,17 @@ auto CalculateDerivative(const frc::Pose3d& camera_pose,
 
   // clang-format off
   auto projected_point_d = (Eigen::Vector3d() << 
-    -normalized_points_d[1] * projected_point[1] / (projected_point[0] * projected_point[0])
-    -normalized_points_d[2] * projected_point[2] / (projected_point[0] * projected_point[0]),
+    (-normalized_points_d[1] * projected_point[1]) / (projected_point[0] * projected_point[0]) + 
+    (-normalized_points_d[2] * projected_point[1]) / (projected_point[0] * projected_point[0]),
     normalized_points_d[1] / projected_point[0],
     normalized_points_d[2] / projected_point[0]
   ).finished();
   // clang-format on
 
   auto camera_matrix_xd = camera_matrix.transpose() * projected_point_d;
+
   auto PI_xd = PI.transpose() * camera_matrix_xd;
+
   auto camera_to_tag_d =
       PI_xd * localization::kapriltag_corners_eigen_homogenized[corner_index]
                   .transpose();
@@ -187,7 +338,15 @@ TEST_F(ForwardTest, ProjectTest) {  // NOLINT
           ProjectPoints(square_solver_solution.pose,
                         kapriltag_layout.GetTagPose(detection.tag_id).value(),
                         camera_matrix_, j);
-      CheckIsEqual(detection.corners[j], projected_points);
+
+      auto projected_points_normalized =
+          ProjectPoints(square_solver_solution.pose,
+                        kapriltag_layout.GetTagPose(detection.tag_id).value(),
+                        normalized_camera_matrix_, j);
+
+      CheckIsEqual(detection.corners[j], projected_points, 1);
+      CheckIsEqual(detection.corners[j] / NORMALIZATION,
+                   projected_points_normalized, 1.0 / NORMALIZATION);
     }
   }
 }
@@ -202,20 +361,40 @@ TEST_F(ForwardTest, TestDerrivative) {  // NOLINT
   auto square_solver_solution =
       square_solver_->EstimatePosition({detection})[0];
 
-  Eigen::Matrix4d camera_to_tag_d = Eigen::Matrix4d::Zero();
-  for (int camera_index = 0; camera_index < 4; camera_index++) {
-    auto image_point =
-        (Eigen::Vector3d() << 1, detection.corners[camera_index].x,
-         detection.corners[camera_index].y)
-            .finished();
+  auto feild_to_tag =
+      kapriltag_layout.GetTagPose(detection.tag_id).value().ToMatrix();
 
-    camera_to_tag_d += CalculateDerivative(
-        square_solver_solution.pose,
-        kapriltag_layout.GetTagPose(detection.tag_id).value(), camera_matrix_,
-        image_point, camera_index);
+  auto feild_to_camera = square_solver_solution.pose.ToMatrix();
+
+  Eigen::Matrix4d camera_to_tag =
+      feild_to_camera.inverse() * feild_to_tag * rotate_yaw;
+
+  // Noise
+  camera_to_tag(0, 0) += 0.1;
+  camera_to_tag(0, 3) += 0.1;
+  camera_to_tag(0, 2) += 0.1;
+  camera_to_tag(1, 3) += 0.1;
+
+  double loss = 0;
+  for (int epoch = 0; epoch < EPOCHS; epoch++) {
+    Eigen::Matrix4d camera_to_tag_d = Eigen::Matrix4d::Zero();
+    loss = 0;
+    for (int corner_index = 0; corner_index < 4; corner_index++) {
+      auto image_point = (Eigen::Vector3d() << 1,
+                          detection.corners[corner_index].x / NORMALIZATION,
+                          detection.corners[corner_index].y / NORMALIZATION)
+                             .finished();
+
+      camera_to_tag_d += CalculateDerivative(
+          camera_to_tag, normalized_camera_matrix_, image_point, corner_index);
+
+      loss += CalculateLoss(camera_to_tag, normalized_camera_matrix_,
+                            image_point, corner_index);
+    }
+    camera_to_tag -= camera_to_tag_d * LR;
+    LOG(INFO) << loss;
   }
-
-  LOG(INFO) << "derrivative\n" << camera_to_tag_d;
+  ASSERT_LT(loss, 0.001);
 }
 
 TEST_F(ForwardTest, TestTranfrom3d) {  // NOLINT
@@ -228,11 +407,16 @@ TEST_F(ForwardTest, TestTranfrom3d) {  // NOLINT
   auto square_solver_solution =
       square_solver_->EstimatePosition({detection})[0];
 
-  transform3d_t transform(square_solver_solution.pose);
-
-  LOG(INFO) << "pose.ToMatrix()\n" << square_solver_solution.pose.ToMatrix();
-  LOG(INFO) << "transform.ToEigen()\n" << transform.ToEigen();
+  DifferntiableTransform3d transform(square_solver_solution.pose);
+  transform.CalculateMatrix();
 
   EXPECT_TRUE(square_solver_solution.pose.ToMatrix().isApprox(
       transform.ToEigen(), 1e-9));
+
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      EXPECT_NEAR(square_solver_solution.pose.ToMatrix()(i, j),
+                  transform.matrix[i][j].value(), 1e-9);
+    }
+  }
 }
