@@ -65,6 +65,11 @@ MultiCameraDetector::MultiCameraDetector(
         camera::timestamped_frame_t timestamped_frame;
         timestamped_frame = cameras_[i]->GetFrame();
         if (timestamped_frame.invalid) {
+          if (image_paths.has_value()) {
+            frc::DataLogManager::Stop();
+            LOG(INFO) << "Reached the end of the file list";
+            std::exit(0);
+          }
           continue;  // this is ok because GetFrame is blocking
         }
         if (timestamped_frame.timestamp - last_write_times_[i] >
