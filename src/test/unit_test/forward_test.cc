@@ -7,12 +7,13 @@
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/constants_from_json.h"
+#include "src/utils/timer.h"
 #include "src/utils/transform.h"
 
 #define IMAGE_STRIDE 4
 #define LOG_PATH "/bos-logs/log181/right"
-#define LR 0.01
-#define EPOCHS 1000
+#define LR 0.05
+#define EPOCHS 500
 #define NORMALIZATION 100
 
 namespace fs = std::filesystem;
@@ -461,7 +462,7 @@ TEST_F(ForwardTest, TestTransfrom3d) {  // NOLINT
 }
 
 TEST_F(ForwardTest, TestBackpropagation) {  // NOLINT
-  cv::Mat image = cv::imread("/bos-logs/log181/right/7.047703.jpg");
+  cv::Mat image = cv::imread("/bos-logs/log181/right/5.647740.jpg");
   timestamped_frame_t timestamped_frame{
       .frame = std::move(image), .timestamp = 0, .invalid = false};
   auto detections = detector_->GetTagDetections(timestamped_frame);
@@ -490,6 +491,7 @@ TEST_F(ForwardTest, TestBackpropagation) {  // NOLINT
   tape_type tape;
 
   double loss = 0;
+  utils::Timer solve_timer("solve", false);
   for (int epoch = 0; epoch < EPOCHS; epoch++) {
     loss = 0;
     transform3d_derrivative_t derrivative;
@@ -516,5 +518,6 @@ TEST_F(ForwardTest, TestBackpropagation) {  // NOLINT
     }
     camera_to_tag.Apply(derrivative);
   }
+  ASSERT_LT(solve_timer.Stop(), 1.0 / 250);
   ASSERT_LT(loss, 0.001);
 }
