@@ -42,15 +42,21 @@ MultiCameraDetector::MultiCameraDetector(
     }
     auto intrinsics =
         utils::ReadIntrinsics(camera_constants_[i].intrinsics_path.value());
-    if (true /*camera_constants_[i].use_cpu.has_value() &&
-        camera_constants[i].use_cpu.value()*/) {
-      detectors_.push_back(std::make_unique<OpenCVAprilTagDetector>(
-          camera_constants_[i].frame_width.value(),
-          camera_constants_[i].frame_height.value(), intrinsics));
-    } else {
-      detectors_.push_back(std::make_unique<GPUAprilTagDetector>(
-          camera_constants_[i].frame_width.value(),
-          camera_constants_[i].frame_height.value(), intrinsics));
+    switch (camera_constants_[i].detector_type) {
+      case camera::OPENCV_CPU: {
+        detectors_.push_back(std::make_unique<OpenCVAprilTagDetector>(
+            camera_constants_[i].frame_width.value(),
+            camera_constants_[i].frame_height.value(), intrinsics));
+        break;
+      }
+      case camera::AUSTIN_GPU: {
+        detectors_.push_back(std::make_unique<GPUAprilTagDetector>(
+            camera_constants_[i].frame_width.value(),
+            camera_constants_[i].frame_height.value(), intrinsics));
+        break;
+      }
+      default:
+        LOG(FATAL) << "Invalid detector type";
     }
   }
   for (size_t i = 0; i < cameras_.size(); i++) {

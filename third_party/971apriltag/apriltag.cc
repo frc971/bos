@@ -125,7 +125,7 @@ GpuDetector::GpuDetector(size_t width, size_t height,
       height_(height),
       tag_detector_(tag_detector),
       gray_image_host_(width * height),
-      color_image_device_(width * height * 2),
+      color_image_device_(width * height * BytesPerPixel(image_format)),
       gray_image_device_(width * height),
       decimated_image_device_(width / 2 * height / 2),
       thresholded_image_device_(width / 2 * height / 2),
@@ -684,8 +684,13 @@ absl::Status GpuDetector::Detect(const uint8_t* image,
   // If the image isn't already in device memory, copy it there and update the
   // pointer.
   if (image_device == nullptr) {
-    color_image_device_.MemcpyAsyncFrom(image, &stream_);
-    image_device = color_image_device_.get();
+    if (image_format_ != vision::ImageFormat::MONO8) {
+      color_image_device_.MemcpyAsyncFrom(image, &stream_);
+      image_device = color_image_device_.get();
+    } else {
+      gray_image_device_.MemcpyAsyncFrom(image, &stream_);
+      image_device = gray_image_device_.get();
+    }
   }
   after_image_memcpy_to_device_.Record(&stream_);
 

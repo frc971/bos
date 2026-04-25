@@ -13,6 +13,7 @@ constexpr auto RadianToDegree(double radian) -> double {
   return radian * (180 / M_PI);
 }
 
+// TODO find safer way than void* initialization
 auto ToMat(const cv::Mat& image) -> cv::Mat {
   cv::Mat color_image(cv::Size(image.cols, image.rows), CV_8UC2,
                       (void*)image.data);
@@ -44,18 +45,25 @@ GPUAprilTagDetector::GPUAprilTagDetector(uint image_width, uint image_height,
       utils::CameraMatrixFromJson<frc::apriltag::CameraMatrix>(intrinsics),
       utils::DistortionCoefficientsFromJson<frc::apriltag::DistCoeffs>(
           intrinsics),
-      vision::ImageFormat::YUYV422);
+      image_format);
 }
 auto GPUAprilTagDetector::GetTagDetections(
     camera::timestamped_frame_t& timestamped_frame)
     -> std::vector<tag_detection_t> {
   CHECK(!timestamped_frame.frame.empty());
   try {
-    CHECK(timestamped_frame.frame.channels() == 3);
-    cv::Mat gray;
-    cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2YUV_YUY2);
-    cv::Mat mat_ = ToMat(gray);
-    absl::Status detection_status = gpu_detector_->Detect(mat_.data, nullptr);
+    absl::Status detection_status;
+    if (image_format == vision::ImageFormat::MONO8) {
+      CHECK(timestamped_frame.frame.channels() == 1);
+      detection_status =
+          gpu_detector_->Detect(timestamped_frame.frame.data, nullptr);
+    } else {  // TODO allow other formats than YUY2
+      CHECK(timestamped_frame.frame.channels() == 3);
+      cv::Mat gray;
+      cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2YUV_YUY2);
+      cv::Mat mat_ = ToMat(gray);
+      detection_status = gpu_detector_->Detect(mat_.data, nullptr);
+    }
     if (!detection_status.ok()) {
       // LOG(WARNING) << "Gpu detector failed! Error: "
       // << detection_status.message();
@@ -64,7 +72,7 @@ auto GPUAprilTagDetector::GetTagDetections(
         gpu_detector_ = std::make_unique<frc::apriltag::GpuDetector>(
             timestamped_frame.frame.cols, timestamped_frame.frame.rows,
             apriltag_detector_, camera_matrix_, distortion_coefficients_,
-            vision::ImageFormat::YUYV422);
+            image_format);
       }
       return {};
     }

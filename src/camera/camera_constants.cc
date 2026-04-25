@@ -12,6 +12,25 @@ auto GetCameraConstants() -> camera_constants_t {
   return GetCameraConstants(absl::GetFlag(FLAGS_camera_constants_path));
 }
 
+template <typename T>
+void SetConstant(const std::string_view config_name, std::optional<T>& config,
+                 const nlohmann::json& camera_config) {
+  if (camera_config.contains(config_name) &&
+      !camera_config[config_name].is_null()) {
+    config = camera_config[config_name];
+  }
+}
+
+auto StringToDetectorType(const std::string& detector_type) -> DetectorType {
+  if (detector_type == "austin_gpu") {
+    return AUSTIN_GPU;
+  }
+  if (detector_type == "opencv_cpu") {
+    return OPENCV_CPU;
+  }
+  return INVALID;
+}
+
 auto GetCameraConstants(const std::string& path) -> camera_constants_t {
   camera_constants_t camera_constants;
   std::ifstream f(path);
@@ -20,8 +39,8 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
   nlohmann::json json;
   f >> json;
 
-  const auto& camera_configs = json.at("cameras");
-  for (const auto& camera_config : camera_configs) {
+  const nlohmann::json& camera_configs = json.at("cameras");
+  for (const nlohmann::json& camera_config : camera_configs) {
     if (camera_config.is_null()) {
       LOG(WARNING) << "Found a null camera config";
       continue;
@@ -38,56 +57,36 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
     camera_constant_t camera_constant{
         .name = camera_config.value("name", std::string{})};
 
-    if (camera_config.contains("pipeline") &&
-        !camera_config["pipeline"].is_null()) {
-      camera_constant.pipeline = camera_config["pipeline"];
-    }
-    if (camera_config.contains("intrinsics_path") &&
-        !camera_config["intrinsics_path"].is_null()) {
-      camera_constant.intrinsics_path = camera_config["intrinsics_path"];
-    }
-    if (camera_config.contains("extrinsics_path") &&
-        !camera_config["extrinsics_path"].is_null()) {
-      camera_constant.extrinsics_path = camera_config["extrinsics_path"];
-    }
-    if (camera_config.contains("backlight") &&
-        !camera_config["backlight"].is_null()) {
-      camera_constant.backlight = camera_config["backlight"];
-    }
-    if (camera_config.contains("frame_width") &&
-        !camera_config["frame_width"].is_null()) {
-      camera_constant.frame_width = camera_config["frame_width"];
-    }
-    if (camera_config.contains("frame_height") &&
-        !camera_config["frame_height"].is_null()) {
-      camera_constant.frame_height = camera_config["frame_height"];
-    }
-    if (camera_config.contains("fps") && !camera_config["fps"].is_null()) {
-      camera_constant.fps = camera_config["fps"];
-    }
-    if (camera_config.contains("exposure") &&
-        !camera_config["exposure"].is_null()) {
-      camera_constant.exposure = camera_config["exposure"];
-    }
-    if (camera_config.contains("brightness") &&
-        !camera_config["brightness"].is_null()) {
-      camera_constant.brightness = camera_config["brightness"];
-    }
-    if (camera_config.contains("sharpness") &&
-        !camera_config["sharpness"].is_null()) {
-      camera_constant.sharpness = camera_config["sharpness"];
-    }
-    if (camera_config.contains("serial_id") &&
-        !camera_config["serial_id"].is_null()) {
-      camera_constant.serial_id = camera_config["serial_id"];
-    }
-    if (camera_config.contains("max_frame_size") &&
-        !camera_config["max_frame_size"].is_null()) {
-      camera_constant.max_frame_size = camera_config["max_frame_size"];
-    }
-    if (camera_config.contains("max_payload_size") &&
-        !camera_config["max_payload_size"].is_null()) {
-      camera_constant.max_payload_size = camera_config["max_payload_size"];
+    SetConstant<std::string>("pipeline", camera_constant.pipeline,
+                             camera_config);
+    SetConstant<std::string>("intrinsics_path", camera_constant.intrinsics_path,
+                             camera_config);
+    SetConstant<std::string>("extrinsics_path", camera_constant.extrinsics_path,
+                             camera_config);
+    SetConstant<double>("backlight", camera_constant.backlight, camera_config);
+    SetConstant<uint>("frame_width", camera_constant.frame_width,
+                      camera_config);
+    SetConstant<uint>("frame_height", camera_constant.frame_height,
+                      camera_config);
+    SetConstant<uint>("fps", camera_constant.fps, camera_config);
+    SetConstant<double>("exposure", camera_constant.exposure, camera_config);
+    SetConstant<double>("brightness", camera_constant.brightness,
+                        camera_config);
+    SetConstant<double>("sharpness", camera_constant.sharpness, camera_config);
+    SetConstant<std::string>("serial_id", camera_constant.serial_id,
+                             camera_config);
+    SetConstant<uint32_t>("max_frame_size", camera_constant.max_frame_size,
+                          camera_config);
+    SetConstant<uint32_t>("max_payload_size", camera_constant.max_payload_size,
+                          camera_config);
+    SetConstant<double>("stream_ratio", camera_constant.stream_ratio,
+                        camera_config);
+    SetConstant<uint>("port", camera_constant.port, camera_config);
+
+    if (camera_config.contains("detector_type") &&
+        !camera_config["detector_type"].is_null()) {
+      camera_constant.detector_type =
+          StringToDetectorType(camera_config["detector_type"]);
     }
     if (camera_config.contains("use_cpu") &&
         !camera_config["use_cpu"].is_null()) {
