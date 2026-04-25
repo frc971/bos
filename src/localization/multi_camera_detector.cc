@@ -33,8 +33,7 @@ MultiCameraDetector::MultiCameraDetector(
       cameras_.push_back(std::make_unique<camera::UVCCamera>(
           camera_constants_[i], status, camera_log_dest));
       if (!status.ok()) {
-        LOG(WARNING) << "Unable to create uvc camera for unambiguous solver: "
-                     << status.message();
+        LOG(WARNING) << "Unable to create uvc camera: " << status.message();
       }
     } else {
       cameras_.push_back(std::make_unique<camera::CVCamera>(
@@ -103,9 +102,8 @@ auto MultiCameraDetector::GetTagDetections()
   // has_new_detections_.wait(false, std::memory_order_acquire);
   while (!has_new_detections_.load()) {
     std::cout << "Waiting because this garbage is "
-              << has_new_detections_.load() << std::endl;
-    has_new_detections_.store(true);
-    std::cout << "Updated is " << has_new_detections_.load() << std::endl;
+              << has_new_detections_.load()
+              << " with ptr: " << &has_new_detections_ << std::endl;
     std::this_thread::sleep_for(std::chrono::duration<double>(0.1));
   }
   has_new_detections_.store(false, std::memory_order_release);
