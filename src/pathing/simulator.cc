@@ -10,7 +10,7 @@
 #include "src/pathing/pathing.h"
 
 auto main() -> int {
-  wpi::log::DataLogBackgroundWriter log{"/root/bos/logs", "sim.wpilog"};
+  wpi::log::DataLogBackgroundWriter log{"/root/bos/logs", "sim2.wpilog"};
 
   wpi::log::StructLogEntry<frc::Pose2d> poseLog(log, "/sim/Pose2d");
   wpi::log::DoubleLogEntry accelXLog(log, "/sim/AccelX");

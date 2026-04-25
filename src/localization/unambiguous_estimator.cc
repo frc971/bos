@@ -223,7 +223,7 @@ auto UnambiguousEstimator::EstimatePosition(
   double cost = SearchSolutions(ambiguous_estimates, 0, current_solution,
                                 best_solution, best_cost);
   if (best_solution.size() == 0) {
-    return std::make_optional<position_estimate_t>({.invalid = true});
+    return std::nullopt;
   }
   double avg_variance = 0;
   double avg_timestamp = 0;
