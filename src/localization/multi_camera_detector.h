@@ -17,7 +17,6 @@ class MultiCameraDetector {
       -> std::vector<std::vector<tag_detection_t>>;
   [[nodiscard]] auto GetCVFrames() -> std::vector<cv::Mat>;
   [[nodiscard]] inline auto NumCameras() -> double { return cameras_.size(); }
-  void StartThreads();
   ~MultiCameraDetector();
 
  private:

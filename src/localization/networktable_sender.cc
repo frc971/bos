@@ -56,7 +56,7 @@ NetworkTableSender::NetworkTableSender(const std::string& camera_name,
 
   if (sim) {
     std::error_code ec;
-    log_.emplace("/bos/logs/sim2.wpilog", ec);
+    log_.emplace("/bos/logs/sim.wpilog", ec);
     if (ec) {
       std::cerr << "Failed to open log: " << ec.message() << '\n';
       std::exit(0);

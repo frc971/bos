@@ -33,7 +33,7 @@
       "fps": null,
       "exposure": null,
       "port": 5803,
-      "detector_type": "opencv_cpu"
+      "detector_type": "austin_gpu"
     },
     {
       "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.3:1.0-video-index0",
@@ -46,7 +46,7 @@
       "fps": 60.0,
       "exposure": null,
       "port": 5802,
-      "detector_type": "opencv_cpu"
+      "detector_type": "austin_gpu"
     },
     {
       "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.1:1.0-video-index0",
@@ -59,7 +59,7 @@
       "fps": 60.0,
       "exposure": null,
       "port": 5801,
-      "detector_type": "opencv_cpu"
+      "detector_type": "austin_gpu"
     },
     {
       "name": "second_bot_front",
@@ -72,7 +72,7 @@
       "max_payload_size": 1024,
       "stream_ratio": 0.5,
       "port": 5803,
-      "detector_type": "opencv_cpu"
+      "detector_type": "austin_gpu"
     },
     {
       "name": "second_bot_right",
@@ -85,7 +85,7 @@
       "max_payload_size": 1024,
       "stream_ratio": 0.5,
       "port": 5802,
-      "detector_type": "opencv_cpu"
+      "detector_type": "austin_gpu"
     },
     {
       "name": "second_bot_left",
@@ -98,7 +98,7 @@
       "max_payload_size": 1024,
       "stream_ratio": 0.5,
       "port": 5801,
-      "detector_type": "opencv_cpu"
+      "detector_type": "austin_gpu"
     }
   ]
 }
