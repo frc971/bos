@@ -71,7 +71,7 @@ struct DifferntiableTransform3d {
   AD r_y;
   AD r_z;
   std::array<std::array<AD, 4>, 4> matrix;
-  tape_type tape;
+  // tape_type tape;
 
   DifferntiableTransform3d(frc::Pose3d pose)
       : t_x(pose.Translation().X().value()),
@@ -92,6 +92,15 @@ struct DifferntiableTransform3d {
         r_y(pose.Rotation().Y().value()),
         r_z(pose.Rotation().Z().value()) {}
 
+  DifferntiableTransform3d(Eigen::Matrix4d matrix)
+      : t_x(matrix(0, 3)), t_y(matrix(1, 3)), t_z(matrix(2, 3)) {
+    Eigen::Matrix3d R = matrix.block<3, 3>(0, 0);
+    Eigen::Vector3d euler = R.canonicalEulerAngles(2, 1, 0);
+    r_x = euler(2);
+    r_y = euler(1);
+    r_z = euler(0);
+  }
+
   void Update(transform3d_derrivative_t derrivative) {
     t_x -= derrivative.t_x * LR;
     t_y -= derrivative.t_y * LR;
@@ -103,19 +112,19 @@ struct DifferntiableTransform3d {
   }
 
   void RegisterInputs() {
-    tape.registerInput(r_x);
-    tape.registerInput(r_y);
-    tape.registerInput(r_z);
-
-    tape.registerInput(t_x);
-    tape.registerInput(t_y);
-    tape.registerInput(t_z);
+    // tape.registerInput(r_x);
+    // tape.registerInput(r_y);
+    // tape.registerInput(r_z);
+    //
+    // tape.registerInput(t_x);
+    // tape.registerInput(t_y);
+    // tape.registerInput(t_z);
   }
 
   void RegisterOutputs() {
     for (int i = 0; i < 4; i++) {
       for (int j = 0; j < 4; j++) {
-        tape.registerOutput(matrix[i][j]);
+        // tape.registerOutput(matrix[i][j]);
       }
     }
   }
@@ -131,7 +140,7 @@ struct DifferntiableTransform3d {
     // clang-format on
   }
   void CalculateMatrix() {
-    tape.newRecording();
+    // tape.newRecording();
     RegisterInputs();
 
     AD cos_x = xad::cos(r_x);
@@ -170,11 +179,11 @@ struct DifferntiableTransform3d {
       -> transform3d_derrivative_t {
     for (int i = 0; i < 4; i++) {
       for (int j = 0; j < 4; j++) {
-        tape.registerOutput(matrix[i][j]);
+        // tape.registerOutput(matrix[i][j]);
         derivative(matrix[i][j]) = next_derrivative(i, j);
       }
     }
-    tape.computeAdjoints();
+    // tape.computeAdjoints();
     transform3d_derrivative_t derrivative{
         .t_x = xad::derivative(t_x),
         .t_y = xad::derivative(t_y),
@@ -183,7 +192,7 @@ struct DifferntiableTransform3d {
         .r_y = xad::derivative(r_y),
         .r_z = xad::derivative(r_z),
     };
-    tape.clearDerivatives();
+    // tape.clearDerivatives();
     return derrivative;
   }
 };
@@ -392,12 +401,41 @@ TEST_F(ForwardTest, TestDerrivative) {  // NOLINT
                             image_point, corner_index);
     }
     camera_to_tag -= camera_to_tag_d * LR;
-    LOG(INFO) << loss;
+    // LOG(INFO) << loss;
   }
   ASSERT_LT(loss, 0.001);
 }
 
-TEST_F(ForwardTest, TestTranfrom3d) {  // NOLINT
+TEST_F(ForwardTest, TestTransfrom3dConstructor) {  // NOLINT
+  cv::Mat image = cv::imread("/bos-logs/log181/right/7.047703.jpg");
+  timestamped_frame_t timestamped_frame{
+      .frame = std::move(image), .timestamp = 0, .invalid = false};
+  auto detections = detector_->GetTagDetections(timestamped_frame);
+  auto detection = detections[0];
+
+  auto square_solver_solution =
+      square_solver_->EstimatePosition({detection})[0];
+
+  DifferntiableTransform3d transform_from_pose(square_solver_solution.pose);
+  DifferntiableTransform3d transform_from_eigen(
+      square_solver_solution.pose.ToMatrix());
+
+  const double tolerance = 1e-7;
+  ASSERT_NEAR(transform_from_pose.t_x.value(), transform_from_eigen.t_x.value(),
+              tolerance);
+  ASSERT_NEAR(transform_from_pose.t_y.value(), transform_from_eigen.t_y.value(),
+              tolerance);
+  ASSERT_NEAR(transform_from_pose.t_z.value(), transform_from_eigen.t_z.value(),
+              tolerance);
+
+  ASSERT_NEAR(transform_from_pose.r_x.value(), transform_from_eigen.r_x.value(),
+              tolerance);
+  ASSERT_NEAR(transform_from_pose.r_y.value(), transform_from_eigen.r_y.value(),
+              tolerance);
+  ASSERT_NEAR(transform_from_pose.r_z.value(), transform_from_eigen.r_z.value(),
+              tolerance);
+}
+TEST_F(ForwardTest, TestTransfrom3d) {  // NOLINT
   cv::Mat image = cv::imread("/bos-logs/log181/right/7.047703.jpg");
   timestamped_frame_t timestamped_frame{
       .frame = std::move(image), .timestamp = 0, .invalid = false};
@@ -419,4 +457,50 @@ TEST_F(ForwardTest, TestTranfrom3d) {  // NOLINT
                   transform.matrix[i][j].value(), 1e-9);
     }
   }
+}
+
+TEST_F(ForwardTest, TestBackpropagation) {  // NOLINT
+  cv::Mat image = cv::imread("/bos-logs/log181/right/7.047703.jpg");
+  timestamped_frame_t timestamped_frame{
+      .frame = std::move(image), .timestamp = 0, .invalid = false};
+  auto detections = detector_->GetTagDetections(timestamped_frame);
+  auto detection = detections[0];
+
+  auto square_solver_solution =
+      square_solver_->EstimatePosition({detection})[0];
+
+  auto feild_to_tag =
+      kapriltag_layout.GetTagPose(detection.tag_id).value().ToMatrix();
+
+  auto feild_to_camera = square_solver_solution.pose.ToMatrix();
+
+  Eigen::Matrix4d camera_to_tag =
+      feild_to_camera.inverse() * feild_to_tag * rotate_yaw;
+
+  // Noise
+  camera_to_tag(0, 0) += 0.1;
+  camera_to_tag(0, 3) += 0.1;
+  camera_to_tag(0, 2) += 0.1;
+  camera_to_tag(1, 3) += 0.1;
+
+  double loss = 0;
+  for (int epoch = 0; epoch < EPOCHS; epoch++) {
+    Eigen::Matrix4d camera_to_tag_d = Eigen::Matrix4d::Zero();
+    loss = 0;
+    for (int corner_index = 0; corner_index < 4; corner_index++) {
+      auto image_point = (Eigen::Vector3d() << 1,
+                          detection.corners[corner_index].x / NORMALIZATION,
+                          detection.corners[corner_index].y / NORMALIZATION)
+                             .finished();
+
+      camera_to_tag_d += CalculateDerivative(
+          camera_to_tag, normalized_camera_matrix_, image_point, corner_index);
+
+      loss += CalculateLoss(camera_to_tag, normalized_camera_matrix_,
+                            image_point, corner_index);
+    }
+    camera_to_tag -= camera_to_tag_d * LR;
+    // LOG(INFO) << loss;
+  }
+  ASSERT_LT(loss, 0.001);
 }
