@@ -262,10 +262,10 @@ auto ProjectPoints(const frc::Pose3d& camera_pose, const frc::Pose3d& tag_pose,
                    const Eigen::Matrix3d& camera_matrix,
                    const Eigen::Matrix4d& camera_to_robot, int corner_index)
     -> Eigen::Vector3d {
-  auto feild_to_camera = camera_pose.ToMatrix();
+  auto feild_to_robot = camera_pose.ToMatrix();
   auto feild_to_tag = tag_pose.ToMatrix();
   auto camera_to_tag =
-      camera_to_robot * feild_to_camera.inverse() * feild_to_tag * rotate_yaw;
+      camera_to_robot * feild_to_robot.inverse() * feild_to_tag * rotate_yaw;
 
   Eigen::Vector3d projected_point =
       camera_matrix * PI * camera_to_tag *
@@ -376,50 +376,50 @@ TEST_F(ForwardTest, ProjectTest) {  // NOLINT
   }
 }
 
-// TEST_F(ForwardTest, TestDerrivative) {  // NOLINT
-//   cv::Mat image = cv::imread("/bos-logs/log181/right/7.047703.jpg");
-//   timestamped_frame_t timestamped_frame{
-//       .frame = std::move(image), .timestamp = 0, .invalid = false};
-//   auto detections = detector_->GetTagDetections(timestamped_frame);
-//   auto detection = detections[0];
-//
-//   auto square_solver_solution =
-//       square_solver_->EstimatePosition({detection})[0];
-//
-//   auto feild_to_tag =
-//       kapriltag_layout.GetTagPose(detection.tag_id).value().ToMatrix();
-//
-//   auto feild_to_camera = square_solver_solution.pose.ToMatrix();
-//
-//   Eigen::Matrix4d camera_to_tag =
-//       feild_to_camera.inverse() * feild_to_tag * rotate_yaw;
-//
-//   // Noise
-//   camera_to_tag(0, 0) += 0.1;
-//   camera_to_tag(0, 3) += 0.1;
-//   camera_to_tag(0, 2) += 0.1;
-//   camera_to_tag(1, 3) += 0.1;
-//
-//   double loss = 0;
-//   for (int epoch = 0; epoch < EPOCHS; epoch++) {
-//     Eigen::Matrix4d camera_to_tag_d = Eigen::Matrix4d::Zero();
-//     loss = 0;
-//     for (int corner_index = 0; corner_index < 4; corner_index++) {
-//       auto image_point = (Eigen::Vector3d() << 1,
-//                           detection.corners[corner_index].x / NORMALIZATION,
-//                           detection.corners[corner_index].y / NORMALIZATION)
-//                              .finished();
-//
-//       camera_to_tag_d += CalculateDerivative(
-//           camera_to_tag, normalized_camera_matrix_, image_point, corner_index);
-//
-//       loss += CalculateLoss(camera_to_tag, normalized_camera_matrix_,
-//                             image_point, corner_index);
-//     }
-//     camera_to_tag -= camera_to_tag_d * LR;
-//   }
-//   ASSERT_LT(loss, 0.001);
-// }
+TEST_F(ForwardTest, TestDerrivative) {  // NOLINT
+  cv::Mat image = cv::imread("/bos-logs/log181/right/7.047703.jpg");
+  timestamped_frame_t timestamped_frame{
+      .frame = std::move(image), .timestamp = 0, .invalid = false};
+  auto detections = detector_->GetTagDetections(timestamped_frame);
+  auto detection = detections[0];
+
+  auto square_solver_solution =
+      square_solver_->EstimatePosition({detection})[0];
+
+  auto feild_to_tag =
+      kapriltag_layout.GetTagPose(detection.tag_id).value().ToMatrix();
+
+  auto feild_to_robot = square_solver_solution.pose.ToMatrix();
+
+  Eigen::Matrix4d camera_to_tag =
+      camera_to_robot_ * feild_to_robot.inverse() * feild_to_tag * rotate_yaw;
+
+  // Noise
+  camera_to_tag(0, 0) += 0.1;
+  camera_to_tag(0, 3) += 0.1;
+  camera_to_tag(0, 2) += 0.1;
+  camera_to_tag(1, 3) += 0.1;
+
+  double loss = 0;
+  for (int epoch = 0; epoch < EPOCHS; epoch++) {
+    Eigen::Matrix4d camera_to_tag_d = Eigen::Matrix4d::Zero();
+    loss = 0;
+    for (int corner_index = 0; corner_index < 4; corner_index++) {
+      auto image_point = (Eigen::Vector3d() << 1,
+                          detection.corners[corner_index].x / NORMALIZATION,
+                          detection.corners[corner_index].y / NORMALIZATION)
+                             .finished();
+
+      camera_to_tag_d += CalculateDerivative(
+          camera_to_tag, normalized_camera_matrix_, image_point, corner_index);
+
+      loss += CalculateLoss(camera_to_tag, normalized_camera_matrix_,
+                            image_point, corner_index);
+    }
+    camera_to_tag -= camera_to_tag_d * LR;
+  }
+  ASSERT_LT(loss, 0.001);
+}
 //
 // TEST_F(ForwardTest, TestTransfrom3dConstructor) {  // NOLINT
 //   cv::Mat image = cv::imread("/bos-logs/log181/right/7.047703.jpg");
