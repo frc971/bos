@@ -55,9 +55,13 @@ void RunJointLocalization(
     std::unique_ptr<localization::IJointPositionSolver> solver,
     std::unique_ptr<localization::IPositionSender> sender, bool verbose) {
   while (true) {
+    auto detections = detector_source.GetTagDetections();
+    LOG(INFO) << "Detections: " << detections.size();
     std::optional<position_estimate_t> estimated_pose =
-        solver->EstimatePosition(detector_source.GetTagDetections());
+        solver->EstimatePosition(detections);
+    LOG(INFO) << "Estimated";
     if (!estimated_pose.has_value()) {
+      LOG(INFO) << "Skipping";
       continue;
     }
     sender->Send(estimated_pose.value());

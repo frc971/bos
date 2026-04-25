@@ -30,7 +30,7 @@ class MultiCameraDetector {
   std::vector<std::jthread> camera_threads_;
   std::mutex mutex_;
   std::atomic<bool> run_cameras_{true};
-  std::binary_semaphore has_new_detections_{false};
+  std::atomic<bool> has_new_detections_{false};
   static constexpr int kenforced_streamer_fps = 30;
 };
 

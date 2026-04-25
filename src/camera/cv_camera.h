@@ -21,6 +21,7 @@ class CVCamera : public ICamera {
   std::string pipeline_;
   std::optional<std::string> log_path_;
   cv::Mat backup_image_;
+  int i_ = 0;
 };
 
 }  // namespace camera

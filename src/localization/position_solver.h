@@ -45,7 +45,7 @@ class IPositionSolver {
 class IJointPositionSolver {
  public:
   virtual auto EstimatePosition(
-      std::vector<std::vector<tag_detection_t>>&& detection_batches,
+      std::vector<std::vector<tag_detection_t>>& detection_batches,
       bool reject_far_tags = true) -> std::optional<position_estimate_t> = 0;
   virtual ~IJointPositionSolver() = default;
 };

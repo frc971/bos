@@ -19,7 +19,7 @@ class UnambiguousEstimator : public IJointPositionSolver {
       const std::vector<camera::camera_constant_t>& camera_constants,
       bool verbose = false);
   auto EstimatePosition(
-      std::vector<std::vector<tag_detection_t>>&& detection_batches,
+      std::vector<std::vector<tag_detection_t>>& detection_batches,
       bool reject_far_tags = true)
       -> std::optional<position_estimate_t> override;
 

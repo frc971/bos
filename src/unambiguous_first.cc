@@ -28,8 +28,12 @@ auto main() -> int {
   LOG(INFO) << "Started cameras";
   std::this_thread::sleep_for(std::chrono::duration<double>(2));
 
-  localization::UnambiguousEstimator localizer(cameras);
-  std::vector<std::unique_ptr<localization::IPositionSender>> joint_sender;
-  joint_sender.emplace_back(
-      std::make_unique<localization::NetworkTableSender>("Left"));
+  std::jthread thread([cameras] {
+    localization::MultiCameraDetector detector_source(cameras);
+    LOG(INFO) << "Created camera source";
+    localization::RunJointLocalization(
+        detector_source,
+        std::make_unique<localization::UnambiguousEstimator>(cameras),
+        std::make_unique<localization::NetworkTableSender>("Left", false));
+  });
 }
