@@ -513,7 +513,6 @@ TEST_F(ForwardTest, TestBackpropagation) {  // NOLINT
                             image_point, corner_index);
       tape.newRecording();
     }
-    LOG(INFO) << loss;
     camera_to_tag.Apply(derrivative);
   }
   ASSERT_LT(loss, 0.001);
