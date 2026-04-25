@@ -12,7 +12,7 @@
 #define IMAGE_STRIDE 4
 #define LOG_PATH "/bos-logs/log181/right"
 #define LR 0.01
-#define EPOCHS 100
+#define EPOCHS 1000
 #define NORMALIZATION 100
 
 namespace fs = std::filesystem;
@@ -27,6 +27,10 @@ using localization::SquareSolver;
 using localization::tag_detection_t;
 using utils::CameraMatrixFromJson;
 using utils::ReadIntrinsics;
+
+using mode = xad::adj<double>;
+using tape_type = mode::tape_type;
+using AD = mode::active_type;
 
 using transform3d_derrivative_t = struct Transfrom3dDerrivative {
   double t_x = 0;
@@ -59,9 +63,6 @@ auto operator<<(std::ostream& os, const Transfrom3dDerrivative& v)
 }
 
 struct DifferntiableTransform3d {
-  using mode = xad::adj<double>;
-  using tape_type = mode::tape_type;
-  using AD = mode::active_type;
 
   // Translation in meters, rotation in radians
   AD t_x;
@@ -71,7 +72,6 @@ struct DifferntiableTransform3d {
   AD r_y;
   AD r_z;
   std::array<std::array<AD, 4>, 4> matrix;
-  // tape_type tape;
 
   DifferntiableTransform3d(frc::Pose3d pose)
       : t_x(pose.Translation().X().value()),
@@ -79,10 +79,7 @@ struct DifferntiableTransform3d {
         t_z(pose.Translation().Z().value()),
         r_x(pose.Rotation().X().value()),
         r_y(pose.Rotation().Y().value()),
-        r_z(pose.Rotation().Z().value()) {
-    RegisterInputs();
-    RegisterOutputs();
-  }
+        r_z(pose.Rotation().Z().value()) {}
 
   DifferntiableTransform3d(frc::Transform3d pose)
       : t_x(pose.Translation().X().value()),
@@ -111,25 +108,25 @@ struct DifferntiableTransform3d {
     r_z -= derrivative.r_z * LR;
   }
 
-  void RegisterInputs() {
-    // tape.registerInput(r_x);
-    // tape.registerInput(r_y);
-    // tape.registerInput(r_z);
-    //
-    // tape.registerInput(t_x);
-    // tape.registerInput(t_y);
-    // tape.registerInput(t_z);
+  void RegisterInputs(tape_type& tape) {
+    tape.registerInput(r_x);
+    tape.registerInput(r_y);
+    tape.registerInput(r_z);
+
+    tape.registerInput(t_x);
+    tape.registerInput(t_y);
+    tape.registerInput(t_z);
   }
 
-  void RegisterOutputs() {
+  void RegisterOutputs(tape_type& tape) {
     for (int i = 0; i < 4; i++) {
       for (int j = 0; j < 4; j++) {
-        // tape.registerOutput(matrix[i][j]);
+        tape.registerOutput(matrix[i][j]);
       }
     }
   }
 
-  auto ToEigen() -> Eigen::Matrix4d {
+  auto ToEigen() -> Eigen::Matrix4d const {
     // clang-format off
     return (Eigen::Matrix<double, 4, 4>() << 
       matrix[0][0].value(), matrix[0][1].value(), matrix[0][2].value(), matrix[0][3].value(),
@@ -140,9 +137,6 @@ struct DifferntiableTransform3d {
     // clang-format on
   }
   void CalculateMatrix() {
-    // tape.newRecording();
-    RegisterInputs();
-
     AD cos_x = xad::cos(r_x);
     AD cos_y = xad::cos(r_y);
     AD cos_z = xad::cos(r_z);
@@ -175,15 +169,15 @@ struct DifferntiableTransform3d {
     matrix[3][3] = 1;
   }
 
-  auto BackPropagate(const Eigen::Matrix4d& next_derrivative)
+  auto BackPropagate(const Eigen::Matrix4d& next_derrivative, tape_type& tape)
       -> transform3d_derrivative_t {
     for (int i = 0; i < 4; i++) {
       for (int j = 0; j < 4; j++) {
-        // tape.registerOutput(matrix[i][j]);
+        tape.registerOutput(matrix[i][j]);
         derivative(matrix[i][j]) = next_derrivative(i, j);
       }
     }
-    // tape.computeAdjoints();
+    tape.computeAdjoints();
     transform3d_derrivative_t derrivative{
         .t_x = xad::derivative(t_x),
         .t_y = xad::derivative(t_y),
@@ -192,8 +186,16 @@ struct DifferntiableTransform3d {
         .r_y = xad::derivative(r_y),
         .r_z = xad::derivative(r_z),
     };
-    // tape.clearDerivatives();
     return derrivative;
+  }
+  void Apply(const transform3d_derrivative_t& derrivative) {
+    t_x -= derrivative.t_x * LR;
+    t_y -= derrivative.t_y * LR;
+    t_z -= derrivative.t_z * LR;
+
+    r_x -= derrivative.r_x * LR;
+    r_y -= derrivative.r_y * LR;
+    r_z -= derrivative.r_z * LR;
   }
 };
 
@@ -401,7 +403,6 @@ TEST_F(ForwardTest, TestDerrivative) {  // NOLINT
                             image_point, corner_index);
     }
     camera_to_tag -= camera_to_tag_d * LR;
-    // LOG(INFO) << loss;
   }
   ASSERT_LT(loss, 0.001);
 }
@@ -474,33 +475,46 @@ TEST_F(ForwardTest, TestBackpropagation) {  // NOLINT
 
   auto feild_to_camera = square_solver_solution.pose.ToMatrix();
 
-  Eigen::Matrix4d camera_to_tag =
-      feild_to_camera.inverse() * feild_to_tag * rotate_yaw;
+  DifferntiableTransform3d camera_to_tag(feild_to_camera.inverse() *
+                                         feild_to_tag * rotate_yaw);
 
   // Noise
-  camera_to_tag(0, 0) += 0.1;
-  camera_to_tag(0, 3) += 0.1;
-  camera_to_tag(0, 2) += 0.1;
-  camera_to_tag(1, 3) += 0.1;
+  camera_to_tag.t_x += 0.1;
+  camera_to_tag.t_y += 0.1;
+  camera_to_tag.t_z += 0.1;
+
+  camera_to_tag.r_x += 0.1;
+  camera_to_tag.r_y += 0.1;
+  camera_to_tag.r_z += 0.1;
+
+  tape_type tape;
 
   double loss = 0;
   for (int epoch = 0; epoch < EPOCHS; epoch++) {
-    Eigen::Matrix4d camera_to_tag_d = Eigen::Matrix4d::Zero();
     loss = 0;
+    transform3d_derrivative_t derrivative;
+
     for (int corner_index = 0; corner_index < 4; corner_index++) {
+      camera_to_tag.CalculateMatrix();
+      camera_to_tag.RegisterInputs(tape);
       auto image_point = (Eigen::Vector3d() << 1,
                           detection.corners[corner_index].x / NORMALIZATION,
                           detection.corners[corner_index].y / NORMALIZATION)
                              .finished();
 
-      camera_to_tag_d += CalculateDerivative(
-          camera_to_tag, normalized_camera_matrix_, image_point, corner_index);
+      auto camera_to_tag_d = CalculateDerivative(camera_to_tag.ToEigen(),
+                                                 normalized_camera_matrix_,
+                                                 image_point, corner_index);
+      camera_to_tag.RegisterOutputs(tape);
+      derrivative =
+          derrivative + camera_to_tag.BackPropagate(camera_to_tag_d, tape);
 
-      loss += CalculateLoss(camera_to_tag, normalized_camera_matrix_,
+      loss += CalculateLoss(camera_to_tag.ToEigen(), normalized_camera_matrix_,
                             image_point, corner_index);
+      tape.newRecording();
     }
-    camera_to_tag -= camera_to_tag_d * LR;
-    // LOG(INFO) << loss;
+    LOG(INFO) << loss;
+    camera_to_tag.Apply(derrivative);
   }
   ASSERT_LT(loss, 0.001);
 }
