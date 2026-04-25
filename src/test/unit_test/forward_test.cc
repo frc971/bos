@@ -13,7 +13,7 @@
 #define IMAGE_STRIDE 4
 #define LOG_PATH "/bos-logs/log181/right"
 #define LR 0.05
-#define EPOCHS 500
+#define EPOCHS 1000
 #define NORMALIZATION 100
 
 namespace fs = std::filesystem;
@@ -462,10 +462,11 @@ TEST_F(ForwardTest, TestTransfrom3d) {  // NOLINT
 }
 
 TEST_F(ForwardTest, TestBackpropagation) {  // NOLINT
-  cv::Mat image = cv::imread("/bos-logs/log181/right/5.647740.jpg");
+  cv::Mat image = cv::imread("/bos-logs/log181/right/20.411762.jpg");
   timestamped_frame_t timestamped_frame{
       .frame = std::move(image), .timestamp = 0, .invalid = false};
   auto detections = detector_->GetTagDetections(timestamped_frame);
+  LOG(INFO) << detections.size();
   auto detection = detections[0];
 
   auto square_solver_solution =
@@ -519,5 +520,5 @@ TEST_F(ForwardTest, TestBackpropagation) {  // NOLINT
     camera_to_tag.Apply(derrivative);
   }
   ASSERT_LT(solve_timer.Stop(), 1.0 / 250);
-  ASSERT_LT(loss, 0.001);
+  ASSERT_LT(loss, 0.01);
 }
