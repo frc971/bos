@@ -13,8 +13,9 @@
 #define IMAGE_STRIDE 4
 #define LOG_PATH "/bos-logs/log181/right"
 #define LR 0.05
-#define EPOCHS 1000
+#define EPOCHS 100
 #define NORMALIZATION 1000
+#define BETA 0.3
 
 namespace fs = std::filesystem;
 
@@ -48,6 +49,24 @@ using transform3d_derrivative_t = struct Transfrom3dDerrivative {
                                   .r_x = r_x + other.r_x,
                                   .r_y = r_y + other.r_y,
                                   .r_z = r_z + other.r_z};
+  }
+
+  auto operator-(const Transfrom3dDerrivative other) -> Transfrom3dDerrivative {
+    return Transfrom3dDerrivative{.t_x = t_x - other.t_x,
+                                  .t_y = t_y - other.t_y,
+                                  .t_z = t_z - other.t_z,
+                                  .r_x = r_x - other.r_x,
+                                  .r_y = r_y - other.r_y,
+                                  .r_z = r_z - other.r_z};
+  }
+
+  auto operator*(const double other) -> Transfrom3dDerrivative {
+    return Transfrom3dDerrivative{.t_x = t_x * other,
+                                  .t_y = t_y * other,
+                                  .t_z = t_z * other,
+                                  .r_x = r_x * other,
+                                  .r_y = r_y * other,
+                                  .r_z = r_z * other};
   }
 };
 
@@ -616,7 +635,8 @@ TEST_F(ForwardTest, TestMultiCameraBackpropagation) {  // NOLINT
   double loss = 0;
   std::vector<camera_constant_t> camera_constants{camera_constant_left_,
                                                   camera_constant_right_};
-  utils::Timer solve_timer("solve", false);
+  utils::Timer solve_timer("solve", true);
+  transform3d_derrivative_t velocity;
   for (int epoch = 0; epoch < EPOCHS; epoch++) {
     loss = 0;
     transform3d_derrivative_t derrivative;
@@ -661,9 +681,10 @@ TEST_F(ForwardTest, TestMultiCameraBackpropagation) {  // NOLINT
         }
       }
     }
-    robot_to_feild.Apply(derrivative);
-    // LOG(INFO) << loss;
-  }                                    // The test is very unoptimized
+    velocity = (velocity * BETA) + derrivative;
+    robot_to_feild.Apply(velocity);
+    LOG(INFO) << loss;
+  }
   ASSERT_LT(solve_timer.Stop(), 0.1);  // The test is very unoptimized
-  ASSERT_LT(loss, 50);
+  ASSERT_LT(loss, 0.01);
 }
