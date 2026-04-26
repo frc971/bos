@@ -13,6 +13,7 @@ namespace pathing {
 auto RunController(
     const std::string& navgrid_path = "/root/bos/constants/navgrid.json",
     bool verbose = false) -> void {
+  const uint lookahead_ = 5;
   const double speed_ = 1.0;
 
   std::ifstream file(navgrid_path);
@@ -127,10 +128,10 @@ auto RunController(
                   << " Spline size: " << result.points.size();
       }
 
-      auto [dx_raw, dy_raw] =
-          EvaluatePosition(result.params[closest_idx],
-                           result.first_deriv_controls, result.knots,
-                           result.p - 1);
+      closest_idx += lookahead_;
+      auto [dx_raw, dy_raw] = EvaluatePosition(result.params[closest_idx],
+                                               result.first_deriv_controls,
+                                               result.knots, result.p - 1);
       double dx = dx_raw * result.p;
       double dy = dy_raw * result.p;
 
@@ -150,8 +151,8 @@ auto RunController(
         continue;
       }
 
-      double vx = (dx / mag) * speed_;
-      double vy = (dy / mag) * speed_;
+      double vx = (dx / mag) * speed_ * nodeSizeMeters;
+      double vy = (dy / mag) * speed_ * nodeSizeMeters;
 
       vx_pub.Set(vx);
       vy_pub.Set(vy);
