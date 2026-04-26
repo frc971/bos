@@ -14,7 +14,7 @@
 #define LOG_PATH "/bos-logs/log181/right"
 #define LR 0.05
 #define EPOCHS 1000
-#define NORMALIZATION 100
+#define NORMALIZATION 1000
 
 namespace fs = std::filesystem;
 
@@ -274,12 +274,16 @@ auto ProjectPoints(const frc::Pose3d& camera_pose, const frc::Pose3d& tag_pose,
   return normalized_point;
 }
 
-auto CalculateLoss(const Eigen::Matrix4d& camera_to_tag,
+auto CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
+                   const Eigen::Matrix4d& feild_to_tag,
+                   const Eigen::Matrix4d& camera_to_robot,
                    const Eigen::Matrix3d& camera_matrix,
                    const Eigen::Vector3d& image_point, int corner_index)
     -> double {
+
   Eigen::Vector3d projected_point =
-      camera_matrix * PI * camera_to_tag *
+      camera_matrix * PI * camera_to_robot * robot_to_feild * feild_to_tag *
+      rotate_yaw *
       localization::kapriltag_corners_eigen_homogenized[corner_index];
   auto normalized_point = projected_point / projected_point[0];
 
@@ -288,13 +292,15 @@ auto CalculateLoss(const Eigen::Matrix4d& camera_to_tag,
   return normalized_points_d.array().square().sum();
 }
 
-auto CalculateDerivative(const Eigen::Matrix4d& camera_to_tag,
+auto CalculateDerivative(const Eigen::Matrix4d& robot_to_feild,
+                         const Eigen::Matrix4d& feild_to_tag,
+                         const Eigen::Matrix4d& camera_to_robot,
                          const Eigen::Matrix3d& camera_matrix,
                          const Eigen::Vector3d& image_point, int corner_index)
     -> Eigen::Matrix4d {
-
   Eigen::Vector3d projected_point =
-      camera_matrix * PI * camera_to_tag *
+      camera_matrix * PI * camera_to_robot * robot_to_feild * feild_to_tag *
+      rotate_yaw *
       localization::kapriltag_corners_eigen_homogenized[corner_index];
   auto normalized_point = projected_point / projected_point[0];
 
@@ -313,10 +319,16 @@ auto CalculateDerivative(const Eigen::Matrix4d& camera_to_tag,
 
   auto PI_xd = PI.transpose() * camera_matrix_xd;
 
-  auto camera_to_tag_d =
-      PI_xd * localization::kapriltag_corners_eigen_homogenized[corner_index]
-                  .transpose();
-  return camera_to_tag_d;
+  auto camera_to_robot_xd = camera_to_robot.transpose() * PI_xd;
+
+  auto robot_to_feild_d =
+      camera_to_robot_xd *
+
+      (feild_to_tag * rotate_yaw *
+       localization::kapriltag_corners_eigen_homogenized[corner_index])
+          .transpose();
+
+  return robot_to_feild_d;
 }
 
 // TODO: Tolerance is quite high. Find out what causes the loss in precision
@@ -389,20 +401,18 @@ TEST_F(ForwardTest, TestDerrivative) {  // NOLINT
   auto feild_to_tag =
       kapriltag_layout.GetTagPose(detection.tag_id).value().ToMatrix();
 
-  auto feild_to_robot = square_solver_solution.pose.ToMatrix();
-
-  Eigen::Matrix4d camera_to_tag =
-      camera_to_robot_ * feild_to_robot.inverse() * feild_to_tag * rotate_yaw;
+  Eigen::Matrix4d robot_to_feild =
+      square_solver_solution.pose.ToMatrix().inverse();
 
   // Noise
-  camera_to_tag(0, 0) += 0.1;
-  camera_to_tag(0, 3) += 0.1;
-  camera_to_tag(0, 2) += 0.1;
-  camera_to_tag(1, 3) += 0.1;
+  robot_to_feild(0, 0) += 0.1;
+  robot_to_feild(0, 3) += 0.1;
+  robot_to_feild(0, 2) += 0.1;
+  robot_to_feild(1, 3) += 0.1;
 
   double loss = 0;
   for (int epoch = 0; epoch < EPOCHS; epoch++) {
-    Eigen::Matrix4d camera_to_tag_d = Eigen::Matrix4d::Zero();
+    Eigen::Matrix4d robot_to_feild_d = Eigen::Matrix4d::Zero();
     loss = 0;
     for (int corner_index = 0; corner_index < 4; corner_index++) {
       auto image_point = (Eigen::Vector3d() << 1,
@@ -410,13 +420,16 @@ TEST_F(ForwardTest, TestDerrivative) {  // NOLINT
                           detection.corners[corner_index].y / NORMALIZATION)
                              .finished();
 
-      camera_to_tag_d += CalculateDerivative(
-          camera_to_tag, normalized_camera_matrix_, image_point, corner_index);
+      robot_to_feild_d += CalculateDerivative(
+          robot_to_feild, feild_to_tag, camera_to_robot_,
+          normalized_camera_matrix_, image_point, corner_index);
 
-      loss += CalculateLoss(camera_to_tag, normalized_camera_matrix_,
-                            image_point, corner_index);
+      loss +=
+          CalculateLoss(robot_to_feild, feild_to_tag, camera_to_robot_,
+                        normalized_camera_matrix_, image_point, corner_index);
     }
-    camera_to_tag -= camera_to_tag_d * LR;
+    robot_to_feild -= robot_to_feild_d * LR;
+    LOG(INFO) << loss;
   }
   ASSERT_LT(loss, 0.001);
 }
@@ -477,31 +490,27 @@ TEST_F(ForwardTest, TestTransfrom3d) {  // NOLINT
 
 TEST_F(ForwardTest, TestBackpropagation) {  // NOLINT
   cv::Mat image = cv::imread("/bos-logs/log181/right/20.411762.jpg");
+  // LOG(INFO) << detections.size();
   timestamped_frame_t timestamped_frame{
       .frame = std::move(image), .timestamp = 0, .invalid = false};
   auto detections = detector_->GetTagDetections(timestamped_frame);
-  LOG(INFO) << detections.size();
   auto detection = detections[0];
 
   auto square_solver_solution =
       square_solver_->EstimatePosition({detection})[0];
 
-  auto feild_to_tag =
-      kapriltag_layout.GetTagPose(detection.tag_id).value().ToMatrix();
-
   auto feild_to_robot = square_solver_solution.pose.ToMatrix();
 
-  DifferntiableTransform3d camera_to_tag(
-      camera_to_robot_ * feild_to_robot.inverse() * feild_to_tag * rotate_yaw);
+  DifferntiableTransform3d robot_to_feild(feild_to_robot.inverse());
 
   // Noise
-  camera_to_tag.t_x += 0.1;
-  camera_to_tag.t_y += 0.1;
-  camera_to_tag.t_z += 0.1;
+  robot_to_feild.t_x += 0.1;
+  robot_to_feild.t_y += 0.1;
+  robot_to_feild.t_z += 0.1;
 
-  camera_to_tag.r_x += 0.1;
-  camera_to_tag.r_y += 0.1;
-  camera_to_tag.r_z += 0.1;
+  robot_to_feild.r_x += 0.1;
+  robot_to_feild.r_y += 0.1;
+  robot_to_feild.r_z += 0.1;
 
   tape_type tape;
 
@@ -511,27 +520,33 @@ TEST_F(ForwardTest, TestBackpropagation) {  // NOLINT
     loss = 0;
     transform3d_derrivative_t derrivative;
 
+    auto feild_to_tag =
+        kapriltag_layout.GetTagPose(detection.tag_id).value().ToMatrix();
+
     for (int corner_index = 0; corner_index < 4; corner_index++) {
-      camera_to_tag.CalculateMatrix();
-      camera_to_tag.RegisterInputs(tape);
-      const auto camera_to_tag_eigen = camera_to_tag.ToEigen();
+      robot_to_feild.CalculateMatrix();
+      robot_to_feild.RegisterInputs(tape);
+      const auto robot_to_feild_eigen = robot_to_feild.ToEigen();
       auto image_point = (Eigen::Vector3d() << 1,
                           detection.corners[corner_index].x / NORMALIZATION,
                           detection.corners[corner_index].y / NORMALIZATION)
                              .finished();
 
-      auto camera_to_tag_d =
-          CalculateDerivative(camera_to_tag_eigen, normalized_camera_matrix_,
-                              image_point, corner_index);
-      camera_to_tag.RegisterOutputs(tape);
-      derrivative =
-          derrivative + camera_to_tag.BackPropagate(camera_to_tag_d, tape);
+      auto robot_to_feild_d = CalculateDerivative(
+          robot_to_feild_eigen, feild_to_tag, camera_to_robot_,
+          normalized_camera_matrix_, image_point, corner_index);
 
-      loss += CalculateLoss(camera_to_tag_eigen, normalized_camera_matrix_,
-                            image_point, corner_index);
+      robot_to_feild.RegisterOutputs(tape);
+      derrivative =
+          derrivative + robot_to_feild.BackPropagate(robot_to_feild_d, tape);
+
+      loss +=
+          CalculateLoss(robot_to_feild_eigen, feild_to_tag, camera_to_robot_,
+                        normalized_camera_matrix_, image_point, corner_index);
+
       tape.newRecording();
     }
-    camera_to_tag.Apply(derrivative);
+    robot_to_feild.Apply(derrivative);
   }
   ASSERT_LT(solve_timer.Stop(), 1.0 / 250);
   ASSERT_LT(loss, 0.01);
