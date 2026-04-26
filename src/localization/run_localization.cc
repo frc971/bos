@@ -58,9 +58,7 @@ void RunJointLocalization(
     auto detections = detector_source.GetTagDetections();
     std::optional<position_estimate_t> estimated_pose =
         solver->EstimatePosition(detections);
-    LOG(INFO) << "Estimated";
     if (!estimated_pose.has_value()) {
-      LOG(INFO) << "Skipping";
       continue;
     }
     sender->Send(estimated_pose.value());

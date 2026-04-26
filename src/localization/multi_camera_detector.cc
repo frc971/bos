@@ -64,7 +64,6 @@ MultiCameraDetector::MultiCameraDetector(
         camera::timestamped_frame_t timestamped_frame;
         timestamped_frame = cameras_[i]->GetFrame();
         if (timestamped_frame.invalid) {
-          LOG(INFO) << "Skipping frame";
           if (image_paths.has_value()) {
             frc::DataLogManager::Stop();
             LOG(INFO) << "Reached the end of the file list";
@@ -79,19 +78,13 @@ MultiCameraDetector::MultiCameraDetector(
         }
         std::vector<localization::tag_detection_t> detections =
             detectors_[i]->GetTagDetections(timestamped_frame);
-        LOG(INFO) << "Received " << detections.size() << " detections";
-        std::cout << has_new_detections_ << std::endl;
         {
           std::lock_guard<std::mutex> lock(mutex_);
           timestamped_frames_[i] = std::move(timestamped_frame);
           tag_detections_[i] = std::move(detections);
-          // LOG(INFO) << "Producer sees: " << tag_detections_[i].size()
-          //           << " with ptr: " << &has_new_detections_ << std::endl;
         }
-        LOG(INFO) << "Put in new detections";
         has_new_detections_.store(true, std::memory_order_release);
         has_new_detections_.notify_one();
-        LOG(INFO) << "Added new detections";
       }
     });
   }
@@ -99,16 +92,13 @@ MultiCameraDetector::MultiCameraDetector(
 
 auto MultiCameraDetector::GetTagDetections()
     -> std::vector<std::vector<tag_detection_t>> {
-  LOG(INFO) << "Trying to acquire";
   has_new_detections_.wait(false, std::memory_order_acquire);
   has_new_detections_.store(false, std::memory_order_release);
-  LOG(INFO) << "Acquired";
   std::vector<std::vector<tag_detection_t>> tag_detections;
   {
     std::lock_guard<std::mutex> lock(mutex_);
     tag_detections = tag_detections_;
   }
-  // LOG(INFO) << "Consumer sees: " << tag_detections[0].size();
   return tag_detections;
 }
 

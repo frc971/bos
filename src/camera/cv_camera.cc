@@ -66,12 +66,9 @@ CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
 auto CVCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t timestamped_frame;
   cv::Mat raw_image;
-  if (!cap_.grab()) {
-    i_++;
-    if (i_ <= 5) {
-      Restart();
-      LOG(WARNING) << "Restarting camera";
-    }
+  while (!cap_.grab()) {
+    Restart();
+    LOG(WARNING) << "Restarting camera";
   }
   timestamped_frame.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   cap_.retrieve(raw_image);

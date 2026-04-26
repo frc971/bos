@@ -213,7 +213,6 @@ auto UnambiguousEstimator::GetFilteredDetections(
 auto UnambiguousEstimator::EstimatePosition(
     std::vector<std::vector<tag_detection_t>>& detection_batches,
     bool reject_far_tags) -> std::optional<position_estimate_t> {
-  LOG(INFO) << "Init";
   utils::Timer computation_timer("Getting estimate", false);
   const auto& ambiguous_estimates = GetAmbiguousEstimates(detection_batches);
   std::vector<position_estimate_t> best_solution;
@@ -221,11 +220,9 @@ auto UnambiguousEstimator::EstimatePosition(
   use_prev_pose_ = true;
   double best_cost = std::numeric_limits<double>::infinity();
 
-  LOG(INFO) << "Searched";
   double cost = SearchSolutions(ambiguous_estimates, 0, current_solution,
                                 best_solution, best_cost);
   if (best_solution.size() == 0) {
-    LOG(INFO) << "No detections";
     return std::nullopt;
   }
   double avg_variance = 0;
