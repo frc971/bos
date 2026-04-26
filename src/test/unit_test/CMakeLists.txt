@@ -1,7 +1,10 @@
 enable_testing()
 
+add_library(unit_test_utils unit_test_utils.cc)
+target_link_libraries(unit_test_utils wpilibc absl::check nlohmann_json::nlohmann_json)
+
 add_executable(joint_solve_test joint_solve_test.cc)
-target_link_libraries(joint_solve_test PRIVATE localization utils GTest::gtest GTest::gtest_main)
+target_link_libraries(joint_solve_test PRIVATE localization utils GTest::gtest GTest::gtest_main unit_test_utils)
 
 add_executable(multi_tag_test  multi_tag_test.cc)
 target_link_libraries(multi_tag_test PRIVATE localization utils GTest::gtest_main)
