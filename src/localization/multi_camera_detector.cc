@@ -85,11 +85,12 @@ MultiCameraDetector::MultiCameraDetector(
           std::lock_guard<std::mutex> lock(mutex_);
           timestamped_frames_[i] = std::move(timestamped_frame);
           tag_detections_[i] = std::move(detections);
-          LOG(INFO) << "Producer sees: " << tag_detections_[i].size();
+          // LOG(INFO) << "Producer sees: " << tag_detections_[i].size()
+          //           << " with ptr: " << &has_new_detections_ << std::endl;
         }
         LOG(INFO) << "Put in new detections";
         has_new_detections_.store(true, std::memory_order_release);
-        // has_new_detections_.notify_one();
+        has_new_detections_.notify_one();
         LOG(INFO) << "Added new detections";
       }
     });
@@ -99,13 +100,7 @@ MultiCameraDetector::MultiCameraDetector(
 auto MultiCameraDetector::GetTagDetections()
     -> std::vector<std::vector<tag_detection_t>> {
   LOG(INFO) << "Trying to acquire";
-  // has_new_detections_.wait(false, std::memory_order_acquire);
-  while (!has_new_detections_.load()) {
-    std::cout << "Waiting because this garbage is "
-              << has_new_detections_.load()
-              << " with ptr: " << &has_new_detections_ << std::endl;
-    std::this_thread::sleep_for(std::chrono::duration<double>(0.1));
-  }
+  has_new_detections_.wait(false, std::memory_order_acquire);
   has_new_detections_.store(false, std::memory_order_release);
   LOG(INFO) << "Acquired";
   std::vector<std::vector<tag_detection_t>> tag_detections;
@@ -113,7 +108,7 @@ auto MultiCameraDetector::GetTagDetections()
     std::lock_guard<std::mutex> lock(mutex_);
     tag_detections = tag_detections_;
   }
-  LOG(INFO) << "Consumer sees: " << tag_detections[0].size();
+  // LOG(INFO) << "Consumer sees: " << tag_detections[0].size();
   return tag_detections;
 }
 
