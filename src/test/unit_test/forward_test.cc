@@ -635,7 +635,7 @@ TEST_F(ForwardTest, TestMultiCameraBackpropagation) {  // NOLINT
   double loss = 0;
   std::vector<camera_constant_t> camera_constants{camera_constant_left_,
                                                   camera_constant_right_};
-  utils::Timer solve_timer("solve", true);
+  utils::Timer solve_timer("solve", false);
   transform3d_derrivative_t velocity;
   for (int epoch = 0; epoch < EPOCHS; epoch++) {
     loss = 0;
@@ -683,7 +683,6 @@ TEST_F(ForwardTest, TestMultiCameraBackpropagation) {  // NOLINT
     }
     velocity = (velocity * BETA) + derrivative;
     robot_to_feild.Apply(velocity);
-    LOG(INFO) << loss;
   }
   ASSERT_LT(solve_timer.Stop(), 0.1);  // The test is very unoptimized
   ASSERT_LT(loss, 0.01);
