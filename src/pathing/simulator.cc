@@ -1,147 +1,105 @@
 #include <frc/geometry/Pose2d.h>
-#include <wpi/DataLogBackgroundWriter.h>
-#include <algorithm>
+#include <units/length.h>
+#include <wpi/DataLog.h>
+#include <wpi/DataLogWriter.h>
 #include <cmath>
-#include <cstdint>
+#include <cstdio>
 #include <fstream>
 #include <nlohmann/json.hpp>
-#include <system_error>
 #include <vector>
-#include "src/pathing/pathing.h"
+#include "pathfinding.h"
+#include "splines.h"
 
 auto main() -> int {
-  wpi::log::DataLogBackgroundWriter log{"/root/bos/logs", "sim.wpilog"};
+  const std::string navgrid_path = "/root/bos/constants/navgrid.json";
+  const frc::Pose2d start{1_m, 1_m, frc::Rotation2d{}};
+  const frc::Pose2d target{14_m, 6_m, frc::Rotation2d{}};
 
-  wpi::log::StructLogEntry<frc::Pose2d> poseLog(log, "/sim/Pose2d");
-  wpi::log::DoubleLogEntry accelXLog(log, "/sim/AccelX");
-  wpi::log::DoubleLogEntry accelYLog(log, "/sim/AccelY");
-  wpi::log::DoubleLogEntry accelMagLog(log, "/sim/AccelMagnitude");
-  wpi::log::DoubleLogEntry velXLog(log, "/sim/VelX");
-  wpi::log::DoubleLogEntry velYLog(log, "/sim/VelY");
+  constexpr double kDt = 0.02;
+  constexpr double kSpeed = 1.0;
+  constexpr int kLookahead = 5;
+  constexpr int kMaxTicks = 30 * 50;
 
-  std::ifstream file("/root/bos/constants/navgrid.json");
-  if (!file.is_open()) {
-    return 1;
-  }
-
+  std::ifstream file(navgrid_path);
   nlohmann::json data = nlohmann::json::parse(file);
   file.close();
 
-  const int GRID_W = data["grid"][0].size();
   const int GRID_H = data["grid"].size();
-  double nodeSizeMeters = data["nodeSizeMeters"];
+  const int GRID_W = data["grid"][0].size();
+  const double nodeSize = data["nodeSizeMeters"];
 
-  std::vector<std::vector<bool>> gridData(GRID_H, std::vector<bool>(GRID_W));
+  std::vector<std::vector<pathing::Node>> grid(
+      GRID_H, std::vector<pathing::Node>(GRID_W));
   for (int y = 0; y < GRID_H; ++y) {
     for (int x = 0; x < GRID_W; ++x) {
-      gridData[y][x] = data["grid"][y][x];
+      grid[y][x].x = x;
+      grid[y][x].y = y;
+      grid[y][x].obstacle = data["grid"][y][x];
     }
   }
 
-  cv::Mat grid = initializeGrid(gridData);
+  pathing::Point start_pt{
+      static_cast<uint>(start.X().value() / nodeSize),
+      static_cast<uint>(start.Y().value() / nodeSize)};
+  pathing::Point target_pt{
+      static_cast<uint>(target.X().value() / nodeSize),
+      static_cast<uint>(target.Y().value() / nodeSize)};
 
-  auto poses = createSpline(grid, 10, 5, 45, 22, nodeSizeMeters);
-  if (poses.empty()) {
+  pathing::SplineResult spline =
+      pathing::createSpline(grid, start_pt, target_pt, nodeSize);
+  if (spline.points.empty()) {
     return 1;
   }
 
-  constexpr int64_t kDtUs = 20'000;
-  constexpr double kDtSec = kDtUs / 1'000'000.0;
-  constexpr double kMaxAccel = 3.0;
-  constexpr double kMaxDecel = 3.0;
-  constexpr double kMaxModuleSpeed = 5.0;
-  int64_t t = 0;
+  std::remove("/root/bos/logs/sim.wpilog");
+  std::error_code ec;
+  wpi::log::DataLogWriter log{"/root/bos/logs/sim.wpilog", ec};
+  if (ec) return 1;
+  wpi::log::StructLogEntry<frc::Pose2d> pose_log(log, "/sim/Pose");
+  wpi::log::DoubleLogEntry vx_log(log, "/sim/Vx");
+  wpi::log::DoubleLogEntry vy_log(log, "/sim/Vy");
 
-  std::vector<double> pathDist(poses.size(), 0.0);
-  for (size_t i = 1; i < poses.size(); ++i) {
-    double dx = poses[i].X().value() - poses[i - 1].X().value();
-    double dy = poses[i].Y().value() - poses[i - 1].Y().value();
-    pathDist[i] = pathDist[i - 1] + std::sqrt(dx * dx + dy * dy);
-  }
+  double x = start.X().value();
+  double y = start.Y().value();
+  int64_t t_us = 0;
 
-  double totalDist = pathDist.back();
+  for (int tick = 0; tick < kMaxTicks; ++tick) {
+    pose_log.Append({units::meter_t{x}, units::meter_t{y}, frc::Rotation2d{}},
+                    t_us);
 
-  std::vector<double> targetSpeed(poses.size());
+    if (std::hypot(target.X().value() - x, target.Y().value() - y) < nodeSize) {
+      break;
+    }
 
-  for (size_t i = 0; i < poses.size(); ++i) {
-    double distFromStart = pathDist[i];
-    double distToEnd = totalDist - pathDist[i];
-
-    double accelLimitedSpeed = std::sqrt(2.0 * kMaxAccel * distFromStart);
-    double decelLimitedSpeed = std::sqrt(2.0 * kMaxDecel * distToEnd);
-
-    double maxVelThisPose = kMaxModuleSpeed;
-    if (i > 0) {
-      double dx = poses[i].X().value() - poses[i - 1].X().value();
-      double dy = poses[i].Y().value() - poses[i - 1].Y().value();
-      double vx = dx / kDtSec;
-      double vy = dy / kDtSec;
-      double maxComponentSpeed = std::max(std::abs(vx), std::abs(vy));
-      if (maxComponentSpeed > 0.001) {
-        double speedRatio = std::sqrt(vx * vx + vy * vy) / maxComponentSpeed;
-        maxVelThisPose = kMaxModuleSpeed / speedRatio;
+    int closest = 0;
+    double best = std::hypot(spline.points[0].X().value() - x,
+                             spline.points[0].Y().value() - y);
+    for (int i = 1; i < (int)spline.points.size(); ++i) {
+      double d = std::hypot(spline.points[i].X().value() - x,
+                            spline.points[i].Y().value() - y);
+      if (d < best) {
+        best = d;
+        closest = i;
       }
     }
 
-    targetSpeed[i] =
-        std::min({accelLimitedSpeed, decelLimitedSpeed, maxVelThisPose});
-  }
+    int idx = std::min(closest + kLookahead, (int)spline.points.size() - 1);
+    auto [dx_raw, dy_raw] = pathing::EvaluatePosition(
+        spline.params[idx], spline.first_deriv_controls, spline.knots,
+        spline.p - 1);
+    double dx = dx_raw * spline.p;
+    double dy = dy_raw * spline.p;
+    double mag = std::hypot(dx, dy);
+    if (mag < 1e-6) break;
 
-  double currentVx = 0.0;
-  double currentVy = 0.0;
-  double currentX = poses[0].X().value();
-  double currentY = poses[0].Y().value();
-  double currentSpeed = 0.0;
+    double vx = (dx / mag) * kSpeed;
+    double vy = (dy / mag) * kSpeed;
+    vx_log.Append(vx, t_us);
+    vy_log.Append(vy, t_us);
 
-  for (size_t i = 0; i < poses.size(); ++i) {
-    frc::Pose2d actualPose{units::meter_t{currentX}, units::meter_t{currentY},
-                           poses[i].Rotation()};
-    poseLog.Append(actualPose, t);
-
-    double desiredSpeed = targetSpeed[i];
-
-    double dvMag = desiredSpeed - currentSpeed;
-    double accelMag = 0.0;
-
-    if (dvMag > 0) {
-      accelMag = std::min(dvMag / kDtSec, kMaxAccel);
-    } else {
-      accelMag = std::max(dvMag / kDtSec, -kMaxDecel);
-    }
-
-    currentSpeed += accelMag * kDtSec;
-    currentSpeed = std::max(0.0, currentSpeed);
-
-    if (i > 0) {
-      double dx = poses[i].X().value() - poses[i - 1].X().value();
-      double dy = poses[i].Y().value() - poses[i - 1].Y().value();
-      double segDist = std::sqrt(dx * dx + dy * dy);
-
-      double dirX = segDist > 0.001 ? dx / segDist : 0.0;
-      double dirY = segDist > 0.001 ? dy / segDist : 0.0;
-
-      double newVx = dirX * currentSpeed;
-      double newVy = dirY * currentSpeed;
-
-      double ax = (newVx - currentVx) / kDtSec;
-      double ay = (newVy - currentVy) / kDtSec;
-
-      currentVx = newVx;
-      currentVy = newVy;
-
-      currentX += currentVx * kDtSec;
-      currentY += currentVy * kDtSec;
-
-      double accelMagTotal = std::sqrt(ax * ax + ay * ay);
-
-      accelXLog.Append(ax, t);
-      accelYLog.Append(ay, t);
-      accelMagLog.Append(accelMagTotal, t);
-      velXLog.Append(currentVx, t);
-      velYLog.Append(currentVy, t);
-    }
-
-    t += kDtUs;
+    x += vx * kDt;
+    y += vy * kDt;
+    t_us += static_cast<int64_t>(kDt * 1'000'000);
   }
 
   log.Flush();

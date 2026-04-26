@@ -25,6 +25,37 @@ auto KnotVector(int n, int p) -> std::vector<double> {
   return knots;
 }
 
+auto FiniteDifferences(const std::vector<std::pair<double, double>>& controls,
+                       const std::vector<double>& knots, int p, int k)
+    -> std::vector<std::pair<double, double>> {
+  if (k == 0) {
+    return controls;
+  }
+
+  if (controls.size() <= 1 || k >= static_cast<int>(controls.size())) {
+    return {};
+  }
+
+  std::vector<std::pair<double, double>> ret;
+  ret.reserve(controls.size() - 1);
+
+  std::vector<std::pair<double, double>> prev =
+      FiniteDifferences(controls, knots, p, k - 1);
+
+  for (int i = 0; i < (int)prev.size() - 1; ++i) {
+    double denom = knots[i + p + 1] - knots[i + k];
+    if (denom != 0) {
+      double x = (prev[i + 1].first - prev[i].first) / denom;
+      double y = (prev[i + 1].second - prev[i].second) / denom;
+      ret.emplace_back(x, y);
+    } else {
+      ret.emplace_back(0.0, 0.0);
+    }
+  }
+
+  return ret;
+}
+
 auto basis(int i, int p, double t, const std::vector<double>& knots) -> double {
   if (p == 0) {
     if (knots[i] <= t && t < knots[i + 1]) {
@@ -49,8 +80,9 @@ auto basis(int i, int p, double t, const std::vector<double>& knots) -> double {
   return left + right;
 }
 
-auto evaluate(double t, const std::vector<std::pair<double, double>>& controls,
-              const std::vector<double>& knots, int p)
+auto EvaluatePosition(double t,
+                      const std::vector<std::pair<double, double>>& controls,
+                      const std::vector<double>& knots, int p)
     -> std::pair<double, double> {
   if (t >= knots.back()) {
     return controls.back();
@@ -66,9 +98,28 @@ auto evaluate(double t, const std::vector<std::pair<double, double>>& controls,
   return {x, y};
 }
 
+auto EvaluateDerivative(double t,
+                        const std::vector<std::pair<double, double>>& controls,
+                        const std::vector<double>& knots, int p, int k)
+    -> std::pair<double, double> {
+  if (k < 0 || k > p || controls.size() <= static_cast<size_t>(k)) {
+    return {0.0, 0.0};
+  }
+
+  std::vector<std::pair<double, double>> first_diffs =
+      FiniteDifferences(controls, knots, p, k);
+  auto [x, y] = EvaluatePosition(t, first_diffs, knots, p - k);
+
+  int n = 1;
+  for (int i = p; i >= p - k + 1; i--) {
+    n *= i;
+  }
+  return {x * n, y * n};
+}
+
 auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
                   Point start_point, Point target_point, double nodeSizeMeters)
-    -> std::vector<frc::Pose2d> {
+    -> SplineResult {
 
   std::vector<std::vector<pathing::Node>> gridCopy = grid;
   std::vector<pathing::Node> path = BFS(gridCopy, start_point, target_point);
@@ -79,6 +130,11 @@ auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
   }
 
   std::vector<std::pair<double, double>> control_points;
+  std::vector<double> knots;
+  std::vector<frc::Pose2d> spline_points;
+  std::vector<double> spline_params;
+  uint p;
+
   control_points.reserve(path.size());
   for (const pathing::Node& node : path) {
     control_points.emplace_back(node.x * nodeSizeMeters,
@@ -86,26 +142,25 @@ auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
   }
 
   uint numControls = control_points.size();
-
   if (numControls < 4) {
     return {};
   }
 
-  uint p = 3;
+  p = 3;
   if (numControls <= p) {
     p = numControls - 1;
   }
 
-  std::vector<double> knots = KnotVector(numControls, p);
+  knots = KnotVector(numControls, p);
 
-  std::vector<frc::Pose2d> spline_points;
   for (int t = 0; t <= 1000; t += 1) {
     double t_real = t / 1000.0;
-    auto [x, y] = evaluate(t_real, control_points, knots, p);
+    auto [x, y] = EvaluatePosition(t_real, control_points, knots, p);
     spline_points.emplace_back(units::meter_t{x}, units::meter_t{y}, 0_rad);
+    spline_params.emplace_back(t_real);
   }
-
-  return spline_points;
+  auto first_deriv_controls = FiniteDifferences(control_points, knots, p, 1);
+  return {spline_points, control_points, first_deriv_controls,
+          knots,         spline_params,  p};
 }
-
 }  // namespace pathing

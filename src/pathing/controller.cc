@@ -1,24 +1,19 @@
 #include <networktables/BooleanTopic.h>
 #include <networktables/DoubleTopic.h>
-#include <networktables/NetworkTableInstance.h>
 #include <networktables/StructTopic.h>
-#include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <fstream>
-#include <nlohmann/json.hpp>
-#include <thread>
 #include "splines.h"
 #include "src/localization/position_receiver.h"
-#include "src/pathing/splines.h"
 #include "src/utils/log.h"
+#include "src/utils/pch.h"
 
 namespace pathing {
 
 auto RunController(
     const std::string& navgrid_path = "/root/bos/constants/navgrid.json",
     bool verbose = false) -> void {
-  const int lookahead_offset_ = 50;
+  const uint lookahead_ = 5;
   const double speed_ = 1.0;
 
   std::ifstream file(navgrid_path);
@@ -53,17 +48,14 @@ auto RunController(
 
   auto vx_pub = inst.GetDoubleTopic("/pathing/vx").Publish();
   auto vy_pub = inst.GetDoubleTopic("/pathing/vy").Publish();
-  auto next_pose_sub =
-      inst.GetStructTopic<frc::Pose2d>("/pathing/nextPose").Publish();
-
-  std::vector<frc::Pose2d> spline_points;
+  SplineResult result;
 
   while (true) {
     if (!enabled_sub.Get()) {
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);
 
-      spline_points.clear();
+      result.points.clear();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
@@ -90,25 +82,23 @@ auto RunController(
     if (current_pose.Translation().Distance(t2d).value() < nodeSizeMeters) {
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);
-      spline_points.clear();
+      result.points.clear();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
 
-    if (spline_points.empty()) {
-      std::vector<frc::Pose2d> new_spline =
-          createSpline(grid, start_pt, target_pt, nodeSizeMeters);
-      if (!new_spline.empty()) {
-        spline_points = new_spline;
+    if (result.points.empty()) {
+      result = createSpline(grid, start_pt, target_pt, nodeSizeMeters);
+      if (!result.points.empty()) {
         if (verbose) {
-          for (const auto& p : spline_points) {
+          for (const auto& p : result.points) {
             LOG(INFO) << "spline pt: " << p.X().value() << " " << p.Y().value();
           }
         }
       }
     }
 
-    if (spline_points.empty()) {
+    if (result.points.empty()) {
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -119,10 +109,10 @@ auto RunController(
       int closest_idx = 0;
 
       // TODO: this can be optimizeed by only searching from the previous closest index instead of the entire spline
-      frc::Translation2d first2d(spline_points[0].X(), spline_points[0].Y());
+      frc::Translation2d first2d(result.points[0].X(), result.points[0].Y());
       double best_dist = current_pose.Translation().Distance(first2d).value();
-      for (int i = 1; i < (int)spline_points.size(); ++i) {
-        frc::Translation2d t2d(spline_points[i].X(), spline_points[i].Y());
+      for (int i = 1; i < (int)result.points.size(); ++i) {
+        frc::Translation2d t2d(result.points[i].X(), result.points[i].Y());
         double d = current_pose.Translation().Distance(t2d).value();
         if (d < best_dist) {
           best_dist = d;
@@ -135,44 +125,35 @@ auto RunController(
 
       if (verbose) {
         LOG(INFO) << "Closeset idx: " << closest_idx
-                  << " Spline size: " << spline_points.size();
+                  << " Spline size: " << result.points.size();
       }
 
-      int lookahead_idx = std::min(closest_idx + lookahead_offset_,
-                                   (int)spline_points.size() - 1);
-
-      frc::Pose2d lookahead = spline_points[lookahead_idx];
+      closest_idx += lookahead_;
+      auto [dx_raw, dy_raw] = EvaluatePosition(result.params[closest_idx],
+                                               result.first_deriv_controls,
+                                               result.knots, result.p - 1);
+      double dx = dx_raw * result.p;
+      double dy = dy_raw * result.p;
 
       if (verbose) {
         LOG(INFO) << "current " << current_pose.X().value() << " "
                   << current_pose.Y().value();
       }
 
-      double dx = lookahead.X().value() - current_pose.X().value();
-      double dy = lookahead.Y().value() - current_pose.Y().value();
+      double mag = std::hypot(dx, dy);
       if (verbose) {
-        LOG(INFO) << "dx " << dx << " vy " << dy;
-        LOG(INFO) << "looakhead " << lookahead.X().value() << " "
-                  << lookahead.Y().value();
+        LOG(INFO) << "dist " << mag;
       }
-
-      next_pose_sub.Set(lookahead);
-
-      double dist = std::hypot(dx, dy);
-      if (verbose) {
-        LOG(INFO) << "dist " << dist;
-      }
-      if (dist < 1e-6) {
+      if (mag < 1e-6) {
         vx_pub.Set(0.0);
         vy_pub.Set(0.0);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         continue;
       }
 
-      double vx = dx * speed_;
-      double vy = dy * speed_;
+      double vx = (dx / mag) * speed_ * nodeSizeMeters;
+      double vy = (dy / mag) * speed_ * nodeSizeMeters;
 
-      // NOTE: we need to test whether to divide vx and vy by dist to normalize speeds or not,
       vx_pub.Set(vx);
       vy_pub.Set(vy);
       if (verbose) {

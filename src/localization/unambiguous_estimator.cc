@@ -317,7 +317,7 @@ auto UnambiguousEstimator::GetUsableFrames(
     if (streamers_[i].has_value()) {
       streamers_[i].value().WriteFrame(frames[i].frame);
     }
-    if (!frames[i].invalid &&
+    if (!frames[i].invalid && !frames[i].frame.empty() &&
         latest_timestamp - frames[i].timestamp < kacceptable_frame_recency) {
       usable_frames[i] = std::move(frames[i]);
     }
