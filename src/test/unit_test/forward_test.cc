@@ -3,6 +3,7 @@
 #include <XAD/XAD.hpp>
 #include <filesystem>
 #include "src/localization/joint_solver.h"
+#include "src/localization/joint_solver.h"  // NO LINT
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
@@ -22,6 +23,7 @@ namespace fs = std::filesystem;
 using camera::camera_constant_t;
 using camera::GetCameraConstants;
 using camera::timestamped_frame_t;
+using localization::JointSolver;
 using localization::kapriltag_layout;
 using localization::OpenCVAprilTagDetector;
 using localization::position_estimate_t;
@@ -33,203 +35,6 @@ using utils::ReadIntrinsics;
 using mode = xad::adj<double>;
 using tape_type = mode::tape_type;
 using AD = mode::active_type;
-
-using transform3d_derrivative_t = struct Transfrom3dDerrivative {
-  double t_x = 0;
-  double t_y = 0;
-  double t_z = 0;
-  double r_x = 0;
-  double r_y = 0;
-  double r_z = 0;
-
-  auto operator+(const Transfrom3dDerrivative other) -> Transfrom3dDerrivative {
-    return Transfrom3dDerrivative{.t_x = t_x + other.t_x,
-                                  .t_y = t_y + other.t_y,
-                                  .t_z = t_z + other.t_z,
-                                  .r_x = r_x + other.r_x,
-                                  .r_y = r_y + other.r_y,
-                                  .r_z = r_z + other.r_z};
-  }
-
-  auto operator-(const Transfrom3dDerrivative other) -> Transfrom3dDerrivative {
-    return Transfrom3dDerrivative{.t_x = t_x - other.t_x,
-                                  .t_y = t_y - other.t_y,
-                                  .t_z = t_z - other.t_z,
-                                  .r_x = r_x - other.r_x,
-                                  .r_y = r_y - other.r_y,
-                                  .r_z = r_z - other.r_z};
-  }
-
-  auto operator*(const double other) -> Transfrom3dDerrivative {
-    return Transfrom3dDerrivative{.t_x = t_x * other,
-                                  .t_y = t_y * other,
-                                  .t_z = t_z * other,
-                                  .r_x = r_x * other,
-                                  .r_y = r_y * other,
-                                  .r_z = r_z * other};
-  }
-};
-
-auto operator<<(std::ostream& os, const Transfrom3dDerrivative& v)
-    -> std::ostream& {
-  os << "tx: " << v.t_x << "\n";
-  os << "ty: " << v.t_y << "\n";
-  os << "tz: " << v.t_z << "\n";
-
-  os << "rx: " << v.r_x << "\n";
-  os << "ry: " << v.r_y << "\n";
-  os << "rz: " << v.r_z << "\n";
-  return os;
-}
-
-struct DifferntiableTransform3d {
-
-  // Translation in meters, rotation in radians
-  AD t_x;
-  AD t_y;
-  AD t_z;
-  AD r_x;
-  AD r_y;
-  AD r_z;
-  std::array<std::array<AD, 4>, 4> matrix;
-
-  DifferntiableTransform3d(frc::Pose3d pose)
-      : t_x(pose.Translation().X().value()),
-        t_y(pose.Translation().Y().value()),
-        t_z(pose.Translation().Z().value()),
-        r_x(pose.Rotation().X().value()),
-        r_y(pose.Rotation().Y().value()),
-        r_z(pose.Rotation().Z().value()) {}
-
-  DifferntiableTransform3d(frc::Transform3d pose)
-      : t_x(pose.Translation().X().value()),
-        t_y(pose.Translation().Y().value()),
-        t_z(pose.Translation().Z().value()),
-        r_x(pose.Rotation().X().value()),
-        r_y(pose.Rotation().Y().value()),
-        r_z(pose.Rotation().Z().value()) {}
-
-  DifferntiableTransform3d(Eigen::Matrix4d matrix)
-      : t_x(matrix(0, 3)), t_y(matrix(1, 3)), t_z(matrix(2, 3)) {
-    Eigen::Matrix3d R = matrix.block<3, 3>(0, 0);
-    Eigen::Vector3d euler = R.canonicalEulerAngles(2, 1, 0);
-    r_x = euler(2);
-    r_y = euler(1);
-    r_z = euler(0);
-  }
-
-  void Update(transform3d_derrivative_t derrivative) {
-    t_x -= derrivative.t_x * LR;
-    t_y -= derrivative.t_y * LR;
-    t_z -= derrivative.t_z * LR;
-
-    r_x -= derrivative.r_x * LR;
-    r_y -= derrivative.r_y * LR;
-    r_z -= derrivative.r_z * LR;
-  }
-
-  void RegisterInputs(tape_type& tape) {
-    tape.registerInput(r_x);
-    tape.registerInput(r_y);
-    tape.registerInput(r_z);
-
-    tape.registerInput(t_x);
-    tape.registerInput(t_y);
-    tape.registerInput(t_z);
-  }
-
-  void RegisterOutputs(tape_type& tape) {
-    for (int i = 0; i < 4; i++) {
-      for (int j = 0; j < 4; j++) {
-        tape.registerOutput(matrix[i][j]);
-      }
-    }
-  }
-
-  auto ToEigen() -> Eigen::Matrix4d const {
-    // clang-format off
-    return (Eigen::Matrix<double, 4, 4>() << 
-      matrix[0][0].value(), matrix[0][1].value(), matrix[0][2].value(), matrix[0][3].value(),
-      matrix[1][0].value(), matrix[1][1].value(), matrix[1][2].value(), matrix[1][3].value(),
-      matrix[2][0].value(), matrix[2][1].value(), matrix[2][2].value(), matrix[2][3].value(),
-      matrix[3][0].value(), matrix[3][1].value(), matrix[3][2].value(), matrix[3][3].value())
-      .finished();
-    // clang-format on
-  }
-  void CalculateMatrix() {
-    AD cos_x = xad::cos(r_x);
-    AD cos_y = xad::cos(r_y);
-    AD cos_z = xad::cos(r_z);
-
-    AD sin_x = xad::sin(r_x);
-    AD sin_y = xad::sin(r_y);
-    AD sin_z = xad::sin(r_z);
-
-    // Rotation
-    matrix[0][0] = cos_z * cos_y;
-    matrix[0][1] = cos_z * sin_y * sin_x - sin_z * cos_x;
-    matrix[0][2] = cos_z * sin_y * cos_x + sin_z * sin_x;
-
-    matrix[1][0] = sin_z * cos_y;
-    matrix[1][1] = sin_z * sin_y * sin_x + cos_z * cos_x;
-    matrix[1][2] = sin_z * sin_y * cos_x - cos_z * sin_x;
-
-    matrix[2][0] = -sin_y;
-    matrix[2][1] = cos_y * sin_x;
-    matrix[2][2] = cos_y * cos_x;
-
-    // Translation
-    matrix[0][3] = t_x;
-    matrix[1][3] = t_y;
-    matrix[2][3] = t_z;
-
-    matrix[3][0] = 0;
-    matrix[3][1] = 0;
-    matrix[3][2] = 0;
-    matrix[3][3] = 1;
-  }
-
-  auto BackPropagate(const Eigen::Matrix4d& next_derrivative, tape_type& tape)
-      -> transform3d_derrivative_t {
-    for (int i = 0; i < 4; i++) {
-      for (int j = 0; j < 4; j++) {
-        tape.registerOutput(matrix[i][j]);
-        derivative(matrix[i][j]) = next_derrivative(i, j);
-      }
-    }
-    tape.computeAdjoints();
-    transform3d_derrivative_t derrivative{
-        .t_x = xad::derivative(t_x),
-        .t_y = xad::derivative(t_y),
-        .t_z = xad::derivative(t_z),
-        .r_x = xad::derivative(r_x),
-        .r_y = xad::derivative(r_y),
-        .r_z = xad::derivative(r_z),
-    };
-    return derrivative;
-  }
-  void Apply(const transform3d_derrivative_t& derrivative) {
-    t_x -= derrivative.t_x * LR;
-    t_y -= derrivative.t_y * LR;
-    t_z -= derrivative.t_z * LR;
-
-    r_x -= derrivative.r_x * LR;
-    r_y -= derrivative.r_y * LR;
-    r_z -= derrivative.r_z * LR;
-  }
-};
-
-auto operator<<(std::ostream& os, const DifferntiableTransform3d& v)
-    -> std::ostream& {
-  os << "tx: " << v.t_x << "\n";
-  os << "ty: " << v.t_y << "\n";
-  os << "tz: " << v.t_z << "\n";
-
-  os << "rx: " << v.r_x << "\n";
-  os << "ry: " << v.r_y << "\n";
-  os << "rz: " << v.r_z << "\n";
-  return os;
-}
 
 // clang-format off
 const Eigen::Matrix<double, 3, 4> PI =
@@ -485,8 +290,9 @@ TEST_F(ForwardTest, TestTransfrom3dConstructor) {  // NOLINT
   auto square_solver_solution =
       square_solver_right_->EstimatePosition({detection})[0];
 
-  DifferntiableTransform3d transform_from_pose(square_solver_solution.pose);
-  DifferntiableTransform3d transform_from_eigen(
+  JointSolver::DifferntiableTransform3d transform_from_pose(
+      square_solver_solution.pose);
+  JointSolver::DifferntiableTransform3d transform_from_eigen(
       square_solver_solution.pose.ToMatrix());
 
   const double tolerance = 1e-7;
@@ -515,7 +321,7 @@ TEST_F(ForwardTest, TestTransfrom3d) {  // NOLINT
   auto square_solver_solution =
       square_solver_right_->EstimatePosition({detection})[0];
 
-  DifferntiableTransform3d transform(square_solver_solution.pose);
+  JointSolver::DifferntiableTransform3d transform(square_solver_solution.pose);
   transform.CalculateMatrix();
 
   EXPECT_TRUE(square_solver_solution.pose.ToMatrix().isApprox(
@@ -544,7 +350,8 @@ TEST_F(ForwardTest, TestMultiTagBackpropagation) {  // NOLINT
 
   auto feild_to_robot = square_solver_solution.pose.ToMatrix();
 
-  DifferntiableTransform3d robot_to_feild(feild_to_robot.inverse());
+  JointSolver::DifferntiableTransform3d robot_to_feild(
+      feild_to_robot.inverse());
 
   // Noise
   robot_to_feild.t_x += 0.1;
@@ -561,7 +368,7 @@ TEST_F(ForwardTest, TestMultiTagBackpropagation) {  // NOLINT
   utils::Timer solve_timer("solve", false);
   for (int epoch = 0; epoch < EPOCHS; epoch++) {
     loss = 0;
-    transform3d_derrivative_t derrivative;
+    JointSolver::transform3d_derrivative_t derrivative;
     for (const auto& detection : detections) {
       auto feild_to_tag =
           kapriltag_layout.GetTagPose(detection.tag_id).value().ToMatrix();
@@ -590,7 +397,7 @@ TEST_F(ForwardTest, TestMultiTagBackpropagation) {  // NOLINT
         tape.newRecording();
       }
     }
-    robot_to_feild.Apply(derrivative);
+    robot_to_feild.Apply(derrivative, LR);
   }
   ASSERT_LT(solve_timer.Stop(), 0.1);
   ASSERT_LT(loss, 0.01);
@@ -619,7 +426,8 @@ TEST_F(ForwardTest, TestMultiCameraBackpropagation) {  // NOLINT
       detections[camera_constant_right_.name])[0];
 
   auto feild_to_robot = square_solver_solution.pose.ToMatrix();
-  DifferntiableTransform3d robot_to_feild(feild_to_robot.inverse());
+  JointSolver::DifferntiableTransform3d robot_to_feild(
+      feild_to_robot.inverse());
 
   // Noise
   robot_to_feild.t_x += 0.1;
@@ -636,10 +444,10 @@ TEST_F(ForwardTest, TestMultiCameraBackpropagation) {  // NOLINT
   std::vector<camera_constant_t> camera_constants{camera_constant_left_,
                                                   camera_constant_right_};
   utils::Timer solve_timer("solve", false);
-  transform3d_derrivative_t velocity;
+  JointSolver::transform3d_derrivative_t velocity;
   for (int epoch = 0; epoch < EPOCHS; epoch++) {
     loss = 0;
-    transform3d_derrivative_t derrivative;
+    JointSolver::transform3d_derrivative_t derrivative;
     for (const auto& camera_constant : camera_constants) {
 
       auto camera_to_robot =
@@ -682,7 +490,7 @@ TEST_F(ForwardTest, TestMultiCameraBackpropagation) {  // NOLINT
       }
     }
     velocity = (velocity * BETA) + derrivative;
-    robot_to_feild.Apply(velocity);
+    robot_to_feild.Apply(velocity, LR);
   }
   ASSERT_LT(solve_timer.Stop(), 0.1);  // The test is very unoptimized
   ASSERT_LT(loss, 0.01);
