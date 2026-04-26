@@ -4,6 +4,7 @@
 #include <XAD/XAD.hpp>
 #include "nlohmann/json.hpp"
 #include "src/camera/camera_constants.h"
+#include "src/localization/position_receiver.h"
 #include "src/localization/position_solver.h"
 #include "src/localization/square_solver.h"
 
@@ -204,5 +205,7 @@ class JointSolver {
   std::unordered_map<std::string, int> camera_name_to_index;
   std::vector<Eigen::Matrix3d> normalized_camera_matrix_;
   std::vector<Eigen::Matrix4d> camera_to_robot_;
+  PositionReceiver position_receiver_;
+  tape_type tape_;
 };
 }  // namespace localization
