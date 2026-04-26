@@ -78,71 +78,68 @@ NetworkTableSender::NetworkTableSender(const std::string& camera_name,
 }
 
 void NetworkTableSender::Send(
-    const std::vector<localization::position_estimate_t>& detections) {
+    const localization::position_estimate_t& detection) {
   mutex_.lock();
-  for (auto& detection : detections) {
-    std::array<double, 8> tag_estimation{
-        detection.pose.X().value(),
-        detection.pose.Y().value(),
-        detection.pose.Rotation().Z().value(),
-        detection.variance,
-        detection.timestamp +
-            instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
-        static_cast<double>(detection.num_tags),
-        detection.latency,
-        detection.avg_tag_dist};
+  std::array<double, 8> tag_estimation{
+      detection.pose.X().value(),
+      detection.pose.Y().value(),
+      detection.pose.Rotation().Z().value(),
+      detection.variance,
+      detection.timestamp +
+          instance_.GetServerTimeOffset().value_or(0) / 1000000.0,
+      static_cast<double>(detection.num_tags),
+      detection.latency,
+      detection.avg_tag_dist};
 
-    std::array<int, kmax_tags> tags{};
-    for (int tag_id : detection.tag_ids) {
-      tags[tag_id] = true;
-    }
+  std::array<int, kmax_tags> tags{};
+  for (int tag_id : detection.tag_ids) {
+    tags[tag_id] = true;
+  }
 
-    std::array<int, kmax_tags> rejected_tags{};
-    for (int tag_id : detection.rejected_tag_ids) {
-      rejected_tags[tag_id] = true;
-    }
+  std::array<int, kmax_tags> rejected_tags{};
+  for (int tag_id : detection.rejected_tag_ids) {
+    rejected_tags[tag_id] = true;
+  }
 
-    pose_publisher_.Set(
-        frc::Pose2d(units::meter_t{detection.pose.X().value()},
-                    units::meter_t{detection.pose.Y().value()},
-                    units::radian_t{detection.pose.Rotation().Z().value()}));
-    pose3d_publisher_.Set(detection.pose);
+  pose_publisher_.Set(
+      frc::Pose2d(units::meter_t{detection.pose.X().value()},
+                  units::meter_t{detection.pose.Y().value()},
+                  units::radian_t{detection.pose.Rotation().Z().value()}));
+  pose3d_publisher_.Set(detection.pose);
 
-    tag_estimation_publisher_.Set(tag_estimation);
+  tag_estimation_publisher_.Set(tag_estimation);
 
-    tag_ids_publisher_.Set(tags);
-    rejected_tag_ids_publisher_.Set(rejected_tags);
-    varience_publisher_.Set(detection.variance);
+  tag_ids_publisher_.Set(tags);
+  rejected_tag_ids_publisher_.Set(rejected_tags);
+  varience_publisher_.Set(detection.variance);
 
-    latency_publisher_.Set(detection.latency);
-    timestamp_publisher_.Set(detection.timestamp);
-    num_tags_publisher_.Set(detection.num_tags);
-    loss_publisher_.Set(detection.loss);
+  latency_publisher_.Set(detection.latency);
+  timestamp_publisher_.Set(detection.timestamp);
+  num_tags_publisher_.Set(detection.num_tags);
+  loss_publisher_.Set(detection.loss);
 
-    if (log_) {
-      double adjusted_timestamp =
-          detection.timestamp +
-          instance_.GetServerTimeOffset().value_or(0) / 1e6;
-      auto log_time = static_cast<int64_t>(adjusted_timestamp * 1e6);
+  if (log_) {
+    double adjusted_timestamp =
+        detection.timestamp + instance_.GetServerTimeOffset().value_or(0) / 1e6;
+    auto log_time = static_cast<int64_t>(adjusted_timestamp * 1e6);
 
-      pose3d_log_->Append(detection.pose, log_time);
+    pose3d_log_->Append(detection.pose, log_time);
 
-      tag_estimation_log_->Append(tag_estimation, log_time);
-      tag_ids_log_->Append(tags, log_time);
-      rejected_tag_ids_log_->Append(rejected_tags, log_time);
+    tag_estimation_log_->Append(tag_estimation, log_time);
+    tag_ids_log_->Append(tags, log_time);
+    rejected_tag_ids_log_->Append(rejected_tags, log_time);
 
-      varience_log_->Append(detection.variance, log_time);
-      latency_log_->Append(detection.latency, log_time);
-      timestamp_log_->Append(detection.timestamp, log_time);
-      num_tags_log_->Append(detection.num_tags, log_time);
-      loss_log_->Append(detection.loss, log_time);
+    varience_log_->Append(detection.variance, log_time);
+    latency_log_->Append(detection.latency, log_time);
+    timestamp_log_->Append(detection.timestamp, log_time);
+    num_tags_log_->Append(detection.num_tags, log_time);
+    loss_log_->Append(detection.loss, log_time);
 
-      log_->Flush();
-    }
+    log_->Flush();
+  }
 
-    if (verbose_) {
-      LOG(INFO) << detection;
-    }
+  if (verbose_) {
+    LOG(INFO) << detection;
   }
   mutex_.unlock();
 }

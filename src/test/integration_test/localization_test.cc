@@ -69,9 +69,9 @@ auto FindCameraFolders(const std::filesystem::path& path)
 auto ResolveCameraName(const std::string& directory_name,
                        const camera::camera_constants_t& constants)
     -> std::string {
-  std::string resolved_name = directory_name.rfind("main_bot_", 0) == 0
+  std::string resolved_name = directory_name.rfind("second_bot_", 0) == 0
                                   ? directory_name
-                                  : "main_bot_" + directory_name;
+                                  : "second_bot_" + directory_name;
 
   if (!constants.contains(resolved_name)) {
     LOG(FATAL) << "Could not resolve camera constants name for directory: "
@@ -145,8 +145,7 @@ auto main(int argc, char** argv) -> int {
               frame.cols, frame.rows,
               utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
           std::make_unique<localization::MultiTagSolver>(camera_constant),
-          std::move(senders), camera_constant.extrinsics_path.value(),
-          base_port + i, true);
+          std::move(senders), true);
     });
   }
 

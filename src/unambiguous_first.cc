@@ -1,13 +1,13 @@
-#include <thread>
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/cv_camera.h"
+#include "src/localization/multi_camera_detector.h"
 #include "src/localization/multi_tag_solver.h"
+#include "src/localization/networktable_sender.h"
 #include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
 #include "src/localization/unambiguous_estimator.h"
-#include "src/pathing/controller.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 
@@ -18,21 +18,22 @@ auto main() -> int {
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
 
-  LOG(INFO) << "Loading constants";
+  LOG(INFO) << "Starting cameras";
 
-  std::vector<camera::camera_constant_t> cameras = {
+  std::vector<camera::CameraConstant> cameras{
       camera_constants.at("main_bot_left"),
-      camera_constants.at("main_bot_right"),
-  };
+      camera_constants.at("main_bot_right")};
+  localization::MultiCameraDetector detector(cameras);
 
-  LOG(INFO) << "Loaded constants";
+  LOG(INFO) << "Started cameras";
+  std::this_thread::sleep_for(std::chrono::duration<double>(2));
 
-  localization::UnambiguousEstimator localizer(cameras);
-
-  LOG(INFO) << "starting pathing";
-  std::jthread pathing_thread(
-      [&]() { pathing::RunController("/bos/constants/navgrid.json", false); });
-  LOG(INFO) << "starting pathing";
-
-  std::jthread([&] { localizer.Run(); });
+  std::jthread thread([cameras] {
+    localization::MultiCameraDetector detector_source(cameras);
+    LOG(INFO) << "Created camera source";
+    localization::RunJointLocalization(
+        detector_source,
+        std::make_unique<localization::UnambiguousEstimator>(cameras),
+        std::make_unique<localization::NetworkTableSender>("Left", false));
+  });
 }

@@ -67,8 +67,11 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t timestamped_frame;
   cv::Mat raw_image;
   if (!cap_.grab()) {
-    Restart();
-    LOG(WARNING) << "Restarting camera";
+    i_++;
+    if (i_ <= 5) {
+      Restart();
+      LOG(WARNING) << "Restarting camera";
+    }
   }
   timestamped_frame.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   cap_.retrieve(raw_image);
@@ -76,7 +79,7 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
   raw_image.copyTo(timestamped_frame.frame);
 
   if (timestamped_frame.frame.empty()) {
-    timestamped_frame.frame = backup_image_;
+    timestamped_frame.invalid = true;
   }
   if (timestamped_frame.frame.channels() == 4) {
     cv::cvtColor(timestamped_frame.frame, timestamped_frame.frame,
