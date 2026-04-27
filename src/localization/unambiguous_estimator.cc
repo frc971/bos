@@ -30,8 +30,7 @@
 namespace localization {
 
 UnambiguousEstimator::UnambiguousEstimator(
-    const std::vector<camera::camera_constant_t>& camera_constants)
-    : prev_timestamps_(camera_constants.size()) {
+    const std::vector<camera::camera_constant_t>& camera_constants) {
   solvers_.reserve(camera_constants.size());
   for (const auto& camera_constant : camera_constants) {
     solvers_.emplace_back(camera_constant);
@@ -157,7 +156,6 @@ auto UnambiguousEstimator::GetAmbiguousEstimates(
     if (!filtered_detections[i].has_value()) {
       continue;
     }
-    prev_timestamps_[i] = filtered_detections[i]->at(0).timestamp;
 
     std::optional<ambiguous_estimate_t> est =
         solvers_[i].EstimatePositionAmbiguous(filtered_detections[i].value(),

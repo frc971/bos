@@ -41,7 +41,6 @@ class UnambiguousEstimator : public IJointPositionSolver {
 
   std::vector<MultiTagSolver> solvers_;
   std::mutex mutex_;
-  std::vector<double> prev_timestamps_;
   std::optional<position_estimate_t> prev_pose_estimate_ = std::nullopt;
   static constexpr double kuse_prev_pose_threshold = 100;  // tune
   bool use_prev_pose_ = false;

@@ -43,7 +43,7 @@ void StartNetworktables(int team_number) {
   LOG(INFO) << "Connected to rio!";
 }
 
-void HostNetworktables() {
+void StartNetworktablesAsHost() {
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
   inst.StopLocal();
   inst.StopClient();
