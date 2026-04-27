@@ -35,11 +35,6 @@ const Eigen::Matrix<double, 4, 4> rotate_yaw =
   0, 0, 0, 1).finished();
 // clang-format on
 
-void NormalizeCameraMatrix(Eigen::Matrix3d& camera_matrix) {
-  camera_matrix = camera_matrix / 1000;
-  camera_matrix(0, 0) = 1;
-}
-
 auto JointSolver::CalculateDerivative(const Eigen::Matrix4d& robot_to_feild,
                                       const Eigen::Matrix4d& feild_to_tag,
                                       const Eigen::Matrix4d& camera_to_robot,
@@ -100,16 +95,56 @@ auto JointSolver::CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
   return normalized_points_d.array().square().sum();
 }
 
+auto JointSolver::NormalizePoint(
+    const cv::Point2d& image_point,
+    const camera::camera_constant_t& camera_constant) -> Eigen::Vector3d {
+  // clang-format off
+    return (Eigen::Vector3d() << 
+      1,
+      image_point.x / camera_constant.frame_width.value(),
+      image_point.y / camera_constant.frame_height.value())
+   .finished();
+  // clang-format on
+}
+
+auto JointSolver::ProjectPoints(const frc::Pose3d& camera_pose,
+                                const frc::Pose3d& tag_pose,
+                                const Eigen::Matrix3d& camera_matrix,
+                                const Eigen::Matrix4d& camera_to_robot,
+                                int corner_index) -> Eigen::Vector3d {
+  auto feild_to_robot = camera_pose.ToMatrix();
+  auto feild_to_tag = tag_pose.ToMatrix();
+  auto camera_to_tag =
+      camera_to_robot * feild_to_robot.inverse() * feild_to_tag * rotate_yaw;
+
+  Eigen::Vector3d projected_point =
+      camera_matrix * PI * camera_to_tag *
+      localization::kapriltag_corners_eigen_homogenized[corner_index];
+  auto normalized_point = projected_point / projected_point[0];
+  return normalized_point;
+}
+
+auto JointSolver::NormalizeCameraMatrix(
+    Eigen::Matrix3d camera_matrix,
+    const camera::camera_constant_t& camera_constant) -> Eigen::Matrix3d {
+  camera_matrix(1, 0) /= camera_constant.frame_width.value();
+  camera_matrix(1, 1) /= camera_constant.frame_width.value();
+
+  camera_matrix(2, 0) /= camera_constant.frame_height.value();
+  camera_matrix(2, 2) /= camera_constant.frame_height.value();
+  return camera_matrix;
+}
+
 JointSolver::JointSolver(
     const std::vector<camera::camera_constant_t>& camera_constants,
     const AprilTagFieldLayout& layout) {
   for (size_t i = 0; i < camera_constants.size(); i++) {
     camera_name_to_index[camera_constants[i].name] = i;
 
-    normalized_camera_matrix_.emplace_back(
+    normalized_camera_matrix_.emplace_back(NormalizeCameraMatrix(
         CameraMatrixFromJson<Eigen::Matrix3d>(
-            ReadIntrinsics(camera_constants[i].intrinsics_path.value())));
-    NormalizeCameraMatrix(normalized_camera_matrix_[i]);
+            ReadIntrinsics(camera_constants[i].intrinsics_path.value())),
+        camera_constants[i]));
 
     camera_to_robot_.emplace_back(
         ExtrinsicsJsonToCameraToRobot(

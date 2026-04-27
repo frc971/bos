@@ -13,7 +13,7 @@
 
 #define IMAGE_STRIDE 4
 #define LOG_PATH "/bos-logs/log181/right"
-#define LR 0.01
+#define LR 0.1
 #define EPOCHS 10000
 #define NORMALIZATION 500
 #define BETA 0.99
@@ -63,8 +63,8 @@ class ForwardTest : public ::testing::Test {
         ReadIntrinsics(camera_constant_right_.intrinsics_path.value()));
     camera_matrix_right_ = CameraMatrixFromJson<Eigen::Matrix3d>(
         ReadIntrinsics(camera_constant_right_.intrinsics_path.value()));
-    normalized_camera_matrix_right_ = camera_matrix_right_ / NORMALIZATION;
-    normalized_camera_matrix_right_(0, 0) = 1;
+    normalized_camera_matrix_right_ = JointSolver::NormalizeCameraMatrix(
+        camera_matrix_right_, camera_constant_right_);
     camera_to_robot_right_ =
         utils::ExtrinsicsJsonToCameraToRobot(
             utils::ReadExtrinsics(
@@ -79,8 +79,8 @@ class ForwardTest : public ::testing::Test {
         ReadIntrinsics(camera_constant_left_.intrinsics_path.value()));
     camera_matrix_left_ = CameraMatrixFromJson<Eigen::Matrix3d>(
         ReadIntrinsics(camera_constant_left_.intrinsics_path.value()));
-    normalized_camera_matrix_left_ = camera_matrix_left_ / NORMALIZATION;
-    normalized_camera_matrix_left_(0, 0) = 1;
+    normalized_camera_matrix_left_ = JointSolver::NormalizeCameraMatrix(
+        camera_matrix_left_, camera_constant_left_);
     camera_to_robot_left_ =
         utils::ExtrinsicsJsonToCameraToRobot(
             utils::ReadExtrinsics(
@@ -105,27 +105,17 @@ class ForwardTest : public ::testing::Test {
   Eigen::Matrix4d camera_to_robot_left_;
 };
 
-auto ProjectPoints(const frc::Pose3d& camera_pose, const frc::Pose3d& tag_pose,
-                   const Eigen::Matrix3d& camera_matrix,
-                   const Eigen::Matrix4d& camera_to_robot, int corner_index)
-    -> Eigen::Vector3d {
-  auto feild_to_robot = camera_pose.ToMatrix();
-  auto feild_to_tag = tag_pose.ToMatrix();
-  auto camera_to_tag =
-      camera_to_robot * feild_to_robot.inverse() * feild_to_tag * rotate_yaw;
-
-  Eigen::Vector3d projected_point =
-      camera_matrix * PI * camera_to_tag *
-      localization::kapriltag_corners_eigen_homogenized[corner_index];
-  auto normalized_point = projected_point / projected_point[0];
-  return normalized_point;
-}
-
 // TODO: Tolerance is quite high. Find out what causes the loss in precision
 void CheckIsEqual(cv::Point2d image_point, Eigen::Vector3d projected_points,
-                  double tolerance = 1) {
+                  double tolerance) {
   EXPECT_NEAR(image_point.x, projected_points[1], tolerance);
   EXPECT_NEAR(image_point.y, projected_points[2], tolerance);
+}
+
+void CheckIsEqual(Eigen::Vector3d image_point, Eigen::Vector3d projected_points,
+                  double tolerance) {
+  EXPECT_NEAR(image_point[1], projected_points[1], tolerance);
+  EXPECT_NEAR(image_point[2], projected_points[2], tolerance);
 }
 
 TEST_F(ForwardTest, TestForward) {  // NOLINT
@@ -161,19 +151,20 @@ TEST_F(ForwardTest, TestForward) {  // NOLINT
         square_solver_right_->EstimatePosition({detection})[0];
 
     for (int j = 0; j < 4; j++) {
-      auto projected_points =
-          ProjectPoints(square_solver_solution.pose,
-                        kapriltag_layout.GetTagPose(detection.tag_id).value(),
-                        camera_matrix_right_, camera_to_robot_right_, j);
+      auto projected_points = JointSolver::ProjectPoints(
+          square_solver_solution.pose,
+          kapriltag_layout.GetTagPose(detection.tag_id).value(),
+          camera_matrix_right_, camera_to_robot_right_, j);
 
-      auto projected_points_normalized = ProjectPoints(
+      auto projected_points_normalized = JointSolver::ProjectPoints(
           square_solver_solution.pose,
           kapriltag_layout.GetTagPose(detection.tag_id).value(),
           normalized_camera_matrix_right_, camera_to_robot_right_, j);
 
       CheckIsEqual(detection.corners[j], projected_points, 1);
-      CheckIsEqual(detection.corners[j] / NORMALIZATION,
-                   projected_points_normalized, 1.0 / NORMALIZATION);
+      CheckIsEqual(JointSolver::NormalizePoint(detection.corners[j],
+                                               camera_constant_right_),
+                   projected_points_normalized, 0.001);
     }
   }
 }
@@ -205,10 +196,9 @@ TEST_F(ForwardTest, TestDerrivative) {  // NOLINT
     Eigen::Matrix4d robot_to_feild_d = Eigen::Matrix4d::Zero();
     loss = 0;
     for (int corner_index = 0; corner_index < 4; corner_index++) {
-      auto image_point = (Eigen::Vector3d() << 1,
-                          detection.corners[corner_index].x / NORMALIZATION,
-                          detection.corners[corner_index].y / NORMALIZATION)
-                             .finished();
+
+      auto image_point = JointSolver::NormalizePoint(
+          detection.corners[corner_index], camera_constant_right_);
 
       robot_to_feild_d += JointSolver::CalculateDerivative(
           robot_to_feild, feild_to_tag, camera_to_robot_right_,
@@ -324,10 +314,9 @@ TEST_F(ForwardTest, TestMultiTagBackpropagation) {  // NOLINT
         robot_to_feild.CalculateMatrix();
         robot_to_feild.RegisterInputs(tape);
         const auto robot_to_feild_eigen = robot_to_feild.ToEigen();
-        auto image_point = (Eigen::Vector3d() << 1,
-                            detection.corners[corner_index].x / NORMALIZATION,
-                            detection.corners[corner_index].y / NORMALIZATION)
-                               .finished();
+
+        auto image_point = JointSolver::NormalizePoint(
+            detection.corners[corner_index], camera_constant_right_);
 
         auto robot_to_feild_d = JointSolver::CalculateDerivative(
             robot_to_feild_eigen, feild_to_tag, camera_to_robot_right_,

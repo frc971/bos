@@ -199,6 +199,20 @@ class JointSolver {
                             const Eigen::Vector3d& image_point,
                             int corner_index) -> double;
 
+  auto static NormalizePoint(const cv::Point2d& image_point,
+                             const camera::camera_constant_t& camera_constant)
+      -> Eigen::Vector3d;
+
+  auto static ProjectPoints(const frc::Pose3d& camera_pose,
+                            const frc::Pose3d& tag_pose,
+                            const Eigen::Matrix3d& camera_matrix,
+                            const Eigen::Matrix4d& camera_to_robot,
+                            int corner_index) -> Eigen::Vector3d;
+
+  auto static NormalizeCameraMatrix(
+      Eigen::Matrix3d camera_matrix,
+      const camera::camera_constant_t& camera_constant) -> Eigen::Matrix3d;
+
  public:
   JointSolver(const std::vector<camera::camera_constant_t>& camera_constants,
               const frc::AprilTagFieldLayout& layout = kapriltag_layout);
