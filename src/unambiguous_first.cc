@@ -24,12 +24,10 @@ auto main() -> int {
       camera_constants.at("main_bot_left"),
       camera_constants.at("main_bot_right")};
 
-  LOG(INFO) << "Started cameras";
-  std::this_thread::sleep_for(std::chrono::duration<double>(2));
-
   std::jthread thread([cameras] {
     localization::MultiCameraDetector detector_source(cameras);
-    LOG(INFO) << "Created camera source";
+    LOG(INFO) << "Started cameras";
+    std::this_thread::sleep_for(std::chrono::duration<double>(2));
     localization::RunJointLocalization(
         detector_source,
         std::make_unique<localization::UnambiguousEstimator>(cameras),

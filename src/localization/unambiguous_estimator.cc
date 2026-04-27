@@ -237,14 +237,17 @@ auto UnambiguousEstimator::EstimatePosition(
   avg_variance /= best_solution.size();
   const int num_tags = tag_ids.size();
   double latency = computation_timer.Stop();
-  return std::make_optional<position_estimate_t>(
-      {.pose = WeightedAveragePose(best_solution),
-       .variance = avg_variance,
-       .timestamp = avg_timestamp,
-       .num_tags = num_tags,
-       .latency = latency,
-       .invalid = invalid,
-       .loss = cost});
+  std::optional<position_estimate_t> estimate =
+      std::make_optional<position_estimate_t>(
+          {.pose = WeightedAveragePose(best_solution),
+           .variance = avg_variance,
+           .timestamp = avg_timestamp,
+           .num_tags = num_tags,
+           .latency = latency,
+           .invalid = invalid,
+           .loss = cost});
+  prev_pose_estimate_ = estimate;
+  return estimate;
 }
 
 }  // namespace localization
