@@ -20,7 +20,9 @@ auto main() -> int {
 
   LOG(INFO) << "Starting cameras";
 
-  std::vector<camera::CameraConstant> cameras{camera_constants.at("dev_orin")};
+  std::vector<camera::CameraConstant> cameras{
+      camera_constants.at("main_bot_left"),
+      camera_constants.at("main_bot_right")};
 
   LOG(INFO) << "Started cameras";
   std::this_thread::sleep_for(std::chrono::duration<double>(2));
