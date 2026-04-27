@@ -15,7 +15,6 @@
 #define LOG_PATH "/bos-logs/log181/right"
 #define LR 0.1
 #define EPOCHS 10000
-#define NORMALIZATION 500
 #define BETA 0.99
 
 namespace fs = std::filesystem;

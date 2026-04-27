@@ -11,7 +11,6 @@ namespace localization {
 #define LOG_PATH "/bos-logs/log181/right"
 #define LR 0.05
 #define EPOCHS 100
-#define NORMALIZATION 500
 #define BETA 0.3
 
 using frc::AprilTagFieldLayout;
@@ -137,7 +136,8 @@ auto JointSolver::NormalizeCameraMatrix(
 
 JointSolver::JointSolver(
     const std::vector<camera::camera_constant_t>& camera_constants,
-    const AprilTagFieldLayout& layout) {
+    const AprilTagFieldLayout& layout)
+    : camera_constant_(camera_constants) {
   for (size_t i = 0; i < camera_constants.size(); i++) {
     camera_name_to_index[camera_constants[i].name] = i;
 
@@ -193,10 +193,13 @@ auto JointSolver::EstimatePosition(
           robot_to_feild.CalculateMatrix();
           robot_to_feild.RegisterInputs(tape_);
           const auto robot_to_feild_eigen = robot_to_feild.ToEigen();
+
+          // clang-format off
           auto image_point = (Eigen::Vector3d() << 1,
-                              detection.corners[corner_index].x / NORMALIZATION,
-                              detection.corners[corner_index].y / NORMALIZATION)
+                              detection.corners[corner_index].x / camera_constant_[camera_index].frame_width.value(),
+                              detection.corners[corner_index].y / camera_constant_[camera_index].frame_height.value())
                                  .finished();
+          // clang-format on
 
           auto robot_to_feild_d = CalculateDerivative(
               robot_to_feild_eigen, feild_to_tag, camera_to_robot,

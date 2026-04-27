@@ -226,6 +226,7 @@ class JointSolver {
   std::unordered_map<std::string, int> camera_name_to_index;
   std::vector<Eigen::Matrix3d> normalized_camera_matrix_;
   std::vector<Eigen::Matrix4d> camera_to_robot_;
+  std::vector<camera::camera_constant_t> camera_constant_;
   PositionReceiver position_receiver_;
   tape_type tape_;
 };
