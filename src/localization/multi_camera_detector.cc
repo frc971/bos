@@ -25,8 +25,8 @@ MultiCameraDetector::MultiCameraDetector(
           camera_constants_[i].frame_width.has_value());
     streamers_.emplace_back(camera_constants_[i].name,
                             camera_constants_[i].port.value_or(5801 + i), 30,
-                            camera_constants_[i].frame_width,
-                            camera_constants_[i].frame_height);
+                            camera_constants_[i].frame_width.value(),
+                            camera_constants_[i].frame_height.value());
     const std::string camera_log_dest =
         fmt::format("{}/{}", log_path, camera_constants_[i].name);
     if (image_paths.has_value()) {
