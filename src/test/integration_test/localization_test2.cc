@@ -23,10 +23,6 @@
 #include "src/utils/camera_utils.h"
 #include "src/utils/log.h"
 
-// Example command:
-// ./build/src/test/integration_test/localization_test --camera_name=main_bot_right --image_folder=logs/log181/right --speed=0.5
-// To each camera has two streams. 1. Raw video stream, 2. Position estimate stream. The port for raw video stream is 580x and the port for position estimate stream is 480x. x is different for each camera. It starts at 1 and counts up. For example, to view the third camera's position estimate stream, go to localhost:4803
-
 ABSL_FLAG(std::string, image_folder, "",  //NOLINT
           "Path to folder of test images");
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt,  //NOLINT

@@ -16,8 +16,7 @@ namespace localization {
 class UnambiguousEstimator : public IJointPositionSolver {
  public:
   UnambiguousEstimator(
-      const std::vector<camera::camera_constant_t>& camera_constants,
-      bool verbose = false);
+      const std::vector<camera::camera_constant_t>& camera_constants);
   auto EstimatePosition(
       std::vector<std::vector<tag_detection_t>>& detection_batches,
       bool reject_far_tags = true)
@@ -46,6 +45,5 @@ class UnambiguousEstimator : public IJointPositionSolver {
   std::optional<position_estimate_t> prev_pose_estimate_ = std::nullopt;
   static constexpr double kuse_prev_pose_threshold = 100;  // tune
   bool use_prev_pose_ = false;
-  const bool verbose_;
 };
 }  // namespace localization

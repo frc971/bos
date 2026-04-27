@@ -21,8 +21,12 @@ MultiCameraDetector::MultiCameraDetector(
   camera_threads_.reserve(camera_constants_.size());
   streamers_.reserve(camera_constants_.size());
   for (size_t i = 0; i < camera_constants_.size(); i++) {
-    streamers_.emplace_back(camera_constants_[i].name, 5801 + i, 30, 1080,
-                            1080);  // TODO move constants to steamer class
+    CHECK(camera_constants_[i].frame_width.has_value() &&
+          camera_constants_[i].frame_width.has_value());
+    streamers_.emplace_back(camera_constants_[i].name,
+                            camera_constants_[i].port.value_or(5801 + i), 30,
+                            camera_constants_[i].frame_width,
+                            camera_constants_[i].frame_height);
     const std::string camera_log_dest =
         fmt::format("{}/{}", log_path, camera_constants_[i].name);
     if (image_paths.has_value()) {
