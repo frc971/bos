@@ -11,7 +11,7 @@ namespace localization {
 #define LOG_PATH "/bos-logs/log181/right"
 #define LR 0.05
 #define EPOCHS 100
-#define NORMALIZATION 1000
+#define NORMALIZATION 500
 #define BETA 0.3
 
 using frc::AprilTagFieldLayout;
@@ -40,12 +40,12 @@ void NormalizeCameraMatrix(Eigen::Matrix3d& camera_matrix) {
   camera_matrix(0, 0) = 1;
 }
 
-auto CalculateDerivative(const Eigen::Matrix4d& robot_to_feild,
-                         const Eigen::Matrix4d& feild_to_tag,
-                         const Eigen::Matrix4d& camera_to_robot,
-                         const Eigen::Matrix3d& camera_matrix,
-                         const Eigen::Vector3d& image_point, int corner_index)
-    -> Eigen::Matrix4d {
+auto JointSolver::CalculateDerivative(const Eigen::Matrix4d& robot_to_feild,
+                                      const Eigen::Matrix4d& feild_to_tag,
+                                      const Eigen::Matrix4d& camera_to_robot,
+                                      const Eigen::Matrix3d& camera_matrix,
+                                      const Eigen::Vector3d& image_point,
+                                      int corner_index) -> Eigen::Matrix4d {
   Eigen::Vector3d projected_point =
       camera_matrix * PI * camera_to_robot * robot_to_feild * feild_to_tag *
       rotate_yaw *
@@ -79,12 +79,12 @@ auto CalculateDerivative(const Eigen::Matrix4d& robot_to_feild,
   return robot_to_feild_d;
 }
 
-auto CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
-                   const Eigen::Matrix4d& feild_to_tag,
-                   const Eigen::Matrix4d& camera_to_robot,
-                   const Eigen::Matrix3d& camera_matrix,
-                   const Eigen::Vector3d& image_point, int corner_index)
-    -> double {
+auto JointSolver::CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
+                                const Eigen::Matrix4d& feild_to_tag,
+                                const Eigen::Matrix4d& camera_to_robot,
+                                const Eigen::Matrix3d& camera_matrix,
+                                const Eigen::Vector3d& image_point,
+                                int corner_index) -> double {
 
   Eigen::Vector3d projected_point =
       camera_matrix * PI * camera_to_robot * robot_to_feild * feild_to_tag *
@@ -93,6 +93,9 @@ auto CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
   auto normalized_point = projected_point / projected_point[0];
 
   auto normalized_points_d = normalized_point - image_point;
+
+  // LOG(INFO) << "\n" << normalized_point << "\n" << image_point;
+  // LOG(INFO) << normalized_points_d.array().square().sum();
 
   return normalized_points_d.array().square().sum();
 }
@@ -118,10 +121,24 @@ JointSolver::JointSolver(
 auto JointSolver::EstimatePosition(
     const std::map<std::string, std::vector<tag_detection_t>>&
         camera_detections,
-    const frc::Pose3d& starting_pose) -> position_estimate_t {
+    std::optional<frc::Pose3d> initial_pose) -> position_estimate_t {
+  std::vector<int> tag_ids;
+  double average_timestamp = 0;
+  int total_detections = 0;
+  for (const auto& [_, tag_detections] : camera_detections) {
+    for (const auto& tag_detection : tag_detections) {
+      tag_ids.push_back(tag_detection.tag_id);
+      average_timestamp += tag_detection.timestamp;
+      total_detections++;
+    }
+  }
+  average_timestamp /= total_detections;
+
   tape_.clearAll();
   DifferntiableTransform3d robot_to_feild(
-      frc::Pose3d(position_receiver_.Get()).ToMatrix().inverse());
+      frc::Pose3d(initial_pose.value_or(position_receiver_.Get()))
+          .ToMatrix()
+          .inverse());
 
   JointSolver::transform3d_derrivative_t velocity;
   double loss = 0;
@@ -163,9 +180,28 @@ auto JointSolver::EstimatePosition(
       }
     }
     velocity = (velocity * BETA) + derrivative;
-    robot_to_feild.Apply(velocity, LR);
+    robot_to_feild.Update(velocity, LR);
   }
-  return {};
+  robot_to_feild.CalculateMatrix();
+
+  Eigen::Matrix4d feild_to_robot = robot_to_feild.ToEigen().inverse();
+  feild_to_robot(3, 0) = 0;
+  feild_to_robot(3, 1) = 0;
+  feild_to_robot(3, 2) = 0;
+  feild_to_robot(3, 3) = 1;
+
+  return position_estimate_t{
+      .tag_ids = tag_ids,
+      .rejected_tag_ids = {},
+      .pose = frc::Pose3d(feild_to_robot),
+      .variance = 1,
+      .timestamp = average_timestamp,
+      .num_tags = total_detections,
+      .avg_tag_dist = -1,
+      .latency = -1,
+      .invalid = false,
+      .loss = 0,
+  };
 }
 
 }  // namespace localization

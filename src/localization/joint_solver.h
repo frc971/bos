@@ -97,8 +97,8 @@ class JointSolver {
       t_y -= derrivative.t_y * lr;
       t_z -= derrivative.t_z * lr;
 
-      r_x -= derrivative.r_x * lr;
-      r_y -= derrivative.r_y * lr;
+      // r_x -= derrivative.r_x * lr;
+      // r_y -= derrivative.r_y * lr;
       r_z -= derrivative.r_z * lr;
     }
 
@@ -182,16 +182,22 @@ class JointSolver {
       };
       return derrivative;
     }
-    void Apply(const transform3d_derrivative_t& derrivative, double lr) {
-      t_x -= derrivative.t_x * lr;
-      t_y -= derrivative.t_y * lr;
-      t_z -= derrivative.t_z * lr;
-
-      r_x -= derrivative.r_x * lr;
-      r_y -= derrivative.r_y * lr;
-      r_z -= derrivative.r_z * lr;
-    }
   };
+
+ public:
+  auto static CalculateDerivative(const Eigen::Matrix4d& robot_to_feild,
+                                  const Eigen::Matrix4d& feild_to_tag,
+                                  const Eigen::Matrix4d& camera_to_robot,
+                                  const Eigen::Matrix3d& camera_matrix,
+                                  const Eigen::Vector3d& image_point,
+                                  int corner_index) -> Eigen::Matrix4d;
+
+  auto static CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
+                            const Eigen::Matrix4d& feild_to_tag,
+                            const Eigen::Matrix4d& camera_to_robot,
+                            const Eigen::Matrix3d& camera_matrix,
+                            const Eigen::Vector3d& image_point,
+                            int corner_index) -> double;
 
  public:
   JointSolver(const std::vector<camera::camera_constant_t>& camera_constants,
@@ -199,7 +205,8 @@ class JointSolver {
   auto EstimatePosition(
       const std::map<std::string, std::vector<tag_detection_t>>&
           camera_detections,
-      const frc::Pose3d& starting_pose) -> position_estimate_t;
+      std::optional<frc::Pose3d> intial_pose = std::nullopt)
+      -> position_estimate_t;
 
  private:
   std::unordered_map<std::string, int> camera_name_to_index;
@@ -208,4 +215,17 @@ class JointSolver {
   PositionReceiver position_receiver_;
   tape_type tape_;
 };
+
+inline auto operator<<(std::ostream& os,
+                       const JointSolver::Transfrom3dDerrivative& d)
+    -> std::ostream& {
+  os << "t_x=" << d.t_x << "\n"
+     << "t_y=" << d.t_y << "\n"
+     << "t_z=" << d.t_z << "\n"
+     << "r_x=" << d.r_x << "\n"
+     << "r_y=" << d.r_y << "\n"
+     << "r_z=" << d.r_z << "";
+  return os;
+}
 }  // namespace localization
+//

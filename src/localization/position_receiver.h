@@ -9,9 +9,9 @@ namespace localization {
 class PositionReceiver {
  public:
   PositionReceiver();
-  auto Get() -> frc::Pose2d;
+  auto Get() -> frc::Pose3d;
 
  private:
-  nt::StructSubscriber<frc::Pose2d> pose_subscriber_;
+  nt::StructSubscriber<frc::Pose3d> pose_subscriber_;
 };
 }  // namespace localization
