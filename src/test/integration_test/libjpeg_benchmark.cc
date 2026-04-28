@@ -6,6 +6,7 @@
 #include "absl/flags/parse.h"
 #include "src/utils/log.h"
 #include "src/utils/pch.h"
+#include <sstream>
 
 ABSL_FLAG(std::string, image_path, "path/to/image.jpg",  // NOLINT
           "Path to the image file to be loaded and decoded.");
