@@ -13,16 +13,14 @@
 
 using camera::camera_constants_t;
 auto main() -> int {
-  utils::StartNetworktables(9971);
+  utils::StartNetworktablesAsHost();
 
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
 
   LOG(INFO) << "Starting cameras";
 
-  std::vector<camera::CameraConstant> cameras{
-      camera_constants.at("main_bot_left"),
-      camera_constants.at("main_bot_right")};
+  std::vector<camera::CameraConstant> cameras{camera_constants.at("dev_orin")};
 
   std::jthread thread([cameras] {
     localization::MultiCameraDetector detector_source(cameras);

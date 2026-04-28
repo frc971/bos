@@ -58,7 +58,7 @@ MultiCameraDetector::MultiCameraDetector(
             camera_constants_[i].frame_height.value(), intrinsics));
         break;
       }
-      default:
+      case camera::INVALID:
         LOG(FATAL) << "Invalid detector type";
     }
   }
@@ -76,7 +76,8 @@ MultiCameraDetector::MultiCameraDetector(
           continue;  // this is ok because GetFrame is blocking
         }
         if (timestamped_frame.timestamp - last_write_times_[i] >
-            1.0 / kenforced_streamer_fps) {
+            1.0 / camera_constants_[i].streamer_fps.value_or(
+                      kdefault_stream_fps)) {
           streamers_[i].WriteFrame(timestamped_frame.frame);
           last_write_times_[i] = timestamped_frame.timestamp;
         }
