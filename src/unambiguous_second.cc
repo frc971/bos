@@ -17,7 +17,10 @@ auto main() -> int {
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
 
-  std::vector<camera::CameraConstant> cameras{camera_constants.at("dev_orin")};
+  std::vector<camera::CameraConstant> cameras{
+      camera_constants.at("second_bot_front"),
+      camera_constants.at("second_bot_left"),
+      camera_constants.at("second_bot_right")};
 
   std::jthread thread([cameras] {
     localization::MultiCameraDetector detector_source(cameras);
