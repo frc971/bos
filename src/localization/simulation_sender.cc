@@ -29,19 +29,12 @@ SimulationSender::SimulationSender(const std::string& name, int port)
 }
 
 void SimulationSender::Send(
-    const std::vector<localization::position_estimate_t>& detections) {
-  if (detections.empty()) {
-    return;
-  }
-
+    const localization::position_estimate_t& detection) {
   cv::Mat canvas = field_image_.clone();
-  for (const auto& detection : detections) {
-    DrawArrow(
-        canvas,
-        cv::Point(field_image_.cols * (detection.pose.X().value() / 16.46),
-                  field_image_.rows * (detection.pose.Y().value() / 8.23)),
-        detection.pose.ToPose2d().Rotation().Radians().value());
-  }
+  DrawArrow(canvas,
+            cv::Point(field_image_.cols * (detection.pose.X().value() / 16.46),
+                      field_image_.rows * (detection.pose.Y().value() / 8.23)),
+            detection.pose.ToPose2d().Rotation().Radians().value());
   streamer_.WriteFrame(canvas);
 }
 }  // namespace localization

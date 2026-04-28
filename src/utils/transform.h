@@ -7,8 +7,13 @@
 namespace utils {
 enum Basis { WPI_TO_CV, CV_TO_WPI };
 
-const cv::Mat cv_to_wpilib = (cv::Mat_<double>(4, 4) << 0, 0, 1, 0, -1, 0, 0, 0,
-                              0, -1, 0, 0, 0, 0, 0, 1);
+// clang-format off
+const cv::Mat cv_to_wpilib = (cv::Mat_<double>(4, 4) << 
+  0, 0, 1, 0,
+  -1, 0, 0, 0,
+  0, -1, 0, 0,
+  0, 0, 0, 1);
+// clang-format on
 
 const std::map<Basis, cv::Mat> cv_bases = {{WPI_TO_CV, cv_to_wpilib.t()},
                                            {CV_TO_WPI, cv_to_wpilib}};
@@ -69,6 +74,59 @@ struct TransformValues {
   double rx;
   double ry;
   double rz;
+  bool yaw_only = false;
+
+  friend void operator+=(TransformValues& left, const TransformValues& right) {
+    left.x += right.x;
+    left.y += right.y;
+    left.z += right.z;
+    left.ry += right.ry;
+    if (!left.yaw_only) {
+      left.rx += right.rx;
+      left.rz += right.rz;
+    }
+  }
+
+  friend void operator-=(TransformValues& left, const TransformValues& right) {
+    left.x -= right.x;
+    left.y -= right.y;
+    left.z -= right.z;
+    left.ry -= right.ry;
+    if (!left.yaw_only) {
+      left.rx -= right.rx;
+      left.rz -= right.rz;
+    }
+  }
+
+  friend void operator/=(TransformValues& left, const double right) {
+    left.x /= right;
+    left.y /= right;
+    left.z /= right;
+    left.ry /= right;
+    if (!left.yaw_only) {
+      left.rx /= right;
+      left.rz /= right;
+    }
+  }
+
+  friend auto operator*(TransformValues& left, const double right)
+      -> TransformValues {
+    return {
+        .x = left.x * right,
+        .y = left.y * right,
+        .z = left.z * right,
+        .rx = left.rx * right,
+        .ry = left.ry * right,
+        .rz = left.rz * right,
+    };
+  }
+
+  friend auto operator<<(std::ostream& os, const TransformValues& p)
+      -> std::ostream& {
+    os << "x: " << p.x << "\ty: " << p.y << "\tz: " << p.z << "\trx: " << p.rx
+       << "\try: " << p.ry << "\trz: " << p.rz << std::endl;
+    return os;
+  }
 };
 
 struct TransformDecomposition {

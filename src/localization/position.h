@@ -16,6 +16,11 @@ using tag_detection_t = struct TagDetection {
   double timestamp;
   double confidence;
 
+  auto operator==(const TagDetection& other) const -> bool {
+    return tag_id == other.tag_id && corners == other.corners &&
+           timestamp == other.timestamp && confidence == other.confidence;
+  }
+
   friend auto operator<<(std::ostream& os, const TagDetection& t)
       -> std::ostream& {
     os << "ID: " << t.tag_id << "\nCorners:\n";
@@ -47,25 +52,12 @@ using position_estimate_t = struct PositionEstimate {
     fmt::print(os,
                "Transform3d: "
                "translation (x={:.3f} m, y={:.3f} m, z={:.3f} m), "
-               "rotation (roll={:.2f} deg, pitch={:.2f} deg, yaw={:.2f} deg)\n",
+               "rotation (roll={:.2f} deg, pitch={:.2f} deg, yaw={:.2f} deg), "
+               "variance: {:.3f}\n",
                tr.X().value(), tr.Y().value(), tr.Z().value(),
                units::degree_t{r.X()}.value(), units::degree_t{r.Y()}.value(),
-               units::degree_t{r.Z()}.value());
+               units::degree_t{r.Z()}.value(), t.variance);
     return os;
-  }
-
-  friend auto operator==(const PositionEstimate& left,
-                         const PositionEstimate& right) -> bool {
-    const auto& lt = left.pose.Translation();
-    const auto& lr = left.pose.Rotation();
-    const auto& rt = left.pose.Translation();
-    const auto& rr = left.pose.Rotation();
-
-    return lt.X().value() == rt.X().value() &&
-           lt.Y().value() == rt.Y().value() &&
-           lt.Z().value() == rt.Z().value() &&
-           lr.X().value() == rr.X().value() &&
-           lr.Y().value() == rr.Y().value() && lr.Z().value() == rr.Z().value();
   }
 };
 }  // namespace localization
