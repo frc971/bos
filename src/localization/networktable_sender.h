@@ -21,8 +21,7 @@ class NetworkTableSender : public IPositionSender {
  public:
   NetworkTableSender(const std::string& camera_name, bool verbose = false,
                      bool sim = false);
-  void Send(const std::vector<localization::position_estimate_t>& detections)
-      override;
+  void Send(const localization::position_estimate_t& detection) override;
 
  private:
   nt::NetworkTableInstance instance_;
