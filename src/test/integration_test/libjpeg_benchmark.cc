@@ -44,6 +44,10 @@ auto main(int argc, char** argv) -> int {
     auto start = std::chrono::high_resolution_clock::now();
     cv::Mat decodedImage = decodeImage(rawImageData);
     auto end = std::chrono::high_resolution_clock::now();
+    if (decodedImage.empty()) {
+      LOG(INFO) << "image decode failed";
+      continue;
+    }
     double ms = std::chrono::duration<double, std::milli>(end - start).count();
     trials.push_back(ms);
   }
