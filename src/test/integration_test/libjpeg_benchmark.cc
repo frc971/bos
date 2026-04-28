@@ -11,6 +11,8 @@
 ABSL_FLAG(std::string, image_path, "path/to/image.jpg",  // NOLINT
           "Path to the image file to be loaded and decoded.");
 
+ABSL_FLAG(uint, num_trials, 10000, "Number of decoding trials to perform."); // NOLINT
+
 auto loadImage(const std::string& path) -> std::vector<uchar> {
   std::ifstream file(path, std::ios::binary);
   if (!file) {
@@ -39,7 +41,7 @@ auto main(int argc, char** argv) -> int {
       LOG(INFO) << line;
     }
   }
-  const uint tests = 1000;
+  const uint tests = absl::GetFlag(FLAGS_num_trials);
   std::vector<double> trials;
   for (uint i = 0; i < tests; ++i) {
     auto start = std::chrono::high_resolution_clock::now();
