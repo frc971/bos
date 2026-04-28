@@ -218,7 +218,7 @@ auto JointSolver::EstimatePosition(
       }
     }
     velocity = (velocity * BETA) + derrivative;
-    robot_to_feild.Update(velocity, LR);
+    robot_to_feild.Update(velocity, LR, LR);
   }
   robot_to_feild.CalculateMatrix();
 

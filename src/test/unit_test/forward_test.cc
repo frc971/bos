@@ -13,9 +13,13 @@
 
 #define IMAGE_STRIDE 4
 #define LOG_PATH "/bos-logs/log181/right"
-#define LR 0.1
-#define EPOCHS 10000
-#define BETA 0.99
+#define TRANSLATION_LR 0.5
+#define ROTATION_LR 0.001
+#define LR 0.01
+#define EPOCHS 500
+#define BETA_1 0.90
+#define BETA_2 0.990
+#define EPSILON 1e-9
 
 namespace fs = std::filesystem;
 
@@ -289,19 +293,20 @@ TEST_F(ForwardTest, TestMultiTagBackpropagation) {  // NOLINT
   LOG(INFO) << "robot_to_feild_before\n" << robot_to_feild.ToEigen();
 
   // Noise
-  robot_to_feild.t_x += 0.1;
+  robot_to_feild.t_x += 0.2;
   robot_to_feild.t_y += 0.1;
   robot_to_feild.t_z += 0.1;
 
   // robot_to_feild.r_x += 0.05;
   // robot_to_feild.r_y += 0.05;
-  robot_to_feild.r_z += 0.05;
+  // robot_to_feild.r_z += 0.05;
 
   tape_type tape;
 
   double loss = 0;
-  utils::Timer solve_timer("solve", false);
+  utils::Timer solve_timer("solve", true);
   JointSolver::transform3d_derrivative_t velocity;
+  JointSolver::transform3d_derrivative_t squared_gradiants;
   for (int epoch = 0; epoch < EPOCHS; epoch++) {
     loss = 0;
     JointSolver::transform3d_derrivative_t derrivative;
@@ -333,11 +338,20 @@ TEST_F(ForwardTest, TestMultiTagBackpropagation) {  // NOLINT
       }
     }
 
-    velocity = (velocity * BETA) + derrivative;
-    robot_to_feild.Update(velocity, LR);
+    velocity = (velocity * BETA_1) + (derrivative * (1));
+    squared_gradiants = (squared_gradiants * BETA_2) +
+                        (derrivative * derrivative * (1 - BETA_2));
+    auto update = velocity / ((squared_gradiants + EPSILON).sqrt());
+    robot_to_feild.Update(update, LR * TRANSLATION_LR, LR * ROTATION_LR);
     if (epoch == 0) {
       LOG(INFO) << loss;
     }
+    LOG(INFO) << epoch << " " << loss;
+    LOG(INFO) << "tx_d " << derrivative.t_x << " ty_d " << derrivative.t_y;
+    // LOG(INFO) << "tx_vel " << velocity.t_x << " ty_vel " << velocity.t_y;
+    LOG(INFO) << "tx_update " << update.t_x << " ty_update" << update.t_y;
+    LOG(INFO) << "---------------------------------------";
+    // LOG(INFO) << "\n" << derrivative;
   }
 
   robot_to_feild.CalculateMatrix();

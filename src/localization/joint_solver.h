@@ -54,6 +54,44 @@ class JointSolver {
                                     .r_y = r_y * other,
                                     .r_z = r_z * other};
     }
+
+    auto operator+(const double other) -> Transfrom3dDerrivative {
+      return Transfrom3dDerrivative{.t_x = t_x + other,
+                                    .t_y = t_y + other,
+                                    .t_z = t_z + other,
+                                    .r_x = r_x + other,
+                                    .r_y = r_y + other,
+                                    .r_z = r_z + other};
+    }
+
+    auto operator*(const Transfrom3dDerrivative other)
+        -> Transfrom3dDerrivative {
+      return Transfrom3dDerrivative{.t_x = t_x * other.t_x,
+                                    .t_y = t_y * other.t_y,
+                                    .t_z = t_z * other.t_z,
+                                    .r_x = r_x * other.r_x,
+                                    .r_y = r_y * other.r_y,
+                                    .r_z = r_z * other.r_z};
+    }
+
+    auto operator/(const Transfrom3dDerrivative other)
+        -> Transfrom3dDerrivative {
+      return Transfrom3dDerrivative{.t_x = t_x / other.t_x,
+                                    .t_y = t_y / other.t_y,
+                                    .t_z = t_z / other.t_z,
+                                    .r_x = r_x / other.r_x,
+                                    .r_y = r_y / other.r_y,
+                                    .r_z = r_z / other.r_z};
+    }
+
+    auto sqrt() -> Transfrom3dDerrivative {
+      return Transfrom3dDerrivative{.t_x = std::sqrt(t_x),
+                                    .t_y = std::sqrt(t_y),
+                                    .t_z = std::sqrt(t_z),
+                                    .r_x = std::sqrt(r_x),
+                                    .r_y = std::sqrt(r_y),
+                                    .r_z = std::sqrt(r_z)};
+    }
   };
 
   struct DifferntiableTransform3d {
@@ -92,14 +130,15 @@ class JointSolver {
       r_z = euler(0);
     }
 
-    void Update(transform3d_derrivative_t derrivative, double lr) {
-      t_x -= derrivative.t_x * lr;
-      t_y -= derrivative.t_y * lr;
-      t_z -= derrivative.t_z * lr;
+    void Update(transform3d_derrivative_t derrivative, double lr_translation,
+                double lr_rotation) {
+      t_x -= derrivative.t_x * lr_translation;
+      t_y -= derrivative.t_y * lr_translation;
+      t_z -= derrivative.t_z * lr_translation;
 
       // r_x -= derrivative.r_x * lr;
       // r_y -= derrivative.r_y * lr;
-      r_z -= derrivative.r_z * lr;
+      // r_z -= derrivative.r_z * lr_rotation;
     }
 
     void RegisterInputs(tape_type& tape) {
