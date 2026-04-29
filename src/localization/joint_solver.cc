@@ -262,7 +262,7 @@ auto JointSolver::EstimatePosition(
     translation_and_rotation += step * step_size;
     double new_loss;
     do {
-      decomposed_robot_to_field = utils::SeparateTranslationAndRotationMatrices(
+      decomposed_robot_to_field.UpdateTransformDecomposition(
           translation_and_rotation);
       new_loss =
           Forward(decomposed_robot_to_field, Rx_activations, Ry_activations,

@@ -122,4 +122,26 @@ auto SeparateTranslationAndRotationMatrices(
   translation(2, 3) = decomposition.z;
   return {translation, Rx, Ry, Rz};
 }
+
+auto UpdateTransformDecomposition(TransformDecomposition& decomp,
+                                  const TransformValues& new_vals) {
+  decomp.Rx(1, 1) = cos(new_vals.rx);
+  decomp.Rx(2, 1) = sin(new_vals.rx);
+  decomp.Rx(1, 2) = -sin(new_vals.rx);
+  decomp.Rx(2, 2) = cos(new_vals.rx);
+
+  decomp.Ry(0, 0) = cos(new_vals.ry);
+  decomp.Ry(0, 2) = sin(new_vals.ry);
+  decomp.Ry(2, 0) = -sin(new_vals.ry);
+  decomp.Ry(2, 2) = cos(new_vals.ry);
+
+  decomp.Rz(0, 0) = cos(new_vals.rz);
+  decomp.Rz(0, 1) = -sin(new_vals.rz);
+  decomp.Rz(1, 0) = sin(new_vals.rz);
+  decomp.Rz(1, 1) = cos(new_vals.rz);
+
+  decomp.translation(0, 3) = new_vals.x;
+  decomp.translation(1, 3) = new_vals.y;
+  decomp.translation(2, 3) = new_vals.z;
+}
 }  // namespace utils

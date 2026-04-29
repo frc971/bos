@@ -134,6 +134,27 @@ struct TransformDecomposition {
   Eigen::Matrix4d Rx;
   Eigen::Matrix4d Ry;
   Eigen::Matrix4d Rz;
+
+  auto UpdateTransformDecomposition(const TransformValues& new_vals) {
+    Rx(1, 1) = cos(new_vals.rx);
+    Rx(2, 1) = sin(new_vals.rx);
+    Rx(1, 2) = -sin(new_vals.rx);
+    Rx(2, 2) = cos(new_vals.rx);
+
+    Ry(0, 0) = cos(new_vals.ry);
+    Ry(0, 2) = sin(new_vals.ry);
+    Ry(2, 0) = -sin(new_vals.ry);
+    Ry(2, 2) = cos(new_vals.ry);
+
+    Rz(0, 0) = cos(new_vals.rz);
+    Rz(0, 1) = -sin(new_vals.rz);
+    Rz(1, 0) = sin(new_vals.rz);
+    Rz(1, 1) = cos(new_vals.rz);
+
+    translation(0, 3) = new_vals.x;
+    translation(1, 3) = new_vals.y;
+    translation(2, 3) = new_vals.z;
+  }
 };
 
 auto ExtractTranslationAndRotation(const Eigen::Matrix4d& transform_mat)
