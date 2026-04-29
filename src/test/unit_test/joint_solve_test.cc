@@ -137,10 +137,10 @@ TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
       detections};
   joint_solver.SetStartingPose(
       square_solver_solution.pose.TransformBy(frc::Transform3d{
-          frc::Translation3d{units::meter_t{0.1}, units::meter_t{0.1},
-                             units::meter_t{0.1}},
+          frc::Translation3d{units::meter_t{1}, units::meter_t{0.01},
+                             units::meter_t{0.0}},
           frc::Rotation3d{units::degree_t{0}, units::degree_t{0},
-                          units::degree_t{3}}}));
+                          units::degree_t{0.00}}}));
   const localization::position_estimate_t joint_solver_solution =
       joint_solver.EstimatePosition(joint_detections, false).value();
   // std::cout << "sq: " << square_solver_solution

@@ -213,7 +213,7 @@ auto JointSolver::EstimatePosition(
             .undistorted_point = undistorted_image_point,
             .source_index = i,
             .field_to_tag_corner_homogenous =
-                tag_corners_[detection.tag_id].value()[i]};
+                tag_corners_[detection.tag_id].value()[j]};
         data_points.push_back(datapoint);
       }
     }
@@ -242,10 +242,8 @@ auto JointSolver::EstimatePosition(
     LOG(INFO) << "Initial loss: " << net_loss << " initial step: " << step;
   }
 
-  size_t stepdowns_first = 0;
-  size_t stepups_first = 0;
-  size_t stepdowns_second = 0;
-  size_t stepups_second = 0;
+  size_t stepdowns = 0;
+  size_t stepups = 0;
   bool stuck_in_minimum = false;
   for (size_t i = 0;
        i < kmax_iters && net_loss > kacceptable_reprojection_error &&
@@ -271,8 +269,8 @@ auto JointSolver::EstimatePosition(
                   Rz_activations, projections, projection_errors, data_points);
       if (new_loss > net_loss) {
         step_size /= 2.0;
-        stepdowns_first++;
-        if (stepdowns_first >= kmax_iters) {
+        stepdowns++;
+        if (stepdowns >= kmax_iters) {
           stuck_in_minimum = true;
           break;
         }
@@ -282,6 +280,7 @@ auto JointSolver::EstimatePosition(
         continue;
       } else {
         step_size *= 2.0;
+        stepups++;
         break;
       }
     } while (true);
@@ -306,10 +305,8 @@ auto JointSolver::EstimatePosition(
   if (verbose_) {
     std::cout << "Final step: " << step << std::endl;
     std::cout << "Final loss: " << net_loss << std::endl;
-    std::cout << "Stepups first: " << stepups_first << std::endl;
-    std::cout << "Stepdowns first: " << stepdowns_first << std::endl;
-    std::cout << "Stepups second: " << stepups_second << std::endl;
-    std::cout << "Stepdowns second: " << stepdowns_second << std::endl;
+    std::cout << "Stepups: " << stepups << std::endl;
+    std::cout << "Stepdowns: " << stepdowns << std::endl;
     utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
                                      "Field to robot cv");
   }

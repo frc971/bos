@@ -76,7 +76,7 @@ class JointSolver : public IJointPositionSolver {
   static constexpr double starting_step_size_ = 1e-5;
   static constexpr double kyaw_prioritization = 1e1;
   static constexpr double krotation_step_scalar = 3e-1;
-  static constexpr size_t kmax_iters = 1e4;
+  static constexpr size_t kmax_iters = 1e7;
   std::vector<CameraMatrices> camera_matrices_;
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;
