@@ -29,7 +29,7 @@ struct CameraMatrices {
   cv::Mat camera_matrix;
 };
 static constexpr int kmax_tags = 50;
-class JointSolver {
+class JointSolver : public IJointPositionSolver {
  public:
   JointSolver(const std::vector<camera::CameraConstant>& camera_constants_,
               const frc::AprilTagFieldLayout& layout = kapriltag_layout);
@@ -64,18 +64,19 @@ class JointSolver {
       const std::vector<Eigen::Vector2d>& projection_errors,
       const std::vector<data_point_t>& data_points, bool yaw_only)
       -> utils::TransformValues;
+  void SetStartingPose(const frc::Pose3d& field_to_robot);
   auto EstimatePosition(
-      const std::vector<std::vector<tag_detection_t>>& all_cam_detections,
-      const frc::Pose3d& starting_pose, bool yaw_only,
-      const bool verbose = false) -> joint_estimate_t;
-  Eigen::Matrix4d robot_to_field_;
+      std::vector<std::vector<tag_detection_t>>& all_cam_detections,
+      bool reject_far_tags = true)
+      -> std::optional<position_estimate_t> override;
 
  private:
-  static constexpr double kacceptable_reprojection_error = 1.2;
+  Eigen::Matrix4d robot_to_field_cv_;
+  static constexpr double kacceptable_reprojection_error = 0.2;
   static constexpr double starting_step_size_ = 1e-5;
   static constexpr double kyaw_prioritization = 1e1;
   static constexpr double krotation_step_scalar = 3e-1;
-  static constexpr size_t kmax_iters = 1e5;
+  static constexpr size_t kmax_iters = 1e4;
   std::vector<CameraMatrices> camera_matrices_;
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;
@@ -83,5 +84,7 @@ class JointSolver {
   const frc::AprilTagFieldLayout layout_;
   static constexpr double kvariance_scalar_ = 0.5;
   static constexpr double kvariance_min_ = 1.0;
+  const bool verbose_ = true;   // TODO remove
+  const bool yaw_only_ = true;  // TODO remove
 };
 }  // namespace localization

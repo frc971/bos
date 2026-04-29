@@ -133,13 +133,16 @@ TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
       detector.GetTagDetections(frame);
   const localization::position_estimate_t square_solver_solution =
       square_solver.EstimatePosition(detections, false)[0];
+  std::vector<std::vector<localization::tag_detection_t>> joint_detections{
+      detections};
+  joint_solver.SetStartingPose(
+      square_solver_solution.pose.TransformBy(frc::Transform3d{
+          frc::Translation3d{units::meter_t{0.1}, units::meter_t{0.1},
+                             units::meter_t{0.1}},
+          frc::Rotation3d{units::degree_t{0}, units::degree_t{0},
+                          units::degree_t{3}}}));
   const localization::position_estimate_t joint_solver_solution =
-      joint_solver
-          .EstimatePosition(
-              std::vector<std::vector<localization::tag_detection_t>>{
-                  detections},
-              square_solver_solution.pose, true, true)
-          .pose_estimate;
+      joint_solver.EstimatePosition(joint_detections, false).value();
   // std::cout << "sq: " << square_solver_solution
   //           << "\njoint: " << joint_solver_solution << std::endl;
   EXPECT_EQ(square_solver_solution, joint_solver_solution);

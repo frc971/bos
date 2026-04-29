@@ -13,7 +13,7 @@ void PrintTransformationMatrix(
 template <typename Derived>
 inline void PrintTransformationMatrix(const Eigen::MatrixBase<Derived>& mat,
                                       const std::optional<std::string>& name) {
-  PrintTransformationMatrix(utils::EigenToCvMat(mat));
+  PrintTransformationMatrix(utils::EigenToCvMat(mat), name);
 }
 void PrintPose2d(const frc::Pose2d& pose);
 }  // namespace utils

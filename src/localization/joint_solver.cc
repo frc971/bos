@@ -19,7 +19,7 @@ const Eigen::Matrix4d JointSolver::rotate_yaw_cv_ = (Eigen::Matrix4d() <<
 JointSolver::JointSolver(
     const std::vector<camera::CameraConstant>& camera_constants_,
     const AprilTagFieldLayout& layout)
-    : robot_to_field_(Eigen::Matrix4d::Identity()), layout_(layout) {
+    : robot_to_field_cv_(Eigen::Matrix4d::Identity()), layout_(layout) {
   for (const frc::AprilTag& tag : layout.GetTags()) {
     Eigen::Matrix4d field_to_tag = tag.pose.ToMatrix();
     utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);
@@ -184,15 +184,18 @@ auto JointSolver::ComputeNetStep(
   return net_step;
 }
 
+void JointSolver::SetStartingPose(const frc::Pose3d& field_to_robot) {
+  robot_to_field_cv_ = field_to_robot.ToMatrix();
+  utils::ChangeBasis(robot_to_field_cv_, utils::WPI_TO_CV);
+  robot_to_field_cv_ = robot_to_field_cv_.inverse();
+}
+
 auto JointSolver::EstimatePosition(
-    const std::vector<std::vector<tag_detection_t>>& all_cam_detections,
-    const frc::Pose3d& starting_pose, const bool yaw_only, const bool verbose)
-    -> joint_estimate_t {
+    std::vector<std::vector<tag_detection_t>>& all_cam_detections,
+    const bool reject_far_tags) -> std::optional<position_estimate_t> {
   if (all_cam_detections.empty()) {
     return {};
   }
-  robot_to_field_ = starting_pose.ToMatrix().inverse();
-  utils::ChangeBasis(robot_to_field_, utils::WPI_TO_CV);
   std::vector<data_point_t> data_points;
   int num_tags = 0;
   for (size_t i = 0; i < all_cam_detections.size(); i++) {
@@ -217,7 +220,7 @@ auto JointSolver::EstimatePosition(
   }
 
   utils::TransformValues translation_and_rotation =
-      utils::ExtractTranslationAndRotation(robot_to_field_);
+      utils::ExtractTranslationAndRotation(robot_to_field_cv_);
   if (std::isnan(translation_and_rotation.ry)) {
     translation_and_rotation = utils::TransformValues{0, 0, 0, 0, 0, 0};
   }
@@ -233,12 +236,10 @@ auto JointSolver::EstimatePosition(
   utils::TransformValues step =
       ComputeNetStep(translation_and_rotation, decomposed_robot_to_field,
                      Rx_activations, Ry_activations, Rz_activations,
-                     projections, projection_errors, data_points, yaw_only);
+                     projections, projection_errors, data_points, yaw_only_);
   double step_size = starting_step_size_;
-  if (verbose) {
-    std::cout << "Initial loss: " << net_loss << " initial step: " << step
-              << " initial pose: " << std::endl;
-    utils::PrintPose3d(starting_pose);
+  if (verbose_) {
+    LOG(INFO) << "Initial loss: " << net_loss << " initial step: " << step;
   }
 
   size_t stepdowns_first = 0;
@@ -250,12 +251,15 @@ auto JointSolver::EstimatePosition(
        i < kmax_iters && net_loss > kacceptable_reprojection_error &&
        !stuck_in_minimum;
        i++) {
-    if (yaw_only) {
+    if (yaw_only_) {
       step.rx *= krotation_step_scalar;
       step.ry *= krotation_step_scalar;
       step.rz *= krotation_step_scalar;
     } else {
       step.ry *= kyaw_prioritization;
+    }
+    if (step.rx != 0 || step.rz != 0) {
+      LOG(FATAL) << "NONZERO NON-YAW ADJUSTMENT";
     }
     translation_and_rotation += step * step_size;
     double new_loss;
@@ -287,8 +291,8 @@ auto JointSolver::EstimatePosition(
     step =
         ComputeNetStep(translation_and_rotation, decomposed_robot_to_field,
                        Rx_activations, Ry_activations, Rz_activations,
-                       projections, projection_errors, data_points, yaw_only);
-    if (verbose && i % (kmax_iters / 10) == 0) {
+                       projections, projection_errors, data_points, yaw_only_);
+    if (verbose_ && i % (kmax_iters / 10) == 0) {
       std::cout << "Step size: " << step_size << " new net loss: " << net_loss
                 << " new step: " << step * step_size << std::endl;
     }
@@ -299,7 +303,7 @@ auto JointSolver::EstimatePosition(
        decomposed_robot_to_field.Ry * decomposed_robot_to_field.Rx)
           .inverse();
 
-  if (verbose) {
+  if (verbose_) {
     std::cout << "Final step: " << step << std::endl;
     std::cout << "Final loss: " << net_loss << std::endl;
     std::cout << "Stepups first: " << stepups_first << std::endl;
@@ -310,7 +314,7 @@ auto JointSolver::EstimatePosition(
                                      "Field to robot cv");
   }
   utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
-  if (verbose) {
+  if (verbose_) {
     utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
                                      "Field to robot wpi");
   }
@@ -318,7 +322,7 @@ auto JointSolver::EstimatePosition(
   field_to_robot(3, 1) = 0;
   field_to_robot(3, 2) = 0;
   field_to_robot(3, 3) = 1;
-  if (verbose)
+  if (verbose_)
     std::cout << "Field to robot:\n" << field_to_robot << std::endl;
   const frc::Pose3d robot_pose = frc::Pose3d(field_to_robot);
 
@@ -331,7 +335,7 @@ auto JointSolver::EstimatePosition(
         robot_pose.TransformBy(camera_mats.camera_to_robot);
     for (const tag_detection_t& detection : all_cam_detections[i]) {
       const frc::Pose3d tag_pose = layout_.GetTagPose(detection.tag_id).value();
-      if (verbose) {
+      if (verbose_) {
         utils::PrintPose3d(tag_pose);
         utils::PrintPose3d(field_relative_camera_pose);
       }
@@ -344,14 +348,12 @@ auto JointSolver::EstimatePosition(
   }
   avg_distance /= num_detections;
 
-  return {.pose_estimate = {.pose = robot_pose,
-                            .variance =
-                                Variance(num_detections, avg_distance,
-                                         kvariance_scalar_, kvariance_scalar_),
-                            .timestamp = 0,
-                            .num_tags = num_tags},
-          .loss = net_loss,
-          .stuck_in_minimum = stuck_in_minimum};
+  return std::make_optional<position_estimate_t>(
+      {.pose = robot_pose,
+       .variance = Variance(num_detections, avg_distance, kvariance_scalar_,
+                            kvariance_scalar_),
+       .timestamp = 0,
+       .num_tags = num_tags});
 }
 
 }  // namespace localization

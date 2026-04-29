@@ -93,7 +93,7 @@ auto ExtractTranslationAndRotation(const Eigen::Matrix4d& transform_mat)
     yaw = 0.0;
   }
 
-  return {x, y, z, roll, pitch, yaw};
+  return {x, y, z, roll, pitch, yaw, true};
 }
 
 auto SeparateTranslationAndRotationMatrices(
