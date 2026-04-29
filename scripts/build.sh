@@ -21,7 +21,7 @@ else
   BUILD_DIR="${NAME}-build"
 fi
 
-git submodule update --init --progress --depth 1
+# git submodule update --init --progress --depth 1
 if [ "$(pwd)" != "/bos" ]; then
   mkdir -p /bos
   sudo cp -r constants /bos

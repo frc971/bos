@@ -127,20 +127,18 @@ class JointSolverTest : public ::testing::Test {
 // }
 
 TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
-  const cv::Mat image = cv::imread("/bos/logs/log181/left/11.963395.jpg");
+  const cv::Mat image = cv::imread("/bos/bos-logs/pmatch2/left/132.036206.jpg");
   camera::timestamped_frame_t frame{.frame = image, .timestamp = 0.0};
   const std::vector<localization::tag_detection_t> detections =
       detector.GetTagDetections(frame);
   const localization::position_estimate_t square_solver_solution =
       square_solver.EstimatePosition(detections, false)[0];
-  std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
-      associated_detections;
-  associated_detections.insert(
-      {camera_constants.at("main_bot_left"), detections});
   const localization::position_estimate_t joint_solver_solution =
       joint_solver
-          .EstimatePosition(associated_detections, square_solver_solution.pose,
-                            false, true)
+          .EstimatePosition(
+              std::vector<std::vector<localization::tag_detection_t>>{
+                  detections},
+              square_solver_solution.pose, true, true)
           .pose_estimate;
   // std::cout << "sq: " << square_solver_solution
   //           << "\njoint: " << joint_solver_solution << std::endl;

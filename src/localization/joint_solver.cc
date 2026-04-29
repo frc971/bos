@@ -47,13 +47,12 @@ JointSolver::JointSolver(
     utils::ChangeBasis(camera_to_robot, utils::WPI_TO_CV);
     const Eigen::Matrix<double, 3, 4> image_to_robot =
         image_to_camera * camera_to_robot;
-    camera_matrices_.insert(
-        {camera_config,
-         {.image_to_robot = image_to_robot,
-          .camera_to_robot = camera_to_robot_transform,
-          .distortion_coefficients =
-              utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics_json),
-          .camera_matrix = utils::EigenToCvMat(camera_matrix)}});
+    camera_matrices_.push_back(
+        {.image_to_robot = image_to_robot,
+         .camera_to_robot = camera_to_robot_transform,
+         .distortion_coefficients =
+             utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics_json),
+         .camera_matrix = utils::EigenToCvMat(camera_matrix)});
   }
 }
 
@@ -81,7 +80,7 @@ auto JointSolver::Forward(
     Eigen::Vector2d& projection_error, const data_point_t& data_point)
     -> double {
   const Eigen::Matrix<double, 3, 4>& image_to_robot =
-      camera_matrices_.at(data_point.source).image_to_robot;
+      camera_matrices_.at(data_point.source_index).image_to_robot;
 
   Rx_activation =
       position_estimate.Rx * data_point.field_to_tag_corner_homogenous;
@@ -112,7 +111,7 @@ auto JointSolver::ComputeStep(
           lambda);
 
   const Eigen::Matrix<double, 3, 4>& image_to_robot =
-      camera_matrices_.at(data_point.source).image_to_robot;
+      camera_matrices_.at(data_point.source_index).image_to_robot;
   Eigen::Vector4d accumulated_gradient =
       image_to_robot.transpose() * d_projection;
 
@@ -186,8 +185,7 @@ auto JointSolver::ComputeNetStep(
 }
 
 auto JointSolver::EstimatePosition(
-    const std::map<camera::CameraConstant, std::vector<tag_detection_t>>&
-        all_cam_detections,
+    const std::vector<std::vector<tag_detection_t>>& all_cam_detections,
     const frc::Pose3d& starting_pose, const bool yaw_only, const bool verbose)
     -> joint_estimate_t {
   if (all_cam_detections.empty()) {
@@ -197,20 +195,20 @@ auto JointSolver::EstimatePosition(
   utils::ChangeBasis(robot_to_field_, utils::WPI_TO_CV);
   std::vector<data_point_t> data_points;
   int num_tags = 0;
-  for (const auto& pair : all_cam_detections) {
-    for (const tag_detection_t& detection : pair.second) {
+  for (size_t i = 0; i < all_cam_detections.size(); i++) {
+    for (const tag_detection_t& detection : all_cam_detections[i]) {
       num_tags++;
       // std::vector<cv::Point2d> undistorted_corners;
       // cv::undistortImagePoints(detection.corners, undistorted_corners,
       //                          camera_mats.camera_matrix,
       //                          camera_mats.distortion_coefficients);
-      for (size_t i = 0; i < detection.corners.size(); i++) {
+      for (size_t j = 0; j < detection.corners.size(); j++) {
         Eigen::Vector2d undistorted_image_point;
         undistorted_image_point << detection.corners[i].x,
             detection.corners[i].y;
         const data_point_t datapoint = {
             .undistorted_point = undistorted_image_point,
-            .source = pair.first,
+            .source_index = i,
             .field_to_tag_corner_homogenous =
                 tag_corners_[detection.tag_id].value()[i]};
         data_points.push_back(datapoint);
@@ -238,8 +236,7 @@ auto JointSolver::EstimatePosition(
                      projections, projection_errors, data_points, yaw_only);
   double step_size = starting_step_size_;
   if (verbose) {
-    std::cout << "Initial loss: " << net_loss
-              << " initial step: " << step * step_size
+    std::cout << "Initial loss: " << net_loss << " initial step: " << step
               << " initial pose: " << std::endl;
     utils::PrintPose3d(starting_pose);
   }
@@ -327,12 +324,12 @@ auto JointSolver::EstimatePosition(
 
   double avg_distance = 0.0;
   size_t num_detections = 0;
-  for (const auto& pair : all_cam_detections) {
-    num_detections += pair.second.size();
-    const CameraMatrices& camera_mats = camera_matrices_.at(pair.first);
+  for (size_t i = 0; i < all_cam_detections.size(); i++) {
+    num_detections += all_cam_detections[i].size();
+    const CameraMatrices& camera_mats = camera_matrices_[i];
     const frc::Pose3d field_relative_camera_pose =
         robot_pose.TransformBy(camera_mats.camera_to_robot);
-    for (const tag_detection_t& detection : pair.second) {
+    for (const tag_detection_t& detection : all_cam_detections[i]) {
       const frc::Pose3d tag_pose = layout_.GetTagPose(detection.tag_id).value();
       if (verbose) {
         utils::PrintPose3d(tag_pose);

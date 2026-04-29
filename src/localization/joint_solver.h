@@ -12,7 +12,7 @@ namespace localization {
 
 using data_point_t = struct DataPoint {
   Eigen::Vector2d undistorted_point;
-  camera::CameraConstant source;
+  size_t source_index;
   Eigen::Vector4d field_to_tag_corner_homogenous;
 };
 
@@ -65,8 +65,7 @@ class JointSolver {
       const std::vector<data_point_t>& data_points, bool yaw_only)
       -> utils::TransformValues;
   auto EstimatePosition(
-      const std::map<camera::CameraConstant, std::vector<tag_detection_t>>&
-          all_cam_detections,
+      const std::vector<std::vector<tag_detection_t>>& all_cam_detections,
       const frc::Pose3d& starting_pose, bool yaw_only,
       const bool verbose = false) -> joint_estimate_t;
   Eigen::Matrix4d robot_to_field_;
@@ -77,7 +76,7 @@ class JointSolver {
   static constexpr double kyaw_prioritization = 1e1;
   static constexpr double krotation_step_scalar = 3e-1;
   static constexpr size_t kmax_iters = 1e5;
-  std::map<camera::CameraConstant, CameraMatrices> camera_matrices_;
+  std::vector<CameraMatrices> camera_matrices_;
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;
   static const Eigen::Matrix4d rotate_yaw_cv_;
