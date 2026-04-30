@@ -144,6 +144,7 @@ auto UVCCamera::Restart() -> void {
 }
 
 UVCCamera::~UVCCamera() {
+  LOG(INFO) << "DESTRUCTOR CALLED";
   uvc_stop_streaming(device_handle_);
   uvc_close(device_handle_);
   uvc_unref_device(device_);

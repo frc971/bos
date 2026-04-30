@@ -1,3 +1,4 @@
+#include <csignal>
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/cv_camera.h"
@@ -9,8 +10,13 @@
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 
+extern "C" void handle_sigterm(int) {
+  terminate_requested.store(true, std::memory_order_relaxed);
+}
+
 using camera::camera_constants_t;
 auto main() -> int {
+  std::signal(SIGTERM, handle_sigterm);
   utils::StartNetworktables();
 
   std::string log_path = frc::DataLogManager::GetLogDir();

@@ -14,6 +14,7 @@ class MultiCameraSource {
   [[nodiscard]] auto GetTimestampedFrames() -> std::vector<timestamped_frame_t>;
   [[nodiscard]] auto GetCVFrames() -> std::vector<cv::Mat>;
   [[nodiscard]] inline auto NumCameras() -> double { return cameras_.size(); }
+  ~MultiCameraSource();
 
  private:
   std::vector<std::unique_ptr<ICamera>> cameras_;

@@ -11,7 +11,7 @@ MultiCameraSource::MultiCameraSource(
   camera_threads_.reserve(cameras_.size());
   for (size_t i = 0; i < cameras_.size(); i++) {
     camera_threads_.emplace_back([this, i]() -> void {
-      while (true) {
+      while (!terminate_requested.load(std::memory_order_relaxed)) {
         if (use_all_frames_) {
           mutex_.lock();
           bool frames_used = frames_used_;
@@ -52,6 +52,17 @@ auto MultiCameraSource::GetCVFrames() -> std::vector<cv::Mat> {
   frames_used_ = true;
   mutex_.unlock();
   return frames;
+}
+
+MultiCameraSource::~MultiCameraSource() {
+  LOG(INFO) << "CAMERA DESTRUCTOR";
+  terminate_requested.store(true, std::memory_order_relaxed);
+
+  for (auto& t : camera_threads_) {
+    if (t.joinable()) {
+      t.join();
+    }
+  }
 }
 
 }  // namespace camera

@@ -1,8 +1,9 @@
 #pragma once
+#include <atomic>
 #include "src/camera/camera_constants.h"
 #include "src/utils/pch.h"
+extern std::atomic<bool> terminate_requested;
 namespace camera {
-
 using timestamped_frame_t = struct TimestampedFrame {
   cv::Mat frame;
   double timestamp;

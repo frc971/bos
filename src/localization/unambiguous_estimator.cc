@@ -233,7 +233,7 @@ auto UnambiguousEstimator::SearchSolutions(
 void UnambiguousEstimator::Run() {
   frc::DataLogManager::Start();
   localization::NetworkTableSender position_sender("Left", false, sim_);
-  while (true) {
+  while (!terminate_requested.load(std::memory_order_relaxed)) {
     latent_estimate_t pose_estimate = GetUnambiguatedEstimate();
     if (pose_estimate.invalid) {
       continue;
