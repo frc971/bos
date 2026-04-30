@@ -10,48 +10,53 @@ const cv::Mat UVCCamera::backup_image_ =
     cv::imread("/bos/constants/dont_worry_about_it.jpg");
 
 void callback(uvc_frame_t* frame, void* ptr) {
-  auto ptr_ = static_cast<UVCCamera*>(ptr);
-  ptr_->mutex_.lock();
-  switch (frame->frame_format) {
-    case UVC_COLOR_FORMAT_MJPEG: {
-      char* data = static_cast<char*>(frame->data);
-      std::vector<uchar> buffer(data, data + frame->data_bytes);
-      ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
-      break;
-    }
-    case UVC_COLOR_FORMAT_YUYV: {
-      uvc_frame_t* bgr = uvc_allocate_frame(frame->width * frame->height * 3);
-      if (!bgr) {
-        LOG(WARNING) << "Camera " << ptr_->camera_constant_.name
-                     << " failed to allocate ";
-      }
-      uvc_error_t ret = uvc_yuyv2bgr(frame, bgr);
-      if (ret != 0) {
-        LOG(WARNING) << "YUYV failed to convert to BGR";
-      }
-      IplImage* ipl_image;
-      ipl_image =
-          cvCreateImageHeader(cvSize(bgr->width, bgr->height), IPL_DEPTH_8U, 3);
-      cvSetData(ipl_image, bgr->data, bgr->width * 3);
-      ptr_->frame_buffer.frame = cv::cvarrToMat(ipl_image, true);
-      uvc_free_frame(bgr);
-      break;
-    }
-    default:
-      LOG(WARNING) << "Unknown frame format";
-      break;
-  }
-  if (ptr_->frame_buffer.frame.empty()) {
-    LOG(WARNING) << "Failed to decode frame from camera "
-                 << ptr_->camera_constant_.name;
+  if (frame->sequence % 2 == 0) {
     return;
   }
-  ptr_->frame_buffer.invalid = false;
-  ptr_->frame_buffer.timestamp =
-      frc::Timer::GetFPGATimestamp()
-          .to<double>();  // TODO: Use more accurate timestamp
-  ptr_->frame_index_ = frame->sequence;
-  ptr_->mutex_.unlock();
+  auto ptr_ = static_cast<UVCCamera*>(ptr);
+  if (ptr_->mutex_.try_lock()) {
+    switch (frame->frame_format) {
+      case UVC_COLOR_FORMAT_MJPEG: {
+        char* data = static_cast<char*>(frame->data);
+        std::vector<uchar> buffer(data, data + frame->data_bytes);
+        ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
+        break;
+      }
+      case UVC_COLOR_FORMAT_YUYV: {
+        uvc_frame_t* bgr = uvc_allocate_frame(frame->width * frame->height * 3);
+        if (!bgr) {
+          LOG(WARNING) << "Camera " << ptr_->camera_constant_.name
+                       << " failed to allocate ";
+        }
+        uvc_error_t ret = uvc_yuyv2bgr(frame, bgr);
+        if (ret != 0) {
+          LOG(WARNING) << "YUYV failed to convert to BGR";
+        }
+        IplImage* ipl_image;
+        ipl_image = cvCreateImageHeader(cvSize(bgr->width, bgr->height),
+                                        IPL_DEPTH_8U, 3);
+        cvSetData(ipl_image, bgr->data, bgr->width * 3);
+        ptr_->frame_buffer.frame = cv::cvarrToMat(ipl_image, true);
+        uvc_free_frame(bgr);
+        break;
+      }
+      default:
+        LOG(WARNING) << "Unknown frame format";
+        break;
+    }
+    if (ptr_->frame_buffer.frame.empty()) {
+      LOG(WARNING) << "Failed to decode frame from camera "
+                   << ptr_->camera_constant_.name;
+      ptr_->mutex_.unlock();
+      return;
+    }
+    ptr_->frame_buffer.invalid = false;
+    ptr_->frame_buffer.timestamp =
+        frc::Timer::GetFPGATimestamp()
+            .to<double>();  // TODO: Use more accurate timestamp
+    ptr_->frame_index_ = frame->sequence;
+    ptr_->mutex_.unlock();
+  }
 }
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
@@ -109,7 +114,14 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
 
 auto UVCCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t copied_timestamped_frame;
+  mutex_.lock();
+  double prev_timestamp = frame_buffer.timestamp;
+  mutex_.unlock();
   while (frame_index_ == previous_frame_index_) {
+    if (frc::Timer::GetFPGATimestamp().to<double>() - prev_timestamp >
+        krestart_threshold) {
+      Restart();
+    }
     std::this_thread::yield();
   }
   mutex_.lock();
@@ -129,18 +141,21 @@ auto UVCCamera::GetFrame() -> timestamped_frame_t {
 }
 
 auto UVCCamera::Restart() -> void {
-  uvc_stop_streaming(device_handle_);
-  uvc_close(device_handle_);
-  uvc_unref_device(device_);
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    uvc_stop_streaming(device_handle_);
+    uvc_close(device_handle_);
+    uvc_unref_device(device_);
 
-  uvc_find_device(context_, &device_, 0, 0,
-                  camera_constant_.serial_id->c_str());
-  uvc_open(device_, &device_handle_);
+    uvc_find_device(context_, &device_, 0, 0,
+                    camera_constant_.serial_id->c_str());
+    uvc_open(device_, &device_handle_);
 
-  LOG(INFO) << "Restarting device UVC Camera. Device ctrl: ";
-  uvc_print_stream_ctrl(&ctrl_, stderr);
-  LOG(INFO) << "-----------------------------------";
-  uvc_start_streaming(device_handle_, &ctrl_, callback, this, 0);
+    LOG(INFO) << "Restarting device UVC Camera. Device ctrl: ";
+    uvc_print_stream_ctrl(&ctrl_, stderr);
+    LOG(INFO) << "-----------------------------------";
+    uvc_start_streaming(device_handle_, &ctrl_, callback, this, 0);
+  }
 }
 
 UVCCamera::~UVCCamera() {
