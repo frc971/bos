@@ -12,9 +12,11 @@
 using camera::camera_constants_t;
 auto main() -> int {
   // utils::StartNetworktables(9971);
+  LOG(INFO) << "Init";
 
-  std::string log_path = frc::DataLogManager::GetLogDir();
+  // std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
+  LOG(INFO) << "Cam constants";
 
   LOG(INFO) << "Loading constants";
 

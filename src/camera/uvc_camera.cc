@@ -12,30 +12,37 @@ const cv::Mat UVCCamera::backup_image_ =
     cv::imread("/bos/constants/dont_worry_about_it.jpg");
 
 void callback(uvc_frame_t* frame, void* ptr) {
+  LOG(INFO) << "in cb";
   auto ptr_ = static_cast<UVCCamera*>(ptr);
   ptr_->mutex_.lock();
   switch (frame->frame_format) {
     case UVC_COLOR_FORMAT_MJPEG: {
+      LOG(INFO) << "1";
       NvBuffer* decoded_frame_buffer = nullptr;
       uint32_t pixfmt, width, height;
 
       int ret = ptr_->decoder_->decodeToBuffer(
           &decoded_frame_buffer, reinterpret_cast<unsigned char*>(frame->data),
           frame->data_bytes, &pixfmt, &width, &height);
+      LOG(INFO) << "2";
 
       if (ret != 0 || decoded_frame_buffer == nullptr) {
         LOG(WARNING) << "Decode failed for camera "
                      << ptr_->camera_constant_.name;
-        ptr_->mutex_.unlock();
+        decoded_frame_buffer->unmap();
         return;
       }
+      LOG(INFO) << "3";
 
       if (decoded_frame_buffer->map() != 0) {
         LOG(WARNING) << "Failed to map NvBuffer for camera "
                      << ptr_->camera_constant_.name;
         ptr_->mutex_.unlock();
+        decoded_frame_buffer->unmap();
+        delete decoded_frame_buffer;
         return;
       }
+      LOG(INFO) << "4";
 
       if (ptr_->read_type == cv::IMREAD_COLOR) {
         cv::Mat yuv_mat(height * 3 / 2, width, CV_8UC1);
@@ -56,14 +63,18 @@ void callback(uvc_frame_t* frame, void* ptr) {
         }
         ptr_->frame_buffer.frame = std::move(yuv_mat);
       } else {
+        LOG(INFO) << "5";
         NvBuffer::NvBufferPlane& luminance = decoded_frame_buffer->planes[0];
         ptr_->frame_buffer.frame =
             cv::Mat(height, width, CV_8UC1, luminance.data,
                     luminance.fmt.stride * luminance.fmt.bytesperpixel)
                 .clone();
+        LOG(INFO) << "6";
       }
+      LOG(INFO) << "7";
       ptr_->mutex_.unlock();
       decoded_frame_buffer->unmap();
+      delete decoded_frame_buffer;
       break;
     }
     case UVC_COLOR_FORMAT_YUYV: {
@@ -99,6 +110,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
           .to<double>();  // TODO: Use more accurate timestamp
   ptr_->frame_index_ = frame->sequence;
   ptr_->mutex_.unlock();
+  LOG(INFO) << "out cb";
 }
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
@@ -107,6 +119,13 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
       log_path_(std::move(log_path)),
       decoder_(
           NvJPEGDecoder::createJPEGDecoder(camera_constant_.name.c_str())) {
+  LOG(INFO) << "In constructor";
+  if (decoder_ == nullptr) {
+    status = absl::InternalError("Failed to create JPEG decoder for " +
+                                 camera_constant_.name);
+    return;
+  }
+  LOG(INFO) << "After decode";
   if (!camera_constant.serial_id.has_value()) {
     status = absl::InvalidArgumentError(fmt::format(
         "Must provide a serial id for uvc camera {}", camera_constant.name));
