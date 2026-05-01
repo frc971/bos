@@ -57,6 +57,78 @@ void FreeNvBuffer(NvBuffer* buff) {
 
 }  // namespace
 
+inline auto CopyPlaneRow(const NvBuffer::NvBufferPlane& plane, uint32_t row)
+    -> const uint8_t* {
+  return plane.data + row * plane.fmt.stride * plane.fmt.bytesperpixel;
+}
+
+auto BuildYuyvMat(const NvBuffer& decoded_frame_buffer, uint32_t width,
+                  uint32_t height) -> cv::Mat {
+  if (width % 2 != 0) {
+    return {};
+  }
+
+  cv::Mat yuyv(height, width, CV_8UC2);
+  const auto& y_plane = decoded_frame_buffer.planes[0];
+
+  if (decoded_frame_buffer.n_planes == 1 && y_plane.fmt.bytesperpixel == 2) {
+    for (uint32_t row = 0; row < height; ++row) {
+      memcpy(yuyv.ptr(row), CopyPlaneRow(y_plane, row), width * 2);
+    }
+    return yuyv;
+  }
+
+  if (decoded_frame_buffer.n_planes < 2) {
+    return {};
+  }
+
+  const auto& u_or_uv_plane = decoded_frame_buffer.planes[1];
+  const NvBuffer::NvBufferPlane* v_plane = decoded_frame_buffer.n_planes >= 3
+                                               ? &decoded_frame_buffer.planes[2]
+                                               : nullptr;
+
+  const uint32_t chroma_height = u_or_uv_plane.fmt.height;
+  const uint32_t chroma_width = u_or_uv_plane.fmt.width;
+  const bool has_separate_u_v_planes = v_plane != nullptr;
+  const bool chroma_is_horizontally_subsampled = chroma_width * 2 <= width;
+  const bool chroma_is_vertically_subsampled = chroma_height < height;
+
+  for (uint32_t row = 0; row < height; ++row) {
+    const uint8_t* y_src = CopyPlaneRow(y_plane, row);
+    const uint32_t chroma_row = chroma_is_vertically_subsampled ? row / 2 : row;
+    const uint8_t* u_src = CopyPlaneRow(u_or_uv_plane, chroma_row);
+    const uint8_t* v_src =
+        has_separate_u_v_planes ? CopyPlaneRow(*v_plane, chroma_row) : nullptr;
+    uint8_t* dst = yuyv.ptr(row);
+
+    for (uint32_t col = 0; col < width; col += 2) {
+      const uint32_t chroma_col =
+          chroma_is_horizontally_subsampled ? col / 2 : col;
+      const uint8_t y0 = y_src[col * y_plane.fmt.bytesperpixel];
+      const uint8_t y1 =
+          y_src[(std::min(col + 1, width - 1)) * y_plane.fmt.bytesperpixel];
+
+      uint8_t u = 0;
+      uint8_t v = 0;
+      if (has_separate_u_v_planes) {
+        u = u_src[chroma_col * u_or_uv_plane.fmt.bytesperpixel];
+        v = v_src[chroma_col * v_plane->fmt.bytesperpixel];
+      } else {
+        const uint32_t uv_index = chroma_col * u_or_uv_plane.fmt.bytesperpixel;
+        u = u_src[uv_index];
+        v = u_src[uv_index + 1];
+      }
+
+      dst[col * 2] = y0;
+      dst[col * 2 + 1] = u;
+      dst[col * 2 + 2] = y1;
+      dst[col * 2 + 3] = v;
+    }
+  }
+
+  return yuyv;
+}
+
 void callback(uvc_frame_t* frame, void* ptr) {
   auto ptr_ = static_cast<UVCCamera*>(ptr);
   std::unique_lock<std::mutex> lock(ptr_->mutex_);
@@ -85,23 +157,8 @@ void callback(uvc_frame_t* frame, void* ptr) {
       }
 
       if (ptr_->read_type == cv::IMREAD_COLOR) {
-        cv::Mat yuv_mat(height * 3 / 2, width, CV_8UC1);
-
-        for (uint32_t plane = 0; plane < decoded_frame_buffer->n_planes;
-             plane++) {
-          NvBuffer::NvBufferPlane& nv_plane =
-              decoded_frame_buffer->planes[plane];
-
-          uint8_t* src = nv_plane.data;
-          uint8_t* dst = yuv_mat.data + (plane == 0 ? 0 : width * height);
-
-          for (uint32_t row = 0; row < nv_plane.fmt.height; row++) {
-            memcpy(dst + row * nv_plane.fmt.width,
-                   src + row * nv_plane.fmt.bytesperpixel * nv_plane.fmt.stride,
-                   nv_plane.fmt.width * nv_plane.fmt.bytesperpixel);
-          }
-        }
-        ptr_->frame_buffer.frame = yuv_mat.clone();
+        ptr_->frame_buffer.frame =
+            BuildYuyvMat(*decoded_frame_buffer, width, height);
       } else {
         NvBuffer::NvBufferPlane& luminance = decoded_frame_buffer->planes[0];
         ptr_->frame_buffer.frame =

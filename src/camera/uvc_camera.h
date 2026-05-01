@@ -30,7 +30,7 @@ class UVCCamera : public ICamera {
   int frame_index_ = 0;
   int previous_frame_index_ = 0;
   NvJPEGDecoder* decoder_ = nullptr;
-  static constexpr cv::ImreadModes read_type = cv::IMREAD_GRAYSCALE;
+  static constexpr cv::ImreadModes read_type = cv::IMREAD_COLOR;
 
  private:
   auto StartCamera(uvc_stream_ctrl_t ctrl) -> void;
