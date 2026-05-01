@@ -21,7 +21,7 @@ auto main() -> int {
   std::vector<camera::camera_constant_t> cameras = {
       camera_constants.at("second_bot_left"),
       camera_constants.at("second_bot_right"),
-      // camera_constants.at("second_bot_front"),
+      camera_constants.at("second_bot_front"),
   };
 
   LOG(INFO) << "Loaded constants";
