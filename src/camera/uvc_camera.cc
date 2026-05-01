@@ -45,15 +45,6 @@ void callback(uvc_frame_t* frame, void* ptr) {
           NvBuffer::NvBufferPlane& nv_plane =
               decoded_frame_buffer->planes[plane];
 
-          ret = decoded_frame_buffer->map();
-          if (ret != 0) {
-            LOG(WARNING) << "Failed to map NvBuffer plane " << plane
-                         << " for camera " << ptr_->camera_constant_.name
-                         << " with error code: " << ret;
-            ptr_->mutex_.unlock();
-            return;
-          }
-
           uint8_t* src = nv_plane.data;
           uint8_t* dst = yuv_mat.data + (plane == 0 ? 0 : width * height);
 
@@ -63,6 +54,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
                    nv_plane.fmt.width * nv_plane.fmt.bytesperpixel);
           }
         }
+        ptr_->frame_buffer.frame = std::move(yuv_mat);
       } else {
         NvBuffer::NvBufferPlane& luminance = decoded_frame_buffer->planes[0];
         ptr_->frame_buffer.frame =
@@ -71,6 +63,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
                 .clone();
       }
       ptr_->mutex_.unlock();
+      decoded_frame_buffer->unmap();
       break;
     }
     case UVC_COLOR_FORMAT_YUYV: {
@@ -207,6 +200,7 @@ UVCCamera::~UVCCamera() {
   uvc_close(device_handle_);
   uvc_unref_device(device_);
   uvc_exit(context_);
+  delete decoder_;
 }
 
 auto UVCCamera::GetCameraConstant() const -> camera_constant_t {
