@@ -24,7 +24,6 @@ class MultiCameraSource {
   std::mutex mutex_;
   const bool use_all_frames_;
   bool frames_used_ = true;  // only for when use_all_frames_ is true
-  static constexpr int log_frequency = 50;
 };
 
 }  // namespace camera

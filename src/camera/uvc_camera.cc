@@ -7,8 +7,8 @@ namespace camera {
 
 namespace {
 
-constexpr unsigned char kJpegStartMarker[2] = {0xFF, 0xD8};
-constexpr unsigned char kJpegEndMarker[2] = {0xFF, 0xD9};
+constexpr std::array<unsigned char, 2> kJpegStartMarker = {0xFF, 0xD8};
+constexpr std::array<unsigned char, 2> kJpegEndMarker = {0xFF, 0xD9};
 
 auto NormalizeJpegBuffer(const unsigned char* data, size_t size)
     -> std::vector<unsigned char> {
@@ -16,33 +16,38 @@ auto NormalizeJpegBuffer(const unsigned char* data, size_t size)
     return {};
   }
 
-  const unsigned char* begin = data;
-  const unsigned char* end = data + size;
+  const unsigned char* full_frame_begin = data;
+  const unsigned char* full_frame_end = data + size;
 
-  const unsigned char* soi = std::search(
-      begin, end, std::begin(kJpegStartMarker), std::end(kJpegStartMarker));
-  if (soi == end) {
+  const unsigned char* start_of_image =
+      std::search(full_frame_begin, full_frame_end,
+                  std::begin(kJpegStartMarker), std::end(kJpegStartMarker));
+  if (start_of_image == full_frame_end) {
     return {};
   }
 
-  const unsigned char* eoi = end;
-  for (const unsigned char* current = end - 2; current >= soi; --current) {
+  const unsigned char* end_of_image = full_frame_end;
+  for (const unsigned char* current = full_frame_end - 2;
+       current >= start_of_image; --current) {
     if (current[0] == kJpegEndMarker[0] && current[1] == kJpegEndMarker[1]) {
-      eoi = current + 2;
+      end_of_image = current + 2;
       break;
     }
-    if (current == soi) {
+    if (current == start_of_image) {
       break;
     }
   }
 
-  std::vector<unsigned char> normalized(soi, eoi == end ? end : eoi);
+  std::vector<unsigned char> normalized(
+      start_of_image,
+      end_of_image == full_frame_end ? full_frame_end : end_of_image);
   if (normalized.size() < 2) {
     return {};
   }
 
-  if (eoi == end && (normalized[normalized.size() - 2] != kJpegEndMarker[0] ||
-                     normalized[normalized.size() - 1] != kJpegEndMarker[1])) {
+  if (end_of_image == full_frame_end &&
+      (normalized[normalized.size() - 2] != kJpegEndMarker[0] ||
+       normalized[normalized.size() - 1] != kJpegEndMarker[1])) {
     normalized.push_back(kJpegEndMarker[0]);
     normalized.push_back(kJpegEndMarker[1]);
   }
