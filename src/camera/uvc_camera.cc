@@ -19,9 +19,8 @@ auto NormalizeJpegBuffer(const unsigned char* data, size_t size)
   const unsigned char* begin = data;
   const unsigned char* end = data + size;
 
-  const unsigned char* soi =
-      std::search(begin, end, std::begin(kJpegStartMarker),
-                  std::end(kJpegStartMarker));
+  const unsigned char* soi = std::search(
+      begin, end, std::begin(kJpegStartMarker), std::end(kJpegStartMarker));
   if (soi == end) {
     return {};
   }
@@ -53,7 +52,6 @@ auto NormalizeJpegBuffer(const unsigned char* data, size_t size)
 
 void FreeNvBuffer(NvBuffer* buff) {
   if (buff != nullptr) {
-    buff->unmap();
     delete buff;
   }
 }
@@ -68,29 +66,20 @@ void callback(uvc_frame_t* frame, void* ptr) {
     case UVC_COLOR_FORMAT_MJPEG: {
       NvBuffer* decoded_frame_buffer = nullptr;
       uint32_t pixfmt, width, height;
-      std::vector<unsigned char> jpeg =
-          NormalizeJpegBuffer(reinterpret_cast<unsigned char*>(frame->data),
-                              frame->data_bytes);
+      std::vector<unsigned char> jpeg = NormalizeJpegBuffer(
+          reinterpret_cast<unsigned char*>(frame->data), frame->data_bytes);
       if (jpeg.empty()) {
         LOG(WARNING) << "Failed to normalize MJPEG frame for camera "
                      << ptr_->camera_constant_.name;
         return;
       }
 
-      int ret = ptr_->decoder_->decodeToBuffer(
-          &decoded_frame_buffer, jpeg.data(), jpeg.size(), &pixfmt, &width,
-          &height);
+      int ret =
+          ptr_->decoder_->decodeToBuffer(&decoded_frame_buffer, jpeg.data(),
+                                         jpeg.size(), &pixfmt, &width, &height);
 
       if (ret != 0 || decoded_frame_buffer == nullptr) {
         LOG(WARNING) << "Decode failed for camera "
-                     << ptr_->camera_constant_.name << " with code: " << ret;
-        FreeNvBuffer(decoded_frame_buffer);
-        return;
-      }
-
-      ret = decoded_frame_buffer->map();
-      if (ret != 0) {
-        LOG(WARNING) << "Failed to map NvBuffer for camera "
                      << ptr_->camera_constant_.name << " with code: " << ret;
         FreeNvBuffer(decoded_frame_buffer);
         return;
