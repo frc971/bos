@@ -11,7 +11,10 @@ const cv::Mat UVCCamera::backup_image_ =
 
 void callback(uvc_frame_t* frame, void* ptr) {
   auto ptr_ = static_cast<UVCCamera*>(ptr);
-  std::lock_guard<std::mutex> lock_(ptr_->mutex_);
+  std::unique_lock<std::mutex> lock_(ptr_->mutex_, std::try_to_lock);
+  if (!lock_.owns_lock()) {
+    return;
+  }
   switch (frame->frame_format) {
     case UVC_COLOR_FORMAT_MJPEG: {
       char* data = static_cast<char*>(frame->data);
