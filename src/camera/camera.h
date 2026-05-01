@@ -33,5 +33,6 @@ class ICamera {
   [[nodiscard]] virtual auto GetCameraConstant() const -> camera_constant_t = 0;
   virtual auto IsDone() -> bool { return false; }
   virtual ~ICamera() = default;
+  virtual void Grab() = 0;
 };
 }  // namespace camera
