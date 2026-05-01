@@ -1,6 +1,8 @@
 #include "src/camera/uvc_camera.h"
 #include <opencv2/highgui/highgui_c.h>
 #include <opencv2/opencv.hpp>
+#include "/usr/src/jetson_multimedia_api/include/NvBuffer.h"
+#include "/usr/src/jetson_multimedia_api/include/NvUtils.h"
 #include "absl/status/status.h"
 #include "src/utils/pch.h"
 
@@ -14,9 +16,61 @@ void callback(uvc_frame_t* frame, void* ptr) {
   ptr_->mutex_.lock();
   switch (frame->frame_format) {
     case UVC_COLOR_FORMAT_MJPEG: {
-      char* data = static_cast<char*>(frame->data);
-      std::vector<uchar> buffer(data, data + frame->data_bytes);
-      ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
+      NvBuffer* decoded_frame_buffer = nullptr;
+      uint32_t pixfmt, width, height;
+
+      int ret = ptr_->decoder_->decodeToBuffer(
+          &decoded_frame_buffer, reinterpret_cast<unsigned char*>(frame->data),
+          frame->data_bytes, &pixfmt, &width, &height);
+
+      if (ret != 0 || decoded_frame_buffer == nullptr) {
+        LOG(WARNING) << "Decode failed for camera "
+                     << ptr_->camera_constant_.name;
+        ptr_->mutex_.unlock();
+        return;
+      }
+
+      if (decoded_frame_buffer->map() != 0) {
+        LOG(WARNING) << "Failed to map NvBuffer for camera "
+                     << ptr_->camera_constant_.name;
+        ptr_->mutex_.unlock();
+        return;
+      }
+
+      if (ptr_->read_type == cv::IMREAD_COLOR) {
+        cv::Mat yuv_mat(height * 3 / 2, width, CV_8UC1);
+
+        for (uint32_t plane = 0; plane < decoded_frame_buffer->n_planes;
+             plane++) {
+          NvBuffer::NvBufferPlane& nv_plane =
+              decoded_frame_buffer->planes[plane];
+
+          ret = decoded_frame_buffer->map();
+          if (ret != 0) {
+            LOG(WARNING) << "Failed to map NvBuffer plane " << plane
+                         << " for camera " << ptr_->camera_constant_.name
+                         << " with error code: " << ret;
+            ptr_->mutex_.unlock();
+            return;
+          }
+
+          uint8_t* src = nv_plane.data;
+          uint8_t* dst = yuv_mat.data + (plane == 0 ? 0 : width * height);
+
+          for (uint32_t row = 0; row < nv_plane.fmt.height; row++) {
+            memcpy(dst + row * nv_plane.fmt.width,
+                   src + row * nv_plane.fmt.bytesperpixel * nv_plane.fmt.stride,
+                   nv_plane.fmt.width * nv_plane.fmt.bytesperpixel);
+          }
+        }
+      } else {
+        NvBuffer::NvBufferPlane& luminance = decoded_frame_buffer->planes[0];
+        ptr_->frame_buffer.frame =
+            cv::Mat(height, width, CV_8UC1, luminance.data,
+                    luminance.fmt.stride * luminance.fmt.bytesperpixel)
+                .clone();
+      }
+      ptr_->mutex_.unlock();
       break;
     }
     case UVC_COLOR_FORMAT_YUYV: {
@@ -56,7 +110,10 @@ void callback(uvc_frame_t* frame, void* ptr) {
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
                      absl::Status& status, std::optional<std::string> log_path)
-    : camera_constant_(camera_constant), log_path_(std::move(log_path)) {
+    : camera_constant_(camera_constant),
+      log_path_(std::move(log_path)),
+      decoder_(
+          NvJPEGDecoder::createJPEGDecoder(camera_constant_.name.c_str())) {
   if (!camera_constant.serial_id.has_value()) {
     status = absl::InvalidArgumentError(fmt::format(
         "Must provide a serial id for uvc camera {}", camera_constant.name));

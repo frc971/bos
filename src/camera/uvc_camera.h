@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include "/usr/src/jetson_multimedia_api/include/NvJpegDecoder.h"
 #include "camera_constants.h"
 #include "libuvc/libuvc.h"
 #include "src/camera/camera.h"
@@ -29,6 +30,7 @@ class UVCCamera : public ICamera {
   std::mutex mutex_;
   int frame_index_;
   int previous_frame_index_;
+  NvJPEGDecoder* decoder_;
   static constexpr cv::ImreadModes read_type = cv::IMREAD_GRAYSCALE;
 
  private:
