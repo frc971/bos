@@ -11,7 +11,7 @@ const cv::Mat UVCCamera::backup_image_ =
 
 void callback(uvc_frame_t* frame, void* ptr) {
   auto ptr_ = static_cast<UVCCamera*>(ptr);
-  ptr_->mutex_.lock();
+  std::lock_guard<std::mutex> lock_(ptr_->mutex_);
   switch (frame->frame_format) {
     case UVC_COLOR_FORMAT_MJPEG: {
       char* data = static_cast<char*>(frame->data);
@@ -51,7 +51,6 @@ void callback(uvc_frame_t* frame, void* ptr) {
       frc::Timer::GetFPGATimestamp()
           .to<double>();  // TODO: Use more accurate timestamp
   ptr_->frame_index_ = frame->sequence;
-  ptr_->mutex_.unlock();
 }
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
