@@ -11,6 +11,13 @@ namespace camera {
 const cv::Mat UVCCamera::backup_image_ =
     cv::imread("/bos/constants/dont_worry_about_it.jpg");
 
+void FreeNvBuffer(NvBuffer* buff) {
+  if (buff != nullptr) {
+    buff->unmap();
+    delete buff;
+  }
+}
+
 void callback(uvc_frame_t* frame, void* ptr) {
   LOG(INFO) << "in cb";
   auto ptr_ = static_cast<UVCCamera*>(ptr);
@@ -28,18 +35,18 @@ void callback(uvc_frame_t* frame, void* ptr) {
 
       if (ret != 0 || decoded_frame_buffer == nullptr) {
         LOG(WARNING) << "Decode failed for camera "
-                     << ptr_->camera_constant_.name;
-        decoded_frame_buffer->unmap();
+                     << ptr_->camera_constant_.name << " with code: " << ret;
+        ptr_->mutex_.unlock();
+        FreeNvBuffer(decoded_frame_buffer);
         return;
       }
       LOG(INFO) << "3";
 
       if (decoded_frame_buffer->map() != 0) {
         LOG(WARNING) << "Failed to map NvBuffer for camera "
-                     << ptr_->camera_constant_.name;
+                     << ptr_->camera_constant_.name << " with code: " << ret;
         ptr_->mutex_.unlock();
-        decoded_frame_buffer->unmap();
-        delete decoded_frame_buffer;
+        FreeNvBuffer(decoded_frame_buffer);
         return;
       }
       LOG(INFO) << "4";
@@ -73,8 +80,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
       }
       LOG(INFO) << "7";
       ptr_->mutex_.unlock();
-      decoded_frame_buffer->unmap();
-      delete decoded_frame_buffer;
+      FreeNvBuffer(decoded_frame_buffer);
       break;
     }
     case UVC_COLOR_FORMAT_YUYV: {
