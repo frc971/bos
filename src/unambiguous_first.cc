@@ -13,6 +13,7 @@ using camera::camera_constants_t;
 auto main() -> int {
   // utils::StartNetworktables(9971);
   LOG(INFO) << "Init";
+  write(STDERR_FILENO, "ENTER SelectCameraConfig\n", 26);
 
   // std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();

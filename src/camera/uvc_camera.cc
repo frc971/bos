@@ -8,8 +8,8 @@
 
 namespace camera {
 
-const cv::Mat UVCCamera::backup_image_ =
-    cv::imread("/bos/constants/dont_worry_about_it.jpg");
+// const cv::Mat UVCCamera::backup_image_ =
+//     cv::imread("/bos/constants/dont_worry_about_it.jpg");
 
 void FreeNvBuffer(NvBuffer* buff) {
   if (buff != nullptr) {
@@ -68,7 +68,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
                    nv_plane.fmt.width * nv_plane.fmt.bytesperpixel);
           }
         }
-        ptr_->frame_buffer.frame = std::move(yuv_mat);
+        ptr_->frame_buffer.frame = yuv_mat.clone();
       } else {
         LOG(INFO) << "5";
         NvBuffer::NvBufferPlane& luminance = decoded_frame_buffer->planes[0];
@@ -191,7 +191,6 @@ auto UVCCamera::GetFrame() -> timestamped_frame_t {
   }
   mutex_.lock();
   if (frame_buffer.frame.empty()) {
-    backup_image_.copyTo(copied_timestamped_frame.frame);
     copied_timestamped_frame.invalid = true;
     copied_timestamped_frame.timestamp =
         frc::Timer::GetFPGATimestamp().to<double>();

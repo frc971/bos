@@ -21,7 +21,6 @@ class UVCCamera : public ICamera {
  public:
   const camera_constant_t camera_constant_;
   std::optional<std::string> log_path_;
-  static const cv::Mat backup_image_;
   uvc_context_t* context_;
   uvc_device_t* device_;
   uvc_device_handle_t* device_handle_;
