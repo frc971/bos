@@ -11,7 +11,7 @@
 
 using camera::camera_constants_t;
 auto main() -> int {
-  utils::StartNetworktables(9971);
+  // utils::StartNetworktables(9971);
 
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
@@ -19,8 +19,7 @@ auto main() -> int {
   LOG(INFO) << "Loading constants";
 
   std::vector<camera::camera_constant_t> cameras = {
-      camera_constants.at("main_bot_left"),
-      camera_constants.at("main_bot_right"),
+      camera_constants.at("dev_orin"),
   };
 
   LOG(INFO) << "Loaded constants";
