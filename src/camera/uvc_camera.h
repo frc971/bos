@@ -21,15 +21,15 @@ class UVCCamera : public ICamera {
  public:
   const camera_constant_t camera_constant_;
   std::optional<std::string> log_path_;
-  uvc_context_t* context_;
-  uvc_device_t* device_;
-  uvc_device_handle_t* device_handle_;
+  uvc_context_t* context_ = nullptr;
+  uvc_device_t* device_ = nullptr;
+  uvc_device_handle_t* device_handle_ = nullptr;
   timestamped_frame_t frame_buffer;
   uvc_stream_ctrl_t ctrl_;
   std::mutex mutex_;
-  int frame_index_;
-  int previous_frame_index_;
-  NvJPEGDecoder* decoder_;
+  int frame_index_ = 0;
+  int previous_frame_index_ = 0;
+  NvJPEGDecoder* decoder_ = nullptr;
   static constexpr cv::ImreadModes read_type = cv::IMREAD_GRAYSCALE;
 
  private:

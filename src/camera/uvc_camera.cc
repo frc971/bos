@@ -1,15 +1,55 @@
 #include "src/camera/uvc_camera.h"
-#include <opencv2/highgui/highgui_c.h>
-#include <opencv2/opencv.hpp>
 #include "/usr/src/jetson_multimedia_api/include/NvBuffer.h"
-#include "/usr/src/jetson_multimedia_api/include/NvUtils.h"
 #include "absl/status/status.h"
 #include "src/utils/pch.h"
 
 namespace camera {
 
-// const cv::Mat UVCCamera::backup_image_ =
-//     cv::imread("/bos/constants/dont_worry_about_it.jpg");
+namespace {
+
+constexpr unsigned char kJpegStartMarker[2] = {0xFF, 0xD8};
+constexpr unsigned char kJpegEndMarker[2] = {0xFF, 0xD9};
+
+auto NormalizeJpegBuffer(const unsigned char* data, size_t size)
+    -> std::vector<unsigned char> {
+  if (data == nullptr || size < 2) {
+    return {};
+  }
+
+  const unsigned char* begin = data;
+  const unsigned char* end = data + size;
+
+  const unsigned char* soi =
+      std::search(begin, end, std::begin(kJpegStartMarker),
+                  std::end(kJpegStartMarker));
+  if (soi == end) {
+    return {};
+  }
+
+  const unsigned char* eoi = end;
+  for (const unsigned char* current = end - 2; current >= soi; --current) {
+    if (current[0] == kJpegEndMarker[0] && current[1] == kJpegEndMarker[1]) {
+      eoi = current + 2;
+      break;
+    }
+    if (current == soi) {
+      break;
+    }
+  }
+
+  std::vector<unsigned char> normalized(soi, eoi == end ? end : eoi);
+  if (normalized.size() < 2) {
+    return {};
+  }
+
+  if (eoi == end && (normalized[normalized.size() - 2] != kJpegEndMarker[0] ||
+                     normalized[normalized.size() - 1] != kJpegEndMarker[1])) {
+    normalized.push_back(kJpegEndMarker[0]);
+    normalized.push_back(kJpegEndMarker[1]);
+  }
+
+  return normalized;
+}
 
 void FreeNvBuffer(NvBuffer* buff) {
   if (buff != nullptr) {
@@ -18,39 +58,43 @@ void FreeNvBuffer(NvBuffer* buff) {
   }
 }
 
+}  // namespace
+
 void callback(uvc_frame_t* frame, void* ptr) {
-  LOG(INFO) << "in cb";
   auto ptr_ = static_cast<UVCCamera*>(ptr);
-  ptr_->mutex_.lock();
+  std::unique_lock<std::mutex> lock(ptr_->mutex_);
+
   switch (frame->frame_format) {
     case UVC_COLOR_FORMAT_MJPEG: {
-      LOG(INFO) << "1";
       NvBuffer* decoded_frame_buffer = nullptr;
       uint32_t pixfmt, width, height;
+      std::vector<unsigned char> jpeg =
+          NormalizeJpegBuffer(reinterpret_cast<unsigned char*>(frame->data),
+                              frame->data_bytes);
+      if (jpeg.empty()) {
+        LOG(WARNING) << "Failed to normalize MJPEG frame for camera "
+                     << ptr_->camera_constant_.name;
+        return;
+      }
 
       int ret = ptr_->decoder_->decodeToBuffer(
-          &decoded_frame_buffer, reinterpret_cast<unsigned char*>(frame->data),
-          frame->data_bytes, &pixfmt, &width, &height);
-      LOG(INFO) << "2";
+          &decoded_frame_buffer, jpeg.data(), jpeg.size(), &pixfmt, &width,
+          &height);
 
       if (ret != 0 || decoded_frame_buffer == nullptr) {
         LOG(WARNING) << "Decode failed for camera "
                      << ptr_->camera_constant_.name << " with code: " << ret;
-        ptr_->mutex_.unlock();
         FreeNvBuffer(decoded_frame_buffer);
         return;
       }
-      LOG(INFO) << "3";
 
       ret = decoded_frame_buffer->map();
       if (ret != 0) {
         LOG(WARNING) << "Failed to map NvBuffer for camera "
                      << ptr_->camera_constant_.name << " with code: " << ret;
-        ptr_->mutex_.unlock();
         FreeNvBuffer(decoded_frame_buffer);
         return;
       }
-      LOG(INFO) << "4";
 
       if (ptr_->read_type == cv::IMREAD_COLOR) {
         cv::Mat yuv_mat(height * 3 / 2, width, CV_8UC1);
@@ -71,16 +115,12 @@ void callback(uvc_frame_t* frame, void* ptr) {
         }
         ptr_->frame_buffer.frame = yuv_mat.clone();
       } else {
-        LOG(INFO) << "5";
         NvBuffer::NvBufferPlane& luminance = decoded_frame_buffer->planes[0];
         ptr_->frame_buffer.frame =
             cv::Mat(height, width, CV_8UC1, luminance.data,
                     luminance.fmt.stride * luminance.fmt.bytesperpixel)
                 .clone();
-        LOG(INFO) << "6";
       }
-      LOG(INFO) << "7";
-      ptr_->mutex_.unlock();
       FreeNvBuffer(decoded_frame_buffer);
       break;
     }
@@ -89,16 +129,17 @@ void callback(uvc_frame_t* frame, void* ptr) {
       if (!bgr) {
         LOG(WARNING) << "Camera " << ptr_->camera_constant_.name
                      << " failed to allocate ";
+        return;
       }
       uvc_error_t ret = uvc_yuyv2bgr(frame, bgr);
       if (ret != 0) {
         LOG(WARNING) << "YUYV failed to convert to BGR";
+        uvc_free_frame(bgr);
+        return;
       }
-      IplImage* ipl_image;
-      ipl_image =
-          cvCreateImageHeader(cvSize(bgr->width, bgr->height), IPL_DEPTH_8U, 3);
-      cvSetData(ipl_image, bgr->data, bgr->width * 3);
-      ptr_->frame_buffer.frame = cv::cvarrToMat(ipl_image, true);
+      ptr_->frame_buffer.frame =
+          cv::Mat(bgr->height, bgr->width, CV_8UC3, bgr->data, bgr->width * 3)
+              .clone();
       uvc_free_frame(bgr);
       break;
     }
@@ -116,8 +157,6 @@ void callback(uvc_frame_t* frame, void* ptr) {
       frc::Timer::GetFPGATimestamp()
           .to<double>();  // TODO: Use more accurate timestamp
   ptr_->frame_index_ = frame->sequence;
-  ptr_->mutex_.unlock();
-  LOG(INFO) << "out cb";
 }
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
@@ -126,13 +165,11 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
       log_path_(std::move(log_path)),
       decoder_(
           NvJPEGDecoder::createJPEGDecoder(camera_constant_.name.c_str())) {
-  LOG(INFO) << "In constructor";
   if (decoder_ == nullptr) {
     status = absl::InternalError("Failed to create JPEG decoder for " +
                                  camera_constant_.name);
     return;
   }
-  LOG(INFO) << "After decode";
   if (!camera_constant.serial_id.has_value()) {
     status = absl::InvalidArgumentError(fmt::format(
         "Must provide a serial id for uvc camera {}", camera_constant.name));
@@ -190,7 +227,7 @@ auto UVCCamera::GetFrame() -> timestamped_frame_t {
   while (frame_index_ == previous_frame_index_) {
     std::this_thread::yield();
   }
-  mutex_.lock();
+  std::lock_guard<std::mutex> lock(mutex_);
   if (frame_buffer.frame.empty()) {
     copied_timestamped_frame.invalid = true;
     copied_timestamped_frame.timestamp =
@@ -200,7 +237,6 @@ auto UVCCamera::GetFrame() -> timestamped_frame_t {
     copied_timestamped_frame.invalid = frame_buffer.invalid;
     copied_timestamped_frame.timestamp = frame_buffer.timestamp;
   }
-  mutex_.unlock();
   previous_frame_index_ = frame_index_;
   return copied_timestamped_frame;
 }
@@ -221,14 +257,17 @@ auto UVCCamera::Restart() -> void {
 }
 
 UVCCamera::~UVCCamera() {
-  LOG(INFO) << "Destructor";
-  uvc_stop_streaming(device_handle_);
-  uvc_close(device_handle_);
-  uvc_unref_device(device_);
-  uvc_exit(context_);
-  LOG(INFO) << "Decoder deletion";
+  if (device_handle_ != nullptr) {
+    uvc_stop_streaming(device_handle_);
+    uvc_close(device_handle_);
+  }
+  if (device_ != nullptr) {
+    uvc_unref_device(device_);
+  }
+  if (context_ != nullptr) {
+    uvc_exit(context_);
+  }
   delete decoder_;
-  LOG(INFO) << "Deleted";
 }
 
 auto UVCCamera::GetCameraConstant() const -> camera_constant_t {
