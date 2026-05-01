@@ -80,6 +80,8 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
 
 auto DiskCamera::Restart() -> void {}
 
+auto DiskCamera::Grab() -> void {}
+
 auto DiskCamera::GetCameraConstant() const -> camera_constant_t {
   return *camera_constant_;
 }

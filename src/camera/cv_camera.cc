@@ -66,10 +66,6 @@ CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
 auto CVCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t timestamped_frame;
   cv::Mat raw_image;
-  if (!cap_.grab()) {
-    Restart();
-    LOG(WARNING) << "Restarting camera";
-  }
   timestamped_frame.timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   cap_.retrieve(raw_image);
 
@@ -94,6 +90,13 @@ auto CVCamera::Restart() -> void {
   LOG(INFO) << "Restarting camera with pipeline: " << pipeline_;
   cap_ = cv::VideoCapture(pipeline_);
   std::this_thread::sleep_for(std::chrono::seconds(3));
+}
+
+auto CVCamera::Grab() -> void {
+  if (!cap_.grab()) {
+    Restart();
+    LOG(WARNING) << "Restarting camera";
+  cap_timestamp_ = frc::Timer::GetFPGATimestamp().to<double>();
 }
 
 auto CVCamera::GetCameraConstant() const -> camera_constant_t {
