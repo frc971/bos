@@ -42,7 +42,8 @@ void callback(uvc_frame_t* frame, void* ptr) {
       }
       LOG(INFO) << "3";
 
-      if (decoded_frame_buffer->map() != 0) {
+      ret = decoded_frame_buffer->map();
+      if (ret != 0) {
         LOG(WARNING) << "Failed to map NvBuffer for camera "
                      << ptr_->camera_constant_.name << " with code: " << ret;
         ptr_->mutex_.unlock();
@@ -220,11 +221,14 @@ auto UVCCamera::Restart() -> void {
 }
 
 UVCCamera::~UVCCamera() {
+  LOG(INFO) << "Destructor";
   uvc_stop_streaming(device_handle_);
   uvc_close(device_handle_);
   uvc_unref_device(device_);
   uvc_exit(context_);
+  LOG(INFO) << "Decoder deletion";
   delete decoder_;
+  LOG(INFO) << "Deleted";
 }
 
 auto UVCCamera::GetCameraConstant() const -> camera_constant_t {
