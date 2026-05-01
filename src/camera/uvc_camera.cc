@@ -10,7 +10,10 @@ namespace {
 constexpr std::array<unsigned char, 2> kJpegStartMarker = {0xFF, 0xD8};
 constexpr std::array<unsigned char, 2> kJpegEndMarker = {0xFF, 0xD9};
 
-auto NormalizeJpegBuffer(const unsigned char* data, size_t size)
+// Necessary because sometimes the size of the end sequence is variable, usually 5-7 bytes
+// Example on home orin with usb camera: Img end was shifted0xffff60106574 vs 0xffff60106578
+// Doesn't seem to happen for image start but it is left in for safety
+auto RemoveImagePackaging(const unsigned char* data, size_t size)
     -> std::vector<unsigned char> {
   if (data == nullptr || size < 2) {
     return {};
@@ -38,18 +41,9 @@ auto NormalizeJpegBuffer(const unsigned char* data, size_t size)
     }
   }
 
-  std::vector<unsigned char> normalized(
-      start_of_image,
-      end_of_image == full_frame_end ? full_frame_end : end_of_image);
+  std::vector<unsigned char> normalized(start_of_image, end_of_image);
   if (normalized.size() < 2) {
     return {};
-  }
-
-  if (end_of_image == full_frame_end &&
-      (normalized[normalized.size() - 2] != kJpegEndMarker[0] ||
-       normalized[normalized.size() - 1] != kJpegEndMarker[1])) {
-    normalized.push_back(kJpegEndMarker[0]);
-    normalized.push_back(kJpegEndMarker[1]);
   }
 
   return normalized;
@@ -71,7 +65,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
     case UVC_COLOR_FORMAT_MJPEG: {
       NvBuffer* decoded_frame_buffer = nullptr;
       uint32_t pixfmt, width, height;
-      std::vector<unsigned char> jpeg = NormalizeJpegBuffer(
+      std::vector<unsigned char> jpeg = RemoveImagePackaging(
           reinterpret_cast<unsigned char*>(frame->data), frame->data_bytes);
       if (jpeg.empty()) {
         LOG(WARNING) << "Failed to normalize MJPEG frame for camera "
