@@ -53,16 +53,30 @@ auto GPUAprilTagDetector::GetTagDetections(
   CHECK(!timestamped_frame.frame.empty());
   try {
     absl::Status detection_status;
-    if (image_format == vision::ImageFormat::MONO8) {
-      CHECK(timestamped_frame.frame.channels() == 1);
-      detection_status =
-          gpu_detector_->Detect(timestamped_frame.frame.data, nullptr);
-    } else {  // TODO allow other formats than YUY2
-      CHECK(timestamped_frame.frame.channels() == 3);
-      cv::Mat gray;
-      cv::cvtColor(timestamped_frame.frame, gray, cv::COLOR_BGR2YUV_YUY2);
-      cv::Mat mat_ = ToMat(gray);
-      detection_status = gpu_detector_->Detect(mat_.data, nullptr);
+    switch (image_format) {
+      case vision::ImageFormat::MONO8: {
+        CHECK(timestamped_frame.frame.channels() == 1);
+        detection_status =
+            gpu_detector_->Detect(timestamped_frame.frame.data, nullptr);
+        break;
+      }
+      case vision::ImageFormat::BGR8: {  // TODO allow other formats than YUY2
+        CHECK(timestamped_frame.frame.channels() == 3);
+        cv::Mat yuyv_mat;
+        cv::cvtColor(timestamped_frame.frame, yuyv_mat, cv::COLOR_BGR2YUV_YUY2);
+        cv::Mat mat_ = ToMat(yuyv_mat);
+        detection_status = gpu_detector_->Detect(mat_.data, nullptr);
+        break;
+      }
+      case vision::ImageFormat::YUYV422: {
+        LOG(INFO) << "Ch: " << timestamped_frame.frame.channels();
+        CHECK(timestamped_frame.frame.channels() == 2);
+        detection_status =
+            gpu_detector_->Detect(timestamped_frame.frame.data, nullptr);
+        break;
+      }
+      default:
+        LOG(WARNING) << "Unsupported image format";
     }
     if (!detection_status.ok()) {
       // LOG(WARNING) << "Gpu detector failed! Error: "

@@ -1,22 +1,160 @@
 #include "src/camera/uvc_camera.h"
-#include <opencv2/highgui/highgui_c.h>
-#include <opencv2/opencv.hpp>
+#include "/usr/src/jetson_multimedia_api/include/NvBuffer.h"
 #include "absl/status/status.h"
 #include "src/utils/pch.h"
 
 namespace camera {
 
-const cv::Mat UVCCamera::backup_image_ =
-    cv::imread("/bos/constants/dont_worry_about_it.jpg");
+constexpr std::array<unsigned char, 2> kJpegStartMarker = {0xFF, 0xD8};
+constexpr std::array<unsigned char, 2> kJpegEndMarker = {0xFF, 0xD9};
+
+// Necessary because sometimes the size of the end sequence is variable, usually 5-7 bytes
+// Example on home orin with usb camera: Img end was shifted0xffff60106574 vs 0xffff60106578
+// Doesn't seem to happen for image start but it is left in for safety
+auto RemoveImagePackaging(const unsigned char* data, size_t size)
+    -> std::vector<unsigned char> {
+  if (data == nullptr || size < 2) {
+    return {};
+  }
+
+  const unsigned char* full_frame_begin = data;
+  const unsigned char* full_frame_end = data + size;
+
+  const unsigned char* start_of_image =
+      std::search(full_frame_begin, full_frame_end,
+                  std::begin(kJpegStartMarker), std::end(kJpegStartMarker));
+  if (start_of_image == full_frame_end) {
+    return {};
+  }
+
+  const unsigned char* end_of_image = full_frame_end;
+  for (const unsigned char* current = full_frame_end - 2;
+       current >= start_of_image; --current) {
+    if (current[0] == kJpegEndMarker[0] && current[1] == kJpegEndMarker[1]) {
+      end_of_image = current + 2;
+      break;
+    }
+    if (current == start_of_image) {
+      break;
+    }
+  }
+
+  std::vector<unsigned char> normalized(start_of_image, end_of_image);
+  if (normalized.size() < 2) {
+    return {};
+  }
+
+  return normalized;
+}
+
+void FreeNvBuffer(NvBuffer* buff) {
+  if (buff != nullptr) {
+    delete buff;
+  }
+}
+
+void LogPlaneFormat(const NvBuffer* buffer) {
+  for (int i = 0; i < buffer->n_planes; i++) {
+    std::cout << buffer->planes[0].fmt.height << " "
+              << buffer->planes[0].fmt.width << " "
+              << buffer->planes[0].fmt.stride << " "
+              << buffer->planes[0].fmt.bytesperpixel << std::endl;
+  }
+}
+
+void LogPotentialBufferFormat(const NvBuffer* buffer,
+                              NvBuffer::NvBufferPlaneFormat& format,
+                              uint32_t raw_pixfmt, uint32_t width,
+                              uint32_t height) {
+  uint32_t num_planes;
+  buffer->fill_buffer_plane_format(&num_planes, &format, width, height,
+                                   raw_pixfmt);
+  std::cout << format.height << " " << format.width << " " << format.stride
+            << " " << format.bytesperpixel << " with fmt: " << raw_pixfmt
+            << std::endl;
+}
 
 void callback(uvc_frame_t* frame, void* ptr) {
+  LOG(INFO) << "Hallo cb";
   auto ptr_ = static_cast<UVCCamera*>(ptr);
-  ptr_->mutex_.lock();
+  std::unique_lock<std::mutex> lock(ptr_->mutex_);
+
   switch (frame->frame_format) {
     case UVC_COLOR_FORMAT_MJPEG: {
-      char* data = static_cast<char*>(frame->data);
-      std::vector<uchar> buffer(data, data + frame->data_bytes);
-      ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
+      NvBuffer* decoded_frame_buffer = nullptr;
+      uint32_t pixfmt, width, height;
+      std::vector<unsigned char> jpeg = RemoveImagePackaging(
+          reinterpret_cast<unsigned char*>(frame->data), frame->data_bytes);
+      if (jpeg.empty()) {
+        LOG(WARNING) << "Failed to normalize MJPEG frame for camera "
+                     << ptr_->camera_constant_.name;
+        return;
+      }
+
+      int ret =
+          ptr_->decoder_->decodeToBuffer(&decoded_frame_buffer, jpeg.data(),
+                                         jpeg.size(), &pixfmt, &width, &height);
+
+      std::cout << "Pixfmt: " << pixfmt << std::endl;
+
+      if (ret != 0 || decoded_frame_buffer == nullptr) {
+        LOG(WARNING) << "Decode failed for camera "
+                     << ptr_->camera_constant_.name << " with code: " << ret;
+        FreeNvBuffer(decoded_frame_buffer);
+        return;
+      }
+
+      if (ptr_->read_type == cv::IMREAD_COLOR) {
+        // TODO support a reasonable number of formats other than yuyv422M
+        if (pixfmt != V4L2_PIX_FMT_YUV422M) {
+          LOG(WARNING) << "Didn't receive multiplanar format, instead got "
+                       << pixfmt;
+          std::cout << "Possible Formats: " << V4L2_PIX_FMT_NV12M << " "
+                    << V4L2_PIX_FMT_YUV32 << " " << V4L2_PIX_FMT_YUV420 << " "
+                    << V4L2_PIX_FMT_YUV420M << " "
+                    << " " << V4L2_PIX_FMT_YUV422P << " " << std::endl;
+          return;
+        }
+
+        const NvBuffer::NvBufferPlane& y_plane =
+            decoded_frame_buffer->planes[0];
+        const NvBuffer::NvBufferPlane& u_plane =
+            decoded_frame_buffer->planes[1];
+        const NvBuffer::NvBufferPlane& v_plane =
+            decoded_frame_buffer->planes[2];
+        const uint32_t y_stride =
+            y_plane.fmt.stride * y_plane.fmt.bytesperpixel;
+        const uint32_t uv_stride = y_stride / 2;
+        cv::Mat yuyv422_interleaved(height, width, CV_8UC2);
+        for (size_t row = 0; row < height; row++) {
+          cv::Vec2b* row_ptr = yuyv422_interleaved.ptr<cv::Vec2b>(row);
+          uint8_t* y_ptr = y_plane.data + row * y_stride;
+          uint8_t* u_ptr = u_plane.data + row * uv_stride;
+          uint8_t* v_ptr = v_plane.data + row * uv_stride;
+          for (size_t col = 0; col < width; col += 2) {
+            row_ptr[col][0] = y_ptr[col];
+            row_ptr[col][1] = u_ptr[col / 2];
+            row_ptr[col + 1][0] = y_ptr[col + 1];
+            row_ptr[col + 1][1] = v_ptr[col / 2];
+          }
+        }
+
+        // cv::Mat rgb;
+        // std::cout << "1" << std::endl;
+        // cv::cvtColor(yuyv422_interleaved, rgb, cv::COLOR_YUV2BGR_YUY2);
+        // std::cout << "2" << std::endl;
+        // cv::imwrite("frame" + std::to_string(frame->sequence) + ".jpg", rgb);
+        // std::cout << "3" << std::endl;
+        ptr_->frame_buffer.frame = std::move(yuyv422_interleaved);
+        // std::cout << "4" << std::endl;
+      } else {
+        NvBuffer::NvBufferPlane& luminance = decoded_frame_buffer->planes[0];
+        ptr_->frame_buffer.frame =
+            cv::Mat(height, width, CV_8UC1, luminance.data,
+                    luminance.fmt.stride * luminance.fmt.bytesperpixel)
+                .clone();
+      }
+      FreeNvBuffer(decoded_frame_buffer);
       break;
     }
     case UVC_COLOR_FORMAT_YUYV: {
@@ -24,16 +162,17 @@ void callback(uvc_frame_t* frame, void* ptr) {
       if (!bgr) {
         LOG(WARNING) << "Camera " << ptr_->camera_constant_.name
                      << " failed to allocate ";
+        return;
       }
       uvc_error_t ret = uvc_yuyv2bgr(frame, bgr);
       if (ret != 0) {
         LOG(WARNING) << "YUYV failed to convert to BGR";
+        uvc_free_frame(bgr);
+        return;
       }
-      IplImage* ipl_image;
-      ipl_image =
-          cvCreateImageHeader(cvSize(bgr->width, bgr->height), IPL_DEPTH_8U, 3);
-      cvSetData(ipl_image, bgr->data, bgr->width * 3);
-      ptr_->frame_buffer.frame = cv::cvarrToMat(ipl_image, true);
+      ptr_->frame_buffer.frame =
+          cv::Mat(bgr->height, bgr->width, CV_8UC3, bgr->data, bgr->width * 3)
+              .clone();
       uvc_free_frame(bgr);
       break;
     }
@@ -51,12 +190,19 @@ void callback(uvc_frame_t* frame, void* ptr) {
       frc::Timer::GetFPGATimestamp()
           .to<double>();  // TODO: Use more accurate timestamp
   ptr_->frame_index_ = frame->sequence;
-  ptr_->mutex_.unlock();
 }
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
                      absl::Status& status, std::optional<std::string> log_path)
-    : camera_constant_(camera_constant), log_path_(std::move(log_path)) {
+    : camera_constant_(camera_constant),
+      log_path_(std::move(log_path)),
+      decoder_(
+          NvJPEGDecoder::createJPEGDecoder(camera_constant_.name.c_str())) {
+  if (decoder_ == nullptr) {
+    status = absl::InternalError("Failed to create JPEG decoder for " +
+                                 camera_constant_.name);
+    return;
+  }
   if (!camera_constant.serial_id.has_value()) {
     status = absl::InvalidArgumentError(fmt::format(
         "Must provide a serial id for uvc camera {}", camera_constant.name));
@@ -90,8 +236,9 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
       camera_constant_.frame_width.value(),
       camera_constant_.frame_height.value(), camera_constant_.fps.value());
   if (res != 0) {
-    status = absl::AbortedError("Unable to get stream format for camera: " +
-                                camera_constant.name);
+    status = absl::AbortedError(fmt::format(
+        "Unable to get stream control for camera {} with error code {}",
+        camera_constant.name, res));
     return;
   }
   uvc_print_stream_ctrl(&ctrl_, stderr);
@@ -101,8 +248,9 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
       camera_constant.max_frame_size.value_or(ctrl_.dwMaxVideoFrameSize);
   res = uvc_start_streaming(device_handle_, &ctrl_, callback, this, 0);
   if (res != 0) {
-    status = absl::AbortedError("Unable to start streaming for camera: " +
-                                camera_constant.name);
+    status = absl::AbortedError(
+        fmt::format("Unable to start stream for camera {} with error code {}",
+                    camera_constant.name, res));
     return;
   }
 }
@@ -112,9 +260,8 @@ auto UVCCamera::GetFrame() -> timestamped_frame_t {
   while (frame_index_ == previous_frame_index_) {
     std::this_thread::yield();
   }
-  mutex_.lock();
+  std::lock_guard<std::mutex> lock(mutex_);
   if (frame_buffer.frame.empty()) {
-    backup_image_.copyTo(copied_timestamped_frame.frame);
     copied_timestamped_frame.invalid = true;
     copied_timestamped_frame.timestamp =
         frc::Timer::GetFPGATimestamp().to<double>();
@@ -123,7 +270,6 @@ auto UVCCamera::GetFrame() -> timestamped_frame_t {
     copied_timestamped_frame.invalid = frame_buffer.invalid;
     copied_timestamped_frame.timestamp = frame_buffer.timestamp;
   }
-  mutex_.unlock();
   previous_frame_index_ = frame_index_;
   return copied_timestamped_frame;
 }
@@ -144,10 +290,17 @@ auto UVCCamera::Restart() -> void {
 }
 
 UVCCamera::~UVCCamera() {
-  uvc_stop_streaming(device_handle_);
-  uvc_close(device_handle_);
-  uvc_unref_device(device_);
-  uvc_exit(context_);
+  if (device_handle_ != nullptr) {
+    uvc_stop_streaming(device_handle_);
+    uvc_close(device_handle_);
+  }
+  if (device_ != nullptr) {
+    uvc_unref_device(device_);
+  }
+  if (context_ != nullptr) {
+    uvc_exit(context_);
+  }
+  delete decoder_;
 }
 
 auto UVCCamera::GetCameraConstant() const -> camera_constant_t {

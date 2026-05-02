@@ -1,6 +1,36 @@
 #include "cscore_streamer.h"
 namespace camera {
 
+auto NormalizeForStreaming(const cv::Mat& mat) -> cv::Mat {
+  if (mat.empty()) {
+    return {};
+  }
+
+  switch (mat.channels()) {
+    case 1: {
+      cv::Mat bgr;
+      cv::cvtColor(mat, bgr, cv::COLOR_GRAY2BGR);
+      return bgr;
+    }
+    case 2: {
+      cv::Mat bgr;
+      cv::cvtColor(mat, bgr, cv::COLOR_YUV2BGR_YUY2);
+      return bgr;
+    }
+    case 3:
+      return mat;
+    case 4: {
+      cv::Mat bgr;
+      cv::cvtColor(mat, bgr, cv::COLOR_BGRA2BGR);
+      return bgr;
+    }
+    default:
+      std::cerr << "Unsupported frame channel count for CSCore: "
+                << mat.channels();
+      return {};
+  }
+}
+
 CscoreStreamer::CscoreStreamer(const std::string& name, uint port, uint fps,
                                uint width, uint height, bool verbose)
     : width_(width), height_(height) {
@@ -25,11 +55,17 @@ CscoreStreamer::CscoreStreamer(const std::string& name, uint port, uint fps,
                      verbose) {}
 
 void CscoreStreamer::WriteFrame(const cv::Mat& mat) {
-  cv::Mat frame;
-  cv::resize(mat, frame, cv::Size(width_, height_));
-  if (frame.channels() == 4) {
-    cv::cvtColor(frame, frame, cv::COLOR_BGRA2BGR);
+  std::cout << "WRITING FRAME";
+  cv::Mat normalized = NormalizeForStreaming(mat);
+  if (normalized.empty()) {
+    return;
   }
+
+  cv::Mat frame;
+  cv::resize(normalized, frame, cv::Size(width_, height_));
   source_.PutFrame(frame);
+  std::cout << "WROTE FRAME";
+  std::this_thread::sleep_for(std::chrono::duration<double>(1));
+  std::cout << "End sleep";
 }
 }  // namespace camera
