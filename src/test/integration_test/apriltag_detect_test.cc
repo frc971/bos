@@ -57,7 +57,11 @@ auto main(int argc, char* argv[]) -> int {
       LOG(INFO) << position_estimate;
     }
 
+    LOG(INFO) << "Pre conversion";
     timestamped_frame.frame.copyTo(display_frame);
+    cv::cvtColor(display_frame, display_frame, cv::COLOR_YUV2BGR_YUY2);
+    LOG(INFO) << "Post conversion";
+
     for (auto& tag_detection : tag_detections) {
       for (auto& corner : tag_detection.corners) {
         cv::circle(display_frame, corner, 10, cv::Scalar(0, 0, 255));

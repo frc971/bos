@@ -55,6 +55,7 @@ CscoreStreamer::CscoreStreamer(const std::string& name, uint port, uint fps,
                      verbose) {}
 
 void CscoreStreamer::WriteFrame(const cv::Mat& mat) {
+  std::cout << "WRITING FRAME";
   cv::Mat normalized = NormalizeForStreaming(mat);
   if (normalized.empty()) {
     return;
@@ -63,5 +64,8 @@ void CscoreStreamer::WriteFrame(const cv::Mat& mat) {
   cv::Mat frame;
   cv::resize(normalized, frame, cv::Size(width_, height_));
   source_.PutFrame(frame);
+  std::cout << "WROTE FRAME";
+  std::this_thread::sleep_for(std::chrono::duration<double>(1));
+  std::cout << "End sleep";
 }
 }  // namespace camera

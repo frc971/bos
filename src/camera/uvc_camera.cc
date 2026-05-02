@@ -139,7 +139,14 @@ void callback(uvc_frame_t* frame, void* ptr) {
           }
         }
 
+        // cv::Mat rgb;
+        // std::cout << "1" << std::endl;
+        // cv::cvtColor(yuyv422_interleaved, rgb, cv::COLOR_YUV2BGR_YUY2);
+        // std::cout << "2" << std::endl;
+        // cv::imwrite("frame" + std::to_string(frame->sequence) + ".jpg", rgb);
+        // std::cout << "3" << std::endl;
         ptr_->frame_buffer.frame = std::move(yuyv422_interleaved);
+        // std::cout << "4" << std::endl;
       } else {
         NvBuffer::NvBufferPlane& luminance = decoded_frame_buffer->planes[0];
         ptr_->frame_buffer.frame =
