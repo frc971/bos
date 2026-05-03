@@ -14,7 +14,6 @@ auto RunController(
     const std::string& navgrid_path = "/root/bos/constants/navgrid.json",
     bool verbose = false) -> void {
   const uint lookahead_ = 5;
-  const double speed_ = 1.0;
 
   std::ifstream file(navgrid_path);
   if (!file.is_open()) {
@@ -129,30 +128,10 @@ auto RunController(
       }
 
       closest_idx += lookahead_;
-      auto [dx_raw, dy_raw] = EvaluatePosition(result.params[closest_idx],
-                                               result.first_deriv_controls,
-                                               result.knots, result.p - 1);
-      double dx = dx_raw * result.p;
-      double dy = dy_raw * result.p;
 
-      if (verbose) {
-        LOG(INFO) << "current " << current_pose.X().value() << " "
-                  << current_pose.Y().value();
-      }
-
-      double mag = std::hypot(dx, dy);
-      if (verbose) {
-        LOG(INFO) << "dist " << mag;
-      }
-      if (mag < 1e-6) {
-        vx_pub.Set(0.0);
-        vy_pub.Set(0.0);
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        continue;
-      }
-
-      double vx = (dx / mag) * speed_ * nodeSizeMeters;
-      double vy = (dy / mag) * speed_ * nodeSizeMeters;
+      const auto [vx, vy] =
+          EvaluateDerivative(result.params[closest_idx], result.controls,
+                             result.knots, result.p, 1);
 
       vx_pub.Set(vx);
       vy_pub.Set(vy);
