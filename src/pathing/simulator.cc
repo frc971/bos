@@ -11,11 +11,12 @@
 #include "src/pathing/splines.h"
 
 auto main() -> int {
-  const uint lookahead_ = 5;
-  const int64_t dt_us = 20'000;
-  const double dt_sec = 0.02;
+  const uint lookahead_ = 0;
+  const int64_t dt_us = 20000;
+  const double dt_sec = 0.020;
+  const double speed_ = 0.1;
 
-  std::ifstream file("/bos/constants/navgrid.json");
+  std::ifstream file("/root/bos/constants/navgrid.json");
   if (!file.is_open()) {
     return 1;
   }
@@ -38,7 +39,7 @@ auto main() -> int {
 
   int start_x = 10;
   int start_y = 5;
-  int target_x = 21;
+  int target_x = 44;
   int target_y = 12;
   start_x = std::clamp(start_x, 0, grid_w - 1);
   start_y = std::clamp(start_y, 0, grid_h - 1);
@@ -63,6 +64,7 @@ auto main() -> int {
   pathing::SplineResult result;
   constexpr int k_max_steps = 10000;
   int64_t t = 0;
+  int prev_closest_idx = -1;
   for (int step = 0; step < k_max_steps; ++step) {
     pathing::Point start_pt{
         .x = static_cast<uint>(current_pose.X().value() / node_size_meters),
@@ -76,7 +78,8 @@ auto main() -> int {
     target_pt.y = std::clamp(static_cast<int>(target_pt.y), 0, grid_h - 1);
 
     frc::Translation2d t2d(target_pose.X(), target_pose.Y());
-    if (current_pose.Translation().Distance(t2d).value() < node_size_meters) {
+    double dist_to_target = current_pose.Translation().Distance(t2d).value();
+    if (dist_to_target < node_size_meters) {
       vx_log.Append(0.0, t);
       vy_log.Append(0.0, t);
       pose_log.Append(current_pose, t);
@@ -107,13 +110,31 @@ auto main() -> int {
       }
     }
 
+    if (prev_closest_idx >= 0 && closest_idx < prev_closest_idx) {
+      vx_log.Append(0.0, t);
+      vy_log.Append(0.0, t);
+      pose_log.Append(current_pose, t);
+      break;
+    }
+    if (prev_closest_idx >= 0 && closest_idx == prev_closest_idx &&
+        closest_idx >= static_cast<int>(result.params.size()) - 5) {
+      vx_log.Append(0.0, t);
+      vy_log.Append(0.0, t);
+      pose_log.Append(current_pose, t);
+      break;
+    }
+    prev_closest_idx = closest_idx;
+
     closest_idx += lookahead_;
     if (closest_idx >= static_cast<int>(result.params.size())) {
       closest_idx = static_cast<int>(result.params.size()) - 1;
     }
 
-    const auto [vx, vy] = pathing::EvaluateDerivative(
+    auto [vx, vy] = pathing::EvaluateDerivative(
         result.params[closest_idx], result.controls, result.knots, result.p, 1);
+    vx *= speed_;
+    vy *= speed_;
+
     vx_log.Append(vx, t);
     vy_log.Append(vy, t);
     pose_log.Append(current_pose, t);
