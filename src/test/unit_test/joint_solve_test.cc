@@ -40,4 +40,11 @@ TEST(JointSolveTest, TestJointSolve) {  // NOLINT
   auto detection = detections[0];
 
   auto square_solver_solution = square_solver->EstimatePosition({detection})[0];
+
+  const std::map<std::string, std::vector<tag_detection_t>> camera_detections{
+      {camera_constant.name, {detection}},
+  };
+
+  auto joint_solve_solution = joint_solver->EstimatePosition(
+      camera_detections, square_solver_solution.pose);
 }

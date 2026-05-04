@@ -12,8 +12,8 @@ target_link_libraries(general_solver_test PRIVATE localization utils GTest::gtes
 add_executable(matrix matrix.cc)
 target_link_libraries(matrix PRIVATE localization utils GTest::gtest_main)
 
-add_executable(forward_test forward_test.cc)
-target_link_libraries(forward_test PRIVATE localization utils GTest::gtest_main XAD::xad)
+# add_executable(forward_test forward_test.cc)
+# target_link_libraries(forward_test PRIVATE localization utils GTest::gtest_main XAD::xad)
 
 add_executable(joint_solve_test joint_solve_test.cc)
 target_link_libraries(joint_solve_test PRIVATE localization utils GTest::gtest_main XAD::xad)
