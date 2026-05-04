@@ -18,7 +18,7 @@ class JointSolver {
   using tape_type = mode::tape_type;
   using AD = mode::active_type;
 
-  using transform3d_derrivative_t = struct Transfrom3dDerrivative {
+  using transform3d_derrivative_t = struct Transfrom3dDerivative {
     double scaler = 0;
     double theta = 0;
     double t_z = 0;
@@ -26,75 +26,71 @@ class JointSolver {
     double r_y = 0;
     double r_z = 0;
 
-    auto operator+(const Transfrom3dDerrivative other)
-        -> Transfrom3dDerrivative {
-      return Transfrom3dDerrivative{.scaler = scaler + other.scaler,
-                                    .theta = theta + other.theta,
-                                    .t_z = t_z + other.t_z,
-                                    .r_x = r_x + other.r_x,
-                                    .r_y = r_y + other.r_y,
-                                    .r_z = r_z + other.r_z};
+    auto operator+(const Transfrom3dDerivative other) -> Transfrom3dDerivative {
+      return Transfrom3dDerivative{.scaler = scaler + other.scaler,
+                                   .theta = theta + other.theta,
+                                   .t_z = t_z + other.t_z,
+                                   .r_x = r_x + other.r_x,
+                                   .r_y = r_y + other.r_y,
+                                   .r_z = r_z + other.r_z};
     }
 
-    auto operator-(const Transfrom3dDerrivative other)
-        -> Transfrom3dDerrivative {
-      return Transfrom3dDerrivative{.scaler = scaler - other.scaler,
-                                    .theta = theta - other.theta,
-                                    .t_z = t_z - other.t_z,
-                                    .r_x = r_x - other.r_x,
-                                    .r_y = r_y - other.r_y,
-                                    .r_z = r_z - other.r_z};
+    auto operator-(const Transfrom3dDerivative other) -> Transfrom3dDerivative {
+      return Transfrom3dDerivative{.scaler = scaler - other.scaler,
+                                   .theta = theta - other.theta,
+                                   .t_z = t_z - other.t_z,
+                                   .r_x = r_x - other.r_x,
+                                   .r_y = r_y - other.r_y,
+                                   .r_z = r_z - other.r_z};
     }
 
-    auto operator*(const double other) -> Transfrom3dDerrivative {
-      return Transfrom3dDerrivative{.scaler = scaler * other,
-                                    .theta = theta * other,
-                                    .t_z = t_z * other,
-                                    .r_x = r_x * other,
-                                    .r_y = r_y * other,
-                                    .r_z = r_z * other};
+    auto operator*(const double other) -> Transfrom3dDerivative {
+      return Transfrom3dDerivative{.scaler = scaler * other,
+                                   .theta = theta * other,
+                                   .t_z = t_z * other,
+                                   .r_x = r_x * other,
+                                   .r_y = r_y * other,
+                                   .r_z = r_z * other};
     }
 
-    auto operator+(const double other) -> Transfrom3dDerrivative {
-      return Transfrom3dDerrivative{.scaler = scaler + other,
-                                    .theta = theta + other,
-                                    .t_z = t_z + other,
-                                    .r_x = r_x + other,
-                                    .r_y = r_y + other,
-                                    .r_z = r_z + other};
+    auto operator+(const double other) -> Transfrom3dDerivative {
+      return Transfrom3dDerivative{.scaler = scaler + other,
+                                   .theta = theta + other,
+                                   .t_z = t_z + other,
+                                   .r_x = r_x + other,
+                                   .r_y = r_y + other,
+                                   .r_z = r_z + other};
     }
 
-    auto operator*(const Transfrom3dDerrivative other)
-        -> Transfrom3dDerrivative {
-      return Transfrom3dDerrivative{.scaler = scaler * other.scaler,
-                                    .theta = theta * other.theta,
-                                    .t_z = t_z * other.t_z,
-                                    .r_x = r_x * other.r_x,
-                                    .r_y = r_y * other.r_y,
-                                    .r_z = r_z * other.r_z};
+    auto operator*(const Transfrom3dDerivative other) -> Transfrom3dDerivative {
+      return Transfrom3dDerivative{.scaler = scaler * other.scaler,
+                                   .theta = theta * other.theta,
+                                   .t_z = t_z * other.t_z,
+                                   .r_x = r_x * other.r_x,
+                                   .r_y = r_y * other.r_y,
+                                   .r_z = r_z * other.r_z};
     }
 
-    auto operator/(const Transfrom3dDerrivative other)
-        -> Transfrom3dDerrivative {
-      return Transfrom3dDerrivative{.scaler = scaler / other.scaler,
-                                    .theta = theta / other.theta,
-                                    .t_z = t_z / other.t_z,
-                                    .r_x = r_x / other.r_x,
-                                    .r_y = r_y / other.r_y,
-                                    .r_z = r_z / other.r_z};
+    auto operator/(const Transfrom3dDerivative other) -> Transfrom3dDerivative {
+      return Transfrom3dDerivative{.scaler = scaler / other.scaler,
+                                   .theta = theta / other.theta,
+                                   .t_z = t_z / other.t_z,
+                                   .r_x = r_x / other.r_x,
+                                   .r_y = r_y / other.r_y,
+                                   .r_z = r_z / other.r_z};
     }
 
-    auto sqrt() -> Transfrom3dDerrivative {
-      return Transfrom3dDerrivative{.scaler = std::sqrt(scaler),
-                                    .theta = std::sqrt(theta),
-                                    .t_z = std::sqrt(t_z),
-                                    .r_x = std::sqrt(r_x),
-                                    .r_y = std::sqrt(r_y),
-                                    .r_z = std::sqrt(r_z)};
+    auto sqrt() -> Transfrom3dDerivative {
+      return Transfrom3dDerivative{.scaler = std::sqrt(scaler),
+                                   .theta = std::sqrt(theta),
+                                   .t_z = std::sqrt(t_z),
+                                   .r_x = std::sqrt(r_x),
+                                   .r_y = std::sqrt(r_y),
+                                   .r_z = std::sqrt(r_z)};
     }
   };
 
-  struct DifferntiableTransform3d {
+  struct DifferentiableTransform3d {
 
     // Translation in meters, rotation in radians
     AD scaler;
@@ -106,7 +102,7 @@ class JointSolver {
     AD r_z;
     std::array<std::array<AD, 4>, 4> matrix;
 
-    DifferntiableTransform3d(frc::Pose3d pose)
+    DifferentiableTransform3d(frc::Pose3d pose)
         : scaler(std::hypot(pose.Translation().X().value(),
                             pose.Translation().Y().value())),
           theta(std::atan2(pose.Translation().Y().value(),
@@ -116,7 +112,7 @@ class JointSolver {
           r_y(pose.Rotation().Y().value()),
           r_z(pose.Rotation().Z().value()) {}
 
-    DifferntiableTransform3d(frc::Transform3d pose)
+    DifferentiableTransform3d(frc::Transform3d pose)
         : scaler(std::hypot(pose.Translation().X().value(),
                             pose.Translation().Y().value())),
           theta(std::atan2(pose.Translation().Y().value(),
@@ -126,7 +122,7 @@ class JointSolver {
           r_y(pose.Rotation().Y().value()),
           r_z(pose.Rotation().Z().value()) {}
 
-    DifferntiableTransform3d(Eigen::Matrix4d matrix)
+    DifferentiableTransform3d(Eigen::Matrix4d matrix)
         : scaler(std::hypot(matrix(0, 3), matrix(1, 3))),
           theta(std::atan2(matrix(1, 3), matrix(0, 3))),
           t_z(matrix(2, 3)) {
@@ -278,7 +274,7 @@ class JointSolver {
 };
 
 inline auto operator<<(std::ostream& os,
-                       const JointSolver::Transfrom3dDerrivative& d)
+                       const JointSolver::Transfrom3dDerivative& d)
     -> std::ostream& {
   os << "scaler=" << d.scaler << "\n"
      << "theta=" << d.theta << "\n"
@@ -290,7 +286,7 @@ inline auto operator<<(std::ostream& os,
 }
 
 inline auto operator<<(std::ostream& os,
-                       const JointSolver::DifferntiableTransform3d& t)
+                       const JointSolver::DifferentiableTransform3d& t)
     -> std::ostream& {
   os << "scaler=" << t.scaler << "\n"
      << "theta=" << t.theta << "\n"

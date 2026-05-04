@@ -170,7 +170,7 @@ auto JointSolver::EstimatePosition(
   average_timestamp /= total_detections;
 
   tape_.clearAll();
-  DifferntiableTransform3d robot_to_feild(
+  DifferentiableTransform3d robot_to_feild(
       frc::Pose3d(initial_pose.value_or(position_receiver_.Get()))
           .ToMatrix()
           .inverse());

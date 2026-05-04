@@ -226,9 +226,9 @@ TEST_F(ForwardTest, TestTransfrom3dConstructor) {  // NOLINT
   auto square_solver_solution =
       square_solver_right_->EstimatePosition({detection})[0];
 
-  JointSolver::DifferntiableTransform3d transform_from_pose(
+  JointSolver::DifferentiableTransform3d transform_from_pose(
       square_solver_solution.pose);
-  JointSolver::DifferntiableTransform3d transform_from_eigen(
+  JointSolver::DifferentiableTransform3d transform_from_eigen(
       square_solver_solution.pose.ToMatrix());
 
   const double tolerance = 1e-7;
@@ -259,7 +259,7 @@ TEST_F(ForwardTest, TestTransfrom3d) {  // NOLINT
   auto square_solver_solution =
       square_solver_right_->EstimatePosition({detection})[0];
 
-  JointSolver::DifferntiableTransform3d transform(square_solver_solution.pose);
+  JointSolver::DifferentiableTransform3d transform(square_solver_solution.pose);
   transform.CalculateMatrix();
 
   EXPECT_TRUE(square_solver_solution.pose.ToMatrix().isApprox(
@@ -290,7 +290,7 @@ TEST_F(ForwardTest, TestMultiTagBackpropagation) {  // NOLINT
   auto feild_to_robot = square_solver_solution.pose.ToMatrix();
 
   const auto robot_to_feild = feild_to_robot.inverse();
-  JointSolver::DifferntiableTransform3d T(frc::Pose3d{});
+  JointSolver::DifferentiableTransform3d T(frc::Pose3d{});
 
   T.CalculateMatrix();
   LOG(INFO) << "robot_to_feild_before\n" << robot_to_feild;
