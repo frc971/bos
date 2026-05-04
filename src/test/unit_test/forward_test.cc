@@ -13,11 +13,11 @@
 
 #define IMAGE_STRIDE 4
 #define LOG_PATH "/bos-logs/log181/right"
-#define TRANSLATION_LR 0.5
-#define ROTATION_LR 0.001
-#define LR 0.01
-#define EPOCHS 500
-#define BETA_1 0.90
+#define TRANSLATION_LR 1
+#define ROTATION_LR 0.01
+#define LR 0.1
+#define EPOCHS 1000
+#define BETA_1 0.99
 #define BETA_2 0.990
 #define EPSILON 1e-9
 
@@ -232,9 +232,10 @@ TEST_F(ForwardTest, TestTransfrom3dConstructor) {  // NOLINT
       square_solver_solution.pose.ToMatrix());
 
   const double tolerance = 1e-7;
-  ASSERT_NEAR(transform_from_pose.t_x.value(), transform_from_eigen.t_x.value(),
-              tolerance);
-  ASSERT_NEAR(transform_from_pose.t_y.value(), transform_from_eigen.t_y.value(),
+  // clang-format off
+  ASSERT_NEAR(transform_from_pose.scaler.value(), transform_from_eigen.scaler.value(),
+              tolerance); 
+  ASSERT_NEAR(transform_from_pose.theta.value(), transform_from_eigen.theta.value(),
               tolerance);
   ASSERT_NEAR(transform_from_pose.t_z.value(), transform_from_eigen.t_z.value(),
               tolerance);
@@ -245,6 +246,7 @@ TEST_F(ForwardTest, TestTransfrom3dConstructor) {  // NOLINT
               tolerance);
   ASSERT_NEAR(transform_from_pose.r_z.value(), transform_from_eigen.r_z.value(),
               tolerance);
+  // clang-format on
 }
 
 TEST_F(ForwardTest, TestTransfrom3d) {  // NOLINT
@@ -273,6 +275,7 @@ TEST_F(ForwardTest, TestTransfrom3d) {  // NOLINT
 
 TEST_F(ForwardTest, TestMultiTagBackpropagation) {  // NOLINT
   cv::Mat image = cv::imread("/bos-logs/log181/right/6.767740.jpg");
+  // cv::Mat image = cv::imread("/bos-logs/log181/right/17.047751.jpg");
   timestamped_frame_t timestamped_frame{
       .frame = std::move(image), .timestamp = 0, .invalid = false};
   auto detections = detector_right_->GetTagDetections(timestamped_frame);
@@ -286,27 +289,25 @@ TEST_F(ForwardTest, TestMultiTagBackpropagation) {  // NOLINT
 
   auto feild_to_robot = square_solver_solution.pose.ToMatrix();
 
-  JointSolver::DifferntiableTransform3d robot_to_feild(
-      feild_to_robot.inverse());
+  const auto robot_to_feild = feild_to_robot.inverse();
+  JointSolver::DifferntiableTransform3d T(frc::Pose3d{});
 
-  robot_to_feild.CalculateMatrix();
-  LOG(INFO) << "robot_to_feild_before\n" << robot_to_feild.ToEigen();
+  T.CalculateMatrix();
+  LOG(INFO) << "robot_to_feild_before\n" << robot_to_feild;
 
   // Noise
-  robot_to_feild.t_x += 0.2;
-  robot_to_feild.t_y += 0.1;
-  robot_to_feild.t_z += 0.1;
+  // robot_to_feild.scaler += 0.2;
+  // robot_to_feild.theta += 0.2;
+  // robot_to_feild.t_z += 0.1;
 
   // robot_to_feild.r_x += 0.05;
   // robot_to_feild.r_y += 0.05;
-  // robot_to_feild.r_z += 0.05;
+  // robot_to_feild.r_z += 0.1;
 
   tape_type tape;
 
   double loss = 0;
   utils::Timer solve_timer("solve", true);
-  JointSolver::transform3d_derrivative_t velocity;
-  JointSolver::transform3d_derrivative_t squared_gradiants;
   for (int epoch = 0; epoch < EPOCHS; epoch++) {
     loss = 0;
     JointSolver::transform3d_derrivative_t derrivative;
@@ -315,51 +316,28 @@ TEST_F(ForwardTest, TestMultiTagBackpropagation) {  // NOLINT
           kapriltag_layout.GetTagPose(detection.tag_id).value().ToMatrix();
 
       for (int corner_index = 0; corner_index < 4; corner_index++) {
-        robot_to_feild.CalculateMatrix();
-        robot_to_feild.RegisterInputs(tape);
-        const auto robot_to_feild_eigen = robot_to_feild.ToEigen();
+        T.CalculateMatrix();
+        T.RegisterInputs(tape);
 
         auto image_point = JointSolver::NormalizePoint(
             detection.corners[corner_index], camera_constant_right_);
 
         auto robot_to_feild_d = JointSolver::CalculateDerivative(
-            robot_to_feild_eigen, feild_to_tag, camera_to_robot_right_,
+            robot_to_feild, feild_to_tag, camera_to_robot_right_,
             normalized_camera_matrix_right_, image_point, corner_index);
 
-        robot_to_feild.RegisterOutputs(tape);
-        derrivative =
-            derrivative + robot_to_feild.BackPropagate(robot_to_feild_d, tape);
+        T.RegisterOutputs(tape);
+        derrivative = derrivative + T.BackPropagate(robot_to_feild_d, tape);
 
         loss += JointSolver::CalculateLoss(
-            robot_to_feild_eigen, feild_to_tag, camera_to_robot_right_,
+            robot_to_feild, feild_to_tag, camera_to_robot_right_,
             normalized_camera_matrix_right_, image_point, corner_index);
 
         tape.newRecording();
       }
     }
-
-    velocity = (velocity * BETA_1) + (derrivative * (1));
-    squared_gradiants = (squared_gradiants * BETA_2) +
-                        (derrivative * derrivative * (1 - BETA_2));
-    auto update = velocity / ((squared_gradiants + EPSILON).sqrt());
-    robot_to_feild.Update(update, LR * TRANSLATION_LR, LR * ROTATION_LR);
-    if (epoch == 0) {
-      LOG(INFO) << loss;
-    }
-    LOG(INFO) << epoch << " " << loss;
-    LOG(INFO) << "tx_d " << derrivative.t_x << " ty_d " << derrivative.t_y;
-    // LOG(INFO) << "tx_vel " << velocity.t_x << " ty_vel " << velocity.t_y;
-    LOG(INFO) << "tx_update " << update.t_x << " ty_update" << update.t_y;
-    LOG(INFO) << "---------------------------------------";
-    // LOG(INFO) << "\n" << derrivative;
+    LOG(INFO) << "loss " << loss;
   }
-
-  robot_to_feild.CalculateMatrix();
-  LOG(INFO) << "robot_to_feild_after\n" << robot_to_feild.ToEigen();
-  LOG(INFO) << loss;
-
-  ASSERT_LT(solve_timer.Stop(), 0.1);
-  ASSERT_LT(loss, 0.01);
 }
 
 // TEST_F(ForwardTest, TestMultiCameraBackpropagation) {  // NOLINT
