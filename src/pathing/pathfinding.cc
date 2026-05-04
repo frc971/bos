@@ -60,6 +60,8 @@ auto BFS(std::vector<std::vector<Node>>& field, Point start_point,
   }
 
   Node* start = &field[sy][sx];
+  start_point.x = sx;
+  start_point.y = sy;
   start->visited = true;
   start->cost = 0;
 

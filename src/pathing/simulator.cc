@@ -38,8 +38,8 @@ auto main() -> int {
 
   int start_x = 10;
   int start_y = 5;
-  int target_x = 22;
-  int target_y = 14;
+  int target_x = 21;
+  int target_y = 12;
   start_x = std::clamp(start_x, 0, grid_w - 1);
   start_y = std::clamp(start_y, 0, grid_h - 1);
   target_x = std::clamp(target_x, 0, grid_w - 1);
@@ -122,7 +122,6 @@ auto main() -> int {
         frc::Pose2d(units::meter_t{current_pose.X().value() + vx * dt_sec},
                     units::meter_t{current_pose.Y().value() + vy * dt_sec},
                     units::radian_t{0.0});
-    result = {};
     t += dt_us;
   }
 
