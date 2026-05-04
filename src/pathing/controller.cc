@@ -128,6 +128,9 @@ auto RunController(
       }
 
       closest_idx += lookahead_;
+      if (closest_idx >= static_cast<int>(result.params.size())) {
+        closest_idx = static_cast<int>(result.params.size()) - 1;
+      }
 
       const auto [vx, vy] =
           EvaluateDerivative(result.params[closest_idx], result.controls,
@@ -139,6 +142,7 @@ auto RunController(
         LOG(INFO) << "set vx " << vx << " vy " << vy;
       }
       inst.Flush();
+      result = {};
     }
   }
 }
