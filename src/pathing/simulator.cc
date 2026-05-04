@@ -7,15 +7,13 @@
 #include <cstdint>
 #include <fstream>
 #include <nlohmann/json.hpp>
-#include <string>
-#include <utility>
 #include <vector>
 #include "src/pathing/splines.h"
 
 auto main() -> int {
   const uint lookahead_ = 5;
-  constexpr int64_t k_dt_us = 20'000;
-  constexpr double k_dt_sec = 0.02;
+  const int64_t dt_us = 20'000;
+  const double dt_sec = 0.02;
 
   std::ifstream file("/bos/constants/navgrid.json");
   if (!file.is_open()) {
@@ -47,43 +45,12 @@ auto main() -> int {
   target_x = std::clamp(target_x, 0, grid_w - 1);
   target_y = std::clamp(target_y, 0, grid_h - 1);
 
-  frc::Pose2d initial_pose(units::meter_t{start_x * node_size_meters},
+  frc::Pose2d current_pose(units::meter_t{start_x * node_size_meters},
                            units::meter_t{start_y * node_size_meters},
                            units::radian_t{0.0});
   const frc::Pose2d target_pose(units::meter_t{target_x * node_size_meters},
                                 units::meter_t{target_y * node_size_meters},
                                 units::radian_t{0.0});
-
-  std::vector<std::pair<double, double>> velocities;
-  pathing::Point start_pt{.x = static_cast<uint>(start_x),
-                          .y = static_cast<uint>(start_y)};
-  pathing::Point target_pt{.x = static_cast<uint>(target_x),
-                           .y = static_cast<uint>(target_y)};
-  pathing::SplineResult result =
-      pathing::createSpline(grid, start_pt, target_pt, node_size_meters);
-  if (result.points.empty()) {
-    velocities.emplace_back(0.0, 0.0);
-  } else {
-    velocities.reserve(result.params.size());
-    for (int i = 0; i < static_cast<int>(result.params.size()); ++i) {
-      const int idx =
-          std::min(i + static_cast<int>(lookahead_),
-                   static_cast<int>(result.params.size()) - 1);
-      const auto [raw_vx, raw_vy] =
-          pathing::EvaluateDerivative(result.params[idx], result.controls,
-                                      result.knots, result.p, 1);
-
-      const int prev_idx = std::max(idx - 1, 0);
-      const int next_idx =
-          std::min(idx + 1, static_cast<int>(result.params.size()) - 1);
-      const double param_delta =
-          std::max(result.params[next_idx] - result.params[prev_idx], 1e-9);
-      const double sample_dt = (next_idx - prev_idx) * k_dt_sec;
-      const double scale = sample_dt > 0.0 ? (param_delta / sample_dt) : 0.0;
-
-      velocities.emplace_back(raw_vx * scale, raw_vy * scale);
-    }
-  }
 
   wpi::log::DataLogBackgroundWriter log{"logs", "sim.wpilog"};
   log.AddStructSchema<frc::Pose2d>();
@@ -91,19 +58,72 @@ auto main() -> int {
   wpi::log::StructLogEntry<frc::Pose2d> target_log(log, "/sim/TargetPose2d");
   wpi::log::DoubleLogEntry vx_log(log, "/sim/pathing/vx");
   wpi::log::DoubleLogEntry vy_log(log, "/sim/pathing/vy");
-
   target_log.Append(target_pose, 1);
-  frc::Pose2d replay_pose = initial_pose;
+
+  pathing::SplineResult result;
+  constexpr int k_max_steps = 10000;
   int64_t t = 0;
-  for (const auto& [vx, vy] : velocities) {
+  for (int step = 0; step < k_max_steps; ++step) {
+    pathing::Point start_pt{
+        .x = static_cast<uint>(current_pose.X().value() / node_size_meters),
+        .y = static_cast<uint>(current_pose.Y().value() / node_size_meters)};
+    pathing::Point target_pt{
+        .x = static_cast<uint>(target_pose.X().value() / node_size_meters),
+        .y = static_cast<uint>(target_pose.Y().value() / node_size_meters)};
+    start_pt.x = std::clamp(static_cast<int>(start_pt.x), 0, grid_w - 1);
+    start_pt.y = std::clamp(static_cast<int>(start_pt.y), 0, grid_h - 1);
+    target_pt.x = std::clamp(static_cast<int>(target_pt.x), 0, grid_w - 1);
+    target_pt.y = std::clamp(static_cast<int>(target_pt.y), 0, grid_h - 1);
+
+    frc::Translation2d t2d(target_pose.X(), target_pose.Y());
+    if (current_pose.Translation().Distance(t2d).value() < node_size_meters) {
+      vx_log.Append(0.0, t);
+      vy_log.Append(0.0, t);
+      pose_log.Append(current_pose, t);
+      break;
+    }
+
+    if (result.points.empty()) {
+      result =
+          pathing::createSpline(grid, start_pt, target_pt, node_size_meters);
+    }
+
+    if (result.points.empty()) {
+      vx_log.Append(0.0, t);
+      vy_log.Append(0.0, t);
+      pose_log.Append(current_pose, t);
+      break;
+    }
+
+    int closest_idx = 0;
+    frc::Translation2d first2d(result.points[0].X(), result.points[0].Y());
+    double best_dist = current_pose.Translation().Distance(first2d).value();
+    for (int i = 1; i < static_cast<int>(result.points.size()); ++i) {
+      frc::Translation2d p(result.points[i].X(), result.points[i].Y());
+      double d = current_pose.Translation().Distance(p).value();
+      if (d < best_dist) {
+        best_dist = d;
+        closest_idx = i;
+      }
+    }
+
+    closest_idx += lookahead_;
+    if (closest_idx >= static_cast<int>(result.params.size())) {
+      closest_idx = static_cast<int>(result.params.size()) - 1;
+    }
+
+    const auto [vx, vy] = pathing::EvaluateDerivative(
+        result.params[closest_idx], result.controls, result.knots, result.p, 1);
     vx_log.Append(vx, t);
     vy_log.Append(vy, t);
-    pose_log.Append(replay_pose, t);
-    replay_pose =
-        frc::Pose2d(units::meter_t{replay_pose.X().value() + vx * k_dt_sec},
-                    units::meter_t{replay_pose.Y().value() + vy * k_dt_sec},
+    pose_log.Append(current_pose, t);
+
+    current_pose =
+        frc::Pose2d(units::meter_t{current_pose.X().value() + vx * dt_sec},
+                    units::meter_t{current_pose.Y().value() + vy * dt_sec},
                     units::radian_t{0.0});
-    t += k_dt_us;
+    result = {};
+    t += dt_us;
   }
 
   log.Flush();

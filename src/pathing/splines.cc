@@ -146,7 +146,7 @@ auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
     return {};
   }
 
-  p = 3;
+  p = 4;
   if (numControls <= p) {
     p = numControls - 1;
   }
@@ -156,8 +156,7 @@ auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
   for (int t = 0; t <= 1000; t += 1) {
     double t_real = t / 1000.0;
     auto [x, y] = EvaluatePosition(t_real, control_points, knots, p);
-    spline_points.emplace_back(units::meter_t{x * nodeSizeMeters},
-                               units::meter_t{y * nodeSizeMeters}, 0_rad);
+    spline_points.emplace_back(units::meter_t{x}, units::meter_t{y}, 0_rad);
     spline_params.emplace_back(t_real);
   }
   auto first_deriv_controls = FiniteDifferences(control_points, knots, p, 1);
