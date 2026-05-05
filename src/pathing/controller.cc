@@ -48,6 +48,7 @@ auto RunController(
   auto vx_pub = inst.GetDoubleTopic("/pathing/vx").Publish();
   auto vy_pub = inst.GetDoubleTopic("/pathing/vy").Publish();
   SplineResult result;
+  int prev_closest_idx = -1;
 
   while (true) {
     if (!enabled_sub.Get()) {
@@ -127,6 +128,46 @@ auto RunController(
                   << " Spline size: " << result.points.size();
       }
 
+      if (prev_closest_idx >= 0 && closest_idx < prev_closest_idx) {
+        vx_pub.Set(0.0);
+        vy_pub.Set(0.0);
+        inst.Flush();
+        result.points.clear();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        continue;
+      }
+      if (prev_closest_idx >= 0 && closest_idx == prev_closest_idx &&
+          closest_idx >= static_cast<int>(result.params.size()) - 5) {
+        double dx = target_pose.X().value() - current_pose.X().value();
+        double dy = target_pose.Y().value() - current_pose.Y().value();
+        double dist = std::hypot(dx, dy);
+
+        while (dist > 0.001) {
+          double vx = (dx / dist) * 1.0;
+          double vy = (dy / dist) * 1.0;
+
+          vx_pub.Set(vx);
+          vy_pub.Set(vy);
+          if (verbose) {
+            LOG(INFO) << "linear approach vx " << vx << " vy " << vy;
+          }
+          inst.Flush();
+          std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+          current_pose = current_sub.Get();
+          dx = target_pose.X().value() - current_pose.X().value();
+          dy = target_pose.Y().value() - current_pose.Y().value();
+          dist = std::hypot(dx, dy);
+        }
+        vx_pub.Set(0.0);
+        vy_pub.Set(0.0);
+        inst.Flush();
+        result.points.clear();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        continue;
+      }
+      prev_closest_idx = closest_idx;
+
       closest_idx += lookahead_;
       if (closest_idx >= static_cast<int>(result.params.size())) {
         closest_idx = static_cast<int>(result.params.size()) - 1;
@@ -142,7 +183,6 @@ auto RunController(
         LOG(INFO) << "set vx " << vx << " vy " << vy;
       }
       inst.Flush();
-      result = {};
     }
   }
 }
