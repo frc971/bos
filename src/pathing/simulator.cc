@@ -118,11 +118,33 @@ auto main() -> int {
     }
     if (prev_closest_idx >= 0 && closest_idx == prev_closest_idx &&
         closest_idx >= static_cast<int>(result.params.size()) - 5) {
+      double dx = target_pose.X().value() - current_pose.X().value();
+      double dy = target_pose.Y().value() - current_pose.Y().value();
+      double dist = std::hypot(dx, dy);
+
+      while (dist > 0.001) {
+        double vx = (dx / dist) * speed_;
+        double vy = (dy / dist) * speed_;
+
+        vx_log.Append(vx, t);
+        vy_log.Append(vy, t);
+        pose_log.Append(current_pose, t);
+
+        current_pose =
+            frc::Pose2d(units::meter_t{current_pose.X().value() + vx * dt_sec},
+                        units::meter_t{current_pose.Y().value() + vy * dt_sec},
+                        units::radian_t{0.0});
+        t += dt_us;
+        dx = target_pose.X().value() - current_pose.X().value();
+        dy = target_pose.Y().value() - current_pose.Y().value();
+        dist = std::hypot(dx, dy);
+      }
       vx_log.Append(0.0, t);
       vy_log.Append(0.0, t);
       pose_log.Append(current_pose, t);
       break;
     }
+
     prev_closest_idx = closest_idx;
 
     closest_idx += lookahead_;
