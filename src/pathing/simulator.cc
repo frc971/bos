@@ -14,7 +14,7 @@ auto main() -> int {
   const uint lookahead_ = 0;
   const int64_t dt_us = 20000;
   const double dt_sec = 0.020;
-  const double speed_ = 0.1;
+  const double speed_ = 0.2;
 
   std::ifstream file("/root/bos/constants/navgrid.json");
   if (!file.is_open()) {
@@ -116,15 +116,14 @@ auto main() -> int {
       pose_log.Append(current_pose, t);
       break;
     }
-    if (prev_closest_idx >= 0 && closest_idx == prev_closest_idx &&
-        closest_idx >= static_cast<int>(result.params.size()) - 5) {
-      double dx = target_pose.X().value() - current_pose.X().value();
-      double dy = target_pose.Y().value() - current_pose.Y().value();
-      double dist = std::hypot(dx, dy);
+    double dx = target_pose.X().value() - current_pose.X().value();
+    double dy = target_pose.Y().value() - current_pose.Y().value();
+    double dist = std::hypot(dx, dy);
 
-      while (dist > 0.001) {
-        double vx = (dx / dist) * speed_;
-        double vy = (dy / dist) * speed_;
+    if (dist <= 1) {
+      while (dist > 0.01) {
+        double vx = (dx / dist);
+        double vy = (dy / dist);
 
         vx_log.Append(vx, t);
         vy_log.Append(vy, t);
