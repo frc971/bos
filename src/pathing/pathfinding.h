@@ -26,6 +26,9 @@ struct Point {
   uint x, y;
 };
 
+auto BFSFirstFreeCell(std::vector<std::vector<Node>>& field, Point start_point)
+    -> Node;
+
 auto BFS(std::vector<std::vector<Node>>& field, Point start_point,
          Point end_point) -> std::vector<Node>;
 
