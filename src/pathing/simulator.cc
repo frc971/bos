@@ -62,10 +62,10 @@ auto main() -> int {
   target_log.Append(target_pose, 1);
 
   pathing::SplineResult result;
-  constexpr int k_max_steps = 10000;
+  const int max_steps = 10000;
   int64_t t = 0;
   int prev_closest_idx = -1;
-  for (int step = 0; step < k_max_steps; ++step) {
+  for (int step = 0; step < max_steps; ++step) {
     pathing::Point start_pt{
         .x = static_cast<uint>(current_pose.X().value() / node_size_meters),
         .y = static_cast<uint>(current_pose.Y().value() / node_size_meters)};
