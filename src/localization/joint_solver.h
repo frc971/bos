@@ -6,6 +6,12 @@
 #include "src/localization/square_solver.h"
 #include "src/utils/transform.h"
 
+ABSL_FLAG(double, acceptable_reprojection_error, 0.2, "");
+ABSL_FLAG(double, starting_step_size, 1e-5, "");
+ABSL_FLAG(double, yaw_prioritization, 1e1, "");
+ABSL_FLAG(double, rotation_step_scalar, 3e-1, "");
+ABSL_FLAG(double, max_iters, 1e3, "");
+
 using json = nlohmann::json;
 
 namespace localization {
@@ -72,14 +78,14 @@ class JointSolver : public IJointPositionSolver {
 
  private:
   Eigen::Matrix4d robot_to_field_cv_;
-  static constexpr double kacceptable_reprojection_error = 0.2;
-  static constexpr double starting_step_size_ = 1e-5;
-  static constexpr double kyaw_prioritization = 1e1;
-  static constexpr double krotation_step_scalar = 3e-1;
-  static constexpr size_t kmax_iters = 1e7;
   std::vector<CameraMatrices> camera_matrices_;
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;
+  const double kacceptable_reprojection_error;
+  const double starting_step_size_;
+  const double kyaw_prioritization;
+  const double krotation_step_scalar;
+  const size_t kmax_iters;
   static const Eigen::Matrix4d rotate_yaw_cv_;
   const frc::AprilTagFieldLayout layout_;
   static constexpr double kvariance_scalar_ = 0.5;

@@ -19,7 +19,14 @@ const Eigen::Matrix4d JointSolver::rotate_yaw_cv_ = (Eigen::Matrix4d() <<
 JointSolver::JointSolver(
     const std::vector<camera::CameraConstant>& camera_constants_,
     const AprilTagFieldLayout& layout)
-    : robot_to_field_cv_(Eigen::Matrix4d::Identity()), layout_(layout) {
+    : robot_to_field_cv_(Eigen::Matrix4d::Identity()),
+      layout_(layout),
+      kacceptable_reprojection_error(
+          absl::GetFlag(FLAGS_acceptable_reprojection_error)),
+      starting_step_size(absl::GetFlag(FLAGS_starting_step_size)),
+      kyaw_prioritization(absl::GetFlag(FLAGS_yaw_prioritization)),
+      krotation_step_scalar(absl::GetFlag(FLAGS_rotation_step_scalar)),
+      kmax_iters(absl::GetFlag(FLAGS_max_iters)) {
   for (const frc::AprilTag& tag : layout.GetTags()) {
     Eigen::Matrix4d field_to_tag = tag.pose.ToMatrix();
     utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);
@@ -237,53 +244,37 @@ auto JointSolver::EstimatePosition(
       ComputeNetStep(translation_and_rotation, decomposed_robot_to_field,
                      Rx_activations, Ry_activations, Rz_activations,
                      projections, projection_errors, data_points, yaw_only_);
-  double step_size = starting_step_size_;
   if (verbose_) {
     LOG(INFO) << "Initial loss: " << net_loss << " initial step: " << step;
   }
-
+  double step_size = starting_step_size_;
+  translation_and_rotation += step * step_size;
   size_t stepdowns = 0;
   size_t stepups = 0;
-  bool stuck_in_minimum = false;
-  for (size_t i = 0;
-       i < kmax_iters && net_loss > kacceptable_reprojection_error &&
-       !stuck_in_minimum;
-       i++) {
-    if (yaw_only_) {
-      step.rx *= krotation_step_scalar;
-      step.ry *= krotation_step_scalar;
-      step.rz *= krotation_step_scalar;
-    } else {
-      step.ry *= kyaw_prioritization;
-    }
-    if (step.rx != 0 || step.rz != 0) {
-      LOG(FATAL) << "NONZERO NON-YAW ADJUSTMENT";
-    }
-    translation_and_rotation += step * step_size;
-    double new_loss;
-    do {
-      decomposed_robot_to_field.UpdateTransformDecomposition(
-          translation_and_rotation);
-      new_loss =
-          Forward(decomposed_robot_to_field, Rx_activations, Ry_activations,
-                  Rz_activations, projections, projection_errors, data_points);
-      if (new_loss > net_loss) {
-        step_size /= 2.0;
-        stepdowns++;
-        if (stepdowns >= kmax_iters) {
-          stuck_in_minimum = true;
-          break;
-        }
-        translation_and_rotation -= step * step_size;
-        // std::cout << "Translation&Rotation: " << translation_and_rotation
-        //           << std::endl;
-        continue;
-      } else {
-        step_size *= 2.0;
-        stepups++;
+  double new_loss;
+  do {
+    decomposed_robot_to_field.UpdateTransformDecomposition(
+        translation_and_rotation);
+    new_loss =
+        Forward(decomposed_robot_to_field, Rx_activations, Ry_activations,
+                Rz_activations, projections, projection_errors, data_points);
+    if (new_loss > net_loss) {
+      step_size /= 2.0;
+      stepdowns++;
+      if (stepdowns >= kmax_iters) {
         break;
       }
-    } while (true);
+      translation_and_rotation -= step * step_size;
+      continue;
+    } else {
+      step_size *= 2.0;
+      stepups++;
+      break;
+    }
+  } while (step_size > 1e-6);
+  utils::TrackedTransformValues tracked_transform(translation_and_rotation);
+  for (size_t i = 0;
+       i < kmax_iters && net_loss > kacceptable_reprojection_error; i++) {
     net_loss =
         Forward(decomposed_robot_to_field, Rx_activations, Ry_activations,
                 Rz_activations, projections, projection_errors, data_points);
@@ -291,9 +282,13 @@ auto JointSolver::EstimatePosition(
         ComputeNetStep(translation_and_rotation, decomposed_robot_to_field,
                        Rx_activations, Ry_activations, Rz_activations,
                        projections, projection_errors, data_points, yaw_only_);
+    CHECK(step.rx == 0 && step.rz == 0);
+    tracked_transform.Update(step, step_size);
+    decomposed_robot_to_field.UpdateTransformDecomposition(tracked_transform);
+
     if (verbose_ && i % (kmax_iters / 10) == 0) {
       std::cout << "Step size: " << step_size << " new net loss: " << net_loss
-                << " new step: " << step * step_size << std::endl;
+                << " new step: " << step << std::endl;
     }
   }
 

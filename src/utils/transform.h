@@ -1,4 +1,5 @@
 #pragma once
+#include <absl/flags/flag.h>
 #include <frc/geometry/Pose3d.h>
 #include <opencv2/calib3d.hpp>
 #include "src/utils/pch.h"
@@ -74,7 +75,7 @@ struct TransformValues {
   double rx;
   double ry;
   double rz;
-  bool yaw_only = false;
+  bool yaw_only = true;
 
   friend void operator+=(TransformValues& left, const TransformValues& right) {
     left.x += right.x;
@@ -129,6 +130,72 @@ struct TransformValues {
   }
 };
 
+ABSL_FLAG(double, first_moment_decay, 0.9, "");
+ABSL_FLAG(double, second_moment_decay, 0.999, "");
+
+struct AdamTrackedValue {
+  double val;
+  double first_moment{};
+  double second_moment{};
+
+  inline AdamTrackedValue(double initial_val) : val(initial_val) {}
+
+  inline void Update(const double gradient, const double learning_rate) {
+    // Adam optimizer literature values
+    static constexpr double kfirst_moment_decay_rate_ =
+        absl::GetFlag(FLAGS_first_moment_decay).value_or(0.9);
+    static constexpr double ksecond_moment_decay_rate_ =
+        absl::GetFlag(FLAGS_first_moment_decay).value_or(0.999);
+    first_moment = kfirst_moment_decay_rate_ * first_moment +
+                   (1 - kfirst_moment_decay_rate_) * gradient;
+    second_moment = ksecond_moment_decay_rate_ * second_moment +
+                    (1 - ksecond_moment_decay_rate_) * gradient * gradient;
+    val =
+        val +
+        learning_rate * first_moment /
+            (std::sqrt(second_moment) +
+             std::numeric_limits<double>::
+                 epsilon());  // normally minus but in this case we already have the gradient going in the opposite direction
+  }
+
+  friend auto operator<<(std::ostream& os, const AdamTrackedValue& p)
+      -> std::ostream& {
+    os << "[" << p.val << ", " << p.first_moment << ", " << p.second_moment
+       << "]";
+    return os;
+  }
+};
+
+struct TrackedTransformValues {
+  AdamTrackedValue x, y, z, rx, ry, rz;
+
+  inline TrackedTransformValues(const TransformValues& untracked_values)
+      : x(untracked_values.x),
+        y(untracked_values.y),
+        z(untracked_values.z),
+        rx(untracked_values.rx),
+        ry(untracked_values.ry),
+        rz(untracked_values.rz) {}
+
+  inline void Update(const TransformValues& step, const double learning_rate) {
+    x.Update(step.x, learning_rate);
+    y.Update(step.y, learning_rate);
+    z.Update(step.z, learning_rate);
+    ry.Update(step.ry, learning_rate);
+    if (false) {  // TODO make dependent on yaw_only
+      rx.Update(step.rx, learning_rate);
+      rz.Update(step.rz, learning_rate);
+    }
+  }
+
+  friend auto operator<<(std::ostream& os, const TrackedTransformValues& p)
+      -> std::ostream& {
+    os << "x: " << p.x << "\ty: " << p.y << "\tz: " << p.z << "\trx: " << p.rx
+       << "\try: " << p.ry << "\trz: " << p.rz << std::endl;
+    return os;
+  }
+};
+
 struct TransformDecomposition {
   Eigen::Matrix4d translation;
   Eigen::Matrix4d Rx;
@@ -154,6 +221,27 @@ struct TransformDecomposition {
     translation(0, 3) = new_vals.x;
     translation(1, 3) = new_vals.y;
     translation(2, 3) = new_vals.z;
+  }
+
+  auto UpdateTransformDecomposition(const TrackedTransformValues& new_vals) {
+    Rx(1, 1) = cos(new_vals.rx.val);
+    Rx(2, 1) = sin(new_vals.rx.val);
+    Rx(1, 2) = -sin(new_vals.rx.val);
+    Rx(2, 2) = cos(new_vals.rx.val);
+
+    Ry(0, 0) = cos(new_vals.ry.val);
+    Ry(0, 2) = sin(new_vals.ry.val);
+    Ry(2, 0) = -sin(new_vals.ry.val);
+    Ry(2, 2) = cos(new_vals.ry.val);
+
+    Rz(0, 0) = cos(new_vals.rz.val);
+    Rz(0, 1) = -sin(new_vals.rz.val);
+    Rz(1, 0) = sin(new_vals.rz.val);
+    Rz(1, 1) = cos(new_vals.rz.val);
+
+    translation(0, 3) = new_vals.x.val;
+    translation(1, 3) = new_vals.y.val;
+    translation(2, 3) = new_vals.z.val;
   }
 };
 
