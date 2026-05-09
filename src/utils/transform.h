@@ -1,8 +1,12 @@
 #pragma once
+#include <absl/flags/declare.h>
 #include <absl/flags/flag.h>
 #include <frc/geometry/Pose3d.h>
 #include <opencv2/calib3d.hpp>
 #include "src/utils/pch.h"
+
+ABSL_DECLARE_FLAG(double, first_moment_decay);
+ABSL_DECLARE_FLAG(double, second_moment_decay);
 
 // Helper functions for converting between wpilib, opencv and eigen
 namespace utils {
@@ -130,9 +134,6 @@ struct TransformValues {
   }
 };
 
-ABSL_FLAG(double, first_moment_decay, 0.9, "");
-ABSL_FLAG(double, second_moment_decay, 0.999, "");
-
 struct AdamTrackedValue {
   double val;
   double first_moment{};
@@ -142,10 +143,10 @@ struct AdamTrackedValue {
 
   inline void Update(const double gradient, const double learning_rate) {
     // Adam optimizer literature values
-    static constexpr double kfirst_moment_decay_rate_ =
-        absl::GetFlag(FLAGS_first_moment_decay).value_or(0.9);
-    static constexpr double ksecond_moment_decay_rate_ =
-        absl::GetFlag(FLAGS_first_moment_decay).value_or(0.999);
+    const double kfirst_moment_decay_rate_ =
+        absl::GetFlag(FLAGS_first_moment_decay);
+    const double ksecond_moment_decay_rate_ =
+        absl::GetFlag(FLAGS_second_moment_decay);
     first_moment = kfirst_moment_decay_rate_ * first_moment +
                    (1 - kfirst_moment_decay_rate_) * gradient;
     second_moment = ksecond_moment_decay_rate_ * second_moment +

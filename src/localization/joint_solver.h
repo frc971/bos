@@ -1,4 +1,5 @@
 #pragma once
+#include <absl/flags/declare.h>
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include "nlohmann/json.hpp"
 #include "src/camera/camera_constants.h"
@@ -6,11 +7,11 @@
 #include "src/localization/square_solver.h"
 #include "src/utils/transform.h"
 
-ABSL_FLAG(double, acceptable_reprojection_error, 0.2, "");
-ABSL_FLAG(double, starting_step_size, 1e-5, "");
-ABSL_FLAG(double, yaw_prioritization, 1e1, "");
-ABSL_FLAG(double, rotation_step_scalar, 3e-1, "");
-ABSL_FLAG(double, max_iters, 1e3, "");
+ABSL_DECLARE_FLAG(double, acceptable_reprojection_error);
+ABSL_DECLARE_FLAG(double, starting_step_size);
+ABSL_DECLARE_FLAG(double, yaw_prioritization);
+ABSL_DECLARE_FLAG(double, rotation_step_scalar);
+ABSL_DECLARE_FLAG(double, max_iters);
 
 using json = nlohmann::json;
 

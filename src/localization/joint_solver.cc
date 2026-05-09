@@ -1,9 +1,16 @@
 #include "src/localization/joint_solver.h"
+#include <absl/flags/flag.h>
 #include <opencv2/calib3d.hpp>
 #include <utility>
 #include "src/utils/camera_utils.h"
 #include "src/utils/constants_from_json.h"
 #include "src/utils/transform.h"
+
+ABSL_FLAG(double, acceptable_reprojection_error, 0.2, "");
+ABSL_FLAG(double, starting_step_size, 1e-5, "");
+ABSL_FLAG(double, yaw_prioritization, 1e1, "");
+ABSL_FLAG(double, rotation_step_scalar, 3e-1, "");
+ABSL_FLAG(double, max_iters, 1e3, "");
 
 namespace localization {
 
@@ -18,15 +25,15 @@ const Eigen::Matrix4d JointSolver::rotate_yaw_cv_ = (Eigen::Matrix4d() <<
 
 JointSolver::JointSolver(
     const std::vector<camera::CameraConstant>& camera_constants_,
-    const AprilTagFieldLayout& layout)
+    const frc::AprilTagFieldLayout& layout)
     : robot_to_field_cv_(Eigen::Matrix4d::Identity()),
-      layout_(layout),
       kacceptable_reprojection_error(
           absl::GetFlag(FLAGS_acceptable_reprojection_error)),
-      starting_step_size(absl::GetFlag(FLAGS_starting_step_size)),
+      starting_step_size_(absl::GetFlag(FLAGS_starting_step_size)),
       kyaw_prioritization(absl::GetFlag(FLAGS_yaw_prioritization)),
       krotation_step_scalar(absl::GetFlag(FLAGS_rotation_step_scalar)),
-      kmax_iters(absl::GetFlag(FLAGS_max_iters)) {
+      kmax_iters(absl::GetFlag(FLAGS_max_iters)),
+      layout_(layout) {
   for (const frc::AprilTag& tag : layout.GetTags()) {
     Eigen::Matrix4d field_to_tag = tag.pose.ToMatrix();
     utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);

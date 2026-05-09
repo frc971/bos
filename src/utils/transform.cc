@@ -1,4 +1,8 @@
+#include <absl/flags/flag.h>
 #include "src/utils/transform.h"
+
+ABSL_FLAG(double, first_moment_decay, 0.9, "");
+ABSL_FLAG(double, second_moment_decay, 0.999, "");
 
 namespace utils {
 
