@@ -212,22 +212,20 @@ auto JointSolver::EstimatePosition(
   }
   std::vector<data_point_t> data_points;
   int num_tags = 0;
-  for (size_t i = 0; i < all_cam_detections.size(); i++) {
-    for (const tag_detection_t& detection : all_cam_detections[i]) {
+  for (size_t source_index = 0; source_index < all_cam_detections.size();
+       source_index++) {
+    for (const tag_detection_t& detection : all_cam_detections[source_index]) {
       num_tags++;
-      // std::vector<cv::Point2d> undistorted_corners;
-      // cv::undistortImagePoints(detection.corners, undistorted_corners,
-      //                          camera_mats.camera_matrix,
-      //                          camera_mats.distortion_coefficients);
-      for (size_t j = 0; j < detection.corners.size(); j++) {
+      for (size_t corner_index = 0; corner_index < detection.corners.size();
+           corner_index++) {
         Eigen::Vector2d undistorted_image_point;
-        undistorted_image_point << detection.corners[i].x,
-            detection.corners[i].y;
+        undistorted_image_point << detection.corners[corner_index].x,
+            detection.corners[corner_index].y;
         const data_point_t datapoint = {
             .undistorted_point = undistorted_image_point,
-            .source_index = i,
+            .source_index = source_index,
             .field_to_tag_corner_homogenous =
-                tag_corners_[detection.tag_id].value()[j]};
+                tag_corners_[detection.tag_id].value()[corner_index]};
         data_points.push_back(datapoint);
       }
     }
