@@ -16,3 +16,11 @@ auto levenberg_marquardt(
     const std::function<Eigen::MatrixXd(const Eigen::VectorXd&)>&
         compute_jacobian,
     double& lambda, double tolerance = 1e-8) -> bool;
+
+auto levenberg_marquardt(
+    Eigen::VectorXd& params,
+    const std::function<Eigen::MatrixXd(const Eigen::VectorXd&)>&
+        compute_residual,
+    const std::function<Eigen::MatrixXd(const Eigen::VectorXd&)>&
+        compute_jacobian,
+    double& lambda, double tolerance = 1e-8) -> bool;

@@ -19,11 +19,13 @@ class JointSolver {
   using AD = mode::active_type;
 
   using datapoint_t = struct DataPoint {
-    const Eigen::Vector3d& normalized_image_point;
-    const Eigen::Matrix3d& normalized_camera_matrix;
-    const Eigen::Matrix4d& camera_to_robot;
-    const Eigen::Matrix4d& feild_to_tag;
-    const Eigen::Vector4d& homogenized_apriltag_corner;
+    Eigen::Vector3d normalized_image_point;
+    Eigen::Matrix3d normalized_camera_matrix;
+    Eigen::Matrix4d camera_to_robot;
+    Eigen::Matrix4d feild_to_tag;
+    Eigen::Vector4d homogenized_apriltag_corner;
+    Eigen::Vector4d x;
+    Eigen::MatrixXd A;
   };
 
   using transform3d_derivative_t = struct Transfrom3dDerivative {
@@ -87,16 +89,16 @@ class JointSolver {
                              const camera::camera_constant_t& camera_constant)
       -> Eigen::Vector3d;
 
-  auto static ProjectPoints(const Eigen::Matrix4d feild_to_robot,
-                            const Eigen::Matrix4d feild_to_tag,
-                            const Eigen::Matrix3d& camera_matrix,
-                            const Eigen::Matrix4d& camera_to_robot,
-                            const Eigen::Vector4d& homogenized_apriltag_corner)
-      -> Eigen::Vector3d;
+  auto static ProjectPoints(const Eigen::MatrixXd& A,
+                            const Eigen::MatrixXd& correction,
+                            const Eigen::Vector4d& x) -> Eigen::Vector3d;
 
   auto static NormalizeCameraMatrix(
       Eigen::Matrix3d camera_matrix,
       const camera::camera_constant_t& camera_constant) -> Eigen::Matrix3d;
+
+  auto static CreateTransformationMatrix(const Eigen::VectorXd& params)
+      -> Eigen::Matrix4d;
 
  public:
   JointSolver(const std::vector<camera::camera_constant_t>& camera_constants,
@@ -106,9 +108,8 @@ class JointSolver {
           camera_detections,
       std::optional<frc::Pose3d> intial_pose = std::nullopt)
       -> position_estimate_t;
-
- private:
-  auto CalculateResidual(const Eigen::VectorXd& candidate) -> Eigen::VectorXd;
+  auto CalculateResidual(const Eigen::VectorXd& candidate) -> Eigen::MatrixXd;
+  auto CalculateJacobian(const Eigen::VectorXd& candidate) -> Eigen::MatrixXd;
 
  private:
   std::unordered_map<std::string, int> camera_name_to_index;
