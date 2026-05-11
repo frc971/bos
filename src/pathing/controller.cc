@@ -17,7 +17,6 @@ auto RunController(
 
   std::ifstream file(navgrid_path);
   if (!file.is_open()) {
-    LOG(FATAL) << "Failed to open navgrid.json" << std::endl;
     LOG(FATAL) << "Failed to open navgrid.json";
     return;
   }
