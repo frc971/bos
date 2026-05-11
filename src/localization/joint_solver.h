@@ -14,7 +14,7 @@ namespace localization {
 
 class JointSolver {
  public:
-  using mode = xad::adj<double>;
+  using mode = xad::adj<double, 2>;
   using tape_type = mode::tape_type;
   using AD = mode::active_type;
 
@@ -28,56 +28,18 @@ class JointSolver {
     Eigen::MatrixXd A;
   };
 
-  using transform3d_derivative_t = struct Transfrom3dDerivative {
-    double scaler = 0;
-    double theta = 0;
-    double t_z = 0;
-    double r_x = 0;
-    double r_y = 0;
-    double r_z = 0;
+  using differentiable_transform3d_t = struct DifferentiableTransform3d {
+    AD t_x = 0;
+    AD t_y = 0;
+    AD t_z = 0;
+    AD r_x = 0;
+    AD r_y = 0;
+    AD r_z = 0;
 
-    auto operator+(const Transfrom3dDerivative other) -> Transfrom3dDerivative;
-    auto operator-(const Transfrom3dDerivative other) -> Transfrom3dDerivative;
-    auto operator*(const double other) -> Transfrom3dDerivative;
-    auto operator+(const double other) -> Transfrom3dDerivative;
-    auto operator*(const Transfrom3dDerivative other) -> Transfrom3dDerivative;
-    auto operator/(const Transfrom3dDerivative other) -> Transfrom3dDerivative;
-    auto sqrt() -> Transfrom3dDerivative;
-  };
-
-  struct DifferentiableTransform3d {
-    AD scaler;
-    AD theta;
-
-    AD t_z;
-    AD r_x;
-    AD r_y;
-    AD r_z;
-    std::array<std::array<AD, 4>, 4> matrix;
-
-    DifferentiableTransform3d(frc::Pose3d pose);
-    DifferentiableTransform3d(frc::Transform3d pose);
-    DifferentiableTransform3d(Eigen::Matrix4d matrix);
-    DifferentiableTransform3d(const Eigen::VectorXd& params);
-
-    void Update(transform3d_derivative_t derrivative, double lr_translation,
-                double lr_rotation);
-    void RegisterInputs(tape_type& tape);
-    void RegisterOutputs(tape_type& tape);
-    auto ToEigen() -> Eigen::Matrix4d const;
-    void CalculateMatrix();
-    auto BackPropagate(const Eigen::Matrix4d& next_derrivative, tape_type& tape)
-        -> transform3d_derivative_t;
+    auto ToMatrix() -> std::array<std::array<AD, 4>, 4>;
   };
 
  public:
-  auto static CalculateDerivative(const Eigen::Matrix4d& robot_to_feild,
-                                  const Eigen::Matrix4d& feild_to_tag,
-                                  const Eigen::Matrix4d& camera_to_robot,
-                                  const Eigen::Matrix3d& camera_matrix,
-                                  const Eigen::Vector3d& image_point,
-                                  int corner_index) -> Eigen::Matrix4d;
-
   auto static CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
                             const Eigen::Matrix4d& feild_to_tag,
                             const Eigen::Matrix4d& camera_to_robot,
@@ -99,6 +61,21 @@ class JointSolver {
 
   auto static CreateTransformationMatrix(const Eigen::VectorXd& params)
       -> Eigen::Matrix4d;
+
+  auto static Multiply(const std::array<std::array<AD, 4>, 4>& a,
+                       const Eigen::Vector4d& b) -> std::array<AD, 4>;
+
+  auto static Multiply(const Eigen::Matrix<double, 3, 4>& a,
+                       const std::array<AD, 4>& b) -> std::array<AD, 3>;
+
+  // Jacobian should be data_points_.size() x 6(number of params in correction)
+  // index is should be from 1...data_points_.size()
+  void static SaveJacobian(Eigen::MatrixXd& J,
+                           const differentiable_transform3d_t& correction,
+                           int index);
+
+  void static SaveResidual(Eigen::VectorXd& residual, double u_residual,
+                           double v_residual, int index);
 
  public:
   JointSolver(const std::vector<camera::camera_constant_t>& camera_constants,
@@ -124,7 +101,8 @@ class JointSolver {
   tape_type tape_;
 };
 
-auto operator<<(std::ostream& os, const JointSolver::Transfrom3dDerivative& d)
+auto operator<<(std::ostream& os,
+                const JointSolver::differentiable_transform3d_t& d)
     -> std::ostream&;
 
 auto operator<<(std::ostream& os,

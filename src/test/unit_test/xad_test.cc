@@ -66,6 +66,42 @@ TEST(XadTest, Vector) {  // NOLINT
   tape.computeAdjoints();
 
   // output results
+  auto y1 = value(y.first);
+  auto y2 = value(y.second);
+  auto dy1_dx0 = x0_ad.getAdjoint()[0];
+  auto dy1_dx1 = x1_ad.getAdjoint()[0];
+  auto dy1_dx2 = x2_ad.getAdjoint()[0];
+  auto dy1_dx3 = x3_ad.getAdjoint()[0];
+  auto dy2_dx0 = x0_ad.getAdjoint()[1];
+  auto dy2_dx1 = x1_ad.getAdjoint()[1];
+  auto dy2_dx2 = x2_ad.getAdjoint()[1];
+  auto dy2_dx3 = x3_ad.getAdjoint()[1];
+
+  tape.newRecording();
+  tape.registerInput(x0_ad);
+  tape.registerInput(x1_ad);
+  tape.registerInput(x2_ad);
+  tape.registerInput(x3_ad);
+  tape.registerOutput(y.first);
+  tape.registerOutput(y.second);
+  y = f2(x0_ad, x1_ad, x2_ad, x3_ad);
+  y.first.setAdjoint({1.0, 0.0});
+  y.second.setAdjoint({0.0, 1.0});
+  tape.computeAdjoints();
+
+  ASSERT_DOUBLE_EQ(y1, value(y.first));
+  ASSERT_DOUBLE_EQ(y2, value(y.second));
+
+  EXPECT_DOUBLE_EQ(dy1_dx0, x0_ad.getAdjoint()[0]);
+  EXPECT_DOUBLE_EQ(dy1_dx1, x1_ad.getAdjoint()[0]);
+  EXPECT_DOUBLE_EQ(dy1_dx2, x2_ad.getAdjoint()[0]);
+  EXPECT_DOUBLE_EQ(dy1_dx3, x3_ad.getAdjoint()[0]);
+
+  EXPECT_DOUBLE_EQ(dy2_dx0, x0_ad.getAdjoint()[1]);
+  EXPECT_DOUBLE_EQ(dy2_dx1, x1_ad.getAdjoint()[1]);
+  EXPECT_DOUBLE_EQ(dy2_dx2, x2_ad.getAdjoint()[1]);
+  EXPECT_DOUBLE_EQ(dy2_dx3, x3_ad.getAdjoint()[1]);
+
   std::cout << "y1 = " << value(y.first) << "\n"
             << "y2 = " << value(y.second) << "\n"
             << "\nfirst order derivatives of y1:\n"

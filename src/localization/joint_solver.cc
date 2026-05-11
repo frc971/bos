@@ -11,7 +11,7 @@ namespace localization {
 #define IMAGE_STRIDE 4
 #define LOG_PATH "/bos-logs/log181/right"
 #define LR 0.05
-#define EPOCHS 100
+#define EPOCHS 1
 #define BETA 0.3
 
 using frc::AprilTagFieldLayout;
@@ -39,161 +39,8 @@ constexpr auto square(double x) -> double {
   return x * x;
 }
 
-auto JointSolver::Transfrom3dDerivative::operator+(
-    const Transfrom3dDerivative other) -> Transfrom3dDerivative {
-  return Transfrom3dDerivative{.scaler = scaler + other.scaler,
-                               .theta = theta + other.theta,
-                               .t_z = t_z + other.t_z,
-                               .r_x = r_x + other.r_x,
-                               .r_y = r_y + other.r_y,
-                               .r_z = r_z + other.r_z};
-}
-
-auto JointSolver::Transfrom3dDerivative::operator-(
-    const Transfrom3dDerivative other) -> Transfrom3dDerivative {
-  return Transfrom3dDerivative{.scaler = scaler - other.scaler,
-                               .theta = theta - other.theta,
-                               .t_z = t_z - other.t_z,
-                               .r_x = r_x - other.r_x,
-                               .r_y = r_y - other.r_y,
-                               .r_z = r_z - other.r_z};
-}
-
-auto JointSolver::Transfrom3dDerivative::operator*(const double other)
-    -> Transfrom3dDerivative {
-  return Transfrom3dDerivative{.scaler = scaler * other,
-                               .theta = theta * other,
-                               .t_z = t_z * other,
-                               .r_x = r_x * other,
-                               .r_y = r_y * other,
-                               .r_z = r_z * other};
-}
-
-auto JointSolver::Transfrom3dDerivative::operator+(const double other)
-    -> Transfrom3dDerivative {
-  return Transfrom3dDerivative{.scaler = scaler + other,
-                               .theta = theta + other,
-                               .t_z = t_z + other,
-                               .r_x = r_x + other,
-                               .r_y = r_y + other,
-                               .r_z = r_z + other};
-}
-
-auto JointSolver::Transfrom3dDerivative::operator*(
-    const Transfrom3dDerivative other) -> Transfrom3dDerivative {
-  return Transfrom3dDerivative{.scaler = scaler * other.scaler,
-                               .theta = theta * other.theta,
-                               .t_z = t_z * other.t_z,
-                               .r_x = r_x * other.r_x,
-                               .r_y = r_y * other.r_y,
-                               .r_z = r_z * other.r_z};
-}
-
-auto JointSolver::Transfrom3dDerivative::operator/(
-    const Transfrom3dDerivative other) -> Transfrom3dDerivative {
-  return Transfrom3dDerivative{.scaler = scaler / other.scaler,
-                               .theta = theta / other.theta,
-                               .t_z = t_z / other.t_z,
-                               .r_x = r_x / other.r_x,
-                               .r_y = r_y / other.r_y,
-                               .r_z = r_z / other.r_z};
-}
-
-auto JointSolver::Transfrom3dDerivative::sqrt() -> Transfrom3dDerivative {
-  return Transfrom3dDerivative{.scaler = std::sqrt(scaler),
-                               .theta = std::sqrt(theta),
-                               .t_z = std::sqrt(t_z),
-                               .r_x = std::sqrt(r_x),
-                               .r_y = std::sqrt(r_y),
-                               .r_z = std::sqrt(r_z)};
-}
-
-JointSolver::DifferentiableTransform3d::DifferentiableTransform3d(
-    const Eigen::VectorXd& params)
-    : scaler(params(0)),
-      theta(params(1)),
-      t_z(params(2)),
-      r_x(params(3)),
-      r_y(params(4)),
-      r_z(params(5)) {}
-
-JointSolver::DifferentiableTransform3d::DifferentiableTransform3d(
-    frc::Pose3d pose)
-    : scaler(std::hypot(pose.Translation().X().value(),
-                        pose.Translation().Y().value())),
-      theta(std::atan2(pose.Translation().Y().value(),
-                       pose.Translation().X().value())),
-      t_z(pose.Translation().Z().value()),
-      r_x(pose.Rotation().X().value()),
-      r_y(pose.Rotation().Y().value()),
-      r_z(pose.Rotation().Z().value()) {}
-
-JointSolver::DifferentiableTransform3d::DifferentiableTransform3d(
-    frc::Transform3d pose)
-    : scaler(std::hypot(pose.Translation().X().value(),
-                        pose.Translation().Y().value())),
-      theta(std::atan2(pose.Translation().Y().value(),
-                       pose.Translation().X().value())),
-      t_z(pose.Translation().Z().value()),
-      r_x(pose.Rotation().X().value()),
-      r_y(pose.Rotation().Y().value()),
-      r_z(pose.Rotation().Z().value()) {}
-
-JointSolver::DifferentiableTransform3d::DifferentiableTransform3d(
-    Eigen::Matrix4d matrix)
-    : scaler(std::hypot(matrix(0, 3), matrix(1, 3))),
-      theta(std::atan2(matrix(1, 3), matrix(0, 3))),
-      t_z(matrix(2, 3)) {
-  Eigen::Matrix3d R = matrix.block<3, 3>(0, 0);
-  Eigen::Vector3d euler = R.canonicalEulerAngles(2, 1, 0);
-  r_x = euler(2);
-  r_z = euler(0);
-  r_y = euler(1);
-}
-
-void JointSolver::DifferentiableTransform3d::Update(
-    transform3d_derivative_t derrivative, double lr_translation,
-    double lr_rotation) {
-  scaler -= derrivative.scaler * lr_translation;
-  theta -= derrivative.theta * lr_translation;
-  // t_z -= derrivative.t_z * lr_translation;
-
-  // r_x -= derrivative.r_x * lr;
-  // r_y -= derrivative.r_y * lr;
-  r_z -= derrivative.r_z * lr_rotation;
-}
-
-void JointSolver::DifferentiableTransform3d::RegisterInputs(tape_type& tape) {
-  tape.registerInput(r_x);
-  tape.registerInput(r_y);
-  tape.registerInput(r_z);
-
-  tape.registerInput(scaler);
-  tape.registerInput(theta);
-  tape.registerInput(t_z);
-}
-
-void JointSolver::DifferentiableTransform3d::RegisterOutputs(tape_type& tape) {
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      tape.registerOutput(matrix[i][j]);
-    }
-  }
-}
-
-auto JointSolver::DifferentiableTransform3d::ToEigen()
-    -> Eigen::Matrix4d const {
-  // clang-format off
-  return (Eigen::Matrix<double, 4, 4>() << 
-  matrix[0][0].value(), matrix[0][1].value(), matrix[0][2].value(), matrix[0][3].value(),
-  matrix[1][0].value(), matrix[1][1].value(), matrix[1][2].value(), matrix[1][3].value(),
-  matrix[2][0].value(), matrix[2][1].value(), matrix[2][2].value(), matrix[2][3].value(),
-  matrix[3][0].value(), matrix[3][1].value(), matrix[3][2].value(), matrix[3][3].value())
-  .finished();
-  // clang-format on
-}
-
-void JointSolver::DifferentiableTransform3d::CalculateMatrix() {
+auto JointSolver::DifferentiableTransform3d::ToMatrix()
+    -> std::array<std::array<AD, 4>, 4> {
   AD cos_x = xad::cos(r_x);
   AD cos_y = xad::cos(r_y);
   AD cos_z = xad::cos(r_z);
@@ -203,6 +50,7 @@ void JointSolver::DifferentiableTransform3d::CalculateMatrix() {
   AD sin_z = xad::sin(r_z);
 
   // Rotation
+  std::array<std::array<AD, 4>, 4> matrix;
   matrix[0][0] = cos_z * cos_y;
   matrix[0][1] = cos_z * sin_y * sin_x - sin_z * cos_x;
   matrix[0][2] = cos_z * sin_y * cos_x + sin_z * sin_x;
@@ -216,74 +64,15 @@ void JointSolver::DifferentiableTransform3d::CalculateMatrix() {
   matrix[2][2] = cos_y * cos_x;
 
   // Translation
-  matrix[0][3] = std::cos(theta) * scaler;
-  matrix[1][3] = std::sin(theta) * scaler;
+  matrix[0][3] = t_x;
+  matrix[1][3] = t_y;
   matrix[2][3] = t_z;
 
   matrix[3][0] = 0;
   matrix[3][1] = 0;
   matrix[3][3] = 1;
   matrix[3][2] = 0;
-}
-
-auto JointSolver::DifferentiableTransform3d::BackPropagate(
-    const Eigen::Matrix4d& next_derrivative, tape_type& tape)
-    -> transform3d_derivative_t {
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      tape.registerOutput(matrix[i][j]);
-      derivative(matrix[i][j]) = next_derrivative(i, j);
-    }
-  }
-  tape.computeAdjoints();
-  transform3d_derivative_t derrivative{
-      .scaler = xad::derivative(scaler),
-      .theta = xad::derivative(theta),
-      .t_z = xad::derivative(t_z),
-      .r_x = xad::derivative(r_x),
-      .r_y = xad::derivative(r_y),
-      .r_z = xad::derivative(r_z),
-  };
-  return derrivative;
-}
-
-auto JointSolver::CalculateDerivative(const Eigen::Matrix4d& robot_to_feild,
-                                      const Eigen::Matrix4d& feild_to_tag,
-                                      const Eigen::Matrix4d& camera_to_robot,
-                                      const Eigen::Matrix3d& camera_matrix,
-                                      const Eigen::Vector3d& image_point,
-                                      int corner_index) -> Eigen::Matrix4d {
-  Eigen::Vector3d projected_point =
-      camera_matrix * PI * camera_to_robot * robot_to_feild * feild_to_tag *
-      rotate_yaw *
-      localization::kapriltag_corners_eigen_homogenized[corner_index];
-  auto normalized_point = projected_point / projected_point[0];
-
-  auto normalized_points_d = normalized_point - image_point;
-
-  // clang-format off
-  auto projected_point_d = (Eigen::Vector3d() << 
-    (-normalized_points_d[1] * projected_point[1]) / (projected_point[0] * projected_point[0]) + 
-    (-normalized_points_d[2] * projected_point[1]) / (projected_point[0] * projected_point[0]),
-    normalized_points_d[1] / projected_point[0],
-    normalized_points_d[2] / projected_point[0]
-  ).finished();
-  // clang-format on
-
-  auto camera_matrix_xd = camera_matrix.transpose() * projected_point_d;
-
-  auto PI_xd = PI.transpose() * camera_matrix_xd;
-
-  auto camera_to_robot_xd = camera_to_robot.transpose() * PI_xd;
-
-  auto robot_to_feild_d =
-      camera_to_robot_xd *
-
-      (feild_to_tag * rotate_yaw *
-       localization::kapriltag_corners_eigen_homogenized[corner_index])
-          .transpose();
-
-  return robot_to_feild_d;
+  return matrix;
 }
 
 auto JointSolver::CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
@@ -362,6 +151,53 @@ auto JointSolver::CreateTransformationMatrix(const Eigen::VectorXd& params)
       0,             0,                                     0,                                     1)
       .finished();
   // clang-format on
+}
+auto JointSolver::Multiply(const std::array<std::array<AD, 4>, 4>& a,
+                           const Eigen::Vector4d& b) -> std::array<AD, 4> {
+  std::array<AD, 4> out{};
+  for (int i = 0; i < 4; i++) {
+    out[i] = 0;
+    for (int j = 0; j < 4; j++) {
+      out[i] += a[i][j] * b[j];
+    }
+  }
+  return out;
+}
+auto JointSolver::Multiply(const Eigen::Matrix<double, 3, 4>& a,
+                           const std::array<AD, 4>& b) -> std::array<AD, 3> {
+  std::array<AD, 3> out{};
+  for (int i = 0; i < 3; i++) {
+    out[i] = 0;
+    for (int j = 0; j < 4; j++) {
+      out[i] += a(i, j) * b[j];
+    }
+  }
+  return out;
+}
+
+void JointSolver::SaveJacobian(Eigen::MatrixXd& J,
+                               const differentiable_transform3d_t& correction,
+                               int index) {
+  const int offset = index * 2;
+  J(0 + offset, 0) = correction.t_x.getAdjoint()[0];
+  J(0 + offset, 1) = correction.t_y.getAdjoint()[0];
+  J(0 + offset, 2) = correction.t_z.getAdjoint()[0];
+  J(0 + offset, 3) = correction.r_x.getAdjoint()[0];
+  J(0 + offset, 4) = correction.r_y.getAdjoint()[0];
+  J(0 + offset, 5) = correction.r_z.getAdjoint()[0];
+  J(1 + offset, 0) = correction.t_x.getAdjoint()[1];
+  J(1 + offset, 1) = correction.t_y.getAdjoint()[1];
+  J(1 + offset, 2) = correction.t_z.getAdjoint()[1];
+  J(1 + offset, 3) = correction.r_x.getAdjoint()[1];
+  J(1 + offset, 4) = correction.r_y.getAdjoint()[1];
+  J(1 + offset, 5) = correction.r_z.getAdjoint()[1];
+}
+
+void JointSolver::SaveResidual(Eigen::VectorXd& residual, double u_residual,
+                               double v_residual, int index) {
+  const int offset = index * 2;
+  residual[0 + offset] = u_residual;
+  residual[1 + offset] = v_residual;
 }
 
 JointSolver::JointSolver(
@@ -444,7 +280,7 @@ auto JointSolver::CalculateJacobian(const Eigen::VectorXd& params)
     J(0, 4) = 0;                                 // du/r_y
     J(0, 5) = 0;                                 // du/r_z
 
-    LOG(INFO) << "A_d\n" << A_d;
+    // LOG(INFO) << "A_d\n" << A_d;
   }
   return {};
 }
@@ -490,9 +326,60 @@ auto JointSolver::EstimatePosition(
     }
   }
 
-  const Eigen::VectorXd kZeroTransformParams = Eigen::VectorXd::Zero(6);
-  CalculateResidual(kZeroTransformParams);
-  CalculateJacobian(kZeroTransformParams);
+  differentiable_transform3d_t correction;
+  value(correction.t_x) = 0.0;
+  value(correction.t_y) = 0.0;
+  value(correction.t_z) = 0.0;
+  value(correction.r_x) = 0.0;
+  value(correction.r_y) = 0.0;
+  value(correction.r_z) = 0.0;
+
+  for (int epoch = 0; epoch < EPOCHS; epoch++) {
+    Eigen::MatrixXd J(data_points_.size() * 2, 6);
+    Eigen::VectorXd residual(data_points_.size() * 2);
+
+    tape_.registerInput(correction.t_x);
+    tape_.registerInput(correction.t_y);
+    tape_.registerInput(correction.t_z);
+    tape_.registerInput(correction.r_x);
+    tape_.registerInput(correction.r_y);
+    tape_.registerInput(correction.r_z);
+    tape_.newRecording();
+    int index = 0;
+    for (auto const& data_point : data_points_) {
+      const auto correction_matrix = correction.ToMatrix();
+      auto a = Multiply(correction_matrix, data_point.x);
+      std::array<AD, 3> projected_point = Multiply(data_point.A, a);
+      AD u = projected_point[1] / projected_point[0];
+      AD v = projected_point[2] / projected_point[0];
+      tape_.registerOutput(u);
+      tape_.registerOutput(v);
+      u.setAdjoint({1.0, 0.0});
+      v.setAdjoint({0.0, 1.0});
+      LOG(INFO) << u.value() << " " << data_point.normalized_image_point[1];
+      tape_.computeAdjoints();
+      SaveJacobian(J, correction, index);
+      SaveResidual(residual, u.value() - data_point.normalized_image_point[1],
+                   v.value() - data_point.normalized_image_point[2], index);
+
+      index++;
+    }
+    LOG(INFO) << "J\n" << J;
+    LOG(INFO) << "Residual\n" << residual;
+    // J(0, 0) = correction.t_x.getAdjoint()[0];
+    // J(0, 1) = correction.t_y.getAdjoint()[0];
+    // J(0, 2) = correction.t_z.getAdjoint()[0];
+    // J(0, 3) = correction.r_x.getAdjoint()[0];
+    // J(0, 4) = correction.r_y.getAdjoint()[0];
+    // J(0, 5) = correction.r_z.getAdjoint()[0];
+    // J(1, 0) = correction.t_x.getAdjoint()[1];
+    // J(1, 1) = correction.t_y.getAdjoint()[1];
+    // J(1, 2) = correction.t_z.getAdjoint()[1];
+    // J(1, 3) = correction.r_x.getAdjoint()[1];
+    // J(1, 4) = correction.r_y.getAdjoint()[1];
+    // J(1, 5) = correction.r_z.getAdjoint()[1];
+    // LOG(INFO) << "J\n" << J;
+  }
 
   return position_estimate_t{
       .tag_ids = tag_ids,
@@ -508,22 +395,11 @@ auto JointSolver::EstimatePosition(
   };
 }
 
-auto operator<<(std::ostream& os, const JointSolver::Transfrom3dDerivative& d)
-    -> std::ostream& {
-  os << "scaler=" << d.scaler << "\n"
-     << "theta=" << d.theta << "\n"
-     << "t_z=" << d.t_z << "\n"
-     << "r_x=" << d.r_x << "\n"
-     << "r_y=" << d.r_y << "\n"
-     << "r_z=" << d.r_z << "";
-  return os;
-}
-
 auto operator<<(std::ostream& os,
-                const JointSolver::DifferentiableTransform3d& t)
+                const JointSolver::differentiable_transform3d_t& t)
     -> std::ostream& {
-  os << "scaler=" << t.scaler << "\n"
-     << "theta=" << t.theta << "\n"
+  os << "t_x=" << t.t_x << "\n"
+     << "t_y=" << t.t_y << "\n"
      << "t_z=" << t.t_z << "\n"
      << "r_x=" << t.r_x << "\n"
      << "r_y=" << t.r_y << "\n"
