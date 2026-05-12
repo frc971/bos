@@ -1,4 +1,5 @@
 #include "src/localization/joint_solver.h"
+#include <algorithm>
 #include <opencv2/calib3d.hpp>
 #include <utility>
 #include "src/localization/position_solver.h"
@@ -8,11 +9,7 @@
 
 namespace localization {
 
-#define IMAGE_STRIDE 4
-#define LOG_PATH "/bos-logs/log181/right"
-#define LR 0.05
-#define EPOCHS 1
-#define BETA 0.3
+#define EPOCHS 200
 
 using frc::AprilTagFieldLayout;
 using utils::CameraMatrixFromJson;
@@ -73,6 +70,17 @@ auto JointSolver::DifferentiableTransform3d::ToMatrix()
   matrix[3][3] = 1;
   matrix[3][2] = 0;
   return matrix;
+}
+void JointSolver::DifferentiableTransform3d::Update(
+    const Eigen::VectorXd& update) {
+  CHECK(update.size() == 6);
+  t_x += update[0];
+  t_y += update[1];
+  t_z += update[2];
+
+  r_x += update[3];
+  r_y += update[4];
+  r_z += update[5];
 }
 
 auto JointSolver::CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
@@ -198,6 +206,57 @@ void JointSolver::SaveResidual(Eigen::VectorXd& residual, double u_residual,
   const int offset = index * 2;
   residual[0 + offset] = u_residual;
   residual[1 + offset] = v_residual;
+}
+
+auto JointSolver::CalculateUpdate(const Eigen::MatrixXd& J,
+                                  const Eigen::VectorXd& residual,
+                                  double lambda) -> Eigen::VectorXd {
+  constexpr double kEpsilon = 1e-9;
+
+  const Eigen::MatrixXd j_t_j = J.transpose() * J;
+  Eigen::VectorXd diagonal = j_t_j.diagonal();
+  for (int i = 0; i < diagonal.size(); ++i) {
+    if (diagonal[i] <= kEpsilon) {
+      diagonal[i] = kEpsilon;
+    }
+  }
+
+  const Eigen::MatrixXd damping =
+      (lambda * diagonal).asDiagonal().toDenseMatrix();
+  const Eigen::MatrixXd damped_hessian =
+      j_t_j + damping +
+      kEpsilon * Eigen::MatrixXd::Identity(J.cols(), J.cols());
+  const Eigen::VectorXd gradient = J.transpose() * residual;
+
+  const Eigen::LDLT<Eigen::MatrixXd> solver(damped_hessian);
+  if (solver.info() != Eigen::Success) {
+    return Eigen::VectorXd::Zero(J.cols());
+  }
+
+  return solver.solve(-gradient);
+}
+
+auto JointSolver::CalculateResidualLoss(
+    const differentiable_transform3d_t& correction,
+    const std::vector<datapoint_t>& data_points) -> double {
+  Eigen::VectorXd params(6);
+  params << value(correction.t_x), value(correction.t_y), value(correction.t_z),
+      value(correction.r_x), value(correction.r_y), value(correction.r_z);
+
+  const Eigen::Matrix4d correction_matrix = CreateTransformationMatrix(params);
+
+  double loss = 0.0;
+  for (const auto& data_point : data_points) {
+    const Eigen::Vector3d projected_point =
+        ProjectPoints(data_point.A, correction_matrix, data_point.x);
+    const double u_residual =
+        projected_point[1] - data_point.normalized_image_point[1];
+    const double v_residual =
+        projected_point[2] - data_point.normalized_image_point[2];
+    loss += u_residual * u_residual + v_residual * v_residual;
+  }
+
+  return loss;
 }
 
 JointSolver::JointSolver(
@@ -327,12 +386,22 @@ auto JointSolver::EstimatePosition(
   }
 
   differentiable_transform3d_t correction;
-  value(correction.t_x) = 0.0;
-  value(correction.t_y) = 0.0;
-  value(correction.t_z) = 0.0;
-  value(correction.r_x) = 0.0;
-  value(correction.r_y) = 0.0;
-  value(correction.r_z) = 0.0;
+  value(correction.t_x) = 0.5;
+  value(correction.t_y) = -0.5;
+  value(correction.t_z) = 0.3;
+  value(correction.r_x) = 0.3;
+  value(correction.r_y) = -0.3;
+  value(correction.r_z) = 0.4;
+
+  double checkpoint_loss = CalculateResidualLoss(correction, data_points_);
+  double lambda = 1e-4;
+  constexpr double kMinLambda = 1e-12;
+  constexpr double kMaxLambda = 1e12;
+  constexpr double kMinUpdateNorm = 1e-14;
+  constexpr double kMinLossImprovement = 1e-15;
+  constexpr int kMaxAttemptsPerEpoch = 10;
+  constexpr int kMaxStaleEpochs = 20;
+  int stale_epochs = 0;
 
   for (int epoch = 0; epoch < EPOCHS; epoch++) {
     Eigen::MatrixXd J(data_points_.size() * 2, 6);
@@ -356,7 +425,6 @@ auto JointSolver::EstimatePosition(
       tape_.registerOutput(v);
       u.setAdjoint({1.0, 0.0});
       v.setAdjoint({0.0, 1.0});
-      LOG(INFO) << u.value() << " " << data_point.normalized_image_point[1];
       tape_.computeAdjoints();
       SaveJacobian(J, correction, index);
       SaveResidual(residual, u.value() - data_point.normalized_image_point[1],
@@ -364,21 +432,62 @@ auto JointSolver::EstimatePosition(
 
       index++;
     }
-    LOG(INFO) << "J\n" << J;
-    LOG(INFO) << "Residual\n" << residual;
-    // J(0, 0) = correction.t_x.getAdjoint()[0];
-    // J(0, 1) = correction.t_y.getAdjoint()[0];
-    // J(0, 2) = correction.t_z.getAdjoint()[0];
-    // J(0, 3) = correction.r_x.getAdjoint()[0];
-    // J(0, 4) = correction.r_y.getAdjoint()[0];
-    // J(0, 5) = correction.r_z.getAdjoint()[0];
-    // J(1, 0) = correction.t_x.getAdjoint()[1];
-    // J(1, 1) = correction.t_y.getAdjoint()[1];
-    // J(1, 2) = correction.t_z.getAdjoint()[1];
-    // J(1, 3) = correction.r_x.getAdjoint()[1];
-    // J(1, 4) = correction.r_y.getAdjoint()[1];
-    // J(1, 5) = correction.r_z.getAdjoint()[1];
+    const double loss = residual.squaredNorm();
+    bool accepted = false;
+    double best_candidate_loss = checkpoint_loss;
+    Eigen::VectorXd accepted_update = Eigen::VectorXd::Zero(6);
+    double trial_lambda = lambda;
+
+    for (int attempt = 0; attempt < kMaxAttemptsPerEpoch; ++attempt) {
+      const Eigen::VectorXd update = CalculateUpdate(J, residual, trial_lambda);
+      if (update.norm() < kMinUpdateNorm) {
+        break;
+      }
+
+      differentiable_transform3d_t candidate = correction;
+      candidate.Update(update);
+      const double candidate_loss =
+          CalculateResidualLoss(candidate, data_points_);
+
+      if (candidate_loss < checkpoint_loss) {
+        accepted = true;
+        accepted_update = update;
+        best_candidate_loss = candidate_loss;
+        lambda = std::max(kMinLambda, trial_lambda * 0.25);
+        break;
+      }
+
+      trial_lambda = std::min(kMaxLambda, trial_lambda * 8.0);
+    }
+
+    LOG(INFO) << "--------------------------------------";
     // LOG(INFO) << "J\n" << J;
+    LOG(INFO) << "Residual\n" << residual;
+    LOG(INFO) << "Loss: " << loss;
+    LOG(INFO) << "Checkpoint Loss: " << checkpoint_loss;
+    LOG(INFO) << "Candidate Loss: " << best_candidate_loss;
+    LOG(INFO) << "lambda: " << lambda;
+
+    if (accepted) {
+      const double loss_improvement = checkpoint_loss - best_candidate_loss;
+      correction.Update(accepted_update);
+      checkpoint_loss = best_candidate_loss;
+      if (loss_improvement < kMinLossImprovement) {
+        stale_epochs++;
+      } else {
+        stale_epochs = 0;
+      }
+    } else {
+      stale_epochs++;
+      lambda = std::min(kMaxLambda, trial_lambda);
+      if (lambda >= kMaxLambda) {
+        break;
+      }
+    }
+
+    if (stale_epochs >= kMaxStaleEpochs) {
+      break;
+    }
   }
 
   return position_estimate_t{

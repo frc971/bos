@@ -37,6 +37,7 @@ class JointSolver {
     AD r_z = 0;
 
     auto ToMatrix() -> std::array<std::array<AD, 4>, 4>;
+    void Update(const Eigen::VectorXd& update);
   };
 
  public:
@@ -77,6 +78,15 @@ class JointSolver {
   void static SaveResidual(Eigen::VectorXd& residual, double u_residual,
                            double v_residual, int index);
 
+  auto static CalculateUpdate(const Eigen::MatrixXd& J,
+                              const Eigen::VectorXd& residual,
+                              double lambda)
+      -> Eigen::VectorXd;
+
+  auto static CalculateResidualLoss(
+      const differentiable_transform3d_t& correction,
+      const std::vector<datapoint_t>& data_points) -> double;
+
  public:
   JointSolver(const std::vector<camera::camera_constant_t>& camera_constants,
               const frc::AprilTagFieldLayout& layout = kapriltag_layout);
@@ -100,10 +110,6 @@ class JointSolver {
   PositionReceiver position_receiver_;
   tape_type tape_;
 };
-
-auto operator<<(std::ostream& os,
-                const JointSolver::differentiable_transform3d_t& d)
-    -> std::ostream&;
 
 auto operator<<(std::ostream& os,
                 const JointSolver::DifferentiableTransform3d& t)
