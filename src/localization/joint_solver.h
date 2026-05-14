@@ -36,6 +36,7 @@ class JointSolver {
     AD r_y = 0;
     AD r_z = 0;
 
+    auto ToEigen() -> Eigen::Matrix4d;
     auto ToMatrix() -> std::array<std::array<AD, 4>, 4>;
     void Update(const Eigen::VectorXd& update);
   };
@@ -66,6 +67,9 @@ class JointSolver {
   auto static Multiply(const std::array<std::array<AD, 4>, 4>& a,
                        const Eigen::Vector4d& b) -> std::array<AD, 4>;
 
+  auto static Multiply(const std::array<std::array<AD, 4>, 4>& a,
+                       const Eigen::Matrix4d& b) -> Eigen::Matrix4d;
+
   auto static Multiply(const Eigen::Matrix<double, 3, 4>& a,
                        const std::array<AD, 4>& b) -> std::array<AD, 3>;
 
@@ -79,8 +83,7 @@ class JointSolver {
                            double v_residual, int index);
 
   auto static CalculateUpdate(const Eigen::MatrixXd& J,
-                              const Eigen::VectorXd& residual,
-                              double lambda)
+                              const Eigen::VectorXd& residual, double lambda)
       -> Eigen::VectorXd;
 
   auto static CalculateResidualLoss(
@@ -95,8 +98,6 @@ class JointSolver {
           camera_detections,
       std::optional<frc::Pose3d> intial_pose = std::nullopt)
       -> position_estimate_t;
-  auto CalculateResidual(const Eigen::VectorXd& candidate) -> Eigen::MatrixXd;
-  auto CalculateJacobian(const Eigen::VectorXd& candidate) -> Eigen::MatrixXd;
 
  private:
   std::unordered_map<std::string, int> camera_name_to_index;
@@ -105,7 +106,6 @@ class JointSolver {
   std::vector<camera::camera_constant_t> camera_constant_;
 
   std::vector<datapoint_t> data_points_;
-  Eigen::Matrix4d field_to_robot_;
 
   PositionReceiver position_receiver_;
   tape_type tape_;

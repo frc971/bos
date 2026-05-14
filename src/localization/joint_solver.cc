@@ -35,6 +35,16 @@ const Eigen::Matrix<double, 4, 4> rotate_yaw =
 constexpr auto square(double x) -> double {
   return x * x;
 }
+auto JointSolver::DifferentiableTransform3d::ToEigen() -> Eigen::Matrix4d {
+  const auto matrix = ToMatrix();
+  Eigen::Matrix4d out = Eigen::Matrix4d::Zero();
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      out(i, j) = value(matrix[i][j]);
+    }
+  }
+  return out;
+}
 
 auto JointSolver::DifferentiableTransform3d::ToMatrix()
     -> std::array<std::array<AD, 4>, 4> {
@@ -88,8 +98,8 @@ auto JointSolver::CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
                                 const Eigen::Matrix4d& camera_to_robot,
                                 const Eigen::Matrix3d& camera_matrix,
                                 const Eigen::Vector3d& image_point,
-                                int corner_index) -> double {
 
+                                int corner_index) -> double {
   Eigen::Vector3d projected_point =
       camera_matrix * PI * camera_to_robot * robot_to_feild * feild_to_tag *
       rotate_yaw *
@@ -160,6 +170,20 @@ auto JointSolver::CreateTransformationMatrix(const Eigen::VectorXd& params)
       .finished();
   // clang-format on
 }
+
+auto JointSolver::Multiply(const std::array<std::array<AD, 4>, 4>& a,
+                           const Eigen::Matrix4d& b) -> Eigen::Matrix4d {
+  Eigen::Matrix4d out = Eigen::Matrix4d::Zero();
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      for (int k = 0; k < 4; ++k) {
+        out(i, j) += value(a[i][k]) * b(k, j);
+      }
+    }
+  }
+  return out;
+}
+
 auto JointSolver::Multiply(const std::array<std::array<AD, 4>, 4>& a,
                            const Eigen::Vector4d& b) -> std::array<AD, 4> {
   std::array<AD, 4> out{};
@@ -279,71 +303,6 @@ JointSolver::JointSolver(
   }
 }
 
-auto JointSolver::CalculateResidual(const Eigen::VectorXd& params)
-    -> Eigen::MatrixXd {
-  const Eigen::MatrixXd correction = CreateTransformationMatrix(params);
-  Eigen::MatrixXd residual(data_points_.size(), 3);
-  for (size_t i = 0; i < data_points_.size(); i++) {
-    const auto& data_point = data_points_[i];
-    auto projected_point =
-        ProjectPoints(data_point.A, correction, data_point.x);
-    const auto point_residual =
-        projected_point - data_point.normalized_image_point;
-    residual(i, 0) = point_residual[0];
-    residual(i, 1) = point_residual[1];
-    residual(i, 2) = point_residual[2];
-  }
-  LOG(INFO) << "residual\n" << residual;
-  return residual;
-}
-
-auto JointSolver::CalculateJacobian(const Eigen::VectorXd& params)
-    -> Eigen::MatrixXd {
-
-  const Eigen::Matrix4d correction = CreateTransformationMatrix(params);
-
-  for (size_t i = 0; i < data_points_.size(); i++) {
-    const auto& data_point = data_points_[i];
-
-    Eigen::Vector3d projected_point =
-        data_points_[i].A * correction * data_points_[i].x;
-    auto normalized_point = projected_point / projected_point[0];
-
-    // [z u v]
-    const double z = projected_point[0];
-    const double u = projected_point[1];
-    const double v = projected_point[2];
-
-    // clang-format off
-    const Eigen::Matrix<double, 3, 3> normalized_point_d =
-      (Eigen::Matrix<double, 3, 3>() << 
-      0, 0, 0,
-      -u / square(z), 1/z, 0,
-      -v / square(z), 0, 1/z).finished();
-    // clang-format on
-
-    const Eigen::MatrixXd A_d = normalized_point_d * data_points_[i].A;
-
-    Eigen::Matrix<double, 3, 6> J;
-    J(0, 0) = 0;  // dz/t_x
-    J(0, 1) = 0;  // dz/t_y
-    J(0, 2) = 0;  // dz/t_z
-    J(0, 3) = 0;  // dz/r_x
-    J(0, 4) = 0;  // dz/r_y
-    J(0, 5) = 0;  // dz/r_z
-
-    J(1, 0) = A_d(1, 0) * data_points_[i].x(3);  // du/t_x
-    J(0, 1) = A_d(1, 1) * data_points_[i].x(3);  // du/t_y
-    J(0, 2) = A_d(1, 2) * data_points_[i].x(3);  // du/t_z
-    J(0, 3) = 0;                                 // du/r_x
-    J(0, 4) = 0;                                 // du/r_y
-    J(0, 5) = 0;                                 // du/r_z
-
-    // LOG(INFO) << "A_d\n" << A_d;
-  }
-  return {};
-}
-
 auto JointSolver::EstimatePosition(
     const std::map<std::string, std::vector<tag_detection_t>>&
         camera_detections,
@@ -351,8 +310,9 @@ auto JointSolver::EstimatePosition(
   std::vector<int> tag_ids;
   double average_timestamp = 0;
   int total_detections = 0;
-  field_to_robot_ = initial_pose.value_or(position_receiver_.Get()).ToMatrix();
-  const auto robot_to_feild = field_to_robot_.inverse();
+  const Eigen::Matrix4d field_to_robot =
+      initial_pose.value_or(position_receiver_.Get()).ToMatrix();
+  const Eigen::Matrix4d robot_to_feild = field_to_robot.inverse();
 
   data_points_.clear();
 
@@ -386,12 +346,6 @@ auto JointSolver::EstimatePosition(
   }
 
   differentiable_transform3d_t correction;
-  value(correction.t_x) = 0.5;
-  value(correction.t_y) = -0.5;
-  value(correction.t_z) = 0.3;
-  value(correction.r_x) = 0.3;
-  value(correction.r_y) = -0.3;
-  value(correction.r_z) = 0.4;
 
   double checkpoint_loss = CalculateResidualLoss(correction, data_points_);
   double lambda = 1e-4;
@@ -460,14 +414,14 @@ auto JointSolver::EstimatePosition(
       trial_lambda = std::min(kMaxLambda, trial_lambda * 8.0);
     }
 
-    LOG(INFO) << "--------------------------------------";
-    // LOG(INFO) << "J\n" << J;
-    LOG(INFO) << "Residual\n" << residual;
-    LOG(INFO) << "Loss: " << loss;
-    LOG(INFO) << "Checkpoint Loss: " << checkpoint_loss;
-    LOG(INFO) << "Candidate Loss: " << best_candidate_loss;
-    LOG(INFO) << "lambda: " << lambda;
-
+    VLOG(1) << "--------------------------------------";
+    VLOG(1) << "Residual\n" << residual;
+    VLOG(1) << "Loss: " << loss;
+    VLOG(1) << "Checkpoint Loss: " << checkpoint_loss;
+    VLOG(1) << "Candidate Loss: " << best_candidate_loss;
+    VLOG(1) << "lambda: " << lambda;
+    VLOG(1) << "update\n" << accepted_update;
+    VLOG(1) << "correction\n" << correction;
     if (accepted) {
       const double loss_improvement = checkpoint_loss - best_candidate_loss;
       correction.Update(accepted_update);
@@ -490,17 +444,25 @@ auto JointSolver::EstimatePosition(
     }
   }
 
+  Eigen::Matrix4d tmp =
+      (Multiply(correction.ToMatrix(), robot_to_feild)).inverse();
+  tmp(3, 0) = 0;
+  tmp(3, 1) = 0;
+  tmp(3, 2) = 0;
+  tmp(3, 3) = 1;
+  frc::Pose3d pose(tmp);
+
   return position_estimate_t{
       .tag_ids = tag_ids,
       .rejected_tag_ids = {},
-      .pose = {},
+      .pose = pose,
       .variance = 1,
       .timestamp = average_timestamp,
       .num_tags = total_detections,
       .avg_tag_dist = -1,
       .latency = -1,
       .invalid = false,
-      .loss = 0,
+      .loss = checkpoint_loss,
   };
 }
 

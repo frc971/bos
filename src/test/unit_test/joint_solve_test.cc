@@ -40,11 +40,28 @@ TEST(JointSolveTest, TestJointSolve) {  // NOLINT
   auto detection = detections[0];
 
   auto square_solver_solution = square_solver->EstimatePosition({detection})[0];
+  const frc::Pose3d expected_pose = square_solver_solution.pose;
 
   const std::map<std::string, std::vector<tag_detection_t>> camera_detections{
       {camera_constant.name, {detection}},
   };
 
+  // LOG(INFO) << "square_solver_solution\n"
+  //           << square_solver_solution.pose.ToMatrix();
+
+  square_solver_solution.pose =
+      square_solver_solution.pose.TransformBy(frc::Transform3d(
+          frc::Translation3d(units::meter_t{0.1}, units::meter_t{0.1},
+                             units::meter_t{0}),
+          frc::Rotation3d(units::radian_t{0}, units::radian_t{0},
+                          units::radian_t{0})));
+
   auto joint_solve_solution = joint_solver->EstimatePosition(
       camera_detections, square_solver_solution.pose);
+
+  ASSERT_LT(joint_solve_solution.loss, 1e-7);
+  ASSERT_TRUE(joint_solve_solution.pose.ToMatrix().isApprox(
+      expected_pose.ToMatrix(), 0.01));
+
+  // LOG(INFO) << "joint_solve_solution\n" << joint_solve_solution.pose.ToMatrix();
 }
