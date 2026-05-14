@@ -1,5 +1,7 @@
 #include "nt_utils.h"
 #include <frc/DataLogManager.h>
+#include <networktables/NetworkTableInstance.h>
+#include <networktables/StringTopic.h>
 #include <ntcore/networktables/NetworkTableInstance.h>
 #include <chrono>
 #include <filesystem>
@@ -9,6 +11,17 @@
 namespace fs = std::filesystem;
 
 namespace utils {
+
+// Publishes logname such as log32 to networktables so we can easily find match logs
+static void PublishLogName() {
+  std::string path = frc::DataLogManager::GetLogDir();
+  static auto log_name_publisher =
+      nt::NetworkTableInstance::GetDefault()
+          .GetTable("Orin/")
+          ->GetStringTopic("LogName")
+          .Publish();
+  log_name_publisher.Set(path);
+}
 
 void StartNetworktables(int team_number) {
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
@@ -26,6 +39,8 @@ void StartNetworktables(int team_number) {
   while (!inst.IsConnected()) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
+
+  PublishLogName();
   LOG(INFO) << "Connected to rio!";
 }
 

@@ -311,7 +311,7 @@ auto JointSolver::EstimatePosition(
   double average_timestamp = 0;
   int total_detections = 0;
   const Eigen::Matrix4d field_to_robot =
-      initial_pose.value_or(position_receiver_.Get()).ToMatrix();
+      initial_pose.value_or(frc::Pose3d(position_receiver_.Get())).ToMatrix();
   const Eigen::Matrix4d robot_to_feild = field_to_robot.inverse();
 
   data_points_.clear();

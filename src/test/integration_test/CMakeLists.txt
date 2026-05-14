@@ -27,3 +27,6 @@ target_link_libraries(networktable_performance_test PRIVATE utils localization)
 
 add_executable(pva_test pva_test.cc)
 target_link_libraries(pva_test PRIVATE utils localization vpi)
+
+add_executable(bfs-test bfs_tester.cc)
+target_link_libraries(bfs-test PRIVATE pathing utils nlohmann_json::nlohmann_json wpiutil)
