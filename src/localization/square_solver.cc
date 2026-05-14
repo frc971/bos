@@ -127,7 +127,7 @@ auto SquareSolver::EstimatePosition(
     try {
       cv::solvePnP(tag_corners_, detection.corners, camera_matrix_,
                    distortion_coefficients_, rvec, tvec, false,
-                   cv::SOLVEPNP_ITERATIVE);
+                   cv::SOLVEPNP_IPPE_SQUARE);
     } catch (std::exception& e) {
       LOG(WARNING) << "Caught solve pnp exception:\n" << e.what();
       return {};

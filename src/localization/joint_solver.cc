@@ -327,7 +327,7 @@ auto JointSolver::EstimatePosition(
       int corner_index = 0;
       for (const auto& corner : tag_detection.corners) {
         const auto field_to_tag =
-            kapriltag_layout.GetTagPose(tag_detection.tag_id)->ToMatrix();
+            layout_.GetTagPose(tag_detection.tag_id)->ToMatrix();
         const auto homogenized_apriltag_corner =
             localization::kapriltag_corners_eigen_homogenized[corner_index];
         const auto normalized_camera_matrix = normalized_camera_matrix_[index];
@@ -347,7 +347,6 @@ auto JointSolver::EstimatePosition(
       }
     }
   }
-  average_timestamp /= total_detections;
 
   if (data_points_.size() < 3) {
     return position_estimate_t{
@@ -363,6 +362,8 @@ auto JointSolver::EstimatePosition(
         .loss = -1,
     };
   }
+
+  average_timestamp /= total_detections;
 
   differentiable_transform3d_t correction{};
 
