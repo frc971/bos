@@ -103,7 +103,7 @@ class JointSolver {
   std::unordered_map<std::string, int> camera_name_to_index;
   std::vector<Eigen::Matrix3d> normalized_camera_matrix_;
   std::vector<Eigen::Matrix4d> robot_to_camera_;
-  std::vector<camera::camera_constant_t> camera_constant_;
+  std::vector<camera::camera_constant_t> camera_constants_;
 
   std::vector<datapoint_t> data_points_;
 

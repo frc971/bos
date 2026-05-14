@@ -9,7 +9,7 @@
 
 namespace localization {
 
-#define EPOCHS 200
+#define EPOCHS 1000
 
 using frc::AprilTagFieldLayout;
 using utils::CameraMatrixFromJson;
@@ -235,7 +235,7 @@ void JointSolver::SaveResidual(Eigen::VectorXd& residual, double u_residual,
 auto JointSolver::CalculateUpdate(const Eigen::MatrixXd& J,
                                   const Eigen::VectorXd& residual,
                                   double lambda) -> Eigen::VectorXd {
-  constexpr double kEpsilon = 1e-9;
+  constexpr double kEpsilon = 1e-12;
 
   const Eigen::MatrixXd j_t_j = J.transpose() * J;
   Eigen::VectorXd diagonal = j_t_j.diagonal();
@@ -280,13 +280,15 @@ auto JointSolver::CalculateResidualLoss(
     loss += u_residual * u_residual + v_residual * v_residual;
   }
 
-  return loss;
+  const double residual_count =
+      static_cast<double>(std::max<size_t>(1, data_points.size() * 2));
+  return loss / residual_count;
 }
 
 JointSolver::JointSolver(
     const std::vector<camera::camera_constant_t>& camera_constants,
     const AprilTagFieldLayout& layout)
-    : camera_constant_(camera_constants) {
+    : camera_constants_(camera_constants) {
   for (size_t i = 0; i < camera_constants.size(); i++) {
     camera_name_to_index[camera_constants[i].name] = i;
 
@@ -332,7 +334,7 @@ auto JointSolver::EstimatePosition(
         const auto camera_to_robot = robot_to_camera_[index].inverse();
         data_points_.push_back(datapoint_t{
             .normalized_image_point =
-                NormalizePoint(corner, camera_constant_[index]),
+                NormalizePoint(corner, camera_constants_[index]),
             .normalized_camera_matrix = normalized_camera_matrix,
             .camera_to_robot = camera_to_robot,
             .feild_to_tag = field_to_tag,
@@ -348,16 +350,17 @@ auto JointSolver::EstimatePosition(
   differentiable_transform3d_t correction;
 
   double checkpoint_loss = CalculateResidualLoss(correction, data_points_);
-  double lambda = 1e-4;
-  constexpr double kMinLambda = 1e-12;
-  constexpr double kMaxLambda = 1e12;
-  constexpr double kMinUpdateNorm = 1e-14;
-  constexpr double kMinLossImprovement = 1e-15;
-  constexpr int kMaxAttemptsPerEpoch = 10;
-  constexpr int kMaxStaleEpochs = 20;
+  double lambda = 1e-6;
+  constexpr double kMinLambda = 1e-16;
+  constexpr double kMaxLambda = 1e16;
+  constexpr double kMinUpdateNorm = 1e-18;
+  constexpr double kMinLossImprovement = 1e-17;
+  constexpr int kMaxAttemptsPerEpoch = 40;
+  constexpr int kMaxStaleEpochs = 400;
   int stale_epochs = 0;
 
   for (int epoch = 0; epoch < EPOCHS; epoch++) {
+    LOG(INFO) << epoch;
     Eigen::MatrixXd J(data_points_.size() * 2, 6);
     Eigen::VectorXd residual(data_points_.size() * 2);
 
@@ -407,16 +410,16 @@ auto JointSolver::EstimatePosition(
         accepted = true;
         accepted_update = update;
         best_candidate_loss = candidate_loss;
-        lambda = std::max(kMinLambda, trial_lambda * 0.25);
+        lambda = std::max(kMinLambda, trial_lambda * 0.5);
         break;
       }
 
-      trial_lambda = std::min(kMaxLambda, trial_lambda * 8.0);
+      trial_lambda = std::min(kMaxLambda, trial_lambda * 2.0);
     }
 
     VLOG(1) << "--------------------------------------";
     VLOG(1) << "Residual\n" << residual;
-    VLOG(1) << "Loss: " << loss;
+    VLOG(0) << "Loss: " << loss;
     VLOG(1) << "Checkpoint Loss: " << checkpoint_loss;
     VLOG(1) << "Candidate Loss: " << best_candidate_loss;
     VLOG(1) << "lambda: " << lambda;
@@ -443,6 +446,7 @@ auto JointSolver::EstimatePosition(
       break;
     }
   }
+  LOG(INFO) << "correction\n" << correction;
 
   Eigen::Matrix4d tmp =
       (Multiply(correction.ToMatrix(), robot_to_feild)).inverse();
