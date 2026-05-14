@@ -62,19 +62,7 @@ auto SquareSolver::EstimatePositionAmbiguous(
 
     cv::solvePnPGeneric(tag_corners_, detection.corners, camera_matrix_,
                         distortion_coefficients_, rvecs, tvecs, false,
-                        cv::SOLVEPNP_ITERATIVE);
-
-    cv::solvePnPGeneric(tag_corners_, detection.corners, camera_matrix_,
-                        distortion_coefficients_, rvecs, tvecs, true,
-                        cv::SOLVEPNP_ITERATIVE);
-
-    cv::solvePnPGeneric(tag_corners_, detection.corners, camera_matrix_,
-                        distortion_coefficients_, rvecs, tvecs, true,
-                        cv::SOLVEPNP_ITERATIVE);
-
-    cv::solvePnPGeneric(tag_corners_, detection.corners, camera_matrix_,
-                        distortion_coefficients_, rvecs, tvecs, true,
-                        cv::SOLVEPNP_ITERATIVE);
+                        cv::SOLVEPNP_IPPE_SQUARE);
 
     if (rvecs.size() < 2 || tvecs.size() < 2) {
       continue;
