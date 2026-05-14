@@ -50,7 +50,9 @@ class JointSolver {
                             int corner_index) -> double;
 
   auto static NormalizePoint(const cv::Point2d& image_point,
-                             const camera::camera_constant_t& camera_constant)
+                             const camera::camera_constant_t& camera_constant,
+                             const cv::Mat& camera_matrix,
+                             const cv::Mat& distortion_coefficients)
       -> Eigen::Vector3d;
 
   auto static ProjectPoints(const Eigen::MatrixXd& A,
@@ -101,6 +103,8 @@ class JointSolver {
 
  private:
   std::unordered_map<std::string, int> camera_name_to_index;
+  std::vector<cv::Mat> camera_matrix_;
+  std::vector<cv::Mat> distortion_coefficients_;
   std::vector<Eigen::Matrix3d> normalized_camera_matrix_;
   std::vector<Eigen::Matrix4d> robot_to_camera_;
   std::vector<camera::camera_constant_t> camera_constants_;

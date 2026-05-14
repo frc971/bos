@@ -13,6 +13,7 @@ namespace localization {
 
 using frc::AprilTagFieldLayout;
 using utils::CameraMatrixFromJson;
+using utils::DistortionCoefficientsFromJson;
 using utils::ExtrinsicsJsonToCameraToRobot;
 using utils::ReadExtrinsics;
 using utils::ReadIntrinsics;
@@ -111,14 +112,29 @@ auto JointSolver::CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
   return normalized_points_d.array().square().sum();
 }
 
+auto UndistortPixelPoint(const cv::Point2f& distortedPoint,
+                         const cv::Mat& cameraMatrix, const cv::Mat& distCoeffs)
+    -> cv::Point2f {
+  std::vector<cv::Point2f> src = {distortedPoint};
+  std::vector<cv::Point2f> dst;
+  cv::undistortPoints(src, dst, cameraMatrix, distCoeffs, cv::noArray(),
+                      cameraMatrix);
+  return dst[0];
+}
+
 auto JointSolver::NormalizePoint(
     const cv::Point2d& image_point,
-    const camera::camera_constant_t& camera_constant) -> Eigen::Vector3d {
+    const camera::camera_constant_t& camera_constant,
+    const cv::Mat& camera_matrix, const cv::Mat& distortion_coefficients)
+    -> Eigen::Vector3d {
+
+  cv::Point2f undistorted_point =
+      UndistortPixelPoint(image_point, camera_matrix, distortion_coefficients);
   // clang-format off
     return (Eigen::Vector3d() << 
       1,
-      image_point.x / camera_constant.frame_width.value(),
-      image_point.y / camera_constant.frame_height.value())
+      undistorted_point.x / camera_constant.frame_width.value(),
+      undistorted_point.y / camera_constant.frame_height.value())
    .finished();
   // clang-format on
 }
@@ -292,6 +308,13 @@ JointSolver::JointSolver(
   for (size_t i = 0; i < camera_constants.size(); i++) {
     camera_name_to_index[camera_constants[i].name] = i;
 
+    distortion_coefficients_.emplace_back(
+        DistortionCoefficientsFromJson<cv::Mat>(
+            ReadIntrinsics(camera_constants[i].intrinsics_path.value())));
+
+    camera_matrix_.emplace_back(CameraMatrixFromJson<cv::Mat>(
+        ReadIntrinsics(camera_constants[i].intrinsics_path.value())));
+
     normalized_camera_matrix_.emplace_back(NormalizeCameraMatrix(
         CameraMatrixFromJson<Eigen::Matrix3d>(
             ReadIntrinsics(camera_constants[i].intrinsics_path.value())),
@@ -333,8 +356,9 @@ auto JointSolver::EstimatePosition(
         const auto normalized_camera_matrix = normalized_camera_matrix_[index];
         const auto camera_to_robot = robot_to_camera_[index].inverse();
         data_points_.push_back(datapoint_t{
-            .normalized_image_point =
-                NormalizePoint(corner, camera_constants_[index]),
+            .normalized_image_point = NormalizePoint(
+                corner, camera_constants_[index], camera_matrix_[index],
+                distortion_coefficients_[index]),
             .normalized_camera_matrix = normalized_camera_matrix,
             .camera_to_robot = camera_to_robot,
             .feild_to_tag = field_to_tag,
