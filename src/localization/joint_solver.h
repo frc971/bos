@@ -68,7 +68,7 @@ class JointSolver {
 
  public:
   JointSolver(const std::vector<camera::camera_constant_t>& camera_constants,
-              const frc::AprilTagFieldLayout& layout = kapriltag_layout);
+              frc::AprilTagFieldLayout layout = kapriltag_layout);
   auto EstimatePosition(
       const std::map<std::string, std::vector<tag_detection_t>>&
           camera_detections,
@@ -77,6 +77,7 @@ class JointSolver {
 
  private:
   std::unordered_map<std::string, int> camera_name_to_index;
+  frc::AprilTagFieldLayout layout_;
   std::vector<cv::Mat> camera_matrix_;
   std::vector<cv::Mat> distortion_coefficients_;
   std::vector<Eigen::Matrix3d> normalized_camera_matrix_;

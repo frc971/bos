@@ -280,8 +280,8 @@ auto JointSolver::CalculateResidualLoss(
 
 JointSolver::JointSolver(
     const std::vector<camera::camera_constant_t>& camera_constants,
-    const AprilTagFieldLayout& layout)
-    : camera_constants_(camera_constants) {
+    AprilTagFieldLayout layout)
+    : layout_(std::move(layout)), camera_constants_(camera_constants) {
   for (size_t i = 0; i < camera_constants.size(); i++) {
     camera_name_to_index[camera_constants[i].name] = i;
 
@@ -346,6 +346,22 @@ auto JointSolver::EstimatePosition(
         corner_index++;
       }
     }
+  }
+  average_timestamp /= total_detections;
+
+  if (data_points_.size() < 3) {
+    return position_estimate_t{
+        .tag_ids = tag_ids,
+        .rejected_tag_ids = {},
+        .pose = {},
+        .variance = 1,
+        .timestamp = average_timestamp,
+        .num_tags = total_detections,
+        .avg_tag_dist = -1,
+        .latency = -1,
+        .invalid = true,
+        .loss = -1,
+    };
   }
 
   differentiable_transform3d_t correction{};
@@ -420,7 +436,7 @@ auto JointSolver::EstimatePosition(
 
     VLOG(1) << "--------------------------------------";
     VLOG(1) << "Residual\n" << residual;
-    VLOG(0) << "Loss: " << loss;
+    VLOG(1) << "Loss: " << loss;
     VLOG(1) << "Checkpoint Loss: " << checkpoint_loss;
     VLOG(1) << "Candidate Loss: " << best_candidate_loss;
     VLOG(1) << "lambda: " << lambda;
