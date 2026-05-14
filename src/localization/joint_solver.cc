@@ -463,7 +463,6 @@ auto JointSolver::EstimatePosition(
       break;
     }
   }
-  LOG(INFO) << "correction\n" << correction;
 
   Eigen::Matrix4d tmp =
       (Multiply(correction.ToMatrix(), robot_to_feild)).inverse();
