@@ -11,8 +11,8 @@ const int velocity_lookahead = 5;
 const double max_velocity = 3.5;
 const double max_accel = 3.2;
 
-auto CreateVelocityProfile(const SplineResult& result, double maxVelocity,
-                           double maxAcceleration)
+auto _CreateVelocityProfile(const SplineResult& result, double maxVelocity,
+                            double maxAcceleration)
     -> std::vector<std::pair<double, double>>;
 
 auto CreateVelocityProfile(const SplineResult& result)
