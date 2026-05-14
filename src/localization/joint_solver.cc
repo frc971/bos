@@ -9,8 +9,6 @@
 
 namespace localization {
 
-#define EPOCHS 1000
-
 using frc::AprilTagFieldLayout;
 using utils::CameraMatrixFromJson;
 using utils::DistortionCoefficientsFromJson;
@@ -94,24 +92,6 @@ void JointSolver::DifferentiableTransform3d::Update(
   r_z += update[5];
 }
 
-auto JointSolver::CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
-                                const Eigen::Matrix4d& feild_to_tag,
-                                const Eigen::Matrix4d& camera_to_robot,
-                                const Eigen::Matrix3d& camera_matrix,
-                                const Eigen::Vector3d& image_point,
-
-                                int corner_index) -> double {
-  Eigen::Vector3d projected_point =
-      camera_matrix * PI * camera_to_robot * robot_to_feild * feild_to_tag *
-      rotate_yaw *
-      localization::kapriltag_corners_eigen_homogenized[corner_index];
-  auto normalized_point = projected_point / projected_point[0];
-
-  auto normalized_points_d = normalized_point - image_point;
-
-  return normalized_points_d.array().square().sum();
-}
-
 auto UndistortPixelPoint(const cv::Point2f& distortedPoint,
                          const cv::Mat& cameraMatrix, const cv::Mat& distCoeffs)
     -> cv::Point2f {
@@ -122,12 +102,10 @@ auto UndistortPixelPoint(const cv::Point2f& distortedPoint,
   return dst[0];
 }
 
-auto JointSolver::NormalizePoint(
-    const cv::Point2d& image_point,
-    const camera::camera_constant_t& camera_constant,
-    const cv::Mat& camera_matrix, const cv::Mat& distortion_coefficients)
-    -> Eigen::Vector3d {
-
+auto NormalizePoint(const cv::Point2d& image_point,
+                    const camera::camera_constant_t& camera_constant,
+                    const cv::Mat& camera_matrix,
+                    const cv::Mat& distortion_coefficients) -> Eigen::Vector3d {
   cv::Point2f undistorted_point =
       UndistortPixelPoint(image_point, camera_matrix, distortion_coefficients);
   // clang-format off
@@ -139,18 +117,17 @@ auto JointSolver::NormalizePoint(
   // clang-format on
 }
 
-auto JointSolver::ProjectPoints(const Eigen::MatrixXd& A,
-                                const Eigen::MatrixXd& correction,
-                                const Eigen::Vector4d& x) -> Eigen::Vector3d {
+auto ProjectPoints(const Eigen::MatrixXd& A, const Eigen::MatrixXd& correction,
+                   const Eigen::Vector4d& x) -> Eigen::Vector3d {
 
   Eigen::Vector3d projected_point = A * correction * x;
   auto normalized_point = projected_point / projected_point[0];
   return normalized_point;
 }
 
-auto JointSolver::NormalizeCameraMatrix(
-    Eigen::Matrix3d camera_matrix,
-    const camera::camera_constant_t& camera_constant) -> Eigen::Matrix3d {
+auto NormalizeCameraMatrix(Eigen::Matrix3d camera_matrix,
+                           const camera::camera_constant_t& camera_constant)
+    -> Eigen::Matrix3d {
   camera_matrix(1, 0) /= camera_constant.frame_width.value();
 
   camera_matrix(2, 0) /= camera_constant.frame_height.value();
@@ -159,7 +136,7 @@ auto JointSolver::NormalizeCameraMatrix(
   return camera_matrix;
 }
 
-auto JointSolver::CreateTransformationMatrix(const Eigen::VectorXd& params)
+auto CreateTransformationMatrix(const Eigen::VectorXd& params)
     -> Eigen::Matrix4d {
   double tx = params[0];
   double ty = params[1];
@@ -371,7 +348,7 @@ auto JointSolver::EstimatePosition(
     }
   }
 
-  differentiable_transform3d_t correction;
+  differentiable_transform3d_t correction{};
 
   double checkpoint_loss = CalculateResidualLoss(correction, data_points_);
   double lambda = 1e-6;
@@ -381,10 +358,10 @@ auto JointSolver::EstimatePosition(
   constexpr double kMinLossImprovement = 1e-17;
   constexpr int kMaxAttemptsPerEpoch = 40;
   constexpr int kMaxStaleEpochs = 400;
+  constexpr int kepochs = 100;
   int stale_epochs = 0;
 
-  for (int epoch = 0; epoch < EPOCHS; epoch++) {
-    LOG(INFO) << epoch;
+  for (int epoch = 0; epoch < kepochs; epoch++) {
     Eigen::MatrixXd J(data_points_.size() * 2, 6);
     Eigen::VectorXd residual(data_points_.size() * 2);
 

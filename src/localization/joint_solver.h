@@ -8,8 +8,6 @@
 #include "src/localization/position_solver.h"
 #include "src/localization/square_solver.h"
 
-using json = nlohmann::json;
-
 namespace localization {
 
 class JointSolver {
@@ -42,30 +40,6 @@ class JointSolver {
   };
 
  public:
-  auto static CalculateLoss(const Eigen::Matrix4d& robot_to_feild,
-                            const Eigen::Matrix4d& feild_to_tag,
-                            const Eigen::Matrix4d& camera_to_robot,
-                            const Eigen::Matrix3d& camera_matrix,
-                            const Eigen::Vector3d& image_point,
-                            int corner_index) -> double;
-
-  auto static NormalizePoint(const cv::Point2d& image_point,
-                             const camera::camera_constant_t& camera_constant,
-                             const cv::Mat& camera_matrix,
-                             const cv::Mat& distortion_coefficients)
-      -> Eigen::Vector3d;
-
-  auto static ProjectPoints(const Eigen::MatrixXd& A,
-                            const Eigen::MatrixXd& correction,
-                            const Eigen::Vector4d& x) -> Eigen::Vector3d;
-
-  auto static NormalizeCameraMatrix(
-      Eigen::Matrix3d camera_matrix,
-      const camera::camera_constant_t& camera_constant) -> Eigen::Matrix3d;
-
-  auto static CreateTransformationMatrix(const Eigen::VectorXd& params)
-      -> Eigen::Matrix4d;
-
   auto static Multiply(const std::array<std::array<AD, 4>, 4>& a,
                        const Eigen::Vector4d& b) -> std::array<AD, 4>;
 
