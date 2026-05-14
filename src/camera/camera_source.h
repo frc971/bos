@@ -18,7 +18,7 @@ class CameraSource {
   std::string name_;
   std::unique_ptr<ICamera> camera_;
   timestamped_frame_t timestamped_frame_;
-  std::thread thread_;
+  std::jthread thread_;
   std::mutex mutex_;
   const bool simulation_;
 };

@@ -20,11 +20,12 @@ namespace localization {
 
 // TODO remove extrinsics
 void RunLocalization(
+    const std::stop_token& stop_token,
     std::unique_ptr<camera::CameraSource> source,
     std::unique_ptr<localization::IAprilTagDetector> detector,
     std::unique_ptr<localization::IPositionSolver> solver,
     std::vector<std::unique_ptr<localization::IPositionSender>> senders,
-    const std::string& extrinsics, std::optional<uint> port, bool verbose) {
+    std::optional<uint> port, bool verbose) {
 
   std::optional<camera::CscoreStreamer> streamer =
       port.has_value() ? std::make_optional(camera::CscoreStreamer(
@@ -55,7 +56,7 @@ void RunLocalizationSimulation(
     camera::CameraSource& source,
     std::unique_ptr<localization::IAprilTagDetector> detector,
     std::unique_ptr<localization::IPositionSolver> solver,
-    const std::string& extrinsics, std::optional<uint> port, bool verbose) {
+    std::optional<uint> port, bool verbose) {
   std::error_code ec;
   auto log = std::make_unique<wpi::log::DataLogWriter>("multitag2.wpilog", ec);
   if (ec) {
