@@ -4,8 +4,8 @@
 
 namespace pathing {
 
-auto CreateVelocityProfile(const SplineResult& result, double maxVelocity,
-                           double maxAcceleration)
+auto _CreateVelocityProfile(const SplineResult& result, double maxVelocity,
+                            double maxAcceleration)
     -> std::vector<std::pair<double, double>> {
   if (result.points.empty() || result.params.empty() || maxVelocity <= 0.0 ||
       maxAcceleration <= 0.0) {
@@ -66,8 +66,7 @@ auto CreateVelocityProfile(const SplineResult& result, double maxVelocity,
 
 auto CreateVelocityProfile(const SplineResult& result)
     -> std::vector<std::pair<double, double>> {
-  return CreateVelocityProfile(result, kMaxProfileVelocity,
-                               kMaxProfileAcceleration);
+  return _CreateVelocityProfile(result, max_velocity, max_accel);
 }
 
 }  // namespace pathing

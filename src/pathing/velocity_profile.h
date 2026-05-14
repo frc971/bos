@@ -6,9 +6,9 @@
 
 namespace pathing {
 
-inline constexpr int kVelocityLookahead = 5;
-inline constexpr double kMaxProfileVelocity = 1.0;
-inline constexpr double kMaxProfileAcceleration = 1.0;
+const int velocity_lookahead = 5;
+const double max_velocity = 1.0;
+const double max_accel = 1.0;
 
 auto CreateVelocityProfile(const SplineResult& result, double maxVelocity,
                            double maxAcceleration)

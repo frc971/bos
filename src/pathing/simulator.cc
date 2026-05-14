@@ -12,7 +12,7 @@
 #include "src/pathing/velocity_profile.h"
 
 auto main() -> int {
-  const uint lookahead_ = pathing::kVelocityLookahead;
+  const uint lookahead_ = pathing::velocity_lookahead;
   const int64_t dt_us = 20000;
   const double dt_sec = 0.020;
 
