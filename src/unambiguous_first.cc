@@ -30,8 +30,9 @@ auto main() -> int {
   localization::UnambiguousEstimator localizer(cameras);
 
   LOG(INFO) << "starting pathing";
-  std::jthread pathing_thread(
-      [&]() { pathing::RunController("/bos/constants/navgrid.json", false); });
+  std::jthread pathing_thread([&](const std::stop_token& stop_token) {
+    pathing::RunController(stop_token, "/bos/constants/navgrid.json", false);
+  });
   LOG(INFO) << "starting pathing";
 
   std::jthread([&] { localizer.Run(); });
