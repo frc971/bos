@@ -23,7 +23,7 @@ auto main() -> int {
 
   LOG(INFO) << "Starting estimators";
 
-  std::thread left_thread([&](const std::stop_token& stop_token) {
+  std::jthread left_thread([&](const std::stop_token& stop_token) {
     auto left_camera = std::make_unique<camera::CameraSource>(
         "Left",
         std::make_unique<camera::CVCamera>(camera_constants.at("main_bot_left"),
@@ -45,7 +45,7 @@ auto main() -> int {
         std::move(left_sender), 5802, false);
   });
 
-  std::thread right_thread([&](const std::stop_token& stop_token) {
+  std::jthread right_thread([&](const std::stop_token& stop_token) {
     auto right_camera = std::make_unique<camera::CameraSource>(
         "Right", std::make_unique<camera::CVCamera>(
                      camera_constants.at("main_bot_right"),
@@ -70,8 +70,8 @@ auto main() -> int {
 
   LOG(INFO) << "Started estimators";
 
-  std::thread pathing_thread(pathing::RunController,
-                             "/bos/constants/navgrid.json", false);
+  std::jthread pathing_thread(pathing::RunController,
+                              "/bos/constants/navgrid.json", false);
 
   LOG(INFO) << "pathing started";
 
