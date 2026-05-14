@@ -9,12 +9,12 @@
 #include <nlohmann/json.hpp>
 #include <vector>
 #include "src/pathing/splines.h"
+#include "src/pathing/velocity_profile.h"
 
 auto main() -> int {
-  const uint lookahead_ = 0;
+  const uint lookahead_ = pathing::kVelocityLookahead;
   const int64_t dt_us = 20000;
   const double dt_sec = 0.020;
-  const double speed_ = 0.2;
 
   std::ifstream file("/root/bos/constants/navgrid.json");
   if (!file.is_open()) {
@@ -62,6 +62,7 @@ auto main() -> int {
   target_log.Append(target_pose, 1);
 
   pathing::SplineResult result;
+  std::vector<std::pair<double, double>> velocity_profile;
   const int max_steps = 10000;
   int64_t t = 0;
   int prev_closest_idx = -1;
@@ -89,9 +90,10 @@ auto main() -> int {
     if (result.points.empty()) {
       result =
           pathing::CreateSpline(grid, start_pt, target_pt, node_size_meters);
+      velocity_profile = pathing::CreateVelocityProfile(result);
     }
 
-    if (result.points.empty()) {
+    if (result.points.empty() || velocity_profile.empty()) {
       vx_log.Append(0.0, t);
       vy_log.Append(0.0, t);
       pose_log.Append(current_pose, t);
@@ -151,10 +153,7 @@ auto main() -> int {
       closest_idx = static_cast<int>(result.params.size()) - 1;
     }
 
-    auto [vx, vy] = pathing::EvaluateDerivative(
-        result.params[closest_idx], result.controls, result.knots, result.p, 1);
-    vx *= speed_;
-    vy *= speed_;
+    auto [vx, vy] = velocity_profile[closest_idx];
 
     vx_log.Append(vx, t);
     vy_log.Append(vy, t);

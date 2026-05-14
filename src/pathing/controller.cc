@@ -7,13 +7,14 @@
 #include "src/localization/position_receiver.h"
 #include "src/utils/log.h"
 #include "src/utils/pch.h"
+#include "velocity_profile.h"
 
 namespace pathing {
 
 auto RunController(
     const std::string& navgrid_path = "/root/bos/constants/navgrid.json",
     bool verbose = false) -> void {
-  const uint lookahead_ = 5;
+  const uint lookahead_ = kVelocityLookahead;
 
   std::ifstream file(navgrid_path);
   if (!file.is_open()) {
@@ -47,6 +48,7 @@ auto RunController(
   auto vx_pub = inst.GetDoubleTopic("/pathing/vx").Publish();
   auto vy_pub = inst.GetDoubleTopic("/pathing/vy").Publish();
   SplineResult result;
+  std::vector<std::pair<double, double>> velocity_profile;
   int prev_closest_idx = -1;
 
   while (true) {
@@ -55,6 +57,7 @@ auto RunController(
       vy_pub.Set(0.0);
 
       result.points.clear();
+      velocity_profile.clear();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
@@ -82,12 +85,14 @@ auto RunController(
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);
       result.points.clear();
+      velocity_profile.clear();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
 
     if (result.points.empty()) {
       result = CreateSpline(grid, start_pt, target_pt, nodeSizeMeters);
+      velocity_profile = CreateVelocityProfile(result);
       if (!result.points.empty()) {
         if (verbose) {
           for (const auto& p : result.points) {
@@ -97,7 +102,7 @@ auto RunController(
       }
     }
 
-    if (result.points.empty()) {
+    if (result.points.empty() || velocity_profile.empty()) {
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -132,6 +137,7 @@ auto RunController(
         vy_pub.Set(0.0);
         inst.Flush();
         result.points.clear();
+        velocity_profile.clear();
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         continue;
       }
@@ -162,6 +168,7 @@ auto RunController(
         vy_pub.Set(0.0);
         inst.Flush();
         result.points.clear();
+        velocity_profile.clear();
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         continue;
       }
@@ -172,9 +179,7 @@ auto RunController(
         closest_idx = static_cast<int>(result.params.size()) - 1;
       }
 
-      const auto [vx, vy] =
-          EvaluateDerivative(result.params[closest_idx], result.controls,
-                             result.knots, result.p, 1);
+      const auto [vx, vy] = velocity_profile[closest_idx];
 
       vx_pub.Set(vx);
       vy_pub.Set(vy);
