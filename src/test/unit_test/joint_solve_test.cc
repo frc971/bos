@@ -26,47 +26,47 @@ using localization::tag_detection_t;
 using utils::CameraMatrixFromJson;
 using utils::ReadIntrinsics;
 
-// TEST(JointSolveTest, TestJointSolve) {  // NOLINT
-//   cv::Mat image = cv::imread("/bos-logs/log181/right/7.047703.jpg");
-//   auto camera_constant = GetCameraConstants().at("second_bot_right");
-//   auto square_solver = std::make_unique<SquareSolver>(camera_constant);
-//   auto joint_solver =
-//       std::make_unique<JointSolver>(std::vector{camera_constant});
-//   auto detector = std::make_unique<OpenCVAprilTagDetector>(
-//       camera_constant.frame_width.value(), camera_constant.frame_height.value(),
-//       ReadIntrinsics(camera_constant.intrinsics_path.value()));
-//
-//   timestamped_frame_t timestamped_frame{
-//       .frame = std::move(image), .timestamp = 0, .invalid = false};
-//   auto detections = detector->GetTagDetections(timestamped_frame);
-//   auto detection = detections[0];
-//
-//   auto square_solver_solution = square_solver->EstimatePosition({detection})[0];
-//   const frc::Pose3d expected_pose = square_solver_solution.pose;
-//
-//   const std::map<std::string, std::vector<tag_detection_t>> camera_detections{
-//       {camera_constant.name, {detection}},
-//   };
-//
-//   // LOG(INFO) << "square_solver_solution\n"
-//   //           << square_solver_solution.pose.ToMatrix();
-//
-//   square_solver_solution.pose =
-//       square_solver_solution.pose.TransformBy(frc::Transform3d(
-//           frc::Translation3d(units::meter_t{0.2}, units::meter_t{-0.15},
-//                              units::meter_t{0.05}),
-//           frc::Rotation3d(units::radian_t{0.06}, units::radian_t{-0.05},
-//                           units::radian_t{0.04})));
-//
-//   auto joint_solve_solution = joint_solver->EstimatePosition(
-//       camera_detections, square_solver_solution.pose);
-//
-//   ASSERT_LT(joint_solve_solution.loss, 1e-7);
-//   ASSERT_TRUE(joint_solve_solution.pose.ToMatrix().isApprox(
-//       expected_pose.ToMatrix(), 0.01));
-//
-//   // LOG(INFO) << "joint_solve_solution\n" << joint_solve_solution.pose.ToMatrix();
-// }
+TEST(JointSolveTest, TestJointSolve) {  // NOLINT
+  cv::Mat image = cv::imread("/bos-logs/log181/right/7.047703.jpg");
+  auto camera_constant = GetCameraConstants().at("second_bot_right");
+  auto square_solver = std::make_unique<SquareSolver>(camera_constant);
+  auto joint_solver =
+      std::make_unique<JointSolver>(std::vector{camera_constant});
+  auto detector = std::make_unique<OpenCVAprilTagDetector>(
+      camera_constant.frame_width.value(), camera_constant.frame_height.value(),
+      ReadIntrinsics(camera_constant.intrinsics_path.value()));
+
+  timestamped_frame_t timestamped_frame{
+      .frame = std::move(image), .timestamp = 0, .invalid = false};
+  auto detections = detector->GetTagDetections(timestamped_frame);
+  auto detection = detections[0];
+
+  auto square_solver_solution = square_solver->EstimatePosition({detection})[0];
+  const frc::Pose3d expected_pose = square_solver_solution.pose;
+
+  const std::map<std::string, std::vector<tag_detection_t>> camera_detections{
+      {camera_constant.name, {detection}},
+  };
+
+  // LOG(INFO) << "square_solver_solution\n"
+  //           << square_solver_solution.pose.ToMatrix();
+
+  square_solver_solution.pose =
+      square_solver_solution.pose.TransformBy(frc::Transform3d(
+          frc::Translation3d(units::meter_t{0.2}, units::meter_t{-0.15},
+                             units::meter_t{0.05}),
+          frc::Rotation3d(units::radian_t{0.06}, units::radian_t{-0.05},
+                          units::radian_t{0.04})));
+
+  auto joint_solve_solution = joint_solver->EstimatePosition(
+      camera_detections, square_solver_solution.pose);
+
+  ASSERT_LT(joint_solve_solution.loss, 1e-7);
+  ASSERT_TRUE(joint_solve_solution.pose.ToMatrix().isApprox(
+      expected_pose.ToMatrix(), 0.01));
+
+  // LOG(INFO) << "joint_solve_solution\n" << joint_solve_solution.pose.ToMatrix();
+}
 
 TEST(JointSolveTest, TestJointSolveMultipleInputImages) {  // NOLINT
   const auto camera_constant = GetCameraConstants().at("second_bot_right");
