@@ -56,7 +56,7 @@ auto FiniteDifferences(const std::vector<std::pair<double, double>>& controls,
   return ret;
 }
 
-auto basis(int i, int p, double t, const std::vector<double>& knots) -> double {
+auto Basis(int i, int p, double t, const std::vector<double>& knots) -> double {
   if (p == 0) {
     if (knots[i] <= t && t < knots[i + 1]) {
       return 1.0;
@@ -68,13 +68,13 @@ auto basis(int i, int p, double t, const std::vector<double>& knots) -> double {
   double left = 0.0;
   double denoml = knots[i + p] - knots[i];
   if (denoml != 0) {
-    left = (t - knots[i]) / denoml * basis(i, p - 1, t, knots);
+    left = (t - knots[i]) / denoml * Basis(i, p - 1, t, knots);
   }
 
   double right = 0.0;
   double denomr = knots[i + p + 1] - knots[i + 1];
   if (denomr != 0) {
-    right = (knots[i + p + 1] - t) / denomr * basis(i + 1, p - 1, t, knots);
+    right = (knots[i + p + 1] - t) / denomr * Basis(i + 1, p - 1, t, knots);
   }
 
   return left + right;
@@ -91,7 +91,7 @@ auto EvaluatePosition(double t,
   int n = static_cast<int>(controls.size());
   double x = 0.0, y = 0.0;
   for (int i = 0; i < n; ++i) {
-    double b = basis(i, p, t, knots);
+    double b = Basis(i, p, t, knots);
     x += b * controls[i].first;
     y += b * controls[i].second;
   }
@@ -117,7 +117,7 @@ auto EvaluateDerivative(double t,
   return {x * n, y * n};
 }
 
-auto createSpline(const std::vector<std::vector<pathing::Node>>& grid,
+auto CreateSpline(const std::vector<std::vector<pathing::Node>>& grid,
                   Point start_point, Point target_point, double nodeSizeMeters)
     -> SplineResult {
 

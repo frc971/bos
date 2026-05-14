@@ -87,7 +87,7 @@ auto RunController(
     }
 
     if (result.points.empty()) {
-      result = createSpline(grid, start_pt, target_pt, nodeSizeMeters);
+      result = CreateSpline(grid, start_pt, target_pt, nodeSizeMeters);
       if (!result.points.empty()) {
         if (verbose) {
           for (const auto& p : result.points) {

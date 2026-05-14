@@ -23,7 +23,7 @@ auto FiniteDifferences(const std::vector<std::pair<double, double>>& controls,
                        const std::vector<double>& knots, int p, int k)
     -> std::vector<std::pair<double, double>>;
 
-auto basis(int i, int p, double t, const std::vector<double>& knots) -> double;
+auto Basis(int i, int p, double t, const std::vector<double>& knots) -> double;
 
 auto EvaluatePosition(double t,
                       const std::vector<std::pair<double, double>>& controls,
@@ -34,7 +34,7 @@ auto EvaluateDerivative(double t,
                         const std::vector<double>& knots, int p, int k)
     -> std::pair<double, double>;
 
-auto createSpline(const std::vector<std::vector<Node>>& grid, Point start_point,
+auto CreateSpline(const std::vector<std::vector<Node>>& grid, Point start_point,
                   Point target_point, double nodeSizeMeters) -> SplineResult;
 
 }  // namespace pathing

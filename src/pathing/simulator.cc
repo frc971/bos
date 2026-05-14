@@ -88,7 +88,7 @@ auto main() -> int {
 
     if (result.points.empty()) {
       result =
-          pathing::createSpline(grid, start_pt, target_pt, node_size_meters);
+          pathing::CreateSpline(grid, start_pt, target_pt, node_size_meters);
     }
 
     if (result.points.empty()) {
