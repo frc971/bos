@@ -7,8 +7,9 @@
 namespace pathing {
 
 const int velocity_lookahead = 5;
-const double max_velocity = 1.0;
-const double max_accel = 1.0;
+// Gotten from current pathplanner config of team
+const double max_velocity = 3.5;
+const double max_accel = 3.2;
 
 auto CreateVelocityProfile(const SplineResult& result, double maxVelocity,
                            double maxAcceleration)
