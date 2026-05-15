@@ -112,15 +112,15 @@ TEST(JointSolveTest, TestJointSolveMultipleInputImages) {  // NOLINT
       {camera_constant_left.name, detections_left},
   };
 
-  multi_tag_solver_solution.pose =
+  auto fudged_pose =
       multi_tag_solver_solution.pose.TransformBy(frc::Transform3d(
           frc::Translation3d(units::meter_t{5.25}, units::meter_t{-0.2},
                              units::meter_t{0.08}),
           frc::Rotation3d(units::radian_t{0.08}, units::radian_t{-0.07},
                           units::radian_t{0.06})));
 
-  auto joint_solve_solution = joint_solver->EstimatePosition(
-      camera_detections, multi_tag_solver_solution.pose);
+  auto joint_solve_solution =
+      joint_solver->EstimatePosition(camera_detections, fudged_pose);
 
   ASSERT_LT(joint_solve_solution.loss, 1e-2);
   ASSERT_FALSE(joint_solve_solution.invalid);
