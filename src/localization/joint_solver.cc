@@ -375,7 +375,7 @@ auto JointSolver::EstimatePosition(
   constexpr double kMinLossImprovement = 1e-17;
   constexpr int kMaxAttemptsPerEpoch = 40;
   constexpr int kMaxStaleEpochs = 400;
-  constexpr int kepochs = 100;
+  constexpr int kepochs = 20;
   int stale_epochs = 0;
 
   for (int epoch = 0; epoch < kepochs; epoch++) {
@@ -436,8 +436,8 @@ auto JointSolver::EstimatePosition(
     }
 
     VLOG(1) << "--------------------------------------";
-    VLOG(1) << "Residual\n" << residual;
-    VLOG(1) << "Loss: " << loss;
+    VLOG(0) << "Residual\n" << residual;
+    VLOG(0) << "Loss: " << loss;
     VLOG(1) << "Checkpoint Loss: " << checkpoint_loss;
     VLOG(1) << "Candidate Loss: " << best_candidate_loss;
     VLOG(1) << "lambda: " << lambda;

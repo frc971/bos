@@ -75,9 +75,9 @@ TEST(JointSolveTest, TestJointSolveMultipleInputImages) {  // NOLINT
 
   auto multi_tag_solver =
       std::make_unique<MultiTagSolver>(camera_constant_right);
-
   auto joint_solver = std::make_unique<JointSolver>(
       std::vector{camera_constant_right, camera_constant_left});
+
   auto detector_right = std::make_unique<OpenCVAprilTagDetector>(
       camera_constant_right.frame_width.value(),
       camera_constant_right.frame_height.value(),
@@ -122,8 +122,8 @@ TEST(JointSolveTest, TestJointSolveMultipleInputImages) {  // NOLINT
 
   auto joint_solve_solution =
       joint_solver->EstimatePosition(camera_detections, fudged_pose);
-  LOG(INFO) << joint_solve_solution;
-  LOG(INFO) << multi_tag_solver_solution;
+  LOG(INFO) << "joint\n" << joint_solve_solution;
+  LOG(INFO) << "multi\n" << multi_tag_solver_solution;
 
   ASSERT_LT(joint_solve_solution.loss, 1e-2);
   ASSERT_FALSE(joint_solve_solution.invalid);
