@@ -382,13 +382,13 @@ auto JointSolver::EstimatePosition(
     Eigen::MatrixXd J(data_points_.size() * 2, 6);
     Eigen::VectorXd residual(data_points_.size() * 2);
 
+    tape_.newRecording();
     tape_.registerInput(correction.t_x);
     tape_.registerInput(correction.t_y);
     tape_.registerInput(correction.t_z);
     tape_.registerInput(correction.r_x);
     tape_.registerInput(correction.r_y);
     tape_.registerInput(correction.r_z);
-    tape_.newRecording();
     int index = 0;
     for (auto const& data_point : data_points_) {
       const auto correction_matrix = correction.ToMatrix();
