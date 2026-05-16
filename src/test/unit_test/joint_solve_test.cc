@@ -135,29 +135,16 @@ TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
       square_solver.EstimatePosition(detections, false)[0];
   std::vector<std::vector<localization::tag_detection_t>> associated_detections{
       detections};
+  const frc::Transform3d joint_solve_input_noise(
+      frc::Translation3d(units::meter_t{0.2}, units::meter_t{0.2},
+                         units::meter_t{0.2}),
+      frc::Rotation3d(units::degree_t{0}, units::degree_t{0},
+                      units::degree_t{0}));
+  joint_solver.SetStartPosition(
+      square_solver_solution.pose.TransformBy(joint_solve_input_noise));
   const localization::position_estimate_t joint_solver_solution =
       joint_solver.EstimatePosition(associated_detections, false).value();
   std::cout << "sq: " << square_solver_solution
             << "\njoint: " << joint_solver_solution << std::endl;
   EXPECT_EQ(square_solver_solution, joint_solver_solution);
 }
-
-// TEST_F(JointSolverTest, CloseConvergenceYawOnly) {  // NOLINT
-//   const frc::Transform3d joint_solve_input_noise(
-//       frc::Translation3d(units::meter_t{0.4}, units::meter_t{0.5},
-//                          units::meter_t{0.2}),
-//       frc::Rotation3d(units::degree_t{0}, units::degree_t{0},
-//                       units::degree_t{3}));
-//   localization::position_estimate_t square_solver_solution =
-//       square_solver.EstimatePosition(test_utils::fake_detections, false)[0];
-//   frc::Pose3d noisy_pose =
-//       square_solver_solution.pose.TransformBy(joint_solve_input_noise);
-//   std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
-//       associated_detections;
-//   associated_detections.insert({config, test_utils::fake_detections});
-//   const localization::position_estimate_t joint_solver_solution =
-//       joint_solver.EstimatePosition(associated_detections, noisy_pose, true);
-//   // std::cout << "sq: " << square_solver_solution
-//   //           << "\njoint: " << joint_solver_solution << std::endl;
-//   EXPECT_EQ(square_solver_solution, joint_solver_solution);
-// }

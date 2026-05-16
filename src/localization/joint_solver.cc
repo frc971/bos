@@ -8,12 +8,6 @@
 
 namespace localization {
 
-using data_point_t = struct DataPoint {
-  Eigen::Vector2d undistorted_point;
-  size_t source_index;
-  Eigen::Vector4d field_to_tag_corner_homogenous;
-};
-
 constexpr auto sq(double num) -> double {
   return num * num;
 }
@@ -67,6 +61,55 @@ void JointSolver::SetStartPosition(const frc::Pose3d& pose) {
   utils::ChangeBasis(robot_to_field_, utils::WPI_TO_CV);
 }
 
+void JointSolver::ComputeResidual(
+    const std::vector<data_point_t>& data_points,
+    const Eigen::Matrix4d& robot_to_field, Eigen::VectorXd& residual,
+    Eigen::MatrixXd* d_residual_d_twist_jacobian) {
+  for (size_t i = 0; i < data_points.size(); i++) {
+    const Eigen::Matrix<double, 3, 4>& image_to_robot =
+        camera_matrices_[data_points[i].source_index].image_to_robot;
+
+    const Eigen::Vector4d robot_relative_corner =
+        robot_to_field * data_points[i].field_to_tag_corner_homogenous;
+
+    Eigen::Vector3d projection = image_to_robot * robot_relative_corner;
+    const double lambda = projection(2);
+    projection /= lambda;
+
+    const double x_residual =
+        data_points[i].undistorted_point.x() - projection.x();
+    const double y_residual =
+        data_points[i].undistorted_point.y() - projection.y();
+    residual(2 * i) = x_residual;
+    residual(2 * i + 1) = y_residual;
+    if (d_residual_d_twist_jacobian == nullptr) {
+      continue;
+    }
+
+    // clang-format off
+      const Eigen::Matrix<double, 2, 3> d_residual_i_d_projection_i = 
+        (Eigen::MatrixXd(2, 3) <<
+          -1/lambda, 0, projection.x()/lambda,
+          0, -1/lambda, projection.y()/lambda).finished();
+    // clang-format on
+
+    const Eigen::Matrix3d& d_projection_i_d_robot_relative_object_point =
+        image_to_robot.block<3, 3>(0, 0);
+
+    Eigen::Matrix<double, 3, 6> d_robot_relative_object_point_d_d_twist =
+        Eigen::MatrixXd(3, 6);
+    d_robot_relative_object_point_d_d_twist.block<3, 3>(0, 0) =
+        -utils::CrossProduct(robot_relative_corner.block<3, 1>(0, 0));
+    d_robot_relative_object_point_d_d_twist.block<3, 3>(0, 3) =
+        Eigen::Matrix3d::Identity();
+
+    d_residual_d_twist_jacobian->block<2, 6>(2 * i, 0) =
+        d_residual_i_d_projection_i *
+        d_projection_i_d_robot_relative_object_point *
+        d_robot_relative_object_point_d_d_twist;
+  }
+}
+
 auto JointSolver::EstimatePosition(
     std::vector<std::vector<tag_detection_t>>& detection_batches,
     bool reject_far_tags) -> std::optional<position_estimate_t> {
@@ -100,60 +143,42 @@ auto JointSolver::EstimatePosition(
   Eigen::VectorXd residual(2 * data_points.size());
   Eigen::MatrixXd d_residual_d_twist_jacobian(2 * data_points.size(), 6);
 
-  double loss = std::numeric_limits<double>::infinity();
-
   for (int epoch = 0; epoch < 1000; epoch++) {
-    for (size_t i = 0; i < data_points.size(); i++) {
-      const Eigen::Matrix<double, 3, 4>& image_to_robot =
-          camera_matrices_[data_points[i].source_index].image_to_robot;
-
-      const Eigen::Vector4d robot_relative_corner =
-          robot_to_field_ * data_points[i].field_to_tag_corner_homogenous;
-
-      Eigen::Vector3d projection = image_to_robot * robot_relative_corner;
-      const double lambda = projection(2);
-      projection /= lambda;
-
-      const double x_residual =
-          data_points[i].undistorted_point.x() - projection.x();
-      const double y_residual =
-          data_points[i].undistorted_point.y() - projection.y();
-      residual(2 * i) = x_residual;
-      residual(2 * i + 1) = y_residual;
-
-      // clang-format off
-      const Eigen::MatrixXd d_residual_i_d_projection_i = (Eigen::MatrixXd(2, 3) <<
-          -1/lambda, 0, projection.x()/lambda,
-          0, -1/lambda, projection.y()/lambda).finished();
-      // clang-format on
-
-      const Eigen::MatrixXd& d_projection_i_d_robot_relative_object_point =
-          image_to_robot.block<3, 3>(0, 0);
-
-      Eigen::MatrixXd d_robot_relative_object_point_d_d_twist =
-          Eigen::MatrixXd(3, 6);
-      d_robot_relative_object_point_d_d_twist.block<3, 3>(0, 0) =
-          -utils::CrossProduct(robot_relative_corner.block<3, 1>(0, 0));
-      d_robot_relative_object_point_d_d_twist.block<3, 3>(0, 3) =
-          Eigen::Matrix3d::Identity();
-
-      d_residual_d_twist_jacobian.block<2, 6>(2 * i, 0) =
-          d_residual_i_d_projection_i *
-          d_projection_i_d_robot_relative_object_point *
-          d_robot_relative_object_point_d_d_twist;
-    }
-    std::cout << "Residual: " << residual.cwiseSquare().sum() << std::endl;
-    const Eigen::VectorXd b =
+    ComputeResidual(data_points, robot_to_field_, residual,
+                    &d_residual_d_twist_jacobian);
+    double current_error = residual.cwiseSquare().sum();
+    if (epoch % 10 == 0)
+      std::cout << "Current error: " << current_error << std::endl;
+    const Eigen::Vector<double, 6> b =
         -d_residual_d_twist_jacobian.transpose() * residual;
-    const Eigen::VectorXd partial_twist =
-        (d_residual_d_twist_jacobian.transpose() * d_residual_d_twist_jacobian)
-            .ldlt()
-            .solve(b);
-    Eigen::Matrix4d twist_expanded = Eigen::Matrix4d::Zero();
-    twist_expanded.block<3, 3>(0, 0) =
-        utils::CrossProduct(partial_twist.block<3, 1>(0, 0));
-    twist_expanded.block<3, 1>(0, 3) = partial_twist.block<3, 1>(3, 0);
-    robot_to_field_ = twist_expanded.exp() * robot_to_field_;
+    const Eigen::Matrix<double, 6, 6> hessian =
+        d_residual_d_twist_jacobian.transpose() * d_residual_d_twist_jacobian;
+    double lambda = 1;
+    Eigen::Matrix<double, 6, 6> hessian_diag =
+        hessian.diagonal().asDiagonal().toDenseMatrix();
+    Eigen::Matrix4d candidate_robot_to_field;
+    while (true) {
+      const Eigen::Vector<double, 6> partial_twist =
+          (hessian + lambda * hessian_diag).ldlt().solve(b);
+      Eigen::Matrix4d twist_expanded = Eigen::Matrix4d::Zero();
+      twist_expanded.block<3, 3>(0, 0) =
+          utils::CrossProduct(partial_twist.block<3, 1>(0, 0));
+      twist_expanded.block<3, 1>(0, 3) = partial_twist.block<3, 1>(3, 0);
+      candidate_robot_to_field = twist_expanded.exp() * robot_to_field_;
+      ComputeResidual(data_points, candidate_robot_to_field, residual);
+      double candidate_error = residual.cwiseSquare().sum();
+      if (candidate_error > current_error) {
+        lambda *= 2;
+        if (lambda > kmaximum_lambda) {
+          std::cout << "Failed" << std::endl;
+          return std::nullopt;
+        }
+      } else {
+        lambda /= 2;
+        robot_to_field_ = candidate_robot_to_field;
+        break;
+      }
+    }
   }
 
   std::cout << "Robot to field:\n" << robot_to_field_ << std::endl;
