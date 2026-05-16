@@ -62,28 +62,15 @@ auto inline Homogenize(const Eigen::Vector3d point) -> Eigen::Vector4d {
   return homogenized_point;
 }
 
-struct TransformValues {
-  double x;
-  double y;
-  double z;
-  double rx;
-  double ry;
-  double rz;
-};
-
-struct TransformDecomposition {
-  Eigen::Matrix4d translation;
-  Eigen::Matrix4d Rx;
-  Eigen::Matrix4d Ry;
-  Eigen::Matrix4d Rz;
-};
-
-auto ExtractTranslationAndRotation(const Eigen::Matrix4d& transform_mat)
-    -> TransformValues;
-
-auto SeparateTranslationAndRotationMatrices(const TransformValues& combined)
-    -> TransformDecomposition;
-
+auto inline CrossProduct(const Eigen::Vector3d corner) -> Eigen::Matrix3d {
+  // clang-format off
+  return (Eigen::Matrix3d() << 
+      0, -corner.z(), corner.y(),
+      corner.z(), 0, -corner.x(),
+      -corner.y(), corner.x(), 0)
+      .finished();
+  // clang-format on
+}
 inline auto PoseOffField(frc::Pose3d pose) -> bool {
   constexpr double kerror_margin = 0.2;
   return pose.X().value() < 0 - kerror_margin ||

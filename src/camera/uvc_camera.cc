@@ -71,6 +71,7 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
   }
   res = uvc_find_device(context_, &device_, 0, 0,
                         camera_constant_.serial_id->c_str());
+  LOG(INFO) << "Serial id: " << camera_constant_.serial_id.value();
   if (res != 0) {
     status = absl::AbortedError(
         fmt::format("Unable to find device for camera {} with error code {}",

@@ -20,7 +20,16 @@
       "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.1:1.0-video-index0",
       "intrinsics_path": "/bos/constants/misc/dev_orin_intrinsics.json",
       "extrinsics_path": "/bos/constants/misc/dev_orin_extrinsics.json",
-      "name": "dev_orin"
+      "name": "dev_orin",
+      "backlight": null,
+      "frame_width": 1280,
+      "frame_height": 800,
+      "fps": 100.0,
+      "exposure": null,
+      "port": 5801,
+      "detector_type": "austin_gpu",
+      "serial_id": "devorin",
+      "streamer_fps": 1
     },
     {
       "name": "main_bot_front",
