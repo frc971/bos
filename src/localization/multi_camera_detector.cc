@@ -11,7 +11,8 @@
 namespace localization {
 MultiCameraDetector::MultiCameraDetector(
     std::vector<camera::camera_constant_t> camera_constants,
-    std::optional<std::vector<std::filesystem::path>> image_paths)
+    std::optional<std::vector<std::filesystem::path>> image_paths,
+    double disk_replay_speed)
     : camera_constants_(std::move(camera_constants)),
       last_write_times_(camera_constants_.size()),
       timestamped_frames_(camera_constants_.size()),
@@ -31,7 +32,7 @@ MultiCameraDetector::MultiCameraDetector(
         fmt::format("{}/{}", log_path, camera_constants_[i].name);
     if (image_paths.has_value()) {
       cameras_.push_back(std::make_unique<camera::DiskCamera>(
-          image_paths.value()[i], camera_constants_[i]));
+          image_paths.value()[i], camera_constants_[i], disk_replay_speed));
     } else if (camera_constants_[i].serial_id.has_value()) {
       absl::Status status;
       cameras_.push_back(std::make_unique<camera::UVCCamera>(

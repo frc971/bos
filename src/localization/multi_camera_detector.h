@@ -12,7 +12,8 @@ class MultiCameraDetector {
  public:
   MultiCameraDetector(std::vector<camera::camera_constant_t> camera_constants,
                       std::optional<std::vector<std::filesystem::path>>
-                          image_paths = std::nullopt);
+                          image_paths = std::nullopt,
+                      double disk_replay_speed = 1.0);
   [[nodiscard]] auto GetTagDetections()
       -> std::vector<std::vector<tag_detection_t>>;
   [[nodiscard]] auto GetCVFrames() -> std::vector<cv::Mat>;

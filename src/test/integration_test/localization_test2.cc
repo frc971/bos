@@ -27,8 +27,8 @@ ABSL_FLAG(std::string, image_folder, "",  //NOLINT
           "Path to folder of test images");
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt,  //NOLINT
           "Camera name");
-ABSL_FLAG(int, port, 5801, "Port");                   //NOLINT
-ABSL_FLAG(double, speed, 1, "Delay between frames");  //NOLINT
+ABSL_FLAG(int, port, 5801, "Port");                                   //NOLINT
+ABSL_FLAG(double, speed, 10, "Disk camera replay speed multiplier");  //NOLINT
 
 auto HasRegularFiles(const std::filesystem::path& path) -> bool {
   for (const auto& entry : std::filesystem::directory_iterator(path)) {
@@ -86,6 +86,7 @@ auto main(int argc, char** argv) -> int {
   frc::DataLogManager::Start(frc::DataLogManager::GetLogDir());
 
   const std::string image_folder_root = absl::GetFlag(FLAGS_image_folder);
+  const double speed = absl::GetFlag(FLAGS_speed);
   const std::filesystem::path image_root_path(image_folder_root);
   if (image_folder_root.empty() || !std::filesystem::exists(image_root_path) ||
       !std::filesystem::is_directory(image_root_path)) {
@@ -119,9 +120,9 @@ auto main(int argc, char** argv) -> int {
 
     camera_constants.push_back(constants.at(camera_name));
   }
-  std::jthread thread([camera_constants, camera_folders] {
+  std::jthread thread([camera_constants, camera_folders, speed] {
     localization::MultiCameraDetector detector_source(camera_constants,
-                                                      camera_folders);
+                                                      camera_folders, speed);
     LOG(INFO) << "Created camera source";
     localization::RunJointLocalization(
         detector_source,
