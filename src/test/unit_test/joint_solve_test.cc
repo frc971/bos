@@ -131,6 +131,7 @@ TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
   camera::timestamped_frame_t frame{.frame = image, .timestamp = 0.0};
   const std::vector<localization::tag_detection_t> detections =
       detector.GetTagDetections(frame);
+  CHECK_NE(detections.size(), 0);
   const localization::position_estimate_t square_solver_solution =
       square_solver.EstimatePosition(detections, false)[0];
   std::vector<std::vector<localization::tag_detection_t>> associated_detections{
