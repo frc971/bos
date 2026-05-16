@@ -30,20 +30,3 @@ auto TransformationMatrix(const double rx, const double ry, const double rz,
 
   return A;
 }
-
-TEST(JointSolveTest, EstimatePosition) {  // NOLINT
-  const Eigen::Matrix4d transform =
-      TransformationMatrix(rad(35), rad(23), rad(58), 1, 2, 3);
-  const utils::TransformValues decomp =
-      utils::ExtractTranslationAndRotation(transform);
-  std::cout << decomp.x << " " << decomp.y << " " << decomp.z << " "
-            << decomp.rx << " " << decomp.ry << " " << decomp.rz << " "
-            << std::endl;
-  const utils::TransformDecomposition decomped =
-      utils::SeparateTranslationAndRotationMatrices(decomp);
-  utils::PrintTransformationMatrix(utils::EigenToCvMat(transform), "original");
-  utils::PrintTransformationMatrix(
-      utils::EigenToCvMat(decomped.translation * decomped.Rz * decomped.Ry *
-                          decomped.Rx),
-      "new");
-}

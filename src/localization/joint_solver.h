@@ -14,20 +14,20 @@ struct CameraMatrices {
   cv::Mat camera_matrix;
 };
 static constexpr int kmax_tags = 50;
-class JointSolver {
+class JointSolver : IJointPositionSolver {
  public:
-  JointSolver(const std::vector<camera::camera_constant_t>& camera_constants_,
-              const frc::AprilTagFieldLayout& layout = kapriltag_layout);
+  JointSolver(const std::vector<camera::camera_constant_t>& camera_constants_);
   auto EstimatePosition(
-      const std::map<std::string, std::vector<tag_detection_t>>&
-          all_cam_detections,
-      const frc::Pose3d& starting_pose) -> position_estimate_t;
-  Eigen::Matrix4d robot_to_field_;
+      std::vector<std::vector<tag_detection_t>>& detection_batches,
+      bool reject_far_tags = true)
+      -> std::optional<position_estimate_t> override;
+  void SetStartPosition(const frc::Pose3d& pose);
 
  private:
   static constexpr double kacceptable_reprojection_error = 0.005;
-  std::map<std::string, CameraMatrices> camera_matrices_;
+  std::vector<CameraMatrices> camera_matrices_;
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;
+  Eigen::Matrix4d robot_to_field_;
 };
 }  // namespace localization

@@ -1,5 +1,6 @@
 #include "src/localization/joint_solver.h"
 #include <opencv2/calib3d.hpp>
+#include <unsupported/Eigen/MatrixFunctions>
 #include <utility>
 #include "src/utils/camera_utils.h"
 #include "src/utils/constants_from_json.h"
@@ -9,7 +10,7 @@ namespace localization {
 
 using data_point_t = struct DataPoint {
   Eigen::Vector2d undistorted_point;
-  std::string name;
+  size_t source_index;
   Eigen::Vector4d field_to_tag_corner_homogenous;
 };
 
@@ -20,8 +21,7 @@ constexpr auto sq(double num) -> double {
 using frc::AprilTagFieldLayout;
 
 JointSolver::JointSolver(
-    const std::vector<camera::camera_constant_t>& camera_constants_,
-    const AprilTagFieldLayout& layout)
+    const std::vector<camera::camera_constant_t>& camera_constants_)
     : robot_to_field_(Eigen::Matrix4d::Identity()) {
   // clang-format off
   const Eigen::Matrix4d rotate_yaw_cv = (Eigen::Matrix4d() <<
@@ -30,7 +30,7 @@ JointSolver::JointSolver(
       0, 0, -1, 0,
       0, 0, 0, 1).finished();
   // clang-format on
-  for (const frc::AprilTag& tag : layout.GetTags()) {
+  for (const frc::AprilTag& tag : kapriltag_layout.GetTags()) {
     Eigen::Matrix4d field_to_tag = tag.pose.ToMatrix();
     utils::ChangeBasis(field_to_tag, utils::WPI_TO_CV);
     std::array<Eigen::Vector4d, 4> field_relative_corners;
@@ -54,162 +54,127 @@ JointSolver::JointSolver(
             .ToMatrix();
     const Eigen::Matrix<double, 3, 4> image_to_robot =
         image_to_camera * camera_to_robot;
-    camera_matrices_.insert(
-        {camera_constant.name,
-         {.image_to_robot = image_to_robot,
-          .distortion_coefficients =
-              utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics_json),
-          .camera_matrix = utils::EigenToCvMat(camera_matrix)}});
+    camera_matrices_.push_back(
+        {.image_to_robot = image_to_robot,
+         .distortion_coefficients =
+             utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics_json),
+         .camera_matrix = utils::EigenToCvMat(camera_matrix)});
   }
 }
 
-auto JointSolver::EstimatePosition(
-    const std::map<std::string, std::vector<tag_detection_t>>&
-        all_cam_detections,
-    const frc::Pose3d& starting_pose) -> position_estimate_t {
-  if (all_cam_detections.empty()) {
-    return {};
-  }
-  robot_to_field_ = starting_pose.ToMatrix().inverse();
+void JointSolver::SetStartPosition(const frc::Pose3d& pose) {
+  robot_to_field_ = pose.ToMatrix().inverse();
   utils::ChangeBasis(robot_to_field_, utils::WPI_TO_CV);
+}
+
+auto JointSolver::EstimatePosition(
+    std::vector<std::vector<tag_detection_t>>& detection_batches,
+    bool reject_far_tags) -> std::optional<position_estimate_t> {
+  if (detection_batches.empty()) {
+    return std::nullopt;
+  }
   std::vector<data_point_t> data_points;
-  for (const auto& pair : all_cam_detections) {
-    const CameraMatrices& camera_mats = camera_matrices_.at(pair.first);
-    for (const tag_detection_t& detection : pair.second) {
+  for (size_t source_index = 0; source_index < detection_batches.size();
+       source_index++) {
+    const CameraMatrices& camera_mats = camera_matrices_[source_index];
+    for (const tag_detection_t& detection : detection_batches[source_index]) {
       std::vector<cv::Point2d> undistorted_corners;
       cv::undistortImagePoints(detection.corners, undistorted_corners,
                                camera_mats.camera_matrix,
                                camera_mats.distortion_coefficients);
-      for (size_t i = 0; i < undistorted_corners.size(); i++) {
+      for (size_t corner_index = 0; corner_index < undistorted_corners.size();
+           corner_index++) {
         Eigen::Vector2d undistorted_image_point;
-        undistorted_image_point << undistorted_corners[i].x,
-            undistorted_corners[i].y;
+        undistorted_image_point << undistorted_corners[corner_index].x,
+            undistorted_corners[corner_index].y;
         const data_point_t datapoint = {
             .undistorted_point = undistorted_image_point,
-            .name = pair.first,
+            .source_index = source_index,
             .field_to_tag_corner_homogenous =
-                tag_corners_[detection.tag_id].value()[i]};
+                tag_corners_[detection.tag_id].value()[corner_index]};
         data_points.push_back(datapoint);
       }
     }
   }
 
+  Eigen::VectorXd residual(2 * data_points.size());
+  Eigen::MatrixXd d_residual_d_twist_jacobian(2 * data_points.size(), 6);
+
   double loss = std::numeric_limits<double>::infinity();
-  int counter = 0;
 
-  const double step = 1e-7;
-
-  utils::TransformValues translation_and_rotation =
-      utils::ExtractTranslationAndRotation(robot_to_field_);
-  utils::TransformDecomposition decomposed_robot_to_field;
-
-  while (loss > kacceptable_reprojection_error && counter < 1000000) {
-    bool printed = false;
-    for (const data_point_t& data_point : data_points) {
-      decomposed_robot_to_field = utils::SeparateTranslationAndRotationMatrices(
-          translation_and_rotation);
+  for (int epoch = 0; epoch < 1000; epoch++) {
+    for (size_t i = 0; i < data_points.size(); i++) {
       const Eigen::Matrix<double, 3, 4>& image_to_robot =
-          camera_matrices_.at(data_point.name).image_to_robot;
+          camera_matrices_[data_points[i].source_index].image_to_robot;
 
-      const Eigen::Vector4d Rx_activation =
-          decomposed_robot_to_field.Rx *
-          data_point.field_to_tag_corner_homogenous;
-      const Eigen::Vector4d Ry_activation =
-          decomposed_robot_to_field.Ry * Rx_activation;
-      const Eigen::Vector4d Rz_activation =
-          decomposed_robot_to_field.Rz * Ry_activation;
+      const Eigen::Vector4d robot_relative_corner =
+          robot_to_field_ * data_points[i].field_to_tag_corner_homogenous;
 
-      Eigen::Vector3d projection = image_to_robot *
-                                   decomposed_robot_to_field.translation *
-                                   Rz_activation;
+      Eigen::Vector3d projection = image_to_robot * robot_relative_corner;
       const double lambda = projection(2);
       projection /= lambda;
 
-      const Eigen::Vector2d projection_error(
-          projection.x() - data_point.undistorted_point.x(),
-          projection.y() - data_point.undistorted_point.y());
-      loss = 0.5 * projection_error.squaredNorm();
-
-      if (counter % 10000 == 0 && !printed) {
-        printed = true;
-        std::cout << "loss: " << loss << std::endl;
-      }
-
-      const Eigen::Vector3d d_projection(
-          projection_error.x() / lambda, projection_error.y() / lambda,
-          -(projection_error.x() * projection.x() +
-            projection_error.y() * projection.y()) /
-              lambda);
-
-      Eigen::Vector4d accumulated_gradient =
-          image_to_robot.transpose() * d_projection;
-
-      const Eigen::Matrix4d d_translation =
-          accumulated_gradient * Rz_activation.transpose();
-
-      accumulated_gradient = decomposed_robot_to_field.translation.transpose() *
-                             accumulated_gradient;
-      const Eigen::Matrix4d d_Rz =
-          accumulated_gradient * Ry_activation.transpose();
-
-      accumulated_gradient =
-          decomposed_robot_to_field.Rz.transpose() * accumulated_gradient;
-      const Eigen::Matrix4d d_Ry =
-          accumulated_gradient * Rx_activation.transpose();
-
-      accumulated_gradient =
-          decomposed_robot_to_field.Ry.transpose() * accumulated_gradient;
-      const Eigen::Matrix4d d_Rx =
-          accumulated_gradient *
-          data_point.field_to_tag_corner_homogenous.transpose();
+      const double x_residual =
+          data_points[i].undistorted_point.x() - projection.x();
+      const double y_residual =
+          data_points[i].undistorted_point.y() - projection.y();
+      residual(2 * i) = x_residual;
+      residual(2 * i + 1) = y_residual;
 
       // clang-format off
-      const Eigen::Matrix4d d_Rz_d_rz =
-          (Eigen::Matrix4d() << 
-        -sin(translation_and_rotation.rz), -cos(translation_and_rotation.rz), 0, 0,
-        cos(translation_and_rotation.rz), -sin(translation_and_rotation.rz), 0, 0, 
-        0, 0, 0, 0,
-        0, 0, 0, 0).finished();
-      const Eigen::Matrix4d d_Ry_d_ry =
-          (Eigen::Matrix4d() << 
-        -sin(translation_and_rotation.ry), 0, cos(translation_and_rotation.ry), 0,
-        0, 0, 0, 0,
-        -cos(translation_and_rotation.ry), 0, -sin(translation_and_rotation.ry), 0,
-        0, 0, 0, 0).finished();
-      const Eigen::Matrix4d d_Rx_d_rx =
-        (Eigen::Matrix4d() << 
-        0, 0, 0, 0, 
-        0, -sin(translation_and_rotation.rx), -cos(translation_and_rotation.rx), 0,
-        0, cos(translation_and_rotation.rx), -sin(translation_and_rotation.rx), 0,
-        0, 0, 0, 0).finished();
+      const Eigen::MatrixXd d_residual_i_d_projection_i = (Eigen::MatrixXd(2, 3) <<
+          -1/lambda, 0, projection.x()/lambda,
+          0, -1/lambda, projection.y()/lambda).finished();
       // clang-format on
 
-      translation_and_rotation.rx -=
-          step * (d_Rx_d_rx.transpose() * d_Rx).trace();
-      translation_and_rotation.ry -=
-          step * (d_Ry_d_ry.transpose() * d_Ry).trace();
-      translation_and_rotation.rz -=
-          step * (d_Rz_d_rz.transpose() * d_Rz).trace();
+      const Eigen::MatrixXd& d_projection_i_d_robot_relative_object_point =
+          image_to_robot.block<3, 3>(0, 0);
 
-      translation_and_rotation.x -= step * d_translation(0, 3);
-      translation_and_rotation.y -= step * d_translation(1, 3);
-      translation_and_rotation.z -= step * d_translation(2, 3);
+      Eigen::MatrixXd d_robot_relative_object_point_d_d_twist =
+          Eigen::MatrixXd(3, 6);
+      d_robot_relative_object_point_d_d_twist.block<3, 3>(0, 0) =
+          -utils::CrossProduct(robot_relative_corner.block<3, 1>(0, 0));
+      d_robot_relative_object_point_d_d_twist.block<3, 3>(0, 3) =
+          Eigen::Matrix3d::Identity();
+
+      d_residual_d_twist_jacobian.block<2, 6>(2 * i, 0) =
+          d_residual_i_d_projection_i *
+          d_projection_i_d_robot_relative_object_point *
+          d_robot_relative_object_point_d_d_twist;
     }
-    counter++;
+    std::cout << "Residual: " << residual.cwiseSquare().sum() << std::endl;
+    const Eigen::VectorXd b =
+        -d_residual_d_twist_jacobian.transpose() * residual;
+    const Eigen::VectorXd partial_twist =
+        (d_residual_d_twist_jacobian.transpose() * d_residual_d_twist_jacobian)
+            .ldlt()
+            .solve(b);
+    Eigen::Matrix4d twist_expanded = Eigen::Matrix4d::Zero();
+    twist_expanded.block<3, 3>(0, 0) =
+        utils::CrossProduct(partial_twist.block<3, 1>(0, 0));
+    twist_expanded.block<3, 1>(0, 3) = partial_twist.block<3, 1>(3, 0);
+    robot_to_field_ = twist_expanded.exp() * robot_to_field_;
   }
 
-  Eigen::Matrix4d field_to_robot =
-      (decomposed_robot_to_field.translation * decomposed_robot_to_field.Rz *
-       decomposed_robot_to_field.Ry * decomposed_robot_to_field.Rx)
-          .inverse();
+  std::cout << "Robot to field:\n" << robot_to_field_ << std::endl;
+
+  Eigen::Matrix4d field_to_robot = robot_to_field_.inverse();
+  field_to_robot(3, 0) = 0;
+  field_to_robot(3, 1) = 0;
+  field_to_robot(3, 2) = 0;
+  field_to_robot(3, 3) = 1;
+
+  std::cout << "Field to robot cv:\n" << field_to_robot << std::endl;
 
   utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
                                    "Field to robot cv");
   utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
+  std::cout << "Field to robot wpi:\n" << field_to_robot << std::endl;
   utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
                                    "Field to robot wpi");
 
-  return {.pose = frc::Pose3d(field_to_robot), .variance = 0, .timestamp = 0};
+  return std::make_optional<position_estimate_t>(
+      {.pose = frc::Pose3d(field_to_robot), .variance = 0, .timestamp = 0});
 }
 
 }  // namespace localization
