@@ -62,9 +62,9 @@ class JointSolver {
                               const Eigen::VectorXd& residual, double lambda)
       -> Eigen::VectorXd;
 
-  auto static CalculateResidualLoss(
-      const differentiable_transform3d_t& correction,
-      const std::vector<datapoint_t>& data_points) -> double;
+  auto static CalculateResidualLoss(const Eigen::Matrix4d& correction_matrix,
+                                    const std::vector<datapoint_t>& data_points)
+      -> double;
 
  public:
   JointSolver(const std::vector<camera::camera_constant_t>& camera_constants,
@@ -72,8 +72,21 @@ class JointSolver {
   auto EstimatePosition(
       const std::map<std::string, std::vector<tag_detection_t>>&
           camera_detections,
-      std::optional<frc::Pose3d> intial_pose = std::nullopt)
+      std::optional<frc::Pose3d> intial_pose_maybe = std::nullopt)
       -> position_estimate_t;
+
+  auto CalculateResidualLoss(
+      frc::Pose3d pose,
+      const std::map<std::string, std::vector<tag_detection_t>>&
+          camera_detections) const -> double;
+
+ private:
+  void CreateDataPoints(
+      const frc::Pose3d& initial_pose,
+      const std::map<std::string, std::vector<tag_detection_t>>&
+          camera_detections,
+      std::vector<datapoint_t>& data_points, double& average_timestamp,
+      std::vector<int>& tag_ids) const;
 
  private:
   std::unordered_map<std::string, int> camera_name_to_index;
@@ -83,8 +96,6 @@ class JointSolver {
   std::vector<Eigen::Matrix3d> normalized_camera_matrix_;
   std::vector<Eigen::Matrix4d> robot_to_camera_;
   std::vector<camera::camera_constant_t> camera_constants_;
-
-  std::vector<datapoint_t> data_points_;
 
   PositionReceiver position_receiver_;
   tape_type tape_;

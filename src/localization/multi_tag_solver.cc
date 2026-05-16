@@ -4,6 +4,8 @@
 #include "src/utils/constants_from_json.h"
 #include "src/utils/transform.h"
 
+#include <cmath>
+
 static const cv::Mat zero_vec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
 
 namespace localization {
@@ -114,6 +116,19 @@ auto MultiTagSolver::EstimatePosition(
     cv::solvePnP(object_points, image_points, camera_matrix_,
                  distortion_coefficients_, rvec, tvec, false,
                  cv::SOLVEPNP_SQPNP);
+
+    std::vector<cv::Point2d> reprojected_points;
+    cv::projectPoints(object_points, rvec, tvec, camera_matrix_,
+                      distortion_coefficients_, reprojected_points);
+    double squared_error_sum = 0.0;
+    for (size_t i = 0; i < image_points.size(); ++i) {
+      const cv::Point2d delta = image_points[i] - reprojected_points[i];
+      squared_error_sum += delta.dot(delta);
+    }
+    const double reprojection_error =
+        std::sqrt(squared_error_sum / image_points.size());
+    LOG(INFO) << "MultiTagSolver reprojection RMSE (px): "
+              << reprojection_error;
   } catch (const std::exception& e) {
     LOG(WARNING) << "Caught solve pnp exception:\n" << e.what();
     return {};

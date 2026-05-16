@@ -68,13 +68,12 @@ TEST(JointSolveTest, TestJointSolveMultipleInputImages) {  // NOLINT
       GetCameraConstants().at("second_bot_right");
   const auto camera_constant_left = GetCameraConstants().at("second_bot_left");
 
-  cv::Mat image_right = cv::imread("/bos-logs/log181/right/20.971783.jpg");
-  cv::Mat image_left = cv::imread("/bos-logs/log181/left/20.935361.jpg");
+  cv::Mat image_right = cv::imread("/bos-logs/log181/right/11.067757.jpg");
+  cv::Mat image_left = cv::imread("/bos-logs/log181/left/11.031403.jpg");
   ASSERT_FALSE(image_right.empty());
   ASSERT_FALSE(image_left.empty());
 
-  auto multi_tag_solver =
-      std::make_unique<MultiTagSolver>(camera_constant_right);
+  auto square_solver = std::make_unique<SquareSolver>(camera_constant_right);
   auto joint_solver = std::make_unique<JointSolver>(
       std::vector{camera_constant_right, camera_constant_left});
 
@@ -100,32 +99,65 @@ TEST(JointSolveTest, TestJointSolveMultipleInputImages) {  // NOLINT
   ASSERT_FALSE(detections_right.empty());
   ASSERT_FALSE(detections_left.empty());
 
-  std::vector<tag_detection_t> all_detections = detections_right;
-  all_detections.insert(all_detections.end(), detections_left.begin(),
-                        detections_left.end());
-
-  auto multi_tag_solver_solution =
-      multi_tag_solver->EstimatePosition(detections_right)[0];
+  auto square_solution_right =
+      square_solver->EstimatePosition(detections_right)[0];
 
   const std::map<std::string, std::vector<tag_detection_t>> camera_detections{
       {camera_constant_right.name, detections_right},
-      {camera_constant_left.name, detections_left},
+      // {camera_constant_left.name, detections_left},
   };
 
-  auto fudged_pose =
-      multi_tag_solver_solution.pose.TransformBy(frc::Transform3d(
-          frc::Translation3d(units::meter_t{5.25}, units::meter_t{-0.2},
-                             units::meter_t{0.08}),
-          frc::Rotation3d(units::radian_t{0.08}, units::radian_t{-0.07},
-                          units::radian_t{0.06})));
-  fudged_pose = multi_tag_solver_solution.pose;
+  auto fudged_pose = square_solution_right.pose.TransformBy(frc::Transform3d(
+      frc::Translation3d(units::meter_t{1.25}, units::meter_t{-0.2},
+                         units::meter_t{0.98}),
+      frc::Rotation3d(units::radian_t{0.58}, units::radian_t{-0.07},
+                      units::radian_t{0.06})));
 
   auto joint_solve_solution =
       joint_solver->EstimatePosition(camera_detections, fudged_pose);
-  LOG(INFO) << "joint\n" << joint_solve_solution;
-  LOG(INFO) << "multi\n" << multi_tag_solver_solution;
 
-  ASSERT_LT(joint_solve_solution.loss, 1e-2);
+  ASSERT_LT(joint_solve_solution.loss, 1e-8);
   ASSERT_FALSE(joint_solve_solution.invalid);
-  ASSERT_EQ(joint_solve_solution.num_tags, all_detections.size());
+}
+
+TEST(JointSolveTest, TestJointSolveLoss) {  // NOLINT
+  const auto camera_constant_right =
+      GetCameraConstants().at("second_bot_right");
+
+  cv::Mat image_right = cv::imread("/bos-logs/log181/right/17.979762.jpg");
+  ASSERT_FALSE(image_right.empty());
+
+  auto square_solver = std::make_unique<SquareSolver>(camera_constant_right);
+  auto joint_solver =
+      std::make_unique<JointSolver>(std::vector{camera_constant_right});
+
+  auto detector_right = std::make_unique<OpenCVAprilTagDetector>(
+      camera_constant_right.frame_width.value(),
+      camera_constant_right.frame_height.value(),
+      ReadIntrinsics(camera_constant_right.intrinsics_path.value()));
+
+  timestamped_frame_t timestamped_frame_right{
+      .frame = std::move(image_right), .timestamp = 0, .invalid = false};
+
+  auto detections_right =
+      detector_right->GetTagDetections(timestamped_frame_right);
+
+  ASSERT_GE(detections_right.size(), 4);
+
+  const auto single_tag_detection = std::vector{detections_right[0]};
+
+  std::vector<position_estimate_t> square_solutions =
+      square_solver->EstimatePosition(detections_right);
+
+  ASSERT_FALSE(square_solutions.empty());
+
+  const std::map<std::string, std::vector<tag_detection_t>> camera_detections{
+      {camera_constant_right.name, detections_right},
+  };
+
+  for (const auto& square_solution : square_solutions) {
+    double square_loss = joint_solver->CalculateResidualLoss(
+        square_solution.pose, camera_detections);
+    ASSERT_LE(square_loss, 1e-3);
+  }
 }

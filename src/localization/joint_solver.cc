@@ -254,13 +254,8 @@ auto JointSolver::CalculateUpdate(const Eigen::MatrixXd& J,
 }
 
 auto JointSolver::CalculateResidualLoss(
-    const differentiable_transform3d_t& correction,
+    const Eigen::Matrix4d& correction_matrix,
     const std::vector<datapoint_t>& data_points) -> double {
-  Eigen::VectorXd params(6);
-  params << value(correction.t_x), value(correction.t_y), value(correction.t_z),
-      value(correction.r_x), value(correction.r_y), value(correction.r_z);
-
-  const Eigen::Matrix4d correction_matrix = CreateTransformationMatrix(params);
 
   double loss = 0.0;
   for (const auto& data_point : data_points) {
@@ -308,47 +303,22 @@ JointSolver::JointSolver(
 auto JointSolver::EstimatePosition(
     const std::map<std::string, std::vector<tag_detection_t>>&
         camera_detections,
-    std::optional<frc::Pose3d> initial_pose) -> position_estimate_t {
+    std::optional<frc::Pose3d> initial_pose_maybe) -> position_estimate_t {
   std::vector<int> tag_ids;
+  std::vector<datapoint_t> data_points;
   double average_timestamp = 0;
-  int total_detections = 0;
-  const Eigen::Matrix4d field_to_robot =
-      initial_pose.value_or(frc::Pose3d(position_receiver_.Get())).ToMatrix();
+
+  const auto initial_pose =
+      initial_pose_maybe.value_or(frc::Pose3d(position_receiver_.Get()));
+  const Eigen::Matrix4d field_to_robot = initial_pose.ToMatrix();
   const Eigen::Matrix4d robot_to_feild = field_to_robot.inverse();
 
-  data_points_.clear();
+  CreateDataPoints(initial_pose, camera_detections, data_points,
+                   average_timestamp, tag_ids);
 
-  for (const auto& [camera_name, tag_detections] : camera_detections) {
-    int index = camera_name_to_index[camera_name];
-    for (const auto& tag_detection : tag_detections) {
-      tag_ids.push_back(tag_detection.tag_id);
-      average_timestamp += tag_detection.timestamp;
-      total_detections++;
-      int corner_index = 0;
-      for (const auto& corner : tag_detection.corners) {
-        const auto field_to_tag =
-            layout_.GetTagPose(tag_detection.tag_id)->ToMatrix();
-        const auto homogenized_apriltag_corner =
-            localization::kapriltag_corners_eigen_homogenized[corner_index];
-        const auto normalized_camera_matrix = normalized_camera_matrix_[index];
-        const auto camera_to_robot = robot_to_camera_[index].inverse();
-        data_points_.push_back(datapoint_t{
-            .normalized_image_point = NormalizePoint(
-                corner, camera_constants_[index], camera_matrix_[index],
-                distortion_coefficients_[index]),
-            .normalized_camera_matrix = normalized_camera_matrix,
-            .camera_to_robot = camera_to_robot,
-            .feild_to_tag = field_to_tag,
-            .homogenized_apriltag_corner = homogenized_apriltag_corner,
-            .x = robot_to_feild * field_to_tag * rotate_yaw *
-                 homogenized_apriltag_corner,
-            .A = normalized_camera_matrix * PI * camera_to_robot});
-        corner_index++;
-      }
-    }
-  }
+  const int total_detections = data_points.size() / 4;
 
-  if (data_points_.size() < 3) {
+  if (data_points.size() < 3) {
     return position_estimate_t{
         .tag_ids = tag_ids,
         .rejected_tag_ids = {},
@@ -363,11 +333,10 @@ auto JointSolver::EstimatePosition(
     };
   }
 
-  average_timestamp /= total_detections;
-
   differentiable_transform3d_t correction{};
 
-  double checkpoint_loss = CalculateResidualLoss(correction, data_points_);
+  double checkpoint_loss =
+      CalculateResidualLoss(correction.ToEigen(), data_points);
   double lambda = 1e-6;
   constexpr double kMinLambda = 1e-16;
   constexpr double kMaxLambda = 1e16;
@@ -375,12 +344,12 @@ auto JointSolver::EstimatePosition(
   constexpr double kMinLossImprovement = 1e-17;
   constexpr int kMaxAttemptsPerEpoch = 40;
   constexpr int kMaxStaleEpochs = 400;
-  constexpr int kepochs = 20;
+  constexpr int kepochs = 100;
   int stale_epochs = 0;
 
   for (int epoch = 0; epoch < kepochs; epoch++) {
-    Eigen::MatrixXd J(data_points_.size() * 2, 6);
-    Eigen::VectorXd residual(data_points_.size() * 2);
+    Eigen::MatrixXd J(data_points.size() * 2, 6);
+    Eigen::VectorXd residual(data_points.size() * 2);
 
     tape_.newRecording();
     tape_.registerInput(correction.t_x);
@@ -390,7 +359,7 @@ auto JointSolver::EstimatePosition(
     tape_.registerInput(correction.r_y);
     tape_.registerInput(correction.r_z);
     int index = 0;
-    for (auto const& data_point : data_points_) {
+    for (auto const& data_point : data_points) {
       const auto correction_matrix = correction.ToMatrix();
       auto a = Multiply(correction_matrix, data_point.x);
       std::array<AD, 3> projected_point = Multiply(data_point.A, a);
@@ -422,7 +391,7 @@ auto JointSolver::EstimatePosition(
       differentiable_transform3d_t candidate = correction;
       candidate.Update(update);
       const double candidate_loss =
-          CalculateResidualLoss(candidate, data_points_);
+          CalculateResidualLoss(candidate.ToEigen(), data_points);
 
       if (candidate_loss < checkpoint_loss) {
         accepted = true;
@@ -436,8 +405,8 @@ auto JointSolver::EstimatePosition(
     }
 
     VLOG(1) << "--------------------------------------";
-    VLOG(0) << "Residual\n" << residual;
-    VLOG(0) << "Loss: " << loss;
+    VLOG(1) << "Residual\n" << residual;
+    VLOG(1) << "Loss: " << loss;
     VLOG(1) << "Checkpoint Loss: " << checkpoint_loss;
     VLOG(1) << "Candidate Loss: " << best_candidate_loss;
     VLOG(1) << "lambda: " << lambda;
@@ -485,6 +454,71 @@ auto JointSolver::EstimatePosition(
       .invalid = false,
       .loss = checkpoint_loss,
   };
+}
+
+auto JointSolver::CalculateResidualLoss(
+    frc::Pose3d pose, const std::map<std::string, std::vector<tag_detection_t>>&
+                          camera_detections) const -> double {
+  std::vector<int> tag_ids;
+  std::vector<datapoint_t> data_points;
+  double average_timestamp = 0;
+
+  CreateDataPoints(pose, camera_detections, data_points, average_timestamp,
+                   tag_ids);
+
+  differentiable_transform3d_t correction{};
+
+  double checkpoint_loss =
+      CalculateResidualLoss(correction.ToEigen(), data_points);
+
+  return checkpoint_loss;
+}
+
+void JointSolver::CreateDataPoints(
+    const frc::Pose3d& initial_pose,
+    const std::map<std::string, std::vector<tag_detection_t>>&
+        camera_detections,
+    std::vector<datapoint_t>& data_points, double& average_timestamp,
+    std::vector<int>& tag_ids) const {
+
+  average_timestamp = 0;
+  const Eigen::Matrix4d field_to_robot = initial_pose.ToMatrix();
+  const Eigen::Matrix4d robot_to_feild = field_to_robot.inverse();
+
+  for (const auto& [camera_name, tag_detections] : camera_detections) {
+    int index = camera_name_to_index.at(camera_name);
+    for (const auto& tag_detection : tag_detections) {
+      tag_ids.push_back(tag_detection.tag_id);
+      average_timestamp += tag_detection.timestamp;
+      int corner_index = 0;
+      for (const auto& corner : tag_detection.corners) {
+        const auto field_to_tag =
+            layout_.GetTagPose(tag_detection.tag_id)->ToMatrix();
+        const auto homogenized_apriltag_corner =
+            localization::kapriltag_corners_eigen_homogenized[corner_index];
+        const auto normalized_camera_matrix = normalized_camera_matrix_[index];
+        const auto camera_to_robot = robot_to_camera_[index].inverse();
+        data_points.push_back(datapoint_t{
+            .normalized_image_point = NormalizePoint(
+                corner, camera_constants_[index], camera_matrix_[index],
+                distortion_coefficients_[index]),
+            .normalized_camera_matrix = normalized_camera_matrix,
+            .camera_to_robot = camera_to_robot,
+            .feild_to_tag = field_to_tag,
+            .homogenized_apriltag_corner = homogenized_apriltag_corner,
+            .x = robot_to_feild * field_to_tag * rotate_yaw *
+                 homogenized_apriltag_corner,
+            .A = normalized_camera_matrix * PI * camera_to_robot});
+        corner_index++;
+      }
+    }
+  }
+
+  if (data_points.size() == 0) {
+    return;
+  }
+
+  average_timestamp /= data_points.size() / 4;
 }
 
 auto operator<<(std::ostream& os,
