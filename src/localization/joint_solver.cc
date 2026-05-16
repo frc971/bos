@@ -42,10 +42,11 @@ JointSolver::JointSolver(
     const auto camera_matrix =
         utils::CameraMatrixFromJson<Eigen::Matrix3d>(intrinsics_json);
     const Eigen::Matrix<double, 3, 4> image_to_camera = camera_matrix * pi;
-    const Eigen::Matrix4d camera_to_robot =
+    Eigen::Matrix4d camera_to_robot =
         utils::ExtrinsicsJsonToCameraToRobot(
             utils::ReadExtrinsics(camera_constant.extrinsics_path.value()))
             .ToMatrix();
+    utils::ChangeBasis(camera_to_robot, utils::WPI_TO_CV);
     const Eigen::Matrix<double, 3, 4> image_to_robot =
         image_to_camera * camera_to_robot;
     camera_matrices_.push_back(
@@ -70,7 +71,7 @@ void JointSolver::ComputeResidual(
         camera_matrices_[data_points[i].source_index].image_to_robot;
 
     const Eigen::Vector4d robot_relative_corner =
-        robot_to_field * data_points[i].field_to_tag_corner_homogenous;
+        robot_to_field * data_points[i].field_to_tag_corner_homogeneous_cv;
 
     Eigen::Vector3d projection = image_to_robot * robot_relative_corner;
     const double lambda = projection(2);
@@ -133,17 +134,21 @@ auto JointSolver::EstimatePosition(
         const data_point_t datapoint = {
             .undistorted_point = undistorted_image_point,
             .source_index = source_index,
-            .field_to_tag_corner_homogenous =
+            .field_to_tag_corner_homogeneous_cv =
                 tag_corners_[detection.tag_id].value()[corner_index]};
         data_points.push_back(datapoint);
       }
     }
   }
 
+  if (data_points.empty()) {
+    return std::nullopt;
+  }
+
   Eigen::VectorXd residual(2 * data_points.size());
   Eigen::MatrixXd d_residual_d_twist_jacobian(2 * data_points.size(), 6);
 
-  for (int epoch = 0; epoch < 1000; epoch++) {
+  for (int epoch = 0; epoch < 1e4; epoch++) {
     ComputeResidual(data_points, robot_to_field_, residual,
                     &d_residual_d_twist_jacobian);
     double current_error = residual.cwiseSquare().sum();

@@ -11,7 +11,7 @@ namespace localization {
 using data_point_t = struct DataPoint {
   Eigen::Vector2d undistorted_point;
   size_t source_index;
-  Eigen::Vector4d field_to_tag_corner_homogenous;
+  Eigen::Vector4d field_to_tag_corner_homogeneous_cv;
 };
 struct CameraMatrices {
   Eigen::Matrix<double, 3, 4> image_to_robot;

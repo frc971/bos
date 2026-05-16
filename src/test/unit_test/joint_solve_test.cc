@@ -127,7 +127,7 @@ class JointSolverTest : public ::testing::Test {
 // }
 
 TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
-  const cv::Mat image = cv::imread("/bos/bos-logs/log181/left/11.963395.jpg");
+  const cv::Mat image = cv::imread("/bos/bos-logs/log181/left/20.095369.jpg");
   camera::timestamped_frame_t frame{.frame = image, .timestamp = 0.0};
   const std::vector<localization::tag_detection_t> detections =
       detector.GetTagDetections(frame);
@@ -136,8 +136,8 @@ TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
   std::vector<std::vector<localization::tag_detection_t>> associated_detections{
       detections};
   const frc::Transform3d joint_solve_input_noise(
-      frc::Translation3d(units::meter_t{0.2}, units::meter_t{0.2},
-                         units::meter_t{0.2}),
+      frc::Translation3d(units::meter_t{0.4}, units::meter_t{0.4},
+                         units::meter_t{0.4}),
       frc::Rotation3d(units::degree_t{0}, units::degree_t{0},
                       units::degree_t{0}));
   joint_solver.SetStartPosition(
