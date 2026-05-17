@@ -19,7 +19,7 @@ struct CameraMatrices {
   cv::Mat camera_matrix;
 };
 static constexpr int kmax_tags = 50;
-class JointSolver : IJointPositionSolver {
+class JointSolver : public IJointPositionSolver {
  public:
   JointSolver(const std::vector<camera::camera_constant_t>& camera_constants_);
   auto EstimatePosition(

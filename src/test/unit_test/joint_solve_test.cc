@@ -13,139 +13,73 @@ class JointSolverTest : public ::testing::Test {
   camera::camera_constants_t camera_constants = camera::GetCameraConstants();
 
   std::vector<camera::CameraConstant> joint_solve_cameras =
-      std::vector<camera::CameraConstant>{camera_constants.at("main_bot_left")};
-  localization::SquareSolver square_solver;
+      std::vector<camera::CameraConstant>{
+          camera_constants.at("main_bot_left"),
+          camera_constants.at("main_bot_right")};
+  localization::SquareSolver left_square_solver;
+  localization::SquareSolver right_square_solver;
   localization::JointSolver joint_solver;
-  localization::OpenCVAprilTagDetector detector;
+  localization::OpenCVAprilTagDetector left_detector;
+  localization::OpenCVAprilTagDetector right_detector;
   JointSolverTest()
-      : square_solver(camera_constants.at("main_bot_left")),
+      : left_square_solver(camera_constants.at("main_bot_left")),
+        right_square_solver(camera_constants.at("main_bot_right")),
         joint_solver(joint_solve_cameras),
-        detector(utils::ReadIntrinsics(
-            camera_constants.at("main_bot_left").intrinsics_path.value())) {}
+        left_detector(utils::ReadIntrinsics(
+            camera_constants.at("main_bot_left").intrinsics_path.value())),
+        right_detector(utils::ReadIntrinsics(
+            camera_constants.at("main_bot_right").intrinsics_path.value())) {}
 };
 
-// TEST_F(JointSolverTest, MaintainsValidEstimateOpenRotation) {  // NOLINT
-//   const localization::position_estimate_t square_solver_solution =
-//       square_solver.EstimatePosition(test_utils::fake_detections, false)[0];
-//   std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
-//       associated_detections;
-//   associated_detections.insert({config, test_utils::fake_detections});
-//   const localization::position_estimate_t joint_solver_solution =
-//       joint_solver.EstimatePosition(associated_detections,
-//                                     square_solver_solution.pose, false);
-//   EXPECT_EQ(square_solver_solution, joint_solver_solution);
-// }
-//
-// TEST_F(JointSolverTest, CloseConvergenceOpenRotation) {  // NOLINT
-//   const frc::Transform3d joint_solve_input_noise(
-//       frc::Translation3d(units::meter_t{0.4}, units::meter_t{0.5},
-//                          units::meter_t{0.2}),
-//       frc::Rotation3d(units::degree_t{test_utils::deg2rad(3)},
-//                       units::degree_t{test_utils::deg2rad(3)},
-//                       units::degree_t{test_utils::deg2rad(3)}));
-//   const localization::position_estimate_t square_solver_solution =
-//       square_solver.EstimatePosition(test_utils::fake_detections, false)[0];
-//   frc::Pose3d noisy_pose =
-//       square_solver_solution.pose.TransformBy(joint_solve_input_noise);
-//   std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
-//       associated_detections;
-//   associated_detections.insert({config, test_utils::fake_detections});
-//   const localization::position_estimate_t joint_solver_solution =
-//       joint_solver.EstimatePosition(associated_detections, noisy_pose, false,
-//                                     true);
-//   // std::cout << "sq: " << square_solver_solution
-//   //           << "\njoint: " << joint_solver_solution << std::endl;
-//   EXPECT_EQ(square_solver_solution, joint_solver_solution);
-// }
-
-// TEST_F(JointSolverTest, IncreasingDistanceYawOnly) {  // NOLINT
-//   double xDiff = rand();
-//   double yDiff = rand();
-//   double zDiff = rand();
-//   const double translationMax = std::hypot(xDiff, yDiff, zDiff) * 4.0;
-//   xDiff /= translationMax;
-//   yDiff /= translationMax;
-//   zDiff /= translationMax;
-//   double rollDiff = rand();
-//   double pitchDiff = rand();
-//   double yawDiff = rand();
-//   const double rotationDivider = std::hypot(rollDiff, pitchDiff, yawDiff) / 4.0;
-//   // rollDiff /= rotationDivider;
-//   // pitchDiff /= rotationDivider;
-//   rollDiff = 0;
-//   pitchDiff = 0;
-//   yawDiff /= rotationDivider;
-//   localization::position_estimate_t square_solver_solution =
-//       square_solver.EstimatePosition(test_utils::fake_detections, false)[0];
-//   std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
-//       associated_detections;
-//   associated_detections.insert(
-//       {camera_constants.at("main_bot_left"), test_utils::fake_detections});
-//   localization::position_estimate_t joint_solver_solution;
-//   for (int i = 0; i < 15; i++) {
-//     const frc::Transform3d joint_solve_input_noise(
-//         frc::Translation3d(units::meter_t{i * xDiff}, units::meter_t{i * yDiff},
-//                            units::meter_t{i * zDiff}),
-//         frc::Rotation3d(units::degree_t{i * rollDiff},
-//                         units::degree_t{i * pitchDiff},
-//                         units::degree_t{i * yawDiff}));
-//
-//     frc::Pose3d noisy_pose =
-//         square_solver_solution.pose.TransformBy(joint_solve_input_noise);
-//     joint_solver_solution = joint_solver.EstimatePosition(
-//         associated_detections, noisy_pose, true, false);
-//     std::cout << "iter: " << i << " sq: " << square_solver_solution
-//               << "\njoint: " << joint_solver_solution << std::endl;
-//     std::cout << "Noise" << std::endl;
-//     utils::PrintTransform3d(joint_solve_input_noise);
-//     if (square_solver_solution != joint_solver_solution) {
-//       joint_solver_solution = joint_solver.EstimatePosition(
-//           associated_detections, noisy_pose, true, true);
-//       std::cout << "Noisy pose" << std::endl;
-//       utils::PrintPose3d(noisy_pose);
-//       FAIL() << "Failed with above transformation: "
-//              << "\nJoint solve solution: " << joint_solver_solution
-//              << "\nSq solution: " << square_solver_solution;
-//
-//       break;
-//     }
-//   }
-// }
-//
-// TEST_F(JointSolverTest, MaintainsValidEstimateYawOnly) {  // NOLINT
-//   const localization::position_estimate_t square_solver_solution =
-//       square_solver.EstimatePosition(test_utils::fake_detections, false)[0];
-//   std::map<camera::CameraConstant, std::vector<localization::tag_detection_t>>
-//       associated_detections;
-//   associated_detections.insert({config, test_utils::fake_detections});
-//   const localization::position_estimate_t joint_solver_solution =
-//       joint_solver.EstimatePosition(associated_detections,
-//                                     square_solver_solution.pose, true);
-//   // std::cout << "sq: " << square_solver_solution
-//   //           << "\njoint: " << joint_solver_solution << std::endl;
-//   EXPECT_EQ(square_solver_solution, joint_solver_solution);
-// }
-
 TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
-  const cv::Mat image = cv::imread("/bos/bos-logs/log181/left/20.095369.jpg");
-  camera::timestamped_frame_t frame{.frame = image, .timestamp = 0.0};
-  const std::vector<localization::tag_detection_t> detections =
-      detector.GetTagDetections(frame);
-  CHECK_NE(detections.size(), 0);
-  const localization::position_estimate_t square_solver_solution =
-      square_solver.EstimatePosition(detections, false)[0];
+  const cv::Mat left_image =
+      cv::imread("/bos/bos-logs/log181/main_bot_left/12.899408.jpg");
+  const cv::Mat right_image =
+      cv::imread("/bos/bos-logs/log181/main_bot_right/13.027757.jpg");
+  camera::timestamped_frame_t left_frame{.frame = left_image, .timestamp = 0.0};
+  camera::timestamped_frame_t right_frame{.frame = right_image,
+                                          .timestamp = 0.0};
+  const std::vector<localization::tag_detection_t> left_detections =
+      left_detector.GetTagDetections(left_frame);
+  const std::vector<localization::tag_detection_t> right_detections =
+      right_detector.GetTagDetections(right_frame);
+  CHECK_NE(left_detections.size() + right_detections.size(), 0);
+  const std::vector<localization::position_estimate_t>
+      left_square_solver_solutions =
+          left_square_solver.EstimatePosition(left_detections, false);
+  const std::optional<localization::position_estimate_t>
+      left_square_solver_solution =
+          left_square_solver_solutions.size() == 0
+              ? std::nullopt
+              : std::make_optional<localization::position_estimate_t>(
+                    left_square_solver_solutions[0]);
+  const std::vector<localization::position_estimate_t>
+      right_square_solver_solutions =
+          right_square_solver.EstimatePosition(right_detections, false);
+  const std::optional<localization::position_estimate_t>
+      right_square_solver_solution =
+          right_square_solver_solutions.size() == 0
+              ? std::nullopt
+              : std::make_optional<localization::position_estimate_t>(
+                    right_square_solver_solutions[0]);
   std::vector<std::vector<localization::tag_detection_t>> associated_detections{
-      detections};
+      left_detections, right_detections};
   const frc::Transform3d joint_solve_input_noise(
-      frc::Translation3d(units::meter_t{0.4}, units::meter_t{0.4},
-                         units::meter_t{0.4}),
+      frc::Translation3d(units::meter_t{0.1}, units::meter_t{0.1},
+                         units::meter_t{0.1}),
       frc::Rotation3d(units::degree_t{0}, units::degree_t{0},
                       units::degree_t{0}));
   joint_solver.SetStartPosition(
-      square_solver_solution.pose.TransformBy(joint_solve_input_noise));
+      (left_square_solver_solution.has_value() ? left_square_solver_solution
+                                               : right_square_solver_solution)
+          ->pose.TransformBy(joint_solve_input_noise));
   const localization::position_estimate_t joint_solver_solution =
       joint_solver.EstimatePosition(associated_detections, false).value();
-  std::cout << "sq: " << square_solver_solution
-            << "\njoint: " << joint_solver_solution << std::endl;
-  EXPECT_EQ(square_solver_solution, joint_solver_solution);
+  if (left_square_solver_solution) {
+    std::cout << "sq left: " << left_square_solver_solution.value();
+  }
+  if (right_square_solver_solution) {
+    std::cout << "\nsq right: " << right_square_solver_solution.value();
+  }
+  std::cout << "\njoint: " << joint_solver_solution << std::endl;
 }

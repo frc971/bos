@@ -14,6 +14,7 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/disk_camera.h"
+#include "src/localization/joint_solver.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/networktable_sender.h"
 #include "src/localization/opencv_apriltag_detector.h"
@@ -125,7 +126,7 @@ auto main(int argc, char** argv) -> int {
     LOG(INFO) << "Created camera source";
     localization::RunJointLocalization(
         detector_source,
-        std::make_unique<localization::UnambiguousEstimator>(camera_constants),
+        std::make_unique<localization::JointSolver>(camera_constants),
         std::make_unique<localization::NetworkTableSender>("Joint", false,
                                                            true));
   });

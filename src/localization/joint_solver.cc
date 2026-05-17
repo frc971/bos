@@ -117,11 +117,13 @@ auto JointSolver::EstimatePosition(
   if (detection_batches.empty()) {
     return std::nullopt;
   }
+  double avg_timestamp = 0;
   std::vector<data_point_t> data_points;
   for (size_t source_index = 0; source_index < detection_batches.size();
        source_index++) {
     const CameraMatrices& camera_mats = camera_matrices_[source_index];
     for (const tag_detection_t& detection : detection_batches[source_index]) {
+      avg_timestamp += detection.timestamp;
       std::vector<cv::Point2d> undistorted_corners;
       cv::undistortImagePoints(detection.corners, undistorted_corners,
                                camera_mats.camera_matrix,
@@ -145,15 +147,18 @@ auto JointSolver::EstimatePosition(
     return std::nullopt;
   }
 
+  avg_timestamp /= data_points.size() / 4;
+
   Eigen::VectorXd residual(2 * data_points.size());
   Eigen::MatrixXd d_residual_d_twist_jacobian(2 * data_points.size(), 6);
+  double current_error;
 
   for (int epoch = 0; epoch < 1e4; epoch++) {
     ComputeResidual(data_points, robot_to_field_, residual,
                     &d_residual_d_twist_jacobian);
-    double current_error = residual.cwiseSquare().sum();
-    if (epoch % 10 == 0)
-      std::cout << "Current error: " << current_error << std::endl;
+    current_error = residual.cwiseSquare().sum();
+    // if (epoch % 10 == 0)
+    //   std::cout << "Current error: " << current_error << std::endl;
     const Eigen::Vector<double, 6> b =
         -d_residual_d_twist_jacobian.transpose() * residual;
     const Eigen::Matrix<double, 6, 6> hessian =
@@ -186,7 +191,7 @@ auto JointSolver::EstimatePosition(
     }
   }
 
-  std::cout << "Robot to field:\n" << robot_to_field_ << std::endl;
+  // std::cout << "Robot to field:\n" << robot_to_field_ << std::endl;
 
   Eigen::Matrix4d field_to_robot = robot_to_field_.inverse();
   field_to_robot(3, 0) = 0;
@@ -194,17 +199,20 @@ auto JointSolver::EstimatePosition(
   field_to_robot(3, 2) = 0;
   field_to_robot(3, 3) = 1;
 
-  std::cout << "Field to robot cv:\n" << field_to_robot << std::endl;
+  // std::cout << "Field to robot cv:\n" << field_to_robot << std::endl;
 
-  utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
-                                   "Field to robot cv");
+  // utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
+  // "Field to robot cv");
   utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
-  std::cout << "Field to robot wpi:\n" << field_to_robot << std::endl;
-  utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
-                                   "Field to robot wpi");
+  // std::cout << "Field to robot wpi:\n" << field_to_robot << std::endl;
+  // utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
+  //                                  "Field to robot wpi");
 
   return std::make_optional<position_estimate_t>(
-      {.pose = frc::Pose3d(field_to_robot), .variance = 0, .timestamp = 0});
+      {.pose = frc::Pose3d(field_to_robot),
+       .timestamp = avg_timestamp,
+       .num_tags = static_cast<int>(data_points.size() / 4),
+       .loss = current_error});
 }
 
 }  // namespace localization
