@@ -16,7 +16,8 @@ using frc::AprilTagFieldLayout;
 
 JointSolver::JointSolver(
     const std::vector<camera::camera_constant_t>& camera_constants_)
-    : robot_to_field_(Eigen::Matrix4d::Identity()) {
+    : robot_to_field_(Eigen::Matrix4d::Identity()),
+      backup_solver_(camera_constants_) {
   // clang-format off
   const Eigen::Matrix4d rotate_yaw_cv = (Eigen::Matrix4d() <<
       -1, 0, 0, 0,
@@ -181,7 +182,7 @@ auto JointSolver::EstimatePosition(
         lambda *= 2;
         if (lambda > kmaximum_lambda) {
           std::cout << "Failed" << std::endl;
-          return std::nullopt;
+          return backup_solver_.EstimatePosition(detection_batches);
         }
       } else {
         lambda /= 2;
@@ -207,9 +208,21 @@ auto JointSolver::EstimatePosition(
   // std::cout << "Field to robot wpi:\n" << field_to_robot << std::endl;
   // utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
   //                                  "Field to robot wpi");
+  const frc::Pose3d iteratively_solved_pose(field_to_robot);
+  if (current_error > kmax_acceptable_error ||
+      utils::PoseOffField(iteratively_solved_pose)) {
+    std::optional<position_estimate_t> backup_solution =
+        backup_solver_.EstimatePosition(detection_batches);
+    if (backup_solution.has_value()) {
+      SetStartPosition(backup_solution->pose);
+      std::cout << "Using unambiguous detector for ts: "
+                << backup_solution->timestamp << std::endl;
+    }
+    return backup_solution;
+  }
 
   return std::make_optional<position_estimate_t>(
-      {.pose = frc::Pose3d(field_to_robot),
+      {.pose = iteratively_solved_pose,
        .timestamp = avg_timestamp,
        .num_tags = static_cast<int>(data_points.size() / 4),
        .loss = current_error});

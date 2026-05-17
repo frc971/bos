@@ -3,7 +3,7 @@
 #include "nlohmann/json.hpp"
 #include "src/camera/camera_constants.h"
 #include "src/localization/position_solver.h"
-#include "src/localization/square_solver.h"
+#include "src/localization/unambiguous_estimator.h"
 
 using json = nlohmann::json;
 
@@ -35,9 +35,11 @@ class JointSolver : public IJointPositionSolver {
  private:
   static constexpr double kacceptable_reprojection_error = 0.005;
   static constexpr double kmaximum_lambda = 1e10;
+  static constexpr double kmax_acceptable_error = 1e3;
   std::vector<CameraMatrices> camera_matrices_;
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;
   Eigen::Matrix4d robot_to_field_;
+  UnambiguousEstimator backup_solver_;
 };
 }  // namespace localization
