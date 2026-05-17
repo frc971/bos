@@ -28,7 +28,9 @@ class DiskCamera : public ICamera {
   DiskCamera(std::string image_folder_path,
              std::optional<camera_constant_t> camera_constant = std::nullopt,
              double speed = 1.0, std::optional<double> start = std::nullopt,
-             std::optional<double> end = std::nullopt);
+             std::optional<double> end = std::nullopt,
+             bool deterministic = false);
+  ~DiskCamera() override;
   auto GetFrame() -> timestamped_frame_t override;
   auto Restart() -> void override;
   auto IsDone() -> bool override { return image_paths_.empty(); }
@@ -36,6 +38,8 @@ class DiskCamera : public ICamera {
 
  private:
   const double speed_;
+  const bool deterministic_;
+  bool deterministic_registered_;
   const std::optional<double> start_, end_;
   std::optional<camera_constant_t> camera_constant_;
   std::string image_folder_path_;

@@ -35,7 +35,8 @@ class JointSolver : public IJointPositionSolver {
  private:
   static constexpr double kacceptable_reprojection_error = 0.005;
   static constexpr double kmaximum_lambda = 1e10;
-  static constexpr double kmax_acceptable_error = 1e3;
+  static constexpr double kmax_acceptable_error = 1e5;
+  static constexpr double kmin_acceptable_error = 2;
   std::vector<CameraMatrices> camera_matrices_;
   std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
       tag_corners_;

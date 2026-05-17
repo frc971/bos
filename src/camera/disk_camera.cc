@@ -1,21 +1,82 @@
 #include "disk_camera.h"
+#include <condition_variable>
 #include <optional>
 #include <utility>
+#include "absl/flags/flag.h"
 #include "absl/log/check.h"
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
+
+ABSL_FLAG(bool, deterministic_disk_camera, true,  // NOLINT
+          "Make DiskCamera replay synchronize deterministic DiskCamera "
+          "instances by frame instead of sleeping between timestamps.");
+
+namespace {
+std::mutex deterministic_barrier_mutex;
+std::condition_variable deterministic_barrier_cv;
+size_t deterministic_barrier_active = 0;
+size_t deterministic_barrier_arrived = 0;
+size_t deterministic_barrier_generation = 0;
+
+auto RegisterDeterministicDiskCamera() -> void {
+  std::lock_guard<std::mutex> lock(deterministic_barrier_mutex);
+  deterministic_barrier_active++;
+}
+
+auto ReleaseDeterministicBarrierIfReady(std::unique_lock<std::mutex>& lock)
+    -> void {
+  if (deterministic_barrier_active == 0 ||
+      deterministic_barrier_arrived < deterministic_barrier_active) {
+    return;
+  }
+  deterministic_barrier_arrived = 0;
+  deterministic_barrier_generation++;
+  lock.unlock();
+  deterministic_barrier_cv.notify_all();
+}
+
+auto DeregisterDeterministicDiskCamera(bool& registered) -> void {
+  if (!registered) {
+    return;
+  }
+  std::unique_lock<std::mutex> lock(deterministic_barrier_mutex);
+  registered = false;
+  deterministic_barrier_active--;
+  ReleaseDeterministicBarrierIfReady(lock);
+}
+
+auto WaitForDeterministicDiskCameras() -> void {
+  std::unique_lock<std::mutex> lock(deterministic_barrier_mutex);
+  const size_t generation = deterministic_barrier_generation;
+  deterministic_barrier_arrived++;
+  if (deterministic_barrier_arrived >= deterministic_barrier_active) {
+    ReleaseDeterministicBarrierIfReady(lock);
+    return;
+  }
+  deterministic_barrier_cv.wait(lock, [generation] {
+    return generation != deterministic_barrier_generation ||
+           deterministic_barrier_active == 0;
+  });
+}
+}  // namespace
 
 namespace camera {
 
 DiskCamera::DiskCamera(std::string image_folder_path,
                        std::optional<camera_constant_t> camera_constant,
                        double speed, std::optional<double> start,
-                       std::optional<double> end)
+                       std::optional<double> end, bool deterministic)
     : speed_(speed),
+      deterministic_(deterministic ||
+                     absl::GetFlag(FLAGS_deterministic_disk_camera)),
+      deterministic_registered_(deterministic_),
       start_(start),
       end_(end),
       camera_constant_(std::move(camera_constant)),
       image_folder_path_(std::move(image_folder_path)) {
+  if (deterministic_registered_) {
+    RegisterDeterministicDiskCamera();
+  }
   CHECK(!start_.has_value() || !end_.has_value() ||
         end_.value() > start_.value());
   for (auto& entry : std::filesystem::directory_iterator(image_folder_path_)) {
@@ -55,8 +116,14 @@ DiskCamera::DiskCamera(std::string image_folder_path,
   }
   image_paths_ = std::move(normalized);
 }
+
+DiskCamera::~DiskCamera() {
+  DeregisterDeterministicDiskCamera(deterministic_registered_);
+}
+
 auto DiskCamera::GetFrame() -> timestamped_frame_t {
   if (image_paths_.empty()) {
+    DeregisterDeterministicDiskCamera(deterministic_registered_);
     std::cout << "Finished reading all frames from DiskCamera. Folder path: "
               << image_folder_path_ << std::endl;
     return {.invalid = true};
@@ -69,7 +136,12 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
       .timestamp = recorded_ts + start_.value_or(0)};
   image_paths_.pop();
 
-  if (!image_paths_.empty()) {
+  if (deterministic_) {
+    WaitForDeterministicDiskCameras();
+    if (image_paths_.empty()) {
+      DeregisterDeterministicDiskCamera(deterministic_registered_);
+    }
+  } else if (!image_paths_.empty()) {
     double delta = image_paths_.top().timestamp - recorded_ts;
     std::this_thread::sleep_for(std::chrono::duration<double>(delta / speed_));
   }

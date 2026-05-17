@@ -33,9 +33,9 @@ class JointSolverTest : public ::testing::Test {
 
 TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
   const cv::Mat left_image =
-      cv::imread("/bos/bos-logs/log181/main_bot_left/12.899408.jpg");
+      cv::imread("/bos/bos-logs/log181/main_bot_left/5.611357.jpg");
   const cv::Mat right_image =
-      cv::imread("/bos/bos-logs/log181/main_bot_right/13.027757.jpg");
+      cv::imread("/bos/bos-logs/log181/main_bot_right/5.647740.jpg");
   camera::timestamped_frame_t left_frame{.frame = left_image, .timestamp = 0.0};
   camera::timestamped_frame_t right_frame{.frame = right_image,
                                           .timestamp = 0.0};
@@ -82,4 +82,6 @@ TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
     std::cout << "\nsq right: " << right_square_solver_solution.value();
   }
   std::cout << "\njoint: " << joint_solver_solution << std::endl;
+  std::cout << "loss: " << joint_solver_solution.loss << std::endl;
+  std::cout << "numtags: " << joint_solver_solution.num_tags << std::endl;
 }

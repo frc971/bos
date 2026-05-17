@@ -154,7 +154,8 @@ auto JointSolver::EstimatePosition(
   Eigen::MatrixXd d_residual_d_twist_jacobian(2 * data_points.size(), 6);
   double current_error;
 
-  for (int epoch = 0; epoch < 1e4; epoch++) {
+  for (int epoch = 0; epoch < 1e4 && current_error < kmin_acceptable_error;
+       epoch++) {
     ComputeResidual(data_points, robot_to_field_, residual,
                     &d_residual_d_twist_jacobian);
     current_error = residual.cwiseSquare().sum();
@@ -192,6 +193,8 @@ auto JointSolver::EstimatePosition(
     }
   }
 
+  if (current_error > kmax_acceptable_error) {}
+
   // std::cout << "Robot to field:\n" << robot_to_field_ << std::endl;
 
   Eigen::Matrix4d field_to_robot = robot_to_field_.inverse();
@@ -209,8 +212,8 @@ auto JointSolver::EstimatePosition(
   // utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
   //                                  "Field to robot wpi");
   const frc::Pose3d iteratively_solved_pose(field_to_robot);
-  if (current_error > kmax_acceptable_error ||
-      utils::PoseOffField(iteratively_solved_pose)) {
+  if (false/*current_error > kmax_acceptable_error ||
+      utils::PoseOffField(iteratively_solved_pose)*/) {
     std::optional<position_estimate_t> backup_solution =
         backup_solver_.EstimatePosition(detection_batches);
     if (backup_solution.has_value()) {

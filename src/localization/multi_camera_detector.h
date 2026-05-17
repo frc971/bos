@@ -1,4 +1,5 @@
 #pragma once
+#include <condition_variable>
 #include "src/camera/camera.h"
 #include "src/camera/cscore_streamer.h"
 #include "src/camera/disk_camera.h"
@@ -12,7 +13,8 @@ class MultiCameraDetector {
  public:
   MultiCameraDetector(std::vector<camera::camera_constant_t> camera_constants,
                       std::optional<std::vector<std::filesystem::path>>
-                          image_paths = std::nullopt);
+                          image_paths = std::nullopt,
+                      bool wait_for_all_detections = false);
   [[nodiscard]] auto GetTagDetections()
       -> std::vector<std::vector<tag_detection_t>>;
   [[nodiscard]] auto GetCVFrames() -> std::vector<cv::Mat>;
@@ -27,10 +29,13 @@ class MultiCameraDetector {
   std::vector<double> last_write_times_;
   std::vector<camera::timestamped_frame_t> timestamped_frames_;
   std::vector<std::vector<tag_detection_t>> tag_detections_;
+  std::vector<uint64_t> detection_counts_;
+  std::vector<uint64_t> consumed_detection_counts_;
   std::vector<std::jthread> camera_threads_;
   std::mutex mutex_;
+  std::condition_variable detection_cv_;
   std::atomic<bool> run_cameras_{true};
-  std::atomic<bool> has_new_detections_{false};
+  const bool wait_for_all_detections_;
   static constexpr int kdefault_stream_fps = 30;
 };
 
