@@ -14,7 +14,7 @@ constexpr std::chrono::seconds kwait_interval = 1s;
 std::atomic<bool> stop(false);
 std::atomic<bool> registered_handler(false);
 
-void SignalHander(int signal) {
+void SignalHandler(int signal) {
   LOG(INFO) << "Received signal: " << signal;
   stop = true;
 }
@@ -24,16 +24,16 @@ void RegisterHandler() {
     LOG(WARNING) << "Handler has already been registred";
     return;
   }
-  std::signal(SIGINT, SignalHander);
-  std::signal(SIGILL, SignalHander);
-  std::signal(SIGABRT, SignalHander);
-  std::signal(SIGFPE, SignalHander);
-  std::signal(SIGSEGV, SignalHander);
-  std::signal(SIGTERM, SignalHander);
-  std::signal(SIGHUP, SignalHander);
-  std::signal(SIGQUIT, SignalHander);
+  std::signal(SIGINT, SignalHandler);
+  // std::signal(SIGILL, SignalHandler);
+  // std::signal(SIGABRT, SignalHandler);
+  // std::signal(SIGFPE, SignalHandler);
+  // std::signal(SIGSEGV, SignalHandler);
+  std::signal(SIGTERM, SignalHandler);
+  std::signal(SIGHUP, SignalHandler);
+  std::signal(SIGQUIT, SignalHandler);
   // std::signal(SIGTRAP, SignalHander);
-  std::signal(SIGKILL, SignalHander);
+  // std::signal(SIGKILL, SignalHandler);
   // std::signal(SIGPIPE, SignalHander);
   // std::signal(SIGALRM, SignalHander);
   registered_handler = true;
