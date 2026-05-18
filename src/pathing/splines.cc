@@ -146,7 +146,7 @@ auto CreateSpline(const std::vector<std::vector<pathing::Node>>& grid,
     return {};
   }
 
-  p = 4;
+  p = 3;
   if (numControls <= p) {
     p = numControls - 1;
   }

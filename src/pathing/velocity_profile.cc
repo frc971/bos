@@ -54,10 +54,11 @@ auto _CreateVelocityProfile(const SplineResult& result, double maxVelocity,
     auto [dx, dy] = EvaluateDerivative(result.params[i], result.controls,
                                        result.knots, result.p, 1);
     double derivative = std::hypot(dx, dy);
-    if (derivative <= 0.0) {
+    if (derivative <= 1e-6) {
       velocities.emplace_back(0.0, 0.0);
     } else {
-      velocities.emplace_back(dx / derivative * speed, dy / derivative * speed);
+      velocities.emplace_back((dx / derivative) * speed,
+                              (dy / derivative) * speed);
     }
   }
 

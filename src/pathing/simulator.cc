@@ -10,9 +10,9 @@
 #include <vector>
 #include "src/pathing/splines.h"
 #include "src/pathing/velocity_profile.h"
+#include "src/utils/log.h"
 
 auto main() -> int {
-  const uint lookahead_ = pathing::velocity_lookahead;
   const int64_t dt_us = 20000;
   const double dt_sec = 0.020;
 
@@ -38,7 +38,7 @@ auto main() -> int {
   }
 
   int start_x = 10;
-  int start_y = 5;
+  int start_y = 6;
   int target_x = 44;
   int target_y = 12;
   start_x = std::clamp(start_x, 0, grid_w - 1);
@@ -59,13 +59,17 @@ auto main() -> int {
   wpi::log::StructLogEntry<frc::Pose2d> target_log(log, "/sim/TargetPose2d");
   wpi::log::DoubleLogEntry vx_log(log, "/sim/pathing/vx");
   wpi::log::DoubleLogEntry vy_log(log, "/sim/pathing/vy");
+  wpi::log::DoubleLogEntry speed_log(log, "/sim/speed");
+  wpi::log::IntegerLogEntry closest_idx_log(log, "/sim/closest_idx");
+  wpi::log::DoubleLogEntry v_profile_zero_x(log, "/sim/v_profile_zero_x");
+  wpi::log::DoubleLogEntry v_profile_zero_y(log, "/sim/v_profile_zero_y");
   target_log.Append(target_pose, 1);
 
   pathing::SplineResult result;
   std::vector<std::pair<double, double>> velocity_profile;
   const int max_steps = 10000;
   int64_t t = 0;
-  int prev_closest_idx = -1;
+  int prev_closest_idx = 0;
   for (int step = 0; step < max_steps; ++step) {
     pathing::Point start_pt{
         .x = static_cast<uint>(current_pose.X().value() / node_size_meters),
@@ -91,6 +95,7 @@ auto main() -> int {
       result =
           pathing::CreateSpline(grid, start_pt, target_pt, node_size_meters);
       velocity_profile = pathing::CreateVelocityProfile(result);
+      prev_closest_idx = -1;
     }
 
     if (result.points.empty() || velocity_profile.empty()) {
@@ -100,10 +105,19 @@ auto main() -> int {
       break;
     }
 
-    int closest_idx = 0;
-    frc::Translation2d first2d(result.points[0].X(), result.points[0].Y());
+    const int search_window = 1000;
+
+    // Start searching from 1 because index 0 of velocity profile is always 0,
+    // it needs an initial speed.
+    int start_search = std::max(1, prev_closest_idx);
+    int end_search = std::min(static_cast<int>(result.points.size()) - 1,
+                              start_search + search_window);
+
+    int closest_idx = start_search;
+    frc::Translation2d first2d(result.points[start_search].X(),
+                               result.points[start_search].Y());
     double best_dist = current_pose.Translation().Distance(first2d).value();
-    for (int i = 1; i < static_cast<int>(result.points.size()); ++i) {
+    for (int i = start_search + 1; i <= end_search; ++i) {
       frc::Translation2d p(result.points[i].X(), result.points[i].Y());
       double d = current_pose.Translation().Distance(p).value();
       if (d < best_dist) {
@@ -113,42 +127,11 @@ auto main() -> int {
     }
 
     if (prev_closest_idx >= 0 && closest_idx < prev_closest_idx) {
-      vx_log.Append(0.0, t);
-      vy_log.Append(0.0, t);
-      pose_log.Append(current_pose, t);
-      break;
-    }
-    double dx = target_pose.X().value() - current_pose.X().value();
-    double dy = target_pose.Y().value() - current_pose.Y().value();
-    double dist = std::hypot(dx, dy);
-
-    if (dist <= 1) {
-      while (dist > 0.01) {
-        double vx = (dx / dist);
-        double vy = (dy / dist);
-
-        vx_log.Append(vx, t);
-        vy_log.Append(vy, t);
-        pose_log.Append(current_pose, t);
-
-        current_pose =
-            frc::Pose2d(units::meter_t{current_pose.X().value() + vx * dt_sec},
-                        units::meter_t{current_pose.Y().value() + vy * dt_sec},
-                        units::radian_t{0.0});
-        t += dt_us;
-        dx = target_pose.X().value() - current_pose.X().value();
-        dy = target_pose.Y().value() - current_pose.Y().value();
-        dist = std::hypot(dx, dy);
-      }
-      vx_log.Append(0.0, t);
-      vy_log.Append(0.0, t);
-      pose_log.Append(current_pose, t);
-      break;
+      closest_idx = prev_closest_idx;
     }
 
     prev_closest_idx = closest_idx;
 
-    closest_idx += lookahead_;
     if (closest_idx >= static_cast<int>(result.params.size())) {
       closest_idx = static_cast<int>(result.params.size()) - 1;
     }
@@ -157,7 +140,11 @@ auto main() -> int {
 
     vx_log.Append(vx, t);
     vy_log.Append(vy, t);
+    speed_log.Append(std::hypot(vx, vy), t);
+    closest_idx_log.Append(closest_idx, t);
     pose_log.Append(current_pose, t);
+    v_profile_zero_x.Append(velocity_profile[0].first, t);
+    v_profile_zero_y.Append(velocity_profile[0].second, t);
 
     current_pose =
         frc::Pose2d(units::meter_t{current_pose.X().value() + vx * dt_sec},

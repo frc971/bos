@@ -14,7 +14,6 @@ namespace pathing {
 auto RunController(
     const std::string& navgrid_path = "/root/bos/constants/navgrid.json",
     bool verbose = false) -> void {
-  const uint lookahead_ = velocity_lookahead;
 
   std::ifstream file(navgrid_path);
   if (!file.is_open()) {
@@ -174,7 +173,6 @@ auto RunController(
       }
       prev_closest_idx = closest_idx;
 
-      closest_idx += lookahead_;
       if (closest_idx >= static_cast<int>(result.params.size())) {
         closest_idx = static_cast<int>(result.params.size()) - 1;
       }

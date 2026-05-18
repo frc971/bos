@@ -6,7 +6,6 @@
 
 namespace pathing {
 
-const int velocity_lookahead = 5;
 // Gotten from current pathplanner config of team
 const double max_velocity = 3.5;
 const double max_accel = 3.2;
