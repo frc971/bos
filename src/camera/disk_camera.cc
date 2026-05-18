@@ -23,12 +23,6 @@ DiskCamera::DiskCamera(std::string image_folder_path,
 
     double timestamp = std::stod(entry_name.erase(entry_name.size() - 4, 4));
 
-    if (start.has_value() && timestamp < start_) {
-      continue;
-    }
-    if (end.has_value() && timestamp > end_) {
-      continue;
-    }
     // remove .png for timestamp
     image_paths_.push(
         timestamped_frame_path_t{.path = entry.path(), .timestamp = timestamp});
@@ -51,6 +45,12 @@ DiskCamera::DiskCamera(std::string image_folder_path,
     }
     image_paths_.pop();
     entry.timestamp -= offset;
+    if (start.has_value() && entry.timestamp < start_) {
+      continue;
+    }
+    if (end.has_value() && entry.timestamp > end_) {
+      continue;
+    }
     normalized.push(entry);
   }
   image_paths_ = std::move(normalized);
@@ -59,7 +59,6 @@ auto DiskCamera::GetFrame() -> timestamped_frame_t {
   if (image_paths_.empty()) {
     std::cout << "Finished reading all frames from DiskCamera. Folder path: "
               << image_folder_path_ << std::endl;
-    frc::DataLogManager::Stop();
     return {.invalid = true};
   }
 
