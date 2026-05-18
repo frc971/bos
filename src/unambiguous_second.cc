@@ -8,9 +8,11 @@
 #include "src/localization/unambiguous_estimator.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
+#include "src/utils/stop.h"
 
 using camera::camera_constants_t;
 auto main() -> int {
+  stop::RegisterHandler();
   utils::StartNetworktables();
 
   std::string log_path = frc::DataLogManager::GetLogDir();
@@ -28,4 +30,6 @@ auto main() -> int {
 
   localization::UnambiguousEstimator localizer(cameras);
   localizer.Run();
+
+  stop::WaitUntilStop();
 }

@@ -15,6 +15,7 @@
 
 using camera::camera_constants_t;
 auto main() -> int {
+  stop::RegisterHandler();
   utils::StartNetworktables(9971);
   // TODO configure vision bot camera paths
 

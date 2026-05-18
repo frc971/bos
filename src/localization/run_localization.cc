@@ -32,7 +32,7 @@ void RunLocalization(
                              source->GetName(), port.value(), 30, 1080, 1080))
                        : std::nullopt;
 
-  while (true) {
+  while (!stop_token.stop_requested()) {
     utils::Timer timer(source->GetName(), verbose);
     camera::timestamped_frame_t timestamped_frame = source->Get();
     if (streamer.has_value()) {

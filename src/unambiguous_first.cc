@@ -10,9 +10,11 @@
 #include "src/pathing/controller.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
+#include "src/utils/stop.h"
 
 using camera::camera_constants_t;
 auto main() -> int {
+  stop::RegisterHandler();
   utils::StartNetworktables(9971);
 
   std::string log_path = frc::DataLogManager::GetLogDir();
@@ -36,4 +38,6 @@ auto main() -> int {
   LOG(INFO) << "starting pathing";
 
   std::jthread([&] { localizer.Run(); });
+
+  stop::WaitUntilStop();
 }
