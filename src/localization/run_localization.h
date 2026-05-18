@@ -18,8 +18,6 @@ namespace localization {
 //                 .intrinsics_path)),
 //     std::make_unique<localization::SquareSolver>(
 //         camera::Camera::TURRET_BOT_FRONT_RIGHT),
-//     camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
-//         .extrinsics_path,
 //     5801, false);
 void RunLocalization(
     const std::stop_token& stop_token,
