@@ -146,7 +146,7 @@ auto main(int argc, char** argv) -> int {
               frame.cols, frame.rows,
               utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
           std::make_unique<localization::MultiTagSolver>(camera_constant),
-          std::move(senders), base_port + i, true);
+          std::move(senders), std::nullopt, true);
     });
   }
 

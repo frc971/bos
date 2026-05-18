@@ -16,8 +16,8 @@
 
 using camera::camera_constants_t;
 auto main() -> int {
-  utils::StartNetworktables(9971);
   stop::RegisterHandler();
+  utils::StartNetworktables(971);
 
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
@@ -43,7 +43,7 @@ auto main() -> int {
                                       .intrinsics_path.value())),
         std::make_unique<localization::MultiTagSolver>(
             camera_constants.at("second_bot_left")),
-        std::move(left_sender), 5802, false);
+        std::move(left_sender));
   });
 
   std::jthread right_thread([&](const std::stop_token& stop_token) {
@@ -66,7 +66,7 @@ auto main() -> int {
                                       .intrinsics_path.value())),
         std::make_unique<localization::MultiTagSolver>(
             camera_constants.at("second_bot_right")),
-        std::move(right_sender), 5803, false);
+        std::move(right_sender));
   });
 
   std::jthread pathing_thread(pathing::RunController,
