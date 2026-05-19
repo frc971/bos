@@ -14,11 +14,11 @@ constexpr std::chrono::seconds kwait_interval = 1s;
 std::atomic<bool> stop(false);
 std::atomic<bool> registered_handler(false);
 
-void SignalHandler(int signal) {
+inline void SignalHandler(int signal) {
   stop = true;
 }
 
-void RegisterHandler() {
+inline void RegisterHandler() {
   if (registered_handler) {
     LOG(WARNING) << "Handler has already been registred";
     return;
@@ -38,7 +38,7 @@ void RegisterHandler() {
   registered_handler = true;
 }
 
-void WaitUntilStop() {
+inline void WaitUntilStop() {
   while (!stop) {
     std::this_thread::sleep_for(stop::kwait_interval);
   }
