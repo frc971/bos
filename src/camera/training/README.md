@@ -8,9 +8,9 @@ This is a learn-by-doing task. The interface is given. The implementation is you
 
 > ## NO AI USE
 >
-> **You may not use AI tools on this task.** No Copilot, no Cursor autocomplete, no ChatGPT, no Claude, no "just to explain it to me." If you cannot write a line yourself, ask a mentor.
+> **You may not use AI tools on this task.** No Copilot, no Cursor autocomplete, no ChatGPT, no Claude, no "just to explain it to me." If you cannot write a line yourself, ask a student.
 >
-> The only way to learn is to fail. AI removes the failure and removes the learning. If a mentor catches AI-generated code in your submission you start over.
+> The only way to learn is to fail. AI removes the failure and removes the learning. If a student catches AI-generated code in your submission you start over.
 >
 > Disable AI autocomplete in your editor (Copilot, Cursor AI, Continue, JetBrains AI, etc.) so you do not violate this by accident.
 
@@ -22,7 +22,7 @@ This is a learn-by-doing task. The interface is given. The implementation is you
 
 ## Time box
 
-4-8 hours of real work, spread over as many sessions as you need. If you are stuck for more than 30 minutes on the same problem, ask a mentor.
+4-8 hours of real work, spread over as many sessions as you need. If you are stuck for more than 30 minutes on the same problem, ask a student.
 
 ## Learning goals
 
@@ -47,7 +47,7 @@ You are implementing `camera::ICamera`. The contracts:
 - `IsDone() -> bool`
   True once there are no more frames to return. The default returns false — you must override.
 
-That is the whole interface. Pick your own filenames, your own member variables, your own ordering rule. Document the ordering rule in a comment at the top of your file so a mentor reading it knows what to expect.
+That is the whole interface. Pick your own filenames, your own member variables, your own ordering rule. Document the ordering rule in a comment at the top of your file so a student reading it knows what to expect.
 
 ## The task
 
@@ -56,7 +56,7 @@ That is the whole interface. Pick your own filenames, your own member variables,
 3. **Write your own test.** Model it on `src/test/integration_test/apriltag_detect_test.cc`. Construct your `TrainingCamera`, feed it into the GPU AprilTag detector, and print or log whatever tells you the pipeline is working. Put it under `src/camera/training/` and wire it into the CMakeLists there. **Do not copy the existing test file verbatim** — read it, understand it, then write yours.
 4. **Run on an Orin.** Deploy your test binary to an actual Orin and run it against a real sample PNG directory. Watch the output. Convince yourself the detections make sense.
 
-Ask a mentor for a sample PNG directory before step 4 — possibly earlier if you want one to develop against.
+Ask a student for a sample PNG directory before step 4 — possibly earlier if you want one to develop against.
 
 ## Allowed references
 
@@ -65,7 +65,7 @@ Ask a mentor for a sample PNG directory before step 4 — possibly earlier if yo
 - `src/test/integration_test/apriltag_detect_test.cc` — as a **model** for the shape of your own test, not to copy
 - OpenCV docs (cv::Mat, cv::imread, etc.)
 - C++ standard library docs (filesystem, chrono, etc.)
-- Your mentors
+- Your students
 
 ## When you get stuck
 
@@ -74,14 +74,14 @@ You will get stuck. That is the task working as intended.
 - Re-read the interface and your own code out loud.
 - Write a smaller failing test that isolates the part you do not understand.
 - Print things. Lots of things.
-- Then ask a mentor — with a specific question, not "it does not work."
+- Then ask a student — with a specific question, not "it does not work."
 
 ## Checkoff
 
-A mentor will sit with you at an Orin and verify:
+A student will sit with you at an Orin and verify:
 
 - Your `training_camera.cc` compiles and you can explain every method you wrote.
 - Running your test on the Orin against a real PNG directory produces AprilTag detections that match what we expect for that directory.
 - `Restart()` actually restarts — run the test, restart, run again, get the same frames.
 - `IsDone()` flips correctly at the end of the directory.
-- No AI was used. The mentor will ask you to explain pieces of your code on the spot.
+- No AI was used. The student will ask you to explain pieces of your code on the spot.
