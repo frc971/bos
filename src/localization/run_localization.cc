@@ -52,10 +52,10 @@ void RunLocalization(
 }
 
 void RunJointLocalization(
-    const std::stop_token& stop_toekn, MultiCameraDetector& detector_source,
+    const std::stop_token& stop_token, MultiCameraDetector& detector_source,
     std::unique_ptr<localization::IJointPositionSolver> solver,
     std::unique_ptr<localization::IPositionSender> sender, bool verbose) {
-  while (true) {
+  while (!stop_token.stop_requested()) {
     auto detections = detector_source.GetTagDetections();
     std::optional<position_estimate_t> estimated_pose =
         solver->EstimatePosition(detections);

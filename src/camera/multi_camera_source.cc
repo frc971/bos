@@ -12,7 +12,7 @@ MultiCameraSource::MultiCameraSource(
   for (size_t i = 0; i < cameras_.size(); i++) {
     camera_threads_.emplace_back(
         [this, i](const std::stop_token& stop_token) -> void {
-          while (true) {
+          while (!stop_token.stop_requested()) {
             if (use_all_frames_) {
               mutex_.lock();
               bool frames_used = frames_used_;

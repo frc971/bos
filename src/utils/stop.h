@@ -15,8 +15,8 @@ std::atomic<bool> stop(false);
 std::atomic<bool> registered_handler(false);
 
 void SignalHandler(int signal) {
-  LOG(INFO) << "Received signal: " << signal;
   stop = true;
+  LOG(INFO) << "Received signal: " << signal;
 }
 
 void RegisterHandler() {
