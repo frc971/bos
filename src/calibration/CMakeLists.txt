@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.10)
-
 add_executable(IntrinsicsCalibrate intrinsics_calibrate.cc intrinsics_calibrate_lib.cc)
 target_sources(IntrinsicsCalibrate
   PRIVATE

@@ -18,3 +18,19 @@ target_link_libraries(localization PRIVATE
   utils 
   camera 
 )
+
+add_library(GPUApriltagDetector)
+target_sources(GPUApriltagDetector
+  PRIVATE
+    gpu_apriltag_detector.cc
+
+  PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS
+    FILES
+      gpu_apriltag_detector.h
+)
+target_link_libraries(GPUApriltagDetector PRIVATE
+  971apriltag
+  utils
+)
