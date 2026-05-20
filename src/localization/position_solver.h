@@ -21,6 +21,13 @@ const std::vector<Eigen::Vector3d> kapriltag_corners_eigen = {
     {ktag_size / 2, -ktag_size / 2, 0},
     {-ktag_size / 2, -ktag_size / 2, 0}};
 
+const std::vector<Eigen::Vector4d> kapriltag_corners_eigen_homogenized = {
+    {0, ktag_size / 2, -ktag_size / 2, 1},   // Bottom left
+    {0, -ktag_size / 2, -ktag_size / 2, 1},  // Bottom right
+    {0, -ktag_size / 2, ktag_size / 2, 1},   // Top right
+    {0, ktag_size / 2, ktag_size / 2, 1},    // Top left
+};
+
 const frc::AprilTagFieldLayout kapriltag_layout =
     frc::AprilTagFieldLayout::LoadField(
         frc::AprilTagField::k2026RebuiltAndyMark);

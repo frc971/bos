@@ -1,4 +1,7 @@
 #include "src/localization/square_solver.h"
+
+#include <cmath>
+
 #include <opencv2/calib3d.hpp>
 #include <utility>
 #include "Eigen/Dense"

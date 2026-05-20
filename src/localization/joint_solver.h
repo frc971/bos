@@ -1,33 +1,108 @@
 #pragma once
 #include <frc/apriltag/AprilTagFieldLayout.h>
+#include <XAD/StdCompatibility.hpp>
+#include <XAD/XAD.hpp>
 #include "nlohmann/json.hpp"
 #include "src/camera/camera_constants.h"
+#include "src/localization/position_receiver.h"
 #include "src/localization/position_solver.h"
 #include "src/localization/square_solver.h"
 
-using json = nlohmann::json;
-
 namespace localization {
-struct CameraMatrices {
-  Eigen::Matrix<double, 3, 4> image_to_robot;
-  cv::Mat distortion_coefficients;
-  cv::Mat camera_matrix;
-};
-static constexpr int kmax_tags = 50;
+
 class JointSolver {
  public:
-  JointSolver(const std::vector<camera::camera_constant_t>& camera_constants_,
-              const frc::AprilTagFieldLayout& layout = kapriltag_layout);
+  using mode = xad::adj<double, 2>;
+  using tape_type = mode::tape_type;
+  using AD = mode::active_type;
+
+  using datapoint_t = struct DataPoint {
+    Eigen::Vector3d normalized_image_point;
+    Eigen::Matrix3d normalized_camera_matrix;
+    Eigen::Matrix4d camera_to_robot;
+    Eigen::Matrix4d feild_to_tag;
+    Eigen::Vector4d homogenized_apriltag_corner;
+    Eigen::Vector4d x;
+    Eigen::MatrixXd A;
+  };
+
+  using differentiable_transform3d_t = struct DifferentiableTransform3d {
+    AD t_x = 0;
+    AD t_y = 0;
+    AD t_z = 0;
+    AD r_x = 0;
+    AD r_y = 0;
+    AD r_z = 0;
+
+    auto ToEigen() -> Eigen::Matrix4d;
+    auto ToMatrix() -> std::array<std::array<AD, 4>, 4>;
+    void Update(const Eigen::VectorXd& update);
+  };
+
+ public:
+  auto static Multiply(const std::array<std::array<AD, 4>, 4>& a,
+                       const Eigen::Vector4d& b) -> std::array<AD, 4>;
+
+  auto static Multiply(const std::array<std::array<AD, 4>, 4>& a,
+                       const Eigen::Matrix4d& b) -> Eigen::Matrix4d;
+
+  auto static Multiply(const Eigen::Matrix<double, 3, 4>& a,
+                       const std::array<AD, 4>& b) -> std::array<AD, 3>;
+
+  // Jacobian should be data_points_.size() x 6(number of params in correction)
+  // index is should be from 1...data_points_.size()
+  void static SaveJacobian(Eigen::MatrixXd& J,
+                           const differentiable_transform3d_t& correction,
+                           int index);
+
+  void static SaveResidual(Eigen::VectorXd& residual, double u_residual,
+                           double v_residual, int index);
+
+  auto static CalculateUpdate(const Eigen::MatrixXd& J,
+                              const Eigen::VectorXd& residual, double lambda)
+      -> Eigen::VectorXd;
+
+  auto static CalculateResidualLoss(const Eigen::Matrix4d& correction_matrix,
+                                    const std::vector<datapoint_t>& data_points)
+      -> double;
+
+ public:
+  JointSolver(const std::vector<camera::camera_constant_t>& camera_constants,
+              frc::AprilTagFieldLayout layout = kapriltag_layout);
   auto EstimatePosition(
       const std::map<std::string, std::vector<tag_detection_t>>&
-          all_cam_detections,
-      const frc::Pose3d& starting_pose) -> position_estimate_t;
-  Eigen::Matrix4d robot_to_field_;
+          camera_detections,
+      std::optional<frc::Pose3d> intial_pose_maybe = std::nullopt)
+      -> position_estimate_t;
+
+  auto CalculateResidualLoss(
+      frc::Pose3d pose,
+      const std::map<std::string, std::vector<tag_detection_t>>&
+          camera_detections) const -> double;
 
  private:
-  static constexpr double kacceptable_reprojection_error = 0.005;
-  std::map<std::string, CameraMatrices> camera_matrices_;
-  std::array<std::optional<std::array<Eigen::Vector4d, 4>>, kmax_tags>
-      tag_corners_;
+  void CreateDataPoints(
+      const frc::Pose3d& initial_pose,
+      const std::map<std::string, std::vector<tag_detection_t>>&
+          camera_detections,
+      std::vector<datapoint_t>& data_points, double& average_timestamp,
+      std::vector<int>& tag_ids) const;
+
+ private:
+  std::unordered_map<std::string, int> camera_name_to_index;
+  frc::AprilTagFieldLayout layout_;
+  std::vector<cv::Mat> camera_matrix_;
+  std::vector<cv::Mat> distortion_coefficients_;
+  std::vector<Eigen::Matrix3d> normalized_camera_matrix_;
+  std::vector<Eigen::Matrix4d> robot_to_camera_;
+  std::vector<camera::camera_constant_t> camera_constants_;
+
+  PositionReceiver position_receiver_;
+  tape_type tape_;
 };
+
+auto operator<<(std::ostream& os,
+                const JointSolver::DifferentiableTransform3d& t)
+    -> std::ostream&;
 }  // namespace localization
+//

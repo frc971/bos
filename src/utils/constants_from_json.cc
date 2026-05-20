@@ -45,8 +45,12 @@ template <>
 auto CameraMatrixFromJson<Eigen::Matrix3d>(nlohmann::json intrinsics)
     -> Eigen::Matrix3d {
   Eigen::Matrix3d K;
-  K << intrinsics["fx"], 0, intrinsics["cx"], 0, intrinsics["fy"],
-      intrinsics["cy"], 0, 0, 1;
+  // clang-format off
+  K << 
+    1, 0, 0,
+    static_cast<double>(intrinsics["cx"]), -static_cast<double>(intrinsics["fx"]), 0, 
+    static_cast<double>(intrinsics["cy"]), 0, -static_cast<double>(intrinsics["fy"]);
+  // clang-format on
   return K;
 }
 
