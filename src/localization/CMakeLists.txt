@@ -98,7 +98,7 @@ target_sources(localization
     run_localization.cc
     multi_camera_detector.cc
 )
-target_link_libraries(localization PUBLIC 
+target_link_libraries(localization PRIVATE
   GPUApriltagDetector
   OpencvApriltagDetector
   NvidiaApriltagDetector
