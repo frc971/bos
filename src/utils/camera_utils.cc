@@ -3,7 +3,7 @@
 #include <iostream>
 #include "src/utils/log.h"
 namespace utils {
-nlohmann::json ReadIntrinsics(const std::string& path) {
+auto ReadIntrinsics(const std::string& path) -> nlohmann::json {
   nlohmann::json intrinsics;
 
   std::ifstream intrinsics_file(path);
