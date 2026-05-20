@@ -31,6 +31,8 @@ option(ENABLE_CLANG_TIDY "Enable clang-tidy for static analysis" ON)
 include_directories(/usr/local/cuda/include)
 link_directories(/usr/local/cuda/lib64)
 
+add_compile_options(-march=armv8-a+simd)
+
 find_package(wpilib REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
