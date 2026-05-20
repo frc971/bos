@@ -10,25 +10,27 @@ MultiCameraSource::MultiCameraSource(
       use_all_frames_(use_all_frames) {
   camera_threads_.reserve(cameras_.size());
   for (size_t i = 0; i < cameras_.size(); i++) {
-    camera_threads_.emplace_back([this, i]() -> void {
-      while (true) {
-        if (use_all_frames_) {
-          mutex_.lock();
-          bool frames_used = frames_used_;
-          mutex_.unlock();
-          if (!frames_used) {
-            std::this_thread::sleep_for(std::chrono::duration<double>(0.002));
-            continue;
+    camera_threads_.emplace_back(
+        [this, i](const std::stop_token& stop_token) -> void {
+          while (!stop_token.stop_requested()) {
+            if (use_all_frames_) {
+              mutex_.lock();
+              bool frames_used = frames_used_;
+              mutex_.unlock();
+              if (!frames_used) {
+                std::this_thread::sleep_for(
+                    std::chrono::duration<double>(0.002));
+                continue;
+              }
+            }
+            timestamped_frame_t timestamped_frame;
+            timestamped_frame = cameras_[i]->GetFrame();
+            mutex_.lock();
+            timestamped_frames_[i] = timestamped_frame;
+            frames_used_ = false;
+            mutex_.unlock();
           }
-        }
-        timestamped_frame_t timestamped_frame;
-        timestamped_frame = cameras_[i]->GetFrame();
-        mutex_.lock();
-        timestamped_frames_[i] = timestamped_frame;
-        frames_used_ = false;
-        mutex_.unlock();
-      }
-    });
+        });
   }
 }
 

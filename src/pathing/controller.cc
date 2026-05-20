@@ -16,6 +16,7 @@
 namespace pathing {
 
 auto RunController(
+    const std::stop_token& stop_token,
     const std::string& navgrid_path = "/root/bos/constants/navgrid.json",
     bool verbose = false) -> void {
   const int lookahead_offset_ = 50;
@@ -58,7 +59,7 @@ auto RunController(
 
   std::vector<frc::Pose2d> spline_points;
 
-  while (true) {
+  while (!stop_token.stop_requested()) {
     if (!enabled_sub.Get()) {
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);

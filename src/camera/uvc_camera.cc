@@ -11,47 +11,51 @@ const cv::Mat UVCCamera::backup_image_ =
 
 void callback(uvc_frame_t* frame, void* ptr) {
   auto ptr_ = static_cast<UVCCamera*>(ptr);
-  ptr_->mutex_.lock();
-  switch (frame->frame_format) {
-    case UVC_COLOR_FORMAT_MJPEG: {
-      char* data = static_cast<char*>(frame->data);
-      std::vector<uchar> buffer(data, data + frame->data_bytes);
-      ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
-      break;
-    }
-    case UVC_COLOR_FORMAT_YUYV: {
-      uvc_frame_t* bgr = uvc_allocate_frame(frame->width * frame->height * 3);
-      if (!bgr) {
-        LOG(WARNING) << "Camera " << ptr_->camera_constant_.name
-                     << " failed to allocate ";
+  if (ptr_->mutex_.try_lock()) {
+    switch (frame->frame_format) {
+      case UVC_COLOR_FORMAT_MJPEG: {
+        char* data = static_cast<char*>(frame->data);
+        std::vector<uchar> buffer(data, data + frame->data_bytes);
+        ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
+        break;
       }
-      uvc_error_t ret = uvc_yuyv2bgr(frame, bgr);
-      if (ret != 0) {
-        LOG(WARNING) << "YUYV failed to convert to BGR";
+      case UVC_COLOR_FORMAT_YUYV: {
+        uvc_frame_t* bgr = uvc_allocate_frame(frame->width * frame->height * 3);
+        if (!bgr) {
+          LOG(WARNING) << "Camera " << ptr_->camera_constant_.name
+                       << " failed to allocate ";
+          ptr_->mutex_.unlock();
+          return;
+        }
+        uvc_error_t ret = uvc_yuyv2bgr(frame, bgr);
+        if (ret != 0) {
+          LOG(WARNING) << "YUYV failed to convert to BGR";
+        }
+        IplImage* ipl_image;
+        ipl_image = cvCreateImageHeader(cvSize(bgr->width, bgr->height),
+                                        IPL_DEPTH_8U, 3);
+        cvSetData(ipl_image, bgr->data, bgr->width * 3);
+        ptr_->frame_buffer.frame = cv::cvarrToMat(ipl_image, true);
+        uvc_free_frame(bgr);
+        break;
       }
-      IplImage* ipl_image;
-      ipl_image =
-          cvCreateImageHeader(cvSize(bgr->width, bgr->height), IPL_DEPTH_8U, 3);
-      cvSetData(ipl_image, bgr->data, bgr->width * 3);
-      ptr_->frame_buffer.frame = cv::cvarrToMat(ipl_image, true);
-      uvc_free_frame(bgr);
-      break;
+      default:
+        LOG(WARNING) << "Unknown frame format";
+        break;
     }
-    default:
-      LOG(WARNING) << "Unknown frame format";
-      break;
+    if (ptr_->frame_buffer.frame.empty()) {
+      LOG(WARNING) << "Failed to decode frame from camera "
+                   << ptr_->camera_constant_.name;
+      ptr_->mutex_.unlock();
+      return;
+    }
+    ptr_->frame_buffer.invalid = false;
+    ptr_->frame_buffer.timestamp =
+        frc::Timer::GetFPGATimestamp()
+            .to<double>();  // TODO: Use more accurate timestamp
+    ptr_->frame_index_ = frame->sequence;
+    ptr_->mutex_.unlock();
   }
-  if (ptr_->frame_buffer.frame.empty()) {
-    LOG(WARNING) << "Failed to decode frame from camera "
-                 << ptr_->camera_constant_.name;
-    return;
-  }
-  ptr_->frame_buffer.invalid = false;
-  ptr_->frame_buffer.timestamp =
-      frc::Timer::GetFPGATimestamp()
-          .to<double>();  // TODO: Use more accurate timestamp
-  ptr_->frame_index_ = frame->sequence;
-  ptr_->mutex_.unlock();
 }
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
@@ -71,6 +75,7 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
   }
   res = uvc_find_device(context_, &device_, 0, 0,
                         camera_constant_.serial_id->c_str());
+  LOG(INFO) << "Serial id: " << camera_constant_.serial_id.value();
   if (res != 0) {
     status = absl::AbortedError(
         fmt::format("Unable to find device for camera {} with error code {}",
