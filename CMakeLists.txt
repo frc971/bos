@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.10)
 
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
+if(POLICY CMP0146)
+  # Keep compatibility with packages that still use FindCUDA.
+  cmake_policy(SET CMP0146 OLD)
+endif()
+
 set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.6/bin/nvcc")
 
 project(BOS CXX C CUDA)
@@ -36,9 +45,9 @@ include(FetchContent)
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(googletest)
 
 add_compile_options(-Wno-psabi)
 add_subdirectory(src)
-

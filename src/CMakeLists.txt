@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.16...4.0) 
+
 
 include_directories(${CMAKE_SOURCE_DIR})
 

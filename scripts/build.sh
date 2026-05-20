@@ -22,5 +22,5 @@ else
 fi
 
 git submodule update --init --progress --depth 1
-cmake -DENABLE_CLANG_TIDY=OFF -DCMAKE_BUILD_TYPE=Release -B "$BUILD_DIR" -G Ninja .
+cmake -Wno-dev -DENABLE_CLANG_TIDY=OFF -DCMAKE_BUILD_TYPE=Release -B "$BUILD_DIR" -G Ninja .
 cmake --build "$BUILD_DIR"
