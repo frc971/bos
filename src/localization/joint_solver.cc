@@ -152,16 +152,14 @@ auto JointSolver::EstimatePosition(
     return std::nullopt;
   }
 
-  if (should_reset_) {
-    std::optional<position_estimate_t> backup_estimate_ =
-        backup_solver_.EstimatePosition(detection_batches);
-    if (backup_estimate_.has_value()) {
-      std::cout << "RESETTING to\t";
-      utils::PrintPose3d(backup_estimate_->pose);
-      SetStartPosition(std::make_optional<frc::Pose3d>(backup_estimate_->pose));
-      should_reset_ = false;
-    }
+  std::optional<position_estimate_t> backup_estimate_ =
+      backup_solver_.EstimatePosition(detection_batches);
+  if (!backup_estimate_.has_value()) {
+    return std::nullopt;
   }
+  bool joint_solve_failure = false;
+  utils::PrintPose3d(backup_estimate_->pose);
+  SetStartPosition(std::make_optional<frc::Pose3d>(backup_estimate_->pose));
 
   avg_timestamp /= data_points.size() / 4;
 
@@ -173,8 +171,9 @@ auto JointSolver::EstimatePosition(
     ComputeResidual(data_points, robot_to_field_, residual,
                     &d_residual_d_twist_jacobian);
     current_error = residual.cwiseSquare().sum();
-    if (debug && epoch % 10 == 0)
-      std::cout << "Current error: " << current_error << std::endl;
+    if (debug && epoch % 10 == 0) {
+      LOG(INFO) << "Current error: " << current_error;
+    }
     const Eigen::Vector<double, 6> b =
         -d_residual_d_twist_jacobian.transpose() * residual;
     const Eigen::Matrix<double, 6, 6> hessian =
@@ -196,8 +195,7 @@ auto JointSolver::EstimatePosition(
       if (candidate_error > current_error) {
         lambda *= 2;
         if (lambda > kmaximum_lambda) {
-          std::cout << "Failed" << std::endl;
-          return backup_solver_.EstimatePosition(detection_batches);
+          joint_solve_failure = true;
         }
       } else {
         lambda /= 2;
@@ -207,10 +205,15 @@ auto JointSolver::EstimatePosition(
     }
   }
 
-  if (current_error > kmax_acceptable_error) {}
+  if (joint_solve_failure || current_error > kmax_acceptable_error) {
+    if (debug) {
+      LOG(INFO) << "Joint solve failure";
+    }
+    return backup_estimate_;
+  }
 
   if (debug)
-    std::cout << "Robot to field:\n" << robot_to_field_ << std::endl;
+    LOG(INFO) << "Robot to field:\n" << robot_to_field_;
 
   Eigen::Matrix4d field_to_robot = robot_to_field_.inverse();
   field_to_robot(3, 0) = 0;
@@ -219,30 +222,21 @@ auto JointSolver::EstimatePosition(
   field_to_robot(3, 3) = 1;
 
   if (debug) {
-    std::cout << "Field to robot cv:\n" << field_to_robot << std::endl;
+    LOG(INFO) << "Field to robot cv:\n" << field_to_robot;
     utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
                                      "Field to robot cv");
   }
   utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
   if (debug) {
-    std::cout << "Field to robot wpi:\n" << field_to_robot << std::endl;
+    LOG(INFO) << "Field to robot wpi:\n" << field_to_robot;
     utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
                                      "Field to robot wpi");
   }
   const frc::Pose3d iteratively_solved_pose(field_to_robot);
-  if (false/*current_error > kmax_acceptable_error ||
-      utils::PoseOffField(iteratively_solved_pose)*/) {
-    std::optional<position_estimate_t> backup_solution =
-        backup_solver_.EstimatePosition(detection_batches);
-    if (backup_solution.has_value()) {
-      SetStartPosition(backup_solution->pose);
-      std::cout << "Using unambiguous detector for ts: "
-                << backup_solution->timestamp << std::endl;
-    }
-    return backup_solution;
-  }
 
-  std::cout << "Pose for ts: " << avg_timestamp << ":\t";
+  if (debug) {
+    LOG(INFO) << "Pose for ts: " << avg_timestamp << ":\t";
+  }
   utils::PrintPose3d(iteratively_solved_pose);
 
   return std::make_optional<position_estimate_t>(
