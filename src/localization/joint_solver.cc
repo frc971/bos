@@ -58,9 +58,13 @@ JointSolver::JointSolver(
   }
 }
 
-void JointSolver::SetStartPosition(const frc::Pose3d& pose) {
-  robot_to_field_ = pose.ToMatrix().inverse();
-  utils::ChangeBasis(robot_to_field_, utils::WPI_TO_CV);
+void JointSolver::SetStartPosition(const std::optional<frc::Pose3d>& pose) {
+  if (pose.has_value()) {
+    robot_to_field_ = pose->ToMatrix().inverse();
+    utils::ChangeBasis(robot_to_field_, utils::WPI_TO_CV);
+  } else {
+    should_reset_ = true;
+  }
 }
 
 void JointSolver::ComputeResidual(
@@ -148,19 +152,29 @@ auto JointSolver::EstimatePosition(
     return std::nullopt;
   }
 
+  if (should_reset_) {
+    std::optional<position_estimate_t> backup_estimate_ =
+        backup_solver_.EstimatePosition(detection_batches);
+    if (backup_estimate_.has_value()) {
+      std::cout << "RESETTING to\t";
+      utils::PrintPose3d(backup_estimate_->pose);
+      SetStartPosition(std::make_optional<frc::Pose3d>(backup_estimate_->pose));
+      should_reset_ = false;
+    }
+  }
+
   avg_timestamp /= data_points.size() / 4;
 
   Eigen::VectorXd residual(2 * data_points.size());
   Eigen::MatrixXd d_residual_d_twist_jacobian(2 * data_points.size(), 6);
-  double current_error;
+  double current_error = std::numeric_limits<double>::infinity();
 
-  for (int epoch = 0; epoch < 1e4 && current_error < kmin_acceptable_error;
-       epoch++) {
+  for (int epoch = 0; epoch < 1e4; epoch++) {
     ComputeResidual(data_points, robot_to_field_, residual,
                     &d_residual_d_twist_jacobian);
     current_error = residual.cwiseSquare().sum();
-    // if (epoch % 10 == 0)
-    //   std::cout << "Current error: " << current_error << std::endl;
+    if (debug && epoch % 10 == 0)
+      std::cout << "Current error: " << current_error << std::endl;
     const Eigen::Vector<double, 6> b =
         -d_residual_d_twist_jacobian.transpose() * residual;
     const Eigen::Matrix<double, 6, 6> hessian =
@@ -195,7 +209,8 @@ auto JointSolver::EstimatePosition(
 
   if (current_error > kmax_acceptable_error) {}
 
-  // std::cout << "Robot to field:\n" << robot_to_field_ << std::endl;
+  if (debug)
+    std::cout << "Robot to field:\n" << robot_to_field_ << std::endl;
 
   Eigen::Matrix4d field_to_robot = robot_to_field_.inverse();
   field_to_robot(3, 0) = 0;
@@ -203,14 +218,17 @@ auto JointSolver::EstimatePosition(
   field_to_robot(3, 2) = 0;
   field_to_robot(3, 3) = 1;
 
-  // std::cout << "Field to robot cv:\n" << field_to_robot << std::endl;
-
-  // utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
-  // "Field to robot cv");
+  if (debug) {
+    std::cout << "Field to robot cv:\n" << field_to_robot << std::endl;
+    utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
+                                     "Field to robot cv");
+  }
   utils::ChangeBasis(field_to_robot, utils::CV_TO_WPI);
-  // std::cout << "Field to robot wpi:\n" << field_to_robot << std::endl;
-  // utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
-  //                                  "Field to robot wpi");
+  if (debug) {
+    std::cout << "Field to robot wpi:\n" << field_to_robot << std::endl;
+    utils::PrintTransformationMatrix(utils::EigenToCvMat(field_to_robot),
+                                     "Field to robot wpi");
+  }
   const frc::Pose3d iteratively_solved_pose(field_to_robot);
   if (false/*current_error > kmax_acceptable_error ||
       utils::PoseOffField(iteratively_solved_pose)*/) {
@@ -223,6 +241,9 @@ auto JointSolver::EstimatePosition(
     }
     return backup_solution;
   }
+
+  std::cout << "Pose for ts: " << avg_timestamp << ":\t";
+  utils::PrintPose3d(iteratively_solved_pose);
 
   return std::make_optional<position_estimate_t>(
       {.pose = iteratively_solved_pose,

@@ -26,7 +26,7 @@ class JointSolver : public IJointPositionSolver {
       std::vector<std::vector<tag_detection_t>>& detection_batches,
       bool reject_far_tags = true)
       -> std::optional<position_estimate_t> override;
-  void SetStartPosition(const frc::Pose3d& pose);
+  void SetStartPosition(const std::optional<frc::Pose3d>& pose) override;
   void ComputeResidual(const std::vector<data_point_t>& data_points,
                        const Eigen::Matrix4d& robot_to_field,
                        Eigen::VectorXd& residual,
@@ -42,5 +42,7 @@ class JointSolver : public IJointPositionSolver {
       tag_corners_;
   Eigen::Matrix4d robot_to_field_;
   UnambiguousEstimator backup_solver_;
+  bool should_reset_ = false;
+  const bool debug = false;
 };
 }  // namespace localization

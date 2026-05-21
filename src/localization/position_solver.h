@@ -47,6 +47,7 @@ class IJointPositionSolver {
   virtual auto EstimatePosition(
       std::vector<std::vector<tag_detection_t>>& detection_batches,
       bool reject_far_tags = true) -> std::optional<position_estimate_t> = 0;
+  virtual void SetStartPosition(const std::optional<frc::Pose3d>& start_pose) {}
   virtual ~IJointPositionSolver() = default;
 };
 

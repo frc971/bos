@@ -54,6 +54,7 @@ void RunJointLocalization(
     MultiCameraDetector& detector_source,
     std::unique_ptr<localization::IJointPositionSolver> solver,
     std::unique_ptr<localization::IPositionSender> sender, bool verbose) {
+  solver->SetStartPosition(std::nullopt);
   while (true) {
     auto detections = detector_source.GetTagDetections();
     std::optional<position_estimate_t> estimated_pose =

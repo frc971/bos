@@ -33,9 +33,9 @@ class JointSolverTest : public ::testing::Test {
 
 TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
   const cv::Mat left_image =
-      cv::imread("/bos/bos-logs/log181/main_bot_left/5.611357.jpg");
+      cv::imread("/bos/bos-logs/short-pmatch2/main_bot_left/3.267974.jpg");
   const cv::Mat right_image =
-      cv::imread("/bos/bos-logs/log181/main_bot_right/5.647740.jpg");
+      cv::imread("/bos/bos-logs/short-pmatch2/main_bot_right/3.271297.jpg");
   camera::timestamped_frame_t left_frame{.frame = left_image, .timestamp = 0.0};
   camera::timestamped_frame_t right_frame{.frame = right_image,
                                           .timestamp = 0.0};
@@ -65,10 +65,10 @@ TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
   std::vector<std::vector<localization::tag_detection_t>> associated_detections{
       left_detections, right_detections};
   const frc::Transform3d joint_solve_input_noise(
-      frc::Translation3d(units::meter_t{0.1}, units::meter_t{0.1},
-                         units::meter_t{0.1}),
+      frc::Translation3d(units::meter_t{0.4}, units::meter_t{0.4},
+                         units::meter_t{0.0}),
       frc::Rotation3d(units::degree_t{0}, units::degree_t{0},
-                      units::degree_t{0}));
+                      units::degree_t{5}));
   joint_solver.SetStartPosition(
       (left_square_solver_solution.has_value() ? left_square_solver_solution
                                                : right_square_solver_solution)
@@ -84,4 +84,67 @@ TEST_F(JointSolverTest, MaintainsValidEstimateRealImageYawOnly) {  // NOLINT
   std::cout << "\njoint: " << joint_solver_solution << std::endl;
   std::cout << "loss: " << joint_solver_solution.loss << std::endl;
   std::cout << "numtags: " << joint_solver_solution.num_tags << std::endl;
+}
+
+TEST_F(JointSolverTest, DoubleTrouble) {  // NOLINT
+  const cv::Mat left_image =
+      cv::imread("/bos/bos-logs/short-pmatch2/main_bot_left/3.267974.jpg");
+  const cv::Mat right_image =
+      cv::imread("/bos/bos-logs/short-pmatch2/main_bot_right/3.271297.jpg");
+  camera::timestamped_frame_t left_frame{.frame = left_image, .timestamp = 0.0};
+  camera::timestamped_frame_t right_frame{.frame = right_image,
+                                          .timestamp = 0.0};
+  const std::vector<localization::tag_detection_t> left_detections =
+      left_detector.GetTagDetections(left_frame);
+  const std::vector<localization::tag_detection_t> right_detections =
+      right_detector.GetTagDetections(right_frame);
+  CHECK_NE(left_detections.size() + right_detections.size(), 0);
+  const std::vector<localization::position_estimate_t>
+      left_square_solver_solutions =
+          left_square_solver.EstimatePosition(left_detections, false);
+  const std::optional<localization::position_estimate_t>
+      left_square_solver_solution =
+          left_square_solver_solutions.size() == 0
+              ? std::nullopt
+              : std::make_optional<localization::position_estimate_t>(
+                    left_square_solver_solutions[0]);
+  const std::vector<localization::position_estimate_t>
+      right_square_solver_solutions =
+          right_square_solver.EstimatePosition(right_detections, false);
+  const std::optional<localization::position_estimate_t>
+      right_square_solver_solution =
+          right_square_solver_solutions.size() == 0
+              ? std::nullopt
+              : std::make_optional<localization::position_estimate_t>(
+                    right_square_solver_solutions[0]);
+  std::vector<std::vector<localization::tag_detection_t>> associated_detections{
+      left_detections, right_detections};
+  const frc::Pose3d start_pose(
+      frc::Translation3d(units::meter_t{6.062}, units::meter_t{0.15},
+                         units::meter_t{-0.065}),
+      frc::Rotation3d(units::degree_t{3.221067}, units::degree_t{3.6748235},
+                      units::degree_t{176.1127104}));
+
+  const frc::Pose3d correction_noise(
+      frc::Translation3d(units::meter_t{6.062}, units::meter_t{0.15},
+                         units::meter_t{0.06}),
+      frc::Rotation3d(units::degree_t{3.221067}, units::degree_t{3.6748235},
+                      units::degree_t{176.1127104}));
+  joint_solver.SetStartPosition(start_pose);
+  const localization::position_estimate_t joint_solver_solution =
+      joint_solver.EstimatePosition(associated_detections, false).value();
+  const localization::position_estimate_t new_solution =
+      joint_solver.EstimatePosition(associated_detections, false).value();
+  if (left_square_solver_solution) {
+    std::cout << "sq left: " << left_square_solver_solution.value();
+  }
+  if (right_square_solver_solution) {
+    std::cout << "\nsq right: " << right_square_solver_solution.value();
+  }
+  std::cout << "\njoint: " << joint_solver_solution << std::endl;
+  std::cout << "loss: " << joint_solver_solution.loss << std::endl;
+  std::cout << "numtags: " << joint_solver_solution.num_tags << std::endl;
+  std::cout << "\njoint new: " << new_solution << std::endl;
+  std::cout << "loss: " << new_solution.loss << std::endl;
+  std::cout << "numtags: " << new_solution.num_tags << std::endl;
 }
