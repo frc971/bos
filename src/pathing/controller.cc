@@ -12,6 +12,7 @@
 namespace pathing {
 
 auto RunController(
+    const std::stop_token& stop_token,
     const std::string& navgrid_path = "/root/bos/constants/navgrid.json",
     bool verbose = false) -> void {
 
@@ -50,7 +51,7 @@ auto RunController(
   std::vector<std::pair<double, double>> velocity_profile;
   int prev_closest_idx = -1;
 
-  while (true) {
+  while (!stop_token.stop_requested()) {
     if (!enabled_sub.Get()) {
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);

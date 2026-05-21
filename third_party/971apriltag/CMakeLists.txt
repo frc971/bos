@@ -1,11 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
-
-include_directories(. /usr/local/cuda/include ${OpenCV_INCLUDE_DIRS})
-add_compile_options(-march=armv8-a+simd)
-
 find_package(wpilib REQUIRED)
-enable_language(CUDA)
-
 
 add_library(971apriltag_dep)
 target_sources(971apriltag_dep

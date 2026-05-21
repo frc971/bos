@@ -19,6 +19,7 @@
 namespace localization {
 
 void RunLocalization(
+    const std::stop_token& stop_token,
     std::unique_ptr<camera::CameraSource> source,
     std::unique_ptr<localization::IAprilTagDetector> detector,
     std::unique_ptr<localization::IPositionSolver> solver,
@@ -30,7 +31,7 @@ void RunLocalization(
                              source->GetName(), port.value(), 30, 1080, 1080))
                        : std::nullopt;
 
-  while (true) {
+  while (!stop_token.stop_requested()) {
     utils::Timer timer(source->GetName(), verbose);
     camera::timestamped_frame_t timestamped_frame = source->Get();
     if (streamer.has_value()) {
@@ -51,10 +52,10 @@ void RunLocalization(
 }
 
 void RunJointLocalization(
-    MultiCameraDetector& detector_source,
+    const std::stop_token& stop_token, MultiCameraDetector& detector_source,
     std::unique_ptr<localization::IJointPositionSolver> solver,
     std::unique_ptr<localization::IPositionSender> sender, bool verbose) {
-  while (true) {
+  while (!stop_token.stop_requested()) {
     auto detections = detector_source.GetTagDetections();
     std::optional<position_estimate_t> estimated_pose =
         solver->EstimatePosition(detections);
