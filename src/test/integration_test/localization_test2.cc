@@ -126,7 +126,7 @@ auto main(int argc, char** argv) -> int {
     LOG(INFO) << "Created camera source";
     localization::RunJointLocalization(
         detector_source,
-        std::make_unique<localization::JointSolver>(camera_constants),
+        std::make_unique<localization::UnambiguousEstimator>(camera_constants),
         std::make_unique<localization::NetworkTableSender>("Joint", false,
                                                            true));
   });

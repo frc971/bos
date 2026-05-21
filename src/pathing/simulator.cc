@@ -7,10 +7,15 @@
 #include <nlohmann/json.hpp>
 #include <system_error>
 #include <vector>
+#include "absl/flags/parse.h"
 #include "src/pathing/pathing.h"
+#include "src/utils/log_path.h"
 
-auto main() -> int {
-  wpi::log::DataLogBackgroundWriter log{"/root/bos/logs", "sim.wpilog"};
+auto main(int argc, char** argv) -> int {
+  absl::ParseCommandLine(argc, argv);
+
+  wpi::log::DataLogBackgroundWriter log{"/root/bos/logs",
+                                        utils::GetSimLogName()};
 
   wpi::log::StructLogEntry<frc::Pose2d> poseLog(log, "/sim/Pose2d");
   wpi::log::DoubleLogEntry accelXLog(log, "/sim/AccelX");

@@ -1,6 +1,7 @@
 #include "networktable_sender.h"
 #include "frc/DataLogManager.h"
 #include "src/localization/position.h"
+#include "src/utils/log_path.h"
 
 namespace localization {
 
@@ -56,7 +57,7 @@ NetworkTableSender::NetworkTableSender(const std::string& camera_name,
 
   if (sim) {
     std::error_code ec;
-    log_.emplace("/bos/logs/sim.wpilog", ec);
+    log_.emplace("/bos/logs/" + utils::GetSimLogName(), ec);
     if (ec) {
       std::cerr << "Failed to open log: " << ec.message() << '\n';
       std::exit(0);
