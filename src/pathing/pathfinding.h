@@ -2,6 +2,7 @@
 
 #include <sys/types.h>
 #include <cfloat>
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -9,7 +10,7 @@ namespace pathing {
 
 struct Node {
   uint x, y;
-  double cost = DBL_MAX;
+  double cost = INFINITY;
   bool visited = false;
   bool obstacle = false;
   char readable;
@@ -24,6 +25,9 @@ struct Node {
 struct Point {
   uint x, y;
 };
+
+auto BFSFirstFreeCell(std::vector<std::vector<Node>>& field, Point start_point)
+    -> Node;
 
 auto BFS(std::vector<std::vector<Node>>& field, Point start_point,
          Point end_point) -> std::vector<Node>;
