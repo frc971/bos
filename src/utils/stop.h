@@ -11,6 +11,7 @@ namespace stop {
 using namespace std::literals::chrono_literals;
 
 constexpr std::chrono::seconds kwait_interval = 1s;
+constexpr std::chrono::seconds kwait_until_kill = 10s;
 std::atomic<bool> stop(false);
 std::atomic<bool> registered_handler(false);
 
@@ -35,6 +36,18 @@ inline void RegisterHandler() {
   // std::signal(SIGKILL, SignalHandler);
   // std::signal(SIGPIPE, SignalHander);
   // std::signal(SIGALRM, SignalHander);
+
+  std::thread([] {
+    while (!stop) {
+      std::this_thread::sleep_for(stop::kwait_interval);
+    }
+    std::this_thread::sleep_for(stop::kwait_until_kill);
+    if (stop) {
+      LOG(ERROR) << "Failed to exit cleanly";
+      std::raise(SIGKILL);
+    }
+  }).detach();
+
   registered_handler = true;
 }
 

@@ -158,6 +158,7 @@ UVCCamera::~UVCCamera() {
   uvc_close(device_handle_);
   uvc_unref_device(device_);
   uvc_exit(context_);
+  LOG(INFO) << camera_constant_.name << " has been destructed";
 }
 
 auto UVCCamera::GetCameraConstant() const -> camera_constant_t {
