@@ -10,9 +10,11 @@
 #include "src/localization/unambiguous_estimator.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
+#include "src/utils/stop.h"
 
 using camera::camera_constants_t;
 auto main() -> int {
+  stop::RegisterHandler();
   utils::StartNetworktables(9971);
 
   std::string log_path = frc::DataLogManager::GetLogDir();
@@ -24,13 +26,14 @@ auto main() -> int {
       camera_constants.at("main_bot_left"),
       camera_constants.at("main_bot_right")};
 
-  std::jthread thread([cameras] {
+  std::jthread thread([cameras](const std::stop_token& stop_token) {
     localization::MultiCameraDetector detector_source(cameras);
     LOG(INFO) << "Started cameras";
     std::this_thread::sleep_for(std::chrono::duration<double>(2));
     localization::RunJointLocalization(
-        detector_source,
+        stop_token, detector_source,
         std::make_unique<localization::UnambiguousEstimator>(cameras),
         std::make_unique<localization::NetworkTableSender>("Left", false));
   });
+  stop::WaitUntilStop();
 }

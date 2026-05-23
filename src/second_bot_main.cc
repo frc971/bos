@@ -10,9 +10,13 @@
 #include "src/pathing/pathfinding.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
+#include "src/utils/stop.h"
+
+#include <thread>
 
 using camera::camera_constants_t;
 auto main() -> int {
+  stop::RegisterHandler();
   utils::StartNetworktables(971);
 
   std::string log_path = frc::DataLogManager::GetLogDir();
@@ -20,7 +24,7 @@ auto main() -> int {
 
   LOG(INFO) << "Starting estimators";
 
-  std::thread left_thread([&]() {
+  std::jthread left_thread([&](const std::stop_token& stop_token) {
     auto left_camera = std::make_unique<camera::CameraSource>(
         "Left", std::make_unique<camera::CVCamera>(
                     camera_constants.at("second_bot_left"),
@@ -32,7 +36,7 @@ auto main() -> int {
         camera_constants.at("second_bot_left").name));
 
     localization::RunLocalization(
-        std::move(left_camera),
+        stop_token, std::move(left_camera),
         std::make_unique<localization::GPUAprilTagDetector>(
             left_camera_frame.cols, left_camera_frame.rows,
             utils::ReadIntrinsics(camera_constants.at("second_bot_left")
@@ -42,7 +46,7 @@ auto main() -> int {
         std::move(left_sender));
   });
 
-  std::thread right_thread([&]() {
+  std::jthread right_thread([&](const std::stop_token& stop_token) {
     auto right_camera = std::make_unique<camera::CameraSource>(
         "Right", std::make_unique<camera::CVCamera>(
                      camera_constants.at("second_bot_right"),
@@ -55,7 +59,7 @@ auto main() -> int {
             camera_constants.at("second_bot_right").name));
 
     localization::RunLocalization(
-        std::move(right_camera),
+        stop_token, std::move(right_camera),
         std::make_unique<localization::GPUAprilTagDetector>(
             right_camera_frame.cols, right_camera_frame.rows,
             utils::ReadIntrinsics(camera_constants.at("second_bot_right")
@@ -65,13 +69,10 @@ auto main() -> int {
         std::move(right_sender));
   });
 
-  // TODO front camera
-
-  std::thread pathing_thread(pathing::RunController,
-                             "/bos/constants/navgrid.json", false);
+  std::jthread pathing_thread(pathing::RunController,
+                              "/bos/constants/navgrid.json", false);
 
   LOG(INFO) << "Started estimators";
 
-  left_thread.join();
-  pathing_thread.join();
+  stop::WaitUntilStop();
 }

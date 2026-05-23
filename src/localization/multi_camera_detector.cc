@@ -1,5 +1,4 @@
 #include "src/localization/multi_camera_detector.h"
-#include "absl/flags/flag.h"
 #include "absl/status/status.h"
 #include "src/camera/camera.h"
 #include "src/camera/cv_camera.h"
@@ -9,24 +8,15 @@
 #include "src/utils/camera_utils.h"
 #include "src/utils/log.h"
 
-ABSL_FLAG(bool, wait_for_all_camera_detections, true,  // NOLINT
-          "Make MultiCameraDetector::GetTagDetections wait for one new "
-          "detection batch from every camera before returning.");
-
 namespace localization {
 MultiCameraDetector::MultiCameraDetector(
     std::vector<camera::camera_constant_t> camera_constants,
     std::optional<std::vector<std::filesystem::path>> image_paths,
-    bool wait_for_all_detections)
+    double disk_replay_speed)
     : camera_constants_(std::move(camera_constants)),
       last_write_times_(camera_constants_.size()),
       timestamped_frames_(camera_constants_.size()),
-      tag_detections_(camera_constants_.size()),
-      detection_counts_(camera_constants_.size()),
-      consumed_detection_counts_(camera_constants_.size()),
-      wait_for_all_detections_(
-          wait_for_all_detections ||
-          absl::GetFlag(FLAGS_wait_for_all_camera_detections)) {
+      tag_detections_(camera_constants_.size()) {
   std::string log_path = frc::DataLogManager::GetLogDir();
   cameras_.reserve(camera_constants_.size());
   camera_threads_.reserve(camera_constants_.size());
@@ -42,7 +32,7 @@ MultiCameraDetector::MultiCameraDetector(
         fmt::format("{}/{}", log_path, camera_constants_[i].name);
     if (image_paths.has_value()) {
       cameras_.push_back(std::make_unique<camera::DiskCamera>(
-          image_paths.value()[i], camera_constants_[i]));
+          image_paths.value()[i], camera_constants_[i], disk_replay_speed));
     } else if (camera_constants_[i].serial_id.has_value()) {
       absl::Status status;
       cameras_.push_back(std::make_unique<camera::UVCCamera>(
@@ -76,16 +66,6 @@ MultiCameraDetector::MultiCameraDetector(
   for (size_t i = 0; i < cameras_.size(); i++) {
     camera_threads_.emplace_back([this, i, image_paths]() -> void {
       while (run_cameras_) {
-        if (wait_for_all_detections_) {
-          std::unique_lock<std::mutex> lock(mutex_);
-          detection_cv_.wait(lock, [this, i] {
-            return !run_cameras_ ||
-                   detection_counts_[i] == consumed_detection_counts_[i];
-          });
-          if (!run_cameras_) {
-            return;
-          }
-        }
         camera::timestamped_frame_t timestamped_frame;
         timestamped_frame = cameras_[i]->GetFrame();
         if (timestamped_frame.invalid) {
@@ -108,9 +88,9 @@ MultiCameraDetector::MultiCameraDetector(
           std::lock_guard<std::mutex> lock(mutex_);
           timestamped_frames_[i] = std::move(timestamped_frame);
           tag_detections_[i] = std::move(detections);
-          detection_counts_[i]++;
         }
-        detection_cv_.notify_all();
+        has_new_detections_.store(true, std::memory_order_release);
+        has_new_detections_.notify_one();
       }
     });
   }
@@ -118,37 +98,13 @@ MultiCameraDetector::MultiCameraDetector(
 
 auto MultiCameraDetector::GetTagDetections()
     -> std::vector<std::vector<tag_detection_t>> {
+  has_new_detections_.wait(false, std::memory_order_acquire);
+  has_new_detections_.store(false, std::memory_order_release);
   std::vector<std::vector<tag_detection_t>> tag_detections;
-  std::unique_lock<std::mutex> lock(mutex_);
-  if (wait_for_all_detections_) {
-    detection_cv_.wait(lock, [this] {
-      if (!run_cameras_) {
-        return true;
-      }
-      for (size_t i = 0; i < detection_counts_.size(); i++) {
-        if (detection_counts_[i] <= consumed_detection_counts_[i]) {
-          return false;
-        }
-      }
-      return true;
-    });
-  } else {
-    detection_cv_.wait(lock, [this] {
-      if (!run_cameras_) {
-        return true;
-      }
-      for (size_t i = 0; i < detection_counts_.size(); i++) {
-        if (detection_counts_[i] > consumed_detection_counts_[i]) {
-          return true;
-        }
-      }
-      return false;
-    });
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    tag_detections = tag_detections_;
   }
-  tag_detections = tag_detections_;
-  consumed_detection_counts_ = detection_counts_;
-  lock.unlock();
-  detection_cv_.notify_all();
   return tag_detections;
 }
 
@@ -167,7 +123,6 @@ auto MultiCameraDetector::GetCVFrames() -> std::vector<cv::Mat> {
 
 MultiCameraDetector::~MultiCameraDetector() {
   run_cameras_ = false;
-  detection_cv_.notify_all();
   for (auto& t : camera_threads_) {
     if (t.joinable())
       t.join();

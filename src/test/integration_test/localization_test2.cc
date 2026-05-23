@@ -23,13 +23,14 @@
 #include "src/localization/unambiguous_estimator.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/log.h"
+#include "src/utils/stop.h"
 
 ABSL_FLAG(std::string, image_folder, "",  //NOLINT
           "Path to folder of test images");
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt,  //NOLINT
           "Camera name");
-ABSL_FLAG(int, port, 5801, "Port");                   //NOLINT
-ABSL_FLAG(double, speed, 1, "Delay between frames");  //NOLINT
+ABSL_FLAG(int, port, 5801, "Port");                                   //NOLINT
+ABSL_FLAG(double, speed, 10, "Disk camera replay speed multiplier");  //NOLINT
 
 auto HasRegularFiles(const std::filesystem::path& path) -> bool {
   for (const auto& entry : std::filesystem::directory_iterator(path)) {
@@ -84,9 +85,11 @@ auto main(int argc, char** argv) -> int {
 
   absl::ParseCommandLine(argc, argv);
 
+  stop::RegisterHandler();
   frc::DataLogManager::Start(frc::DataLogManager::GetLogDir());
 
   const std::string image_folder_root = absl::GetFlag(FLAGS_image_folder);
+  const double speed = absl::GetFlag(FLAGS_speed);
   const std::filesystem::path image_root_path(image_folder_root);
   if (image_folder_root.empty() || !std::filesystem::exists(image_root_path) ||
       !std::filesystem::is_directory(image_root_path)) {
@@ -120,13 +123,14 @@ auto main(int argc, char** argv) -> int {
 
     camera_constants.push_back(constants.at(camera_name));
   }
-  std::jthread thread([camera_constants, camera_folders] {
+  std::jthread thread([camera_constants, camera_folders,
+                       speed](const std::stop_token& stop_token) {
     localization::MultiCameraDetector detector_source(camera_constants,
-                                                      camera_folders);
+                                                      camera_folders, speed);
     LOG(INFO) << "Created camera source";
     localization::RunJointLocalization(
-        detector_source,
-        std::make_unique<localization::UnambiguousEstimator>(camera_constants),
+        stop_token, detector_source,
+        std::make_unique<localization::JointSolver>(camera_constants),
         std::make_unique<localization::NetworkTableSender>("Joint", false,
                                                            true));
   });
@@ -135,4 +139,6 @@ auto main(int argc, char** argv) -> int {
     LOG(FATAL) << "No readable images found in any camera folder under: "
                << image_folder_root;
   }
+
+  stop::WaitUntilStop();
 }
