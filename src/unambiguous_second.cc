@@ -14,7 +14,7 @@
 using camera::camera_constants_t;
 auto main() -> int {
   stop::RegisterHandler();
-  utils::StartNetworktables(9971);
+  utils::StartNetworktables();
 
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
