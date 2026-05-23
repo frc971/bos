@@ -16,8 +16,6 @@ else
   RESTART=false
 fi
 
-./scripts/copy_to_bin.sh
-
 target=$(echo "$HOST" | sed 's/nvidia@//g')
 
 echo "Waiting for remote $target"
@@ -32,7 +30,8 @@ while true; do
   sleep 1
 done
 
-rsync -avh --delete bin "$HOST":/bos
+rsync -avh --delete build/bin "$HOST":/bos
+rsync -avh --delete build/lib "$HOST":/bos
 rsync -avh --delete constants "$HOST":/bos
 if [ "$RESTART" = true ]; then
   ssh "$HOST" 'sudo systemctl restart bos.service'
