@@ -124,6 +124,7 @@ auto main() -> int {
       double newVy = dirY * currentSpeed;
 
       double ax = (newVx - currentVx) / kDtSec;
+
       double ay = (newVy - currentVy) / kDtSec;
 
       currentVx = newVx;
