@@ -3,6 +3,7 @@ target_sources(pathing PRIVATE
   pathfinding.cc
   splines.cc 
   controller.cc
+  velocity_profile.cc
 )
 target_link_libraries(pathing PRIVATE 
   utils 
