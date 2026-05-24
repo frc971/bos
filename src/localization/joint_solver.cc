@@ -2,9 +2,18 @@
 #include <opencv2/calib3d.hpp>
 #include <unsupported/Eigen/MatrixFunctions>
 #include <utility>
+#include "absl/flags/flag.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/constants_from_json.h"
 #include "src/utils/transform.h"
+
+ABSL_FLAG(int, max_epochs, 10000,                       // NOLINT
+          "Max iterative epochs the solver will use");  // NOLINT
+ABSL_FLAG(double, max_acceptable_error, 1e5,             // NOLINT
+          "Maximum accepted final reprojection loss");   // NOLINT
+ABSL_FLAG(double, lambda_scalar,                        // NOLINT
+          2.0,                                          // NOLINT
+          "Levenberg-Marquardt damping adjustment");    // NOLINT
 
 namespace localization {
 
@@ -119,6 +128,10 @@ void JointSolver::ComputeResidual(
 auto JointSolver::EstimatePosition(
     std::vector<std::vector<tag_detection_t>>& detection_batches,
     bool reject_far_tags) -> std::optional<position_estimate_t> {
+  const int max_epochs = absl::GetFlag(FLAGS_max_epochs);
+  const double lambda_scalar = absl::GetFlag(FLAGS_lambda_scalar);
+  const double max_acceptable_error =
+      absl::GetFlag(FLAGS_max_acceptable_error);
   if (detection_batches.empty()) {
     return std::nullopt;
   }
@@ -167,7 +180,7 @@ auto JointSolver::EstimatePosition(
   Eigen::MatrixXd d_residual_d_twist_jacobian(2 * data_points.size(), 6);
   double current_error = std::numeric_limits<double>::infinity();
 
-  for (int epoch = 0; epoch < 1e4; epoch++) {
+  for (int epoch = 0; epoch < max_epochs; epoch++) {
     ComputeResidual(data_points, robot_to_field_, residual,
                     &d_residual_d_twist_jacobian);
     current_error = residual.cwiseSquare().sum();
@@ -193,19 +206,19 @@ auto JointSolver::EstimatePosition(
       ComputeResidual(data_points, candidate_robot_to_field, residual);
       double candidate_error = residual.cwiseSquare().sum();
       if (candidate_error > current_error) {
-        lambda *= 2;
+        lambda *= lambda_scalar;
         if (lambda > kmaximum_lambda) {
           joint_solve_failure = true;
         }
       } else {
-        lambda /= 2;
+        lambda /= lambda_scalar;
         robot_to_field_ = candidate_robot_to_field;
         break;
       }
     }
   }
 
-  if (joint_solve_failure || current_error > kmax_acceptable_error) {
+  if (joint_solve_failure || current_error > max_acceptable_error) {
     if (debug) {
       LOG(INFO) << "Joint solve failure";
     }
