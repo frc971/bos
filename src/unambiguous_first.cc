@@ -8,6 +8,7 @@
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
 #include "src/localization/unambiguous_estimator.h"
+#include "src/pathing/controller.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 #include "src/utils/stop.h"
@@ -15,7 +16,9 @@
 using camera::camera_constants_t;
 auto main() -> int {
   stop::RegisterHandler();
-  utils::StartNetworktables(9971);
+  auto inst = nt::NetworkTableInstance::GetDefault();
+  inst.StartClient4("unambiguous_first");
+  inst.SetServer("localhost");
 
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
@@ -25,6 +28,9 @@ auto main() -> int {
   std::vector<camera::CameraConstant> cameras{
       camera_constants.at("main_bot_left"),
       camera_constants.at("main_bot_right")};
+
+  std::jthread pathing(pathing::RunController,
+                       "/root/bos/constants/navgrid.json", true);
 
   std::jthread thread([cameras](const std::stop_token& stop_token) {
     localization::MultiCameraDetector detector_source(cameras);

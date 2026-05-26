@@ -1,8 +1,10 @@
+#include <frc/geometry/Translation3d.h>
 #include <networktables/BooleanTopic.h>
 #include <networktables/DoubleTopic.h>
 #include <networktables/StructTopic.h>
 #include <chrono>
 #include <cmath>
+#include <optional>
 #include "splines.h"
 #include "src/localization/position_receiver.h"
 #include "src/utils/log.h"
@@ -47,9 +49,17 @@ auto RunController(
 
   auto vx_pub = inst.GetDoubleTopic("/pathing/vx").Publish();
   auto vy_pub = inst.GetDoubleTopic("/pathing/vy").Publish();
+  auto isDone_pub = inst.GetBooleanTopic("/pathing/isDone").Publish();
   SplineResult result;
   std::vector<std::pair<double, double>> velocity_profile;
   int prev_closest_idx = -1;
+  std::optional<frc::Pose2d> last_completed_target;
+
+  auto same_pose = [](const frc::Pose2d& a, const frc::Pose2d& b) {
+    return (a.Translation().Distance(b.Translation()).value() < 1e-3 &&
+            units::math::abs((a.Rotation() - b.Rotation()).Radians()).value() <
+                1e-3);
+  };
 
   while (!stop_token.stop_requested()) {
     if (!enabled_sub.Get()) {
@@ -62,9 +72,20 @@ auto RunController(
       continue;
     }
 
+    frc::Pose2d target_pose = target_sub.Get();
+
+    if (last_completed_target &&
+        same_pose(*last_completed_target, target_pose)) {
+      vx_pub.Set(0.0);
+      vy_pub.Set(0.0);
+      inst.Flush();
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      continue;
+    }
+    last_completed_target.reset();
+
     frc::Pose2d current_pose = current_sub.Get();
 
-    frc::Pose2d target_pose = target_sub.Get();
     Point start_pt{
         .x = static_cast<uint>(current_pose.X().value() / nodeSizeMeters),
         .y = static_cast<uint>(current_pose.Y().value() / nodeSizeMeters)};
@@ -86,6 +107,8 @@ auto RunController(
       vy_pub.Set(0.0);
       result.points.clear();
       velocity_profile.clear();
+      last_completed_target = target_pose;
+      prev_closest_idx = -1;
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
@@ -166,9 +189,12 @@ auto RunController(
         }
         vx_pub.Set(0.0);
         vy_pub.Set(0.0);
+        isDone_pub.Set(true);
         inst.Flush();
         result.points.clear();
         velocity_profile.clear();
+        last_completed_target = target_pose;
+        prev_closest_idx = -1;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         continue;
       }
