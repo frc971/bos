@@ -133,12 +133,13 @@ auto RunController(
 
     } else {
 
-      int closest_idx = 0;
+      int start_idx = std::max(0, prev_closest_idx);
+      int closest_idx = start_idx;
 
-      // TODO: this can be optimizeed by only searching from the previous closest index instead of the entire spline
-      frc::Translation2d first2d(result.points[0].X(), result.points[0].Y());
-      double best_dist = current_pose.Translation().Distance(first2d).value();
-      for (int i = 1; i < (int)result.points.size(); ++i) {
+      frc::Translation2d start2d(result.points[start_idx].X(),
+                                 result.points[start_idx].Y());
+      double best_dist = current_pose.Translation().Distance(start2d).value();
+      for (int i = start_idx + 1; i < (int)result.points.size(); ++i) {
         frc::Translation2d t2d(result.points[i].X(), result.points[i].Y());
         double d = current_pose.Translation().Distance(t2d).value();
         if (d < best_dist) {
