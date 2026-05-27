@@ -14,16 +14,17 @@ The runtime system is built around a vision and localization pipeline:
 
 ### `src/camera`
 
-- Camera interfaces and implementations (`cv`, `uvc`, disk replay).
+- Camera interfaces and implementations (`CV`, `UVC`, disk replay).
 - Frame production wrappers (`CameraSource`, `MultiCameraSource`).
-- Optional CSCore streaming and frame writing utilities.
+- CSCore streaming to webpage and opencv write to disk.
 - Camera constants loading from JSON.
+- Camera selection for testing
 
 ### `src/localization`
 
 - AprilTag detector interface and implementations:
   - OpenCV ArUco AprilTag
-  - 971 GPU AprilTag
+  - 971 GPU AprilTag (austin_gpu)
   - NVIDIA VPI AprilTag
 - Pose solvers:
   - `SquareSolver` (single tag)
@@ -49,7 +50,7 @@ The runtime system is built around a vision and localization pipeline:
 - Shared cross-cutting helpers:
   - logging
   - timers
-  - transforms
+  - transforms / matrix operations
   - NetworkTables utility helpers
   - JSON constant handling
 
@@ -60,10 +61,10 @@ The runtime system is built around a vision and localization pipeline:
 
 ### `src/test`
 
-- `unit_test`: solver and pathing focused tests.
-- `integration_test`: end-to-end and subsystem executable tests.
+- `unit_test`: tests whose output can be decided without human input.
+- `integration_test`: tests whose output is in the form of a log or feed which must be reviewed
 
-## Top-Level Binaries
+## Top-Level Binaries (Some deprecated)
 
 Defined in `src/CMakeLists.txt`:
 

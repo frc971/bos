@@ -31,7 +31,7 @@ Optional named build directory:
 
 ## Main Runtime Binaries
 
-After building, these are the primary app entry points:
+After building, these are the primary app entry points (some deprecated):
 
 - `main_bot_main`
 - `second_bot_main`
