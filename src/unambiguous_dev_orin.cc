@@ -27,7 +27,8 @@ auto main() -> int {
     localization::RunJointLocalization(
         stop_token, detector_source,
         std::make_unique<localization::UnambiguousEstimator>(cameras),
-        std::make_unique<localization::NetworkTableSender>("Left", false));
+        std::make_unique<localization::NetworkTableSender>(
+            "UnambiguousEstimator", false));
   });
 
   LOG(INFO) << "Started localization";
