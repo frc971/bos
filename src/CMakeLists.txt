@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.16...4.0) 
 
-
 include_directories(${CMAKE_SOURCE_DIR})
 
 if(ENABLE_CLANG_TIDY)
@@ -25,7 +24,7 @@ add_subdirectory(pathing)
 add_executable(unambiguous_second unambiguous_second.cc)
 target_link_libraries(unambiguous_second PRIVATE utils localization pathing camera)
 
-add_executable(unambiguous_first unambiguous_first.cc)
-target_link_libraries(unambiguous_first PRIVATE utils localization pathing camera)
+add_executable(unambiguous_dev_orin unambiguous_dev_orin.cc)
+target_link_libraries(unambiguous_dev_orin PRIVATE utils localization pathing camera)
 
 set(CMAKE_CXX_CLANG_TIDY "")

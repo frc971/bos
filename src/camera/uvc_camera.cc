@@ -61,11 +61,7 @@ void callback(uvc_frame_t* frame, void* ptr) {
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
                      absl::Status& status, std::optional<std::string> log_path)
     : camera_constant_(camera_constant), log_path_(std::move(log_path)) {
-  if (!camera_constant.serial_id.has_value()) {
-    status = absl::InvalidArgumentError(fmt::format(
-        "Must provide a serial id for uvc camera {}", camera_constant.name));
-    return;
-  }
+
   int res = uvc_init(&context_, nullptr);
   if (res != 0) {
     status = absl::AbortedError(
@@ -73,9 +69,16 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
                     camera_constant.name, res));
     return;
   }
-  res = uvc_find_device(context_, &device_, 0, 0,
-                        camera_constant_.serial_id->c_str());
-  LOG(INFO) << "Serial id: " << camera_constant_.serial_id.value();
+  if (!camera_constant.serial_id.has_value()) {
+    LOG(WARNING) << "Was not provided with serial id. This shuold only be done "
+                    "if there is only one uvc camera connected";
+
+    res = uvc_find_device(context_, &device_, 0, 0, nullptr);
+  } else {
+    res = uvc_find_device(context_, &device_, 0, 0,
+                          camera_constant_.serial_id->c_str());
+    LOG(INFO) << "Serial id: " << camera_constant_.serial_id.value();
+  }
   if (res != 0) {
     status = absl::AbortedError(
         fmt::format("Unable to find device for camera {} with error code {}",
@@ -138,8 +141,10 @@ auto UVCCamera::Restart() -> void {
   uvc_close(device_handle_);
   uvc_unref_device(device_);
 
-  uvc_find_device(context_, &device_, 0, 0,
-                  camera_constant_.serial_id->c_str());
+  const char* serial_id = camera_constant_.serial_id.has_value()
+                              ? camera_constant_.serial_id.value().c_str()
+                              : nullptr;
+  uvc_find_device(context_, &device_, 0, 0, serial_id);
   uvc_open(device_, &device_handle_);
 
   LOG(INFO) << "Restarting device UVC Camera. Device ctrl: ";
@@ -153,6 +158,7 @@ UVCCamera::~UVCCamera() {
   uvc_close(device_handle_);
   uvc_unref_device(device_);
   uvc_exit(context_);
+  LOG(INFO) << camera_constant_.name << " has been destructed";
 }
 
 auto UVCCamera::GetCameraConstant() const -> camera_constant_t {
