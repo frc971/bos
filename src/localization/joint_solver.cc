@@ -9,8 +9,8 @@
 
 ABSL_FLAG(int, max_epochs, 10000,                       // NOLINT
           "Max iterative epochs the solver will use");  // NOLINT
-ABSL_FLAG(double, max_acceptable_error, 1e5,             // NOLINT
-          "Maximum accepted final reprojection loss");   // NOLINT
+ABSL_FLAG(double, max_acceptable_error, 1e5,            // NOLINT
+          "Maximum accepted final reprojection loss");  // NOLINT
 ABSL_FLAG(double, lambda_scalar,                        // NOLINT
           2.0,                                          // NOLINT
           "Levenberg-Marquardt damping adjustment");    // NOLINT
@@ -130,18 +130,21 @@ auto JointSolver::EstimatePosition(
     bool reject_far_tags) -> std::optional<position_estimate_t> {
   const int max_epochs = absl::GetFlag(FLAGS_max_epochs);
   const double lambda_scalar = absl::GetFlag(FLAGS_lambda_scalar);
-  const double max_acceptable_error =
-      absl::GetFlag(FLAGS_max_acceptable_error);
+  const double max_acceptable_error = absl::GetFlag(FLAGS_max_acceptable_error);
   if (detection_batches.empty()) {
     return std::nullopt;
   }
+  std::vector<int> tag_ids;
   double avg_timestamp = 0;
+  std::vector<double> timestamps;
   std::vector<data_point_t> data_points;
   for (size_t source_index = 0; source_index < detection_batches.size();
        source_index++) {
     const CameraMatrices& camera_mats = camera_matrices_[source_index];
     for (const tag_detection_t& detection : detection_batches[source_index]) {
+      tag_ids.push_back(source_index);
       avg_timestamp += detection.timestamp;
+      timestamps.push_back(detection.timestamp);
       std::vector<cv::Point2d> undistorted_corners;
       cv::undistortImagePoints(detection.corners, undistorted_corners,
                                camera_mats.camera_matrix,
@@ -159,6 +162,12 @@ auto JointSolver::EstimatePosition(
         data_points.push_back(datapoint);
       }
     }
+  }
+  while (timestamps.size() < 8) {
+    timestamps.push_back(-1);
+  }
+  while (tag_ids.size() < 8) {
+    tag_ids.push_back(-1);
   }
 
   if (data_points.empty()) {
@@ -253,10 +262,12 @@ auto JointSolver::EstimatePosition(
   utils::PrintPose3d(iteratively_solved_pose);
 
   return std::make_optional<position_estimate_t>(
-      {.pose = iteratively_solved_pose,
+      {.tag_ids = tag_ids,
+       .pose = iteratively_solved_pose,
        .timestamp = avg_timestamp,
        .num_tags = static_cast<int>(data_points.size() / 4),
-       .loss = current_error});
+       .loss = current_error,
+       .misc_debug = std::make_optional<std::vector<double>>(timestamps)});
 }
 
 }  // namespace localization

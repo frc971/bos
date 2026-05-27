@@ -39,6 +39,7 @@ using position_estimate_t = struct PositionEstimate {
   double latency = -1;
   bool invalid = false;
   double loss = 0;
+  std::optional<std::vector<double>> misc_debug = std::nullopt;
   friend auto operator<<(std::ostream& os, const PositionEstimate& t)
       -> std::ostream& {
     const auto& tr = t.pose.Translation();

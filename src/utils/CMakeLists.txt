@@ -5,6 +5,7 @@ target_sources(utils
   nt_utils.cc
   camera_utils.cc
   log.cc
+  log_path.cc
   constants_from_json.cc 
   transform.cc
 )

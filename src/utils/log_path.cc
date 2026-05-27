@@ -4,7 +4,7 @@
 
 #include "absl/flags/flag.h"
 
-ABSL_FLAG(std::string, sim_log_name, "sim.wpilog",  // NOLINT
+ABSL_FLAG(std::string, sim_log_name, "joint.wpilog",  // NOLINT
           "Name of the simulation WPILib log file.");
 
 namespace utils {

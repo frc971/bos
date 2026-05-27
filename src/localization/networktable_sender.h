@@ -48,6 +48,7 @@ class NetworkTableSender : public IPositionSender {
   std::optional<wpi::log::DoubleArrayLogEntry> tag_estimation_log_;
   std::optional<wpi::log::BooleanArrayLogEntry> tag_ids_log_;
   std::optional<wpi::log::BooleanArrayLogEntry> rejected_tag_ids_log_;
+  std::optional<wpi::log::DoubleArrayLogEntry> misc_debug_log_;
 
   std::mutex mutex_;
   bool verbose_;

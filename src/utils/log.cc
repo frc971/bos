@@ -26,10 +26,6 @@ void PrintPose3d(const frc::Pose3d& pose) {
             << "°" << std::endl;
 }
 
-auto GetSimLogName() -> std::string {
-  return "joint.wpilog";
-}
-
 void PrintPose2d(const frc::Pose2d& pose) {
   // Extract translation (in meters)
   double x = pose.X().value();

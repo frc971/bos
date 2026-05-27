@@ -75,6 +75,7 @@ NetworkTableSender::NetworkTableSender(const std::string& camera_name,
     tag_estimation_log_.emplace(*log_, "TagEstimation");
     tag_ids_log_.emplace(*log_, "TagIds");
     rejected_tag_ids_log_.emplace(*log_, "RejectedTagIds");
+    misc_debug_log_.emplace(*log_, "Misc Debug");
   }
 }
 
@@ -135,6 +136,9 @@ void NetworkTableSender::Send(
     timestamp_log_->Append(detection.timestamp, log_time);
     num_tags_log_->Append(detection.num_tags, log_time);
     loss_log_->Append(detection.loss, log_time);
+    if (detection.misc_debug.has_value()) {
+      misc_debug_log_->Append(detection.misc_debug.value(), log_time);
+    }
 
     log_->Flush();
   }
