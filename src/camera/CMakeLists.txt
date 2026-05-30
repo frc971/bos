@@ -35,6 +35,7 @@ target_sources(SelectCamera
 target_link_libraries(SelectCamera PRIVATE
   DiskCamera
   CvCamera
+  UVCCamera
   utils
 )
 
@@ -70,10 +71,11 @@ target_sources(UVCCamera
   PRIVATE
     uvc_camera.cc
 )
-target_link_libraries(UVCCamera PRIVATE
+target_link_libraries(UVCCamera PUBLIC 
   uvc
   absl::status
   utils
+  nvjpeg
 )
 
 add_library(camera INTERFACE)

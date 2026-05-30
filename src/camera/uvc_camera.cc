@@ -1,42 +1,59 @@
 #include "src/camera/uvc_camera.h"
-#include <opencv2/highgui/highgui_c.h>
-#include <opencv2/opencv.hpp>
 #include "absl/status/status.h"
-#include "src/utils/pch.h"
 
 namespace camera {
 
-const cv::Mat UVCCamera::backup_image_ =
-    cv::imread("/bos/constants/dont_worry_about_it.jpg");
+auto CopyPlane(const NvBuffer::NvBufferPlane& plane, int rows, int cols,
+               unsigned char* dst) -> void {
+
+  for (int y = 0; y < rows; ++y) {
+    std::memcpy(dst + (y * cols), plane.data + (y * plane.fmt.stride), cols);
+  }
+}
 
 void callback(uvc_frame_t* frame, void* ptr) {
+  // return;
   auto ptr_ = static_cast<UVCCamera*>(ptr);
   if (ptr_->mutex_.try_lock()) {
     switch (frame->frame_format) {
       case UVC_COLOR_FORMAT_MJPEG: {
-        char* data = static_cast<char*>(frame->data);
-        std::vector<uchar> buffer(data, data + frame->data_bytes);
-        ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
+        auto* data = static_cast<unsigned char*>(frame->data);
+        // std::vector<uchar> buffer(data, data + frame->data_bytes);
+        NvBuffer* decoded_buffer = nullptr;
+        uint32_t pixfmt = 0;
+        uint32_t width = 0;
+        uint32_t height = 0;
+
+        LOG(INFO) << "decoding";
+        const int decode_status = ptr_->decoder_->decodeToBuffer(
+            &decoded_buffer, data, frame->data_bytes, &pixfmt, &width, &height);
+        LOG(INFO) << "decoded\n\n";
+
+        if (decode_status < 0 || !decoded_buffer) {
+          LOG(WARNING) << "Failed to decode buffer";
+          break;
+        }
+
+        cv::Mat i420(height + (height / 2), width, CV_8UC1);
+
+        auto* y_dst = i420.ptr<unsigned char>(0);
+        auto* u_dst = i420.ptr<unsigned char>(height);
+        auto* v_dst = i420.ptr<unsigned char>(height + (height / 4));
+
+        CopyPlane(decoded_buffer->planes[0], static_cast<int>(height),
+                  static_cast<int>(width), y_dst);
+        CopyPlane(decoded_buffer->planes[1], static_cast<int>(height / 2),
+                  static_cast<int>(width / 2), u_dst);
+        CopyPlane(decoded_buffer->planes[2], static_cast<int>(height / 2),
+                  static_cast<int>(width / 2), v_dst);
+
+        cv::cvtColor(i420, ptr_->frame_buffer.frame, cv::COLOR_YUV2BGR_I420);
+        cv::imwrite("bgr.png", ptr_->frame_buffer.frame);
+        // std::abort();
         break;
       }
       case UVC_COLOR_FORMAT_YUYV: {
-        uvc_frame_t* bgr = uvc_allocate_frame(frame->width * frame->height * 3);
-        if (!bgr) {
-          LOG(WARNING) << "Camera " << ptr_->camera_constant_.name
-                       << " failed to allocate ";
-          ptr_->mutex_.unlock();
-          return;
-        }
-        uvc_error_t ret = uvc_yuyv2bgr(frame, bgr);
-        if (ret != 0) {
-          LOG(WARNING) << "YUYV failed to convert to BGR";
-        }
-        IplImage* ipl_image;
-        ipl_image = cvCreateImageHeader(cvSize(bgr->width, bgr->height),
-                                        IPL_DEPTH_8U, 3);
-        cvSetData(ipl_image, bgr->data, bgr->width * 3);
-        ptr_->frame_buffer.frame = cv::cvarrToMat(ipl_image, true);
-        uvc_free_frame(bgr);
+        LOG(FATAL) << "Unimplemented";
         break;
       }
       default:
@@ -60,7 +77,11 @@ void callback(uvc_frame_t* frame, void* ptr) {
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
                      absl::Status& status, std::optional<std::string> log_path)
-    : camera_constant_(camera_constant), log_path_(std::move(log_path)) {
+    : camera_constant_(camera_constant),
+      log_path_(std::move(log_path)),
+      backup_image_(cv::imread("/bos/constants/dont_worry_about_it.jpg")) {
+
+  decoder_ = NvJPEGDecoder::createJPEGDecoder("jpegdec");
 
   int res = uvc_init(&context_, nullptr);
   if (res != 0) {

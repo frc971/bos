@@ -1,9 +1,10 @@
 #pragma once
 #include <memory>
+#include "NvJpegDecoder.h"
 #include "camera_constants.h"
 #include "libuvc/libuvc.h"
 #include "src/camera/camera.h"
-#include "src/utils/pch.h"
+// #include "src/utils/pch.h"
 
 namespace camera {
 
@@ -18,18 +19,19 @@ class UVCCamera : public ICamera {
   [[nodiscard]] auto GetCameraConstant() const -> camera_constant_t override;
 
  public:
-  const camera_constant_t camera_constant_;
+  camera_constant_t camera_constant_;
   std::optional<std::string> log_path_;
-  static const cv::Mat backup_image_;
+  cv::Mat backup_image_;
   uvc_context_t* context_;
   uvc_device_t* device_;
   uvc_device_handle_t* device_handle_;
   timestamped_frame_t frame_buffer;
   uvc_stream_ctrl_t ctrl_;
   std::mutex mutex_;
-  int frame_index_;
-  int previous_frame_index_;
-  static constexpr cv::ImreadModes read_type = cv::IMREAD_GRAYSCALE;
+  int frame_index_ = 0;
+  int previous_frame_index_ = 0;
+  NvJPEGDecoder* decoder_ = nullptr;
+  // static constexpr cv::ImreadModes read_type = cv::IMREAD_GRAYSCALE;
 
  private:
   auto StartCamera(uvc_stream_ctrl_t ctrl) -> void;

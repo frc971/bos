@@ -30,3 +30,7 @@ target_link_libraries(pva_test PRIVATE utils localization vpi)
 
 add_executable(bfs-test bfs_tester.cc)
 target_link_libraries(bfs-test PRIVATE pathing utils nlohmann_json::nlohmann_json wpiutil)
+
+
+add_executable(nvjpeg_test nvjpeg_test.cc)
+target_link_libraries(nvjpeg_test PRIVATE nvjpeg utils)

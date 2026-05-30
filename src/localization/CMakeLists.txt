@@ -71,6 +71,7 @@ target_sources(UnambiguousEstimator
 target_link_libraries(UnambiguousEstimator PRIVATE
   SquareSolver
   MultitagSolver
+  UVCCamera
   utils
 )
 

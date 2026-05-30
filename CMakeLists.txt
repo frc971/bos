@@ -49,6 +49,7 @@ find_package(libuvc REQUIRED)
 add_subdirectory(third_party/json)
 add_subdirectory(third_party/971apriltag)
 add_subdirectory(third_party/abseil-cpp)
+add_subdirectory(third_party/nvjpeg)
 
 include(FetchContent)
 FetchContent_Declare(

@@ -1,4 +1,5 @@
 #include <memory>
+#include "NvJpegDecoder.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "src/camera/camera.h"
@@ -7,6 +8,7 @@
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
 #include "src/utils/log.h"
+#include "src/utils/stop.h"
 
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt, "");  //NOLINT
 ABSL_FLAG(std::optional<int>, port, std::nullopt, "");                 //NOLINT
@@ -14,6 +16,7 @@ ABSL_FLAG(std::optional<std::string>, log_path, std::nullopt, "");     //NOLINT
 
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
+  stop::RegisterHandler();
 
   std::unique_ptr<camera::ICamera> camera = camera::SelectCameraConfig(
       absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
@@ -26,7 +29,8 @@ auto main(int argc, char* argv[]) -> int {
 
   cv::Mat frame = camera->GetFrame().frame;
   LOG(INFO) << "Size of frame: " << frame.size;
-  while (true) {
+  while (!stop::stop) {
+    LOG(INFO) << stop::stop;
     frame = camera->GetFrame().frame;
     streamer.WriteFrame(frame);
   }
