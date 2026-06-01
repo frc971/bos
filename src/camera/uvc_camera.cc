@@ -18,16 +18,13 @@ void callback(uvc_frame_t* frame, void* ptr) {
     switch (frame->frame_format) {
       case UVC_COLOR_FORMAT_MJPEG: {
         auto* data = static_cast<unsigned char*>(frame->data);
-        // std::vector<uchar> buffer(data, data + frame->data_bytes);
         NvBuffer* decoded_buffer = nullptr;
         uint32_t pixfmt = 0;
         uint32_t width = 0;
         uint32_t height = 0;
 
-        LOG(INFO) << "decoding";
         const int decode_status = ptr_->decoder_->decodeToBuffer(
             &decoded_buffer, data, frame->data_bytes, &pixfmt, &width, &height);
-        LOG(INFO) << "decoded\n\n";
 
         if (decode_status < 0 || !decoded_buffer) {
           LOG(WARNING) << "Failed to decode buffer";

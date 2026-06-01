@@ -7,6 +7,17 @@ target_link_libraries(CscoreStreamer PRIVATE
   utils
 )
 
+add_library(NvidiaMjpegStreamer)
+target_sources(NvidiaMjpegStreamer PRIVATE
+  PRIVATE
+    nvidia_mjpeg_streamer.cc
+)
+target_link_libraries(NvidiaMjpegStreamer PRIVATE
+  utils
+  nadjieb_mjpeg_streamer::nadjieb_mjpeg_streamer
+  nvjpeg
+)
+
 add_library(DiskCamera)
 target_sources(DiskCamera
   PRIVATE
@@ -88,4 +99,5 @@ target_link_libraries(camera INTERFACE
   CameraConstants
   MultiCameraSource
   UVCCamera
+  NvidiaMjpegStreamer
 )

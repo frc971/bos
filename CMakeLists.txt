@@ -50,6 +50,7 @@ add_subdirectory(third_party/json)
 add_subdirectory(third_party/971apriltag)
 add_subdirectory(third_party/abseil-cpp)
 add_subdirectory(third_party/nvjpeg)
+add_subdirectory(third_party/cpp-mjpeg-streamer)
 
 include(FetchContent)
 FetchContent_Declare(

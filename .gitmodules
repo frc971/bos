@@ -7,3 +7,6 @@
 [submodule "bos-logs"]
 	path = bos-logs
 	url = https://github.com/frc971/bos-logs
+[submodule "third_party/cpp-mjpeg-streamer"]
+	path = third_party/cpp-mjpeg-streamer
+	url = https://github.com/nadjieb/cpp-mjpeg-streamer.git
