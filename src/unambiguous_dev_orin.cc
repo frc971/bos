@@ -15,13 +15,7 @@
 using camera::camera_constants_t;
 auto main() -> int {
   stop::RegisterHandler();
-<<<<<<< HEAD:src/unambiguous_first.cc
-  auto inst = nt::NetworkTableInstance::GetDefault();
-  inst.StartClient4("unambiguous_first");
-  inst.SetServer("localhost");
-=======
   // utils::StartNetworktables();
->>>>>>> 95efd2cf5e34df43516de59dbd33f6950af9eadd:src/unambiguous_dev_orin.cc
 
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
