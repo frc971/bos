@@ -1,8 +1,24 @@
 cmake_minimum_required(VERSION 3.10)
 
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
+if(POLICY CMP0146)
+  # Keep compatibility with packages that still use FindCUDA.
+  cmake_policy(SET CMP0146 OLD)
+endif()
+
 set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.6/bin/nvcc")
 
 project(BOS CXX C CUDA)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+set(CMAKE_BUILD_RPATH "$ORIGIN/../lib")
+set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -22,6 +38,8 @@ option(ENABLE_CLANG_TIDY "Enable clang-tidy for static analysis" ON)
 include_directories(/usr/local/cuda/include)
 link_directories(/usr/local/cuda/lib64)
 
+add_compile_options(-march=armv8-a+simd)
+
 find_package(wpilib REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -36,9 +54,9 @@ include(FetchContent)
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(googletest)
 
 add_compile_options(-Wno-psabi)
 add_subdirectory(src)
-

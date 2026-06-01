@@ -14,20 +14,15 @@
 using camera::camera_constants_t;
 auto main() -> int {
   stop::RegisterHandler();
-  utils::StartNetworktables();
+  // utils::StartNetworktables();
 
   std::string log_path = frc::DataLogManager::GetLogDir();
   camera_constants_t camera_constants = camera::GetCameraConstants();
 
-  std::vector<camera::CameraConstant> cameras{
-      camera_constants.at("second_bot_left"),
-      camera_constants.at("second_bot_right"),
-      // camera_constants.at("second_bot_front"),
-  };
+  std::vector<camera::CameraConstant> cameras{camera_constants.at("dev_orin")};
 
   std::jthread thread([cameras](const std::stop_token& stop_token) {
     localization::MultiCameraDetector detector_source(cameras);
-    LOG(INFO) << "Started cameras";
     std::this_thread::sleep_for(std::chrono::duration<double>(2));
     localization::RunJointLocalization(
         stop_token, detector_source,
@@ -35,5 +30,7 @@ auto main() -> int {
         std::make_unique<localization::NetworkTableSender>("Left", false));
   });
 
+  LOG(INFO) << "Started localization";
   stop::WaitUntilStop();
+  LOG(INFO) << "Stopping";
 }

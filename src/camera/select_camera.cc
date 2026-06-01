@@ -47,25 +47,29 @@ auto SelectCameraConfig(const std::string& choice,
     }
   }
   if (camera_constants.contains(choice)) {
-    if (camera_constants.at(choice).serial_id.has_value()) {
-      LOG(INFO) << "Initializing via uvc";
-      absl::Status status;
-      auto camera =
-          std::make_unique<UVCCamera>(camera_constants.at(choice), status);
-      if (!status.ok()) {
-        LOG(WARNING) << "Failed to select camera via uvc: " << status.message();
+    switch (camera_constants.at(choice).camera_type) {
+      case camera::CameraType::UVC: {
+        LOG(INFO) << "Initializing via uvc";
+        absl::Status status;
+        auto camera =
+            std::make_unique<UVCCamera>(camera_constants.at(choice), status);
+        if (!status.ok()) {
+          LOG(FATAL) << "Failed to select camera via uvc: " << status.message();
+        }
+        return camera;
       }
-      return camera;
+      case camera::CameraType::OPENCV:
+        return std::make_unique<camera::CVCamera>(
+            camera::GetCameraConstants()[choice]);
+      case camera::CameraType::MIPI:
+        return std::make_unique<camera::CVCamera>(
+            camera::GetCameraConstants()[choice]);
+      case camera::CameraType::INVALID:
+        return SelectCameraConfig(camera_constants);
     }
-    return std::make_unique<camera::CVCamera>(
-        camera::GetCameraConstants()[choice]);
-  } else {
     return SelectCameraConfig(camera_constants);
   }
-  // return camera_constants.contains(choice)
-  //            ? std::make_unique<camera::CVCamera>(
-  //                  camera::GetCameraConstants()[choice])
-  //            : SelectCameraConfig(camera_constants);
+  return SelectCameraConfig(camera_constants);
 }
 
 auto SelectCameraConfig(std::optional<std::string> choice,
@@ -77,9 +81,6 @@ auto SelectCameraConfig(std::optional<std::string> choice,
   } else {
     return SelectCameraConfig(camera_constants);
   }
-  // return choice.has_value()
-  //            ? SelectCameraConfig(choice.value(), camera_constants)
-  //            : SelectCameraConfig(camera_constants);
 }
 
 }  // namespace camera

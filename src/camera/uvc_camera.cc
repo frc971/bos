@@ -77,7 +77,10 @@ void LogPotentialBufferFormat(const NvBuffer* buffer,
 void callback(uvc_frame_t* frame, void* ptr) {
   LOG(INFO) << "Hallo cb";
   auto ptr_ = static_cast<UVCCamera*>(ptr);
-  std::unique_lock<std::mutex> lock(ptr_->mutex_);
+  std::unique_lock<std::mutex> lock(ptr_->mutex_, std::try_to_lock);
+  if (!lock.owns_lock()) {
+    return;
+  }
 
   switch (frame->frame_format) {
     case UVC_COLOR_FORMAT_MJPEG: {

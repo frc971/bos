@@ -8,65 +8,28 @@
       "pipeline": "nvarguscamerasrc sensor-id=0 aelock=true exposuretimerange=\"100000 200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, format=NV12 ! nvvidconv ! video/x-raw, format=BGRx ! queue ! appsink",
       "intrinsics_path": "/bos/constants/imx296_camera0_intrinsics.json",
       "extrinsics_path": "/bos/constants/imx296_camera0_extrinsics.json",
-      "name": "mipi0"
+      "name": "mipi0",
+      "camera_type": "mipi"
     },
     {
       "pipeline": "nvarguscamerasrc sensor-id=1 aelock=true exposuretimerange=\"100000 200000\" gainrange=\"1 15\" ispdigitalgainrange=\"1 1\" ! video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, format=NV12 ! nvvidconv ! video/x-raw, format=BGRx ! queue ! appsink",
       "intrinsics_path": "/bos/constants/imx296_camera1_intrinsics.json",
       "extrinsics_path": "/bos/constants/imx296_camera1_extrinsics.json",
-      "name": "mipi1"
+      "name": "mipi1",
+      "camera_type": "mipi"
     },
     {
+      "name": "dev_orin",
       "intrinsics_path": "/bos/constants/misc/dev_orin_intrinsics.json",
       "extrinsics_path": "/bos/constants/misc/dev_orin_extrinsics.json",
-      "name": "dev_orin",
-      "serial_id": "devorin",
-      "backlight": null,
       "frame_width": 1280,
       "frame_height": 800,
       "fps": 100.0,
-      "exposure": null,
+      "max_payload_size": 1024,
+      "stream_ratio": 0.5,
       "port": 5801,
-      "detector_type": "austin_gpu"
-    },
-    {
-      "name": "main_bot_front",
-      "pipeline": "nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=1456, height=1088, framerate=30/1, format=NV12 ! nvvidconv ! video/x-raw, format=BGRx ! queue ! appsink",
-      "intrinsics_path": "/bos/constants/main_bot/front_intrinsics.json",
-      "extrinsics_path": "/bos/constants/main_bot/front_extrinsics.json",
-      "backlight": null,
-      "frame_width": null,
-      "frame_height": null,
-      "fps": null,
-      "exposure": null,
-      "port": 5803,
-      "detector_type": "austin_gpu"
-    },
-    {
-      "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.3:1.0-video-index0",
-      "intrinsics_path": "/bos/constants/main_bot/left_intrinsics.json",
-      "extrinsics_path": "/bos/constants/main_bot/left_extrinsics.json",
-      "name": "main_bot_left",
-      "backlight": null,
-      "frame_width": 1280,
-      "frame_height": 800,
-      "fps": 60.0,
-      "exposure": null,
-      "port": 5802,
-      "detector_type": "austin_gpu"
-    },
-    {
-      "pipeline": "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.1:1.0-video-index0",
-      "intrinsics_path": "/bos/constants/main_bot/right_intrinsics.json",
-      "extrinsics_path": "/bos/constants/main_bot/right_extrinsics.json",
-      "name": "main_bot_right",
-      "backlight": null,
-      "frame_width": 1280,
-      "frame_height": 800,
-      "fps": 60.0,
-      "exposure": null,
-      "port": 5801,
-      "detector_type": "austin_gpu"
+      "detector_type": "austin_gpu",
+      "camera_type": "uvc"
     },
     {
       "name": "second_bot_front",
@@ -79,7 +42,8 @@
       "max_payload_size": 1024,
       "stream_ratio": 0.5,
       "port": 5803,
-      "detector_type": "austin_gpu"
+      "detector_type": "austin_gpu",
+      "camera_type": "uvc"
     },
     {
       "name": "second_bot_right",
@@ -92,7 +56,8 @@
       "max_payload_size": 1024,
       "stream_ratio": 0.5,
       "port": 5802,
-      "detector_type": "austin_gpu"
+      "detector_type": "austin_gpu",
+      "camera_type": "uvc"
     },
     {
       "name": "second_bot_left",
@@ -105,7 +70,8 @@
       "max_payload_size": 1024,
       "stream_ratio": 0.5,
       "port": 5801,
-      "detector_type": "austin_gpu"
+      "detector_type": "austin_gpu",
+      "camera_type": "uvc"
     }
   ]
 }

@@ -2,6 +2,7 @@
 #include "src/camera/camera_source.h"
 #include "src/localization/apriltag_detector.h"
 #include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/multi_camera_detector.h"
 #include "src/localization/position_sender.h"
 #include "src/localization/position_solver.h"
 #include "src/utils/pch.h"
@@ -18,20 +19,18 @@ namespace localization {
 //                 .intrinsics_path)),
 //     std::make_unique<localization::SquareSolver>(
 //         camera::Camera::TURRET_BOT_FRONT_RIGHT),
-//     camera::camera_constants[camera::Camera::TURRET_BOT_FRONT_RIGHT]
-//         .extrinsics_path,
 //     5801, false);
 void RunLocalization(
+    const std::stop_token& stop_token,
     std::unique_ptr<camera::CameraSource> source,
     std::unique_ptr<localization::IAprilTagDetector> detector,
     std::unique_ptr<localization::IPositionSolver> solver,
     std::vector<std::unique_ptr<localization::IPositionSender>> sender,
-    const std::string& extrinsics, std::optional<uint> port = std::nullopt,
-    bool verbose = false);
-void RunLocalizationSimulation(
-    camera::CameraSource& source,
-    std::unique_ptr<localization::IAprilTagDetector> detector,
-    std::unique_ptr<localization::IPositionSolver> solver,
-    const std::string& extrinsics, std::optional<uint> port = std::nullopt,
+    std::optional<uint> port = std::nullopt, bool verbose = false);
+
+void RunJointLocalization(
+    const std::stop_token& stop_token, MultiCameraDetector& detector_source,
+    std::unique_ptr<localization::IJointPositionSolver> solver,
+    std::unique_ptr<localization::IPositionSender> sender,
     bool verbose = false);
 }  // namespace localization

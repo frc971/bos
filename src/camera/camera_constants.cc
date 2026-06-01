@@ -23,12 +23,27 @@ void SetConstant(const std::string_view config_name, std::optional<T>& config,
 
 auto StringToDetectorType(const std::string& detector_type) -> DetectorType {
   if (detector_type == "austin_gpu") {
-    return AUSTIN_GPU;
+    return DetectorType::AUSTIN_GPU;
   }
   if (detector_type == "opencv_cpu") {
-    return OPENCV_CPU;
+    return DetectorType::OPENCV_CPU;
   }
-  return INVALID;
+  LOG(WARNING) << "Invalid detector type";
+  return DetectorType::INVALID;
+}
+
+auto StringToCameraType(const std::string& camera_type) -> CameraType {
+  if (camera_type == "uvc") {
+    return CameraType::UVC;
+  }
+  if (camera_type == "mipi") {
+    return CameraType::MIPI;
+  }
+  if (camera_type == "opencv") {
+    return CameraType::OPENCV;
+  }
+  LOG(WARNING) << "Invalid camera type";
+  return CameraType::INVALID;
 }
 
 auto GetCameraConstants(const std::string& path) -> camera_constants_t {
@@ -82,12 +97,21 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
     SetConstant<double>("stream_ratio", camera_constant.stream_ratio,
                         camera_config);
     SetConstant<uint>("port", camera_constant.port, camera_config);
+    SetConstant<uint>("streamer_fps", camera_constant.streamer_fps,
+                      camera_config);
 
     if (camera_config.contains("detector_type") &&
         !camera_config["detector_type"].is_null()) {
       camera_constant.detector_type =
           StringToDetectorType(camera_config["detector_type"]);
     }
+
+    if (camera_config.contains("camera_type") &&
+        !camera_config["camera_type"].is_null()) {
+      camera_constant.camera_type =
+          StringToCameraType(camera_config["camera_type"]);
+    }
+
     camera_constants.insert({camera_constant.name, camera_constant});
   }
   return camera_constants;

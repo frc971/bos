@@ -103,7 +103,7 @@ auto main(int argc, char** argv) -> int {
     LOG(FATAL) << "--camera_name may only be used with a single camera folder";
   }
 
-  std::vector<std::thread> localization_threads;
+  std::vector<std::jthread> localization_threads;
   localization_threads.reserve(camera_folders.size());
 
   const int base_port = absl::GetFlag(FLAGS_port);
@@ -125,7 +125,8 @@ auto main(int argc, char** argv) -> int {
     }
 
     localization_threads.emplace_back([camera_name, camera_folder, speed,
-                                       constants, base_port, i] {
+                                       constants, base_port,
+                                       i](const std::stop_token& stop_token) {
       const auto& camera_constant = constants.at(camera_name);
       auto camera_source = std::make_unique<camera::CameraSource>(
           camera_name, std::make_unique<camera::DiskCamera>(
@@ -140,13 +141,12 @@ auto main(int argc, char** argv) -> int {
       senders.emplace_back(std::make_unique<localization::SimulationSender>(
           camera_name, base_port + i - 1000));
       localization::RunLocalization(
-          std::move(camera_source),
+          stop_token, std::move(camera_source),
           std::make_unique<localization::OpenCVAprilTagDetector>(
               frame.cols, frame.rows,
               utils::ReadIntrinsics(camera_constant.intrinsics_path.value())),
           std::make_unique<localization::MultiTagSolver>(camera_constant),
-          std::move(senders), camera_constant.extrinsics_path.value(),
-          base_port + i, true);
+          std::move(senders), std::nullopt, true);
     });
   }
 
@@ -156,8 +156,6 @@ auto main(int argc, char** argv) -> int {
   }
 
   for (auto& thread : localization_threads) {
-    if (thread.joinable()) {
-      thread.join();
-    }
+    thread.join();
   }
 }

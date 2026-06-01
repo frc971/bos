@@ -66,7 +66,7 @@ CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
 auto CVCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t timestamped_frame;
   cv::Mat raw_image;
-  if (!cap_.grab()) {
+  while (!cap_.grab()) {
     Restart();
     LOG(WARNING) << "Restarting camera";
   }
@@ -76,7 +76,7 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
   raw_image.copyTo(timestamped_frame.frame);
 
   if (timestamped_frame.frame.empty()) {
-    timestamped_frame.frame = backup_image_;
+    timestamped_frame.invalid = true;
   }
   if (timestamped_frame.frame.channels() == 4) {
     cv::cvtColor(timestamped_frame.frame, timestamped_frame.frame,
