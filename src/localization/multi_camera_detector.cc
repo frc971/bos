@@ -2,6 +2,7 @@
 #include "absl/status/status.h"
 #include "src/camera/camera.h"
 #include "src/camera/cv_camera.h"
+#include "src/camera/select_camera.h"
 #include "src/camera/uvc_camera.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/opencv_apriltag_detector.h"
@@ -33,33 +34,44 @@ MultiCameraDetector::MultiCameraDetector(
     if (image_paths.has_value()) {
       cameras_.push_back(std::make_unique<camera::DiskCamera>(
           image_paths.value()[i], camera_constants_[i], disk_replay_speed));
-    } else if (camera_constants_[i].serial_id.has_value()) {
-      absl::Status status;
-      cameras_.push_back(std::make_unique<camera::UVCCamera>(
-          camera_constants_[i], status, camera_log_dest));
-      if (!status.ok()) {
-        LOG(WARNING) << "Unable to create uvc camera: " << status.message();
-      }
     } else {
-      cameras_.push_back(std::make_unique<camera::CVCamera>(
-          camera_constants_[i], camera_log_dest));
+      switch (camera_constants_[i].camera_type) {
+        case camera::CameraType::UVC: {
+          absl::Status status;
+          cameras_.push_back(std::make_unique<camera::UVCCamera>(
+              camera_constants_[i], status, camera_log_dest));
+          if (!status.ok()) {
+            LOG(WARNING) << "Unable to create uvc camera: " << status.message();
+          }
+        } break;
+        case camera::CameraType::MIPI:
+          cameras_.push_back(
+              std::make_unique<camera::CVCamera>(camera_constants_[i]));
+          break;
+        case camera::CameraType::OPENCV:
+          cameras_.push_back(
+              std::make_unique<camera::CVCamera>(camera_constants_[i]));
+          break;
+        case camera::CameraType::INVALID:
+          LOG(FATAL) << "Invalid camera type: " << camera_constants_[i].name;
+      }
     }
     auto intrinsics =
         utils::ReadIntrinsics(camera_constants_[i].intrinsics_path.value());
     switch (camera_constants_[i].detector_type) {
-      case camera::OPENCV_CPU: {
+      case camera::DetectorType::OPENCV_CPU: {
         detectors_.push_back(std::make_unique<OpenCVAprilTagDetector>(
             camera_constants_[i].frame_width.value(),
             camera_constants_[i].frame_height.value(), intrinsics));
         break;
       }
-      case camera::AUSTIN_GPU: {
+      case camera::DetectorType::AUSTIN_GPU: {
         detectors_.push_back(std::make_unique<GPUAprilTagDetector>(
             camera_constants_[i].frame_width.value(),
             camera_constants_[i].frame_height.value(), intrinsics));
         break;
       }
-      case camera::INVALID:
+      case camera::DetectorType::INVALID:
         LOG(FATAL) << "Invalid detector type";
     }
   }
