@@ -65,6 +65,14 @@ target_link_libraries(MultiCameraSource PRIVATE
   utils
 )
 
+find_library(NVJPEG_LIBRARY
+  NAMES nvjpeg
+  PATHS
+    /usr/lib/aarch64-linux-gnu/tegra
+    /usr/lib/aarch64-linux-gnu
+    /usr/lib
+  REQUIRED
+)
 
 add_library(UVCCamera)
 target_sources(UVCCamera
@@ -75,7 +83,7 @@ target_link_libraries(UVCCamera PRIVATE
   uvc
   absl::status
   utils
-  /usr/lib/aarch64-linux-gnu/tegra/libnvjpeg.so
+  ${NVJPEG_LIBRARY}
 )
 set(JETSON_API /usr/src/jetson_multimedia_api)
 target_sources(UVCCamera PRIVATE
