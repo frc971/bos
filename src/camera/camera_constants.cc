@@ -1,4 +1,5 @@
 #include "src/camera/camera_constants.h"
+#include <filesystem>
 #include <optional>
 #include "absl/flags/flag.h"
 
@@ -6,10 +7,26 @@ ABSL_FLAG(std::string, camera_constants_path,            // NOLINT
           "/bos/constants/camera_constants.json",        // NOTLINT
           "Path to the json file of camera constants");  //NOLINT
 
+namespace {
+constexpr std::string_view kDefaultCameraConstantsPath =
+    "/bos/constants/camera_constants.json";
+constexpr std::string_view kLocalCameraConstantsPath =
+    "constants/camera_constants.json";
+
+auto ResolveCameraConstantsPath(const std::string& path) -> std::string {
+  if (path == kDefaultCameraConstantsPath &&
+      std::filesystem::exists(kLocalCameraConstantsPath)) {
+    return std::string(kLocalCameraConstantsPath);
+  }
+  return path;
+}
+}  // namespace
+
 namespace camera {
 
 auto GetCameraConstants() -> camera_constants_t {
-  return GetCameraConstants(absl::GetFlag(FLAGS_camera_constants_path));
+  return GetCameraConstants(
+      ResolveCameraConstantsPath(absl::GetFlag(FLAGS_camera_constants_path)));
 }
 
 template <typename T>

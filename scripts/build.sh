@@ -22,8 +22,12 @@ else
 fi
 
 if [ "$(pwd)" != "/bos" ]; then
-  mkdir -p /bos
-  sudo cp -r constants /bos
+  mkdir -p /bos/constants 2>/dev/null || sudo mkdir -p /bos/constants
+  if [ -w /bos ]; then
+    cp -r constants/. /bos/constants
+  else
+    sudo cp -r constants/. /bos/constants
+  fi
 fi
 cmake -Wno-dev -DENABLE_CLANG_TIDY=OFF -DCMAKE_BUILD_TYPE=Release -B "$BUILD_DIR" -G Ninja .
 cmake --build "$BUILD_DIR"
