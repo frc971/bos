@@ -8,6 +8,7 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <thread>
+#include "spline_follower.h"
 #include "splines.h"
 #include "src/localization/position_receiver.h"
 #include "src/pathing/splines.h"
@@ -117,68 +118,21 @@ auto RunController(
 
     } else {
 
-      int closest_idx = 0;
+      auto result =
+          FollowSpline(current_pose, spline_points, lookahead_offset_, speed_, verbose);
 
-      // TODO: this can be optimizeed by only searching from the previous closest index instead of the entire spline
-      frc::Translation2d first2d(spline_points[0].X(), spline_points[0].Y());
-      double best_dist = current_pose.Translation().Distance(first2d).value();
-      for (int i = 1; i < (int)spline_points.size(); ++i) {
-        frc::Translation2d t2d(spline_points[i].X(), spline_points[i].Y());
-        double d = current_pose.Translation().Distance(t2d).value();
-        if (d < best_dist) {
-          best_dist = d;
-          closest_idx = i;
-        }
-        if (verbose) {
-          LOG(INFO) << "d: " << d << " i: " << i;
-        }
-      }
+      next_pose_sub.Set(result.lookahead);
 
-      if (verbose) {
-        LOG(INFO) << "Closeset idx: " << closest_idx
-                  << " Spline size: " << spline_points.size();
-      }
-
-      int lookahead_idx = std::min(closest_idx + lookahead_offset_,
-                                   (int)spline_points.size() - 1);
-
-      frc::Pose2d lookahead = spline_points[lookahead_idx];
-
-      if (verbose) {
-        LOG(INFO) << "current " << current_pose.X().value() << " "
-                  << current_pose.Y().value();
-      }
-
-      double dx = lookahead.X().value() - current_pose.X().value();
-      double dy = lookahead.Y().value() - current_pose.Y().value();
-      if (verbose) {
-        LOG(INFO) << "dx " << dx << " vy " << dy;
-        LOG(INFO) << "looakhead " << lookahead.X().value() << " "
-                  << lookahead.Y().value();
-      }
-
-      next_pose_sub.Set(lookahead);
-
-      double dist = std::hypot(dx, dy);
-      if (verbose) {
-        LOG(INFO) << "dist " << dist;
-      }
-      if (dist < 1e-6) {
+      if (result.vx == 0.0 && result.vy == 0.0) {
         vx_pub.Set(0.0);
         vy_pub.Set(0.0);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         continue;
       }
 
-      double vx = dx * speed_;
-      double vy = dy * speed_;
-
       // NOTE: we need to test whether to divide vx and vy by dist to normalize speeds or not,
-      vx_pub.Set(vx);
-      vy_pub.Set(vy);
-      if (verbose) {
-        LOG(INFO) << "set vx " << vx << " vy " << vy;
-      }
+      vx_pub.Set(result.vx);
+      vy_pub.Set(result.vy);
       inst.Flush();
     }
   }

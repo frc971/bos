@@ -21,6 +21,8 @@ add_subdirectory(yolo)
 add_subdirectory(test)
 add_subdirectory(pathing)
 
+
+
 add_executable(second_bot_main second_bot_main.cc)
 target_link_libraries(second_bot_main PRIVATE utils localization pathing camera)
 
