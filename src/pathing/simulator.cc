@@ -20,7 +20,7 @@ namespace pathing {
 
 int GRID_H;
 int GRID_W;
-int CELL_SIZE = 10;
+int CELL_SIZE = 20;
 
 auto getGrid() -> const std::vector<std::vector<Node>>& {
   static std::vector<std::vector<Node>> grid;
@@ -99,10 +99,6 @@ auto drawPath(cv::Mat& canvas, std::vector<std::pair<double, double>> path,
 }  // namespace pathing
 
 auto main() -> int {
-  // GTK3 over XQuartz fails its GLX probe ("No matching fbConfigs") and paints
-  // a black window. Disabling GDK's GL forces plain cairo software rendering.
-  setenv("GDK_GL", "disable", 1);
-
   pathing::getGrid();
   cv::Mat canvas(pathing::GRID_H * pathing::CELL_SIZE,
                  pathing::GRID_W * pathing::CELL_SIZE, CV_8UC3);
@@ -121,7 +117,5 @@ auto main() -> int {
 
   cv::imwrite("/tmp/xlo.png", canvas);
   cv::namedWindow("Pathing Simulator", cv::WINDOW_AUTOSIZE);
-  cv::imshow("Pathing Simulator", canvas);
-  cv::waitKey(0);
   return 0;
 }
