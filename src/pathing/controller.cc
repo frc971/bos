@@ -97,7 +97,7 @@ auto RunController(
     isDone_pub.Set(false);
 
     if (result.points.empty()) {
-      result = CreateSpline(grid, start_pt, target_pt, nodeSizeMeters);
+      result = CreateSpline(grid, start_pt, target_pt, nodeSizeMeters, 1000);
       velocity_profile = CreateVelocityProfile(result);
       prev_closest_idx = -1;
       if (!result.points.empty()) {
