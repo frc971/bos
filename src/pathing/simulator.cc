@@ -58,7 +58,7 @@ auto getNodeSize() -> double {
 auto generateExpectedPath(Point start, Point end, double nodeSizeMeters)
     -> std::vector<std::pair<double, double>> {
   const auto& grid = getGrid();
-  SplineResult result = CreateSpline(grid, start, end, nodeSizeMeters, 20);
+  SplineResult result = CreateSpline(grid, start, end, nodeSizeMeters, 200);
 
   std::vector<std::pair<double, double>> positions;
   for (const auto& pt : result.points) {
@@ -72,7 +72,7 @@ auto generateExpectedPath(Point start, Point end, double nodeSizeMeters)
 auto generateNoisyPath(Point start, Point end, double nodeSizeMeters)
     -> std::vector<std::pair<double, double>> {
   const auto& grid = getGrid();
-  SplineResult result = CreateSpline(grid, start, end, nodeSizeMeters, 20);
+  SplineResult result = CreateSpline(grid, start, end, nodeSizeMeters, 200);
 
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -80,11 +80,25 @@ auto generateNoisyPath(Point start, Point end, double nodeSizeMeters)
 
   std::vector<std::pair<double, double>> positions;
   for (const auto& pt : result.points) {
-    double px = (pt.X().value() / nodeSizeMeters) * CELL_SIZE + distr(gen);
-    double py = (pt.Y().value() / nodeSizeMeters) * CELL_SIZE + distr(gen);
+    double px = ((pt.X().value() / nodeSizeMeters) + distr(gen)) * CELL_SIZE;
+    double py = ((pt.Y().value() / nodeSizeMeters) + distr(gen)) * CELL_SIZE;
     positions.emplace_back(px, py);
   }
   return positions;
+}
+
+auto drawObstacles(cv::Mat& canvas,
+                   const std::vector<std::vector<Node>>& grid) {
+  for (int y = 0; y < GRID_H; ++y) {
+    for (int x = 0; x < GRID_W; ++x) {
+      if (grid[y][x].obstacle) {
+        cv::rectangle(
+            canvas,
+            cv::Rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE),
+            cv::Scalar(0, 0, 0), cv::FILLED);
+      }
+    }
+  }
 }
 
 auto drawPath(cv::Mat& canvas, std::vector<std::pair<double, double>> path,
@@ -107,13 +121,14 @@ auto main() -> int {
   pathing::Point start = {.x = 10, .y = 6};
   pathing::Point end = {.x = 44, .y = 12};
 
-  auto path = pathing::generateExpectedPath(start, end, pathing::getNodeSize());
-  LOG(INFO) << "Path points: " << path.size();
-  if (!path.empty()) {
-    LOG(INFO) << "First point: " << path[0].first << ", " << path[0].second;
-  }
+  auto expectedPath =
+      pathing::generateExpectedPath(start, end, pathing::getNodeSize());
+  auto noisyPath =
+      pathing::generateNoisyPath(start, end, pathing::getNodeSize());
 
-  pathing::drawPath(canvas, path, cv::Scalar(0, 0, 255));
+  pathing::drawObstacles(canvas, pathing::getGrid());
+  pathing::drawPath(canvas, expectedPath, cv::Scalar(0, 0, 255));
+  pathing::drawPath(canvas, noisyPath, cv::Scalar(0, 255, 255));
 
   cv::imwrite("/tmp/xlo.png", canvas);
   cv::namedWindow("Pathing Simulator", cv::WINDOW_AUTOSIZE);
