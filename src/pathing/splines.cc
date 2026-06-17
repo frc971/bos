@@ -118,8 +118,8 @@ auto EvaluateDerivative(double t,
 }
 
 auto CreateSpline(const std::vector<std::vector<pathing::Node>>& grid,
-                  Point start_point, Point target_point, double nodeSizeMeters)
-    -> SplineResult {
+                  Point start_point, Point target_point, double nodeSizeMeters,
+                  int samples) -> SplineResult {
 
   std::vector<std::vector<pathing::Node>> gridCopy = grid;
   std::vector<pathing::Node> path = BFS(gridCopy, start_point, target_point);
@@ -153,8 +153,8 @@ auto CreateSpline(const std::vector<std::vector<pathing::Node>>& grid,
 
   knots = KnotVector(numControls, p);
 
-  for (int t = 0; t <= 1000; t += 1) {
-    double t_real = t / 1000.0;
+  for (int t = 0; t <= samples; t += 1) {
+    double t_real = t / static_cast<double>(samples);
     auto [x, y] = EvaluatePosition(t_real, control_points, knots, p);
     spline_points.emplace_back(units::meter_t{x}, units::meter_t{y}, 0_rad);
     spline_params.emplace_back(t_real);

@@ -53,6 +53,10 @@ auto RunController(
   std::vector<std::pair<double, double>> velocity_profile;
   int prev_closest_idx = -1;
 
+  const double kp = 10.0;  // TODO: tune this on the real robot
+  const double errorThreshold =
+      0.4;  // cross-track error (m) before replanning
+
   while (!stop_token.stop_requested()) {
     if (!enabled_sub.Get()) {
       vx_pub.Set(0.0);
@@ -83,7 +87,8 @@ auto RunController(
     target_pt.y = std::clamp(static_cast<int>(target_pt.y), 0, GRID_H - 1);
 
     frc::Translation2d t2d(target_pose.X(), target_pose.Y());
-    if (current_pose.Translation().Distance(t2d).value() < nodeSizeMeters) {
+    if (current_pose.Translation().Distance(t2d).value() <
+        nodeSizeMeters * 0.15) {
       vx_pub.Set(0.0);
       vy_pub.Set(0.0);
       isDone_pub.Set(true);
@@ -97,7 +102,7 @@ auto RunController(
     isDone_pub.Set(false);
 
     if (result.points.empty()) {
-      result = CreateSpline(grid, start_pt, target_pt, nodeSizeMeters);
+      result = CreateSpline(grid, start_pt, target_pt, nodeSizeMeters, 1000);
       velocity_profile = CreateVelocityProfile(result);
       prev_closest_idx = -1;
       if (!result.points.empty()) {
@@ -150,46 +155,29 @@ auto RunController(
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         continue;
       }
-      if (prev_closest_idx >= 0 && closest_idx == prev_closest_idx &&
-          closest_idx >= static_cast<int>(result.params.size()) - 5) {
-        double dx = target_pose.X().value() - current_pose.X().value();
-        double dy = target_pose.Y().value() - current_pose.Y().value();
-        double dist = std::hypot(dx, dy);
-
-        while (dist > 0.001) {
-          double vx = (dx / dist) * 1.0;
-          double vy = (dy / dist) * 1.0;
-
-          vx_pub.Set(vx);
-          vy_pub.Set(vy);
-          if (verbose) {
-            LOG(INFO) << "linear approach vx " << vx << " vy " << vy;
-          }
-          inst.Flush();
-          std::this_thread::sleep_for(std::chrono::milliseconds(20));
-
-          current_pose = current_sub.Get();
-          dx = target_pose.X().value() - current_pose.X().value();
-          dy = target_pose.Y().value() - current_pose.Y().value();
-          dist = std::hypot(dx, dy);
-        }
-        vx_pub.Set(0.0);
-        vy_pub.Set(0.0);
-        isDone_pub.Set(true);
-        inst.Flush();
+      // replan from the current pose if we've drifted too far off the path
+      if (best_dist > errorThreshold) {
         result.points.clear();
         velocity_profile.clear();
         prev_closest_idx = -1;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         continue;
       }
+
       prev_closest_idx = closest_idx;
 
       if (closest_idx >= static_cast<int>(result.params.size())) {
         closest_idx = static_cast<int>(result.params.size()) - 1;
       }
 
-      const auto [vx, vy] = velocity_profile[closest_idx];
+      // skip index 0 since its speed is 0
+      int vidx = std::min(std::max(closest_idx, 1),
+                          static_cast<int>(velocity_profile.size()) - 1);
+      double cx = result.points[closest_idx].X().value();
+      double cy = result.points[closest_idx].Y().value();
+      double vx =
+          velocity_profile[vidx].first + kp * (cx - current_pose.X().value());
+      double vy =
+          velocity_profile[vidx].second + kp * (cy - current_pose.Y().value());
 
       vx_pub.Set(vx);
       vy_pub.Set(vy);

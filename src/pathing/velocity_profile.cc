@@ -5,7 +5,7 @@
 namespace pathing {
 
 auto _CreateVelocityProfile(const SplineResult& result, double maxVelocity,
-                            double maxAcceleration)
+                            double maxAcceleration, double initialVelocity)
     -> std::vector<std::pair<double, double>> {
   if (result.points.empty() || result.params.empty() || maxVelocity <= 0.0 ||
       maxAcceleration <= 0.0) {
@@ -28,12 +28,7 @@ auto _CreateVelocityProfile(const SplineResult& result, double maxVelocity,
     return {};
   }
 
-  double ramp_distance = maxVelocity * maxVelocity / (2.0 * maxAcceleration);
-  double profile_velocity = maxVelocity;
-  if (ramp_distance * 2.0 > total_distance) {
-    ramp_distance = total_distance / 2.0;
-    profile_velocity = std::sqrt(total_distance * maxAcceleration);
-  }
+  double v0 = std::clamp(initialVelocity, 0.0, maxVelocity);
 
   std::vector<std::pair<double, double>> velocities;
   velocities.reserve(result.params.size());
@@ -42,14 +37,11 @@ auto _CreateVelocityProfile(const SplineResult& result, double maxVelocity,
     double distance =
         distances[std::min(i, static_cast<int>(distances.size()) - 1)];
     double end_distance = total_distance - distance;
-    double speed = profile_velocity;
 
-    if (distance < ramp_distance) {
-      speed = std::sqrt(2.0 * maxAcceleration * distance);
-    }
-    if (end_distance < ramp_distance) {
-      speed = std::min(speed, std::sqrt(2.0 * maxAcceleration * end_distance));
-    }
+    double speed = maxVelocity;
+    speed =
+        std::min(speed, std::sqrt(v0 * v0 + 2.0 * maxAcceleration * distance));
+    speed = std::min(speed, std::sqrt(2.0 * maxAcceleration * end_distance));
 
     auto [dx, dy] = EvaluateDerivative(result.params[i], result.controls,
                                        result.knots, result.p, 1);
@@ -65,9 +57,10 @@ auto _CreateVelocityProfile(const SplineResult& result, double maxVelocity,
   return velocities;
 }
 
-auto CreateVelocityProfile(const SplineResult& result)
+auto CreateVelocityProfile(const SplineResult& result, double initialVelocity)
     -> std::vector<std::pair<double, double>> {
-  return _CreateVelocityProfile(result, max_velocity, max_accel);
+  return _CreateVelocityProfile(result, max_velocity, max_accel,
+                                initialVelocity);
 }
 
 }  // namespace pathing
