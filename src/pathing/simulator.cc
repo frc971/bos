@@ -201,7 +201,7 @@ auto main() -> int {
       pathing::simulateRobotPath(start, end, pathing::getNodeSize());
 
   pathing::drawObstacles(canvas, pathing::getGrid());
-  // pathing::drawPath(canvas, expectedPath, cv::Scalar(0, 0, 255));
+  pathing::drawPath(canvas, expectedPath, cv::Scalar(0, 0, 255));
   pathing::drawPath(canvas, noisyPath, cv::Scalar(255, 0, 0));
 
   cv::imwrite("/tmp/xlo.png", canvas);
