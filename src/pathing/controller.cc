@@ -53,9 +53,8 @@ auto RunController(
   std::vector<std::pair<double, double>> velocity_profile;
   int prev_closest_idx = -1;
 
-  const double kp = 10.0;  // TODO: tune this on the real robot
-  const double errorThreshold =
-      0.4;  // cross-track error (m) before replanning
+  const double kp = 10.0;             // TODO: tune this on the real robot
+  const double errorThreshold = 0.4;  // error (m) before replanning
 
   while (!stop_token.stop_requested()) {
     if (!enabled_sub.Get()) {

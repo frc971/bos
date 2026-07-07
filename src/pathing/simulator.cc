@@ -1,4 +1,5 @@
 #include <frc/geometry/Pose2d.h>
+#include <units/length.h>
 #include <cmath>
 #include <cstdlib>
 #include <nlohmann/json.hpp>
@@ -10,6 +11,7 @@
 #include <random>
 #include <utility>
 #include <vector>
+#include "src/pathing/path_follower.h"
 #include "src/pathing/pathfinding.h"
 #include "src/pathing/splines.h"
 #include "src/pathing/velocity_profile.h"
@@ -81,78 +83,38 @@ auto generateExpectedPath(Point start, Point end, double nodeSizeMeters)
 auto simulateRobotPath(Point start, Point end, double nodeSizeMeters)
     -> std::vector<std::pair<double, double>> {
   const auto& grid = getGrid();
-  SplineResult result = CreateSpline(grid, start, end, nodeSizeMeters, 200);
-  std::vector<std::pair<double, double>> velocity_profile =
-      CreateVelocityProfile(result);
+  PathFollower follower(grid, nodeSizeMeters, 10.0, 0.4, 200);
 
-  std::vector<std::pair<double, double>> trajectory;
-  if (result.points.empty() || velocity_profile.empty()) {
-    return trajectory;
-  }
-
-  const double dt = 0.02;             // 20 ms
-  const double k = 0.15;              // noise fraction
-  const double kp = 10;               // pull coeficcient
-  const int maxTicks = 2000;          // don't go infinite loop
-  const double errorThreshold = 0.4;  // max error before replanning in m
+  const double dt = 0.02;     // 20 ms
+  const double k = 0.15;      // noise fraction
+  const int maxTicks = 2000;  // don't go infinite loop
 
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<> distr(-1.0, 1);
 
-  // current
-  double x = result.points.front().X().value();
-  double y = result.points.front().Y().value();
+  double x = start.x * nodeSizeMeters;
+  double y = start.y * nodeSizeMeters;
 
-  //target
-  const double tx = result.points.back().X().value();
-  const double ty = result.points.back().Y().value();
+  frc::Pose2d target_pose(units::meter_t{end.x * nodeSizeMeters},
+                          units::meter_t{end.y * nodeSizeMeters},
+                          frc::Rotation2d{});
 
-  int prevClosest = 1;
+  std::vector<std::pair<double, double>> trajectory;
   double currentSpeed = 0.0;  // robot starts at rest
   for (int tick = 0; tick < maxTicks; ++tick) {
     trajectory.emplace_back((x / nodeSizeMeters) * CELL_SIZE,
                             (y / nodeSizeMeters) * CELL_SIZE);
 
-    if (std::hypot(tx - x, ty - y) < nodeSizeMeters * 0.15) {
+    frc::Pose2d current_pose(units::meter_t{x}, units::meter_t{y},
+                             frc::Rotation2d{});
+    FollowerOutput out = follower.update(current_pose, target_pose);
+    if (out.done) {
       break;
     }
 
-    // same closest point as controller
-    int closest = prevClosest;
-    double best = std::hypot(result.points[closest].X().value() - x,
-                             result.points[closest].Y().value() - y);
-    for (int i = prevClosest + 1; i < static_cast<int>(result.points.size());
-         ++i) {
-      double d = std::hypot(result.points[i].X().value() - x,
-                            result.points[i].Y().value() - y);
-      if (d < best) {
-        best = d;
-        closest = i;
-      }
-    }
-    prevClosest = closest;
-
-    double cx = result.points[closest].X().value();
-    double cy = result.points[closest].Y().value();
-    double error = std::hypot(cx - x, cy - y);
-
-    if (error > errorThreshold) {
-      // start the new profile from the current speed so that we don't slow down to 0 speed every time we replan
-      result = CreateSpline(grid, toGridPoint(x, y, getNodeSize()), end,
-                            nodeSizeMeters, 200);
-      velocity_profile = CreateVelocityProfile(result, currentSpeed);
-      prevClosest = 1;
-      continue;
-    }
-
-    int vidx = std::min(closest, static_cast<int>(velocity_profile.size()) - 1);
-
-    double vx = velocity_profile[vidx].first + kp * (cx - x) +
-                (distr(gen) * k * currentSpeed);
-    double vy = velocity_profile[vidx].second + kp * (cy - y) +
-                (distr(gen) * k * currentSpeed);
-
+    double vx = out.vx + (distr(gen) * k * currentSpeed);
+    double vy = out.vy + (distr(gen) * k * currentSpeed);
     currentSpeed = std::hypot(vx, vy);
 
     x += vx * dt;
