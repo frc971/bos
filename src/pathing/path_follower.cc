@@ -16,10 +16,16 @@ PathFollower::PathFollower(const std::vector<std::vector<Node>>& grid,
       errorThreshold_(errorThreshold),
       sampleCount_(sampleCount) {}
 
-auto PathFollower::reset() -> void {
+auto PathFollower::resetPath() -> void {
   spline_.reset();
   velocity_profile_.reset();
   prev_closest_idx_ = std::nullopt;
+}
+
+auto PathFollower::reset() -> void {
+  resetPath();
+  last_vx_ = 0.0;
+  last_vy_ = 0.0;
 }
 
 auto PathFollower::plan(const frc::Pose2d& current_pose,
@@ -68,7 +74,7 @@ auto PathFollower::update(const frc::Pose2d& current_pose,
   const auto& profile = *velocity_profile_;
 
   // closest point, forward-only from the previous index
-  // TODO: this is hella convoluted, might be worth it to fix later
+  // TODO: this is a bit convoluted, might be worth it to fix later
   int start_idx = std::max(static_cast<uint>(0), prev_closest_idx_.value_or(0));
   int closest_idx = start_idx;
   frc::Translation2d start2d(points[start_idx].X(), points[start_idx].Y());
@@ -82,11 +88,14 @@ auto PathFollower::update(const frc::Pose2d& current_pose,
     }
   }
 
-  // we went backwards or are off the course by too much
-  if ((prev_closest_idx_ >= 0 && closest_idx < prev_closest_idx_) ||
-      best_dist > errorThreshold_) {
+  if (prev_closest_idx_.has_value() &&
+      closest_idx < static_cast<int>(*prev_closest_idx_)) {
     reset();
     return {.vx = 0.0, .vy = 0.0, .done = false};
+  }
+  if (best_dist > errorThreshold_) {
+    resetPath();
+    return {.vx = last_vx_, .vy = last_vy_, .done = false};
   }
 
   prev_closest_idx_ = closest_idx;
@@ -103,6 +112,8 @@ auto PathFollower::update(const frc::Pose2d& current_pose,
   double vx = profile[profileidx].first + kp_ * (cx - current_pose.X().value());
   double vy =
       profile[profileidx].second + kp_ * (cy - current_pose.Y().value());
+  last_vx_ = vx;
+  last_vy_ = vy;
 
   return {.vx = vx, .vy = vy, .done = false};
 }
