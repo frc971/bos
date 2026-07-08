@@ -1,6 +1,7 @@
 #include "path_follower.h"
 
 #include <algorithm>
+#include <cmath>
 #include <optional>
 #include "src/utils/pch.h"
 #include "velocity_profile.h"
@@ -47,7 +48,8 @@ auto PathFollower::plan(const frc::Pose2d& current_pose,
                    0, gh - 1))};
 
   spline_ = CreateSpline(grid_, start, target, nodeSizeMeters_, sampleCount_);
-  velocity_profile_ = CreateVelocityProfile(*spline_);
+  velocity_profile_ =
+      CreateVelocityProfile(*spline_, std::hypot(last_vx_, last_vy_));
   prev_closest_idx_ = std::nullopt;
 }
 

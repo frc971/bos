@@ -115,7 +115,6 @@ auto simulateRobotPath(Point start, Point end, double nodeSizeMeters)
 
     double vx = out.vx + (distr(gen) * k * currentSpeed);
     double vy = out.vy + (distr(gen) * k * currentSpeed);
-    currentSpeed = std::hypot(vx, vy);
 
     x += vx * dt;
     y += vy * dt;
