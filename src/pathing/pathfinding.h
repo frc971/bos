@@ -26,6 +26,13 @@ struct Point {
   uint x, y;
 };
 
+struct NavGrid {
+  std::vector<std::vector<Node>> grid;
+  double nodeSizeMeters;
+};
+
+auto GetGrid(const std::string& navgrid_path) -> NavGrid;
+
 auto BFSFirstFreeCell(std::vector<std::vector<Node>>& field, Point start_point)
     -> Node;
 

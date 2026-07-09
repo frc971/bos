@@ -20,55 +20,11 @@
 
 namespace pathing {
 
-int GRID_H;
-int GRID_W;
 int CELL_SIZE = 20;
-
-auto getGrid() -> const std::vector<std::vector<Node>>& {
-  static std::vector<std::vector<Node>> grid;
-  if (grid.empty()) {
-    std::ifstream file("/root/bos/constants/navgrid.json");
-    if (!file.is_open()) {
-      LOG(FATAL) << "Failed to open navgrid.json";
-      return grid;
-    }
-
-    nlohmann::json data = nlohmann::json::parse(file);
-    file.close();
-
-    GRID_H = data["grid"].size();
-    GRID_W = data["grid"][0].size();
-
-    grid.resize(GRID_H, std::vector<Node>(GRID_W));
-    for (int y = 0; y < GRID_H; ++y) {
-      for (int x = 0; x < GRID_W; ++x) {
-        grid[y][x].x = x;
-        grid[y][x].y = y;
-        grid[y][x].obstacle = data["grid"][y][x];
-      }
-    }
-  }
-  return grid;
-}
-
-auto getNodeSize() -> double {
-  std::ifstream file("/root/bos/constants/navgrid.json");
-  nlohmann::json data = nlohmann::json::parse(file);
-  return data["nodeSizeMeters"];
-}
-
-auto toGridPoint(double xMeters, double yMeters, double nodeSizeMeters)
-    -> Point {
-  int gx =
-      std::clamp(static_cast<int>(xMeters / nodeSizeMeters), 0, GRID_W - 1);
-  int gy =
-      std::clamp(static_cast<int>(yMeters / nodeSizeMeters), 0, GRID_H - 1);
-  return Point{.x = static_cast<uint>(gx), .y = static_cast<uint>(gy)};
-}
 
 auto generateExpectedPath(Point start, Point end, double nodeSizeMeters)
     -> std::vector<std::pair<double, double>> {
-  const auto& grid = getGrid();
+  const auto& grid = GetGrid("/root/bos/constants/navgrid.json").grid;
   SplineResult result = CreateSpline(grid, start, end, nodeSizeMeters, 200);
 
   std::vector<std::pair<double, double>> positions;
@@ -82,7 +38,7 @@ auto generateExpectedPath(Point start, Point end, double nodeSizeMeters)
 
 auto simulateRobotPath(Point start, Point end, double nodeSizeMeters)
     -> std::vector<std::pair<double, double>> {
-  const auto& grid = getGrid();
+  const auto& grid = GetGrid("/root/bos/constants/navgrid.json").grid;
   PathFollower follower(grid, nodeSizeMeters, 10.0, 0.4, 200);
 
   const double dt = 0.02;     // 20 ms
@@ -115,6 +71,7 @@ auto simulateRobotPath(Point start, Point end, double nodeSizeMeters)
 
     double vx = out.vx + (distr(gen) * k * currentSpeed);
     double vy = out.vy + (distr(gen) * k * currentSpeed);
+    currentSpeed = std::hypot(vx, vy);
 
     x += vx * dt;
     y += vy * dt;
@@ -124,8 +81,8 @@ auto simulateRobotPath(Point start, Point end, double nodeSizeMeters)
 
 auto drawObstacles(cv::Mat& canvas,
                    const std::vector<std::vector<Node>>& grid) {
-  for (int y = 0; y < GRID_H; ++y) {
-    for (int x = 0; x < GRID_W; ++x) {
+  for (int y = 0; y < static_cast<int>(grid.size()); ++y) {
+    for (int x = 0; x < static_cast<int>(grid[0].size()); ++x) {
       if (grid[y][x].obstacle) {
         cv::rectangle(
             canvas,
@@ -148,20 +105,21 @@ auto drawPath(cv::Mat& canvas, std::vector<std::pair<double, double>> path,
 }  // namespace pathing
 
 auto main() -> int {
-  pathing::getGrid();
-  cv::Mat canvas(pathing::GRID_H * pathing::CELL_SIZE,
-                 pathing::GRID_W * pathing::CELL_SIZE, CV_8UC3);
+  const auto& navgrid = pathing::GetGrid("/root/bos/constants/navgrid.json");
+  const auto& grid = navgrid.grid;
+  const auto& nodeSizeMeters = navgrid.nodeSizeMeters;
+  cv::Mat canvas(static_cast<int>(grid.size()) * pathing::CELL_SIZE,
+                 static_cast<int>(grid[0].size()) * pathing::CELL_SIZE,
+                 CV_8UC3);
   canvas.setTo(cv::Scalar(255, 255, 255));
 
   pathing::Point start = {.x = 10, .y = 6};
   pathing::Point end = {.x = 46, .y = 12};
 
-  auto expectedPath =
-      pathing::generateExpectedPath(start, end, pathing::getNodeSize());
-  auto noisyPath =
-      pathing::simulateRobotPath(start, end, pathing::getNodeSize());
+  auto expectedPath = pathing::generateExpectedPath(start, end, nodeSizeMeters);
+  auto noisyPath = pathing::simulateRobotPath(start, end, nodeSizeMeters);
 
-  pathing::drawObstacles(canvas, pathing::getGrid());
+  pathing::drawObstacles(canvas, grid);
   pathing::drawPath(canvas, expectedPath, cv::Scalar(0, 0, 255));
   pathing::drawPath(canvas, noisyPath, cv::Scalar(255, 0, 0));
 

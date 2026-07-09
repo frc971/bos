@@ -15,28 +15,9 @@ auto RunController(
     const std::string& navgrid_path = "/root/bos/constants/navgrid.json",
     bool verbose = false) -> void {
 
-  std::ifstream file(navgrid_path);
-  if (!file.is_open()) {
-    LOG(FATAL) << "Failed to open navgrid.json";
-    return;
-  }
-
-  nlohmann::json data = nlohmann::json::parse(file);
-  file.close();
-
-  const int GRID_H = data["grid"].size();
-  const int GRID_W = data["grid"][0].size();
-  double nodeSizeMeters = data["nodeSizeMeters"];
-
-  std::vector<std::vector<pathing::Node>> grid(
-      GRID_H, std::vector<pathing::Node>(GRID_W));
-  for (int y = 0; y < GRID_H; ++y) {
-    for (int x = 0; x < GRID_W; ++x) {
-      grid[y][x].x = x;
-      grid[y][x].y = y;
-      grid[y][x].obstacle = data["grid"][y][x];
-    }
-  }
+  const auto& navgrid = pathing::GetGrid("/root/bos/constants/navgrid.json");
+  const auto& grid = navgrid.grid;
+  const auto& nodeSizeMeters = navgrid.nodeSizeMeters;
 
   PathFollower follower(grid, nodeSizeMeters, 10.0, 0.4, 1000);
   nt::NetworkTableInstance inst = nt::NetworkTableInstance::GetDefault();
