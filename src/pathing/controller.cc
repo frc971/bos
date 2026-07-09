@@ -15,7 +15,7 @@ auto RunController(
     const std::string& navgrid_path = "/root/bos/constants/navgrid.json",
     bool verbose = false) -> void {
 
-  const auto& navgrid = pathing::GetGrid("/root/bos/constants/navgrid.json");
+  const auto& navgrid = pathing::GetGrid(navgrid_path);
   const auto& grid = navgrid.grid;
   const auto& nodeSizeMeters = navgrid.nodeSizeMeters;
 

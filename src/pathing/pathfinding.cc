@@ -14,7 +14,8 @@ namespace pathing {
 auto GetGrid(const std::string& navgrid_path) -> NavGrid {
   std::ifstream file(navgrid_path);
   if (!file.is_open()) {
-    LOG(FATAL) << "Failed to open navgrid.json";
+    LOG(FATAL) << "Failed to open navgrid: " << navgrid_path;
+    return {};
   }
 
   nlohmann::json data = nlohmann::json::parse(file);

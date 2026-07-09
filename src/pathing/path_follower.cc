@@ -55,7 +55,7 @@ auto PathFollower::plan(const frc::Pose2d& current_pose,
 
 auto PathFollower::update(const frc::Pose2d& current_pose,
                           const frc::Pose2d& target_pose) -> FollowerOutput {
-  // we are done if we are in in the radius of the target
+  // we are done if we are in the radius of the target
   frc::Translation2d target2d(target_pose.X(), target_pose.Y());
   if (current_pose.Translation().Distance(target2d).value() <
       nodeSizeMeters_ * 0.15) {
@@ -77,7 +77,7 @@ auto PathFollower::update(const frc::Pose2d& current_pose,
 
   // closest point, forward-only from the previous index
   // TODO: this is a bit convoluted, might be worth it to fix later
-  int start_idx = std::max(static_cast<uint>(0), prev_closest_idx_.value_or(0));
+  int start_idx = static_cast<int>(prev_closest_idx_.value_or(0));
   int closest_idx = start_idx;
   frc::Translation2d start2d(points[start_idx].X(), points[start_idx].Y());
   double best_dist = current_pose.Translation().Distance(start2d).value();

@@ -24,7 +24,8 @@ int CELL_SIZE = 20;
 
 auto generateExpectedPath(Point start, Point end, double nodeSizeMeters)
     -> std::vector<std::pair<double, double>> {
-  const auto& grid = GetGrid("/root/bos/constants/navgrid.json").grid;
+  auto navgrid = GetGrid("/root/bos/constants/navgrid.json");
+  const auto& grid = navgrid.grid
   SplineResult result = CreateSpline(grid, start, end, nodeSizeMeters, 200);
 
   std::vector<std::pair<double, double>> positions;
@@ -38,7 +39,8 @@ auto generateExpectedPath(Point start, Point end, double nodeSizeMeters)
 
 auto simulateRobotPath(Point start, Point end, double nodeSizeMeters)
     -> std::vector<std::pair<double, double>> {
-  const auto& grid = GetGrid("/root/bos/constants/navgrid.json").grid;
+  auto navgrid = GetGrid("/root/bos/constants/navgrid.json");
+  const auto& grid = navgrid.grid
   PathFollower follower(grid, nodeSizeMeters, 10.0, 0.4, 200);
 
   const double dt = 0.02;     // 20 ms
