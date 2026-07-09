@@ -1,5 +1,4 @@
 #include "path_follower.h"
-
 #include <algorithm>
 #include <cmath>
 #include <optional>
