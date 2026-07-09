@@ -19,7 +19,7 @@ PathFollower::PathFollower(const std::vector<std::vector<Node>>& grid,
 
 auto PathFollower::resetPath() -> void {
   spline_.reset();
-  velocity_profile_.reset();
+  velocity_profile_.clear();
   prev_closest_idx_ = std::nullopt;
 }
 
@@ -68,15 +68,14 @@ auto PathFollower::update(const frc::Pose2d& current_pose,
     plan(current_pose, target_pose);
   }
   if (!spline_.has_value() || spline_->points.empty() ||
-      !velocity_profile_.has_value() || velocity_profile_->empty()) {
+      velocity_profile_.empty()) {
     return {.vx = 0.0, .vy = 0.0, .done = false};
   }
 
   const auto& points = spline_->points;
-  const auto& profile = *velocity_profile_;
+  const auto& profile = velocity_profile_;
 
   // closest point, forward-only from the previous index
-  // TODO: this is a bit convoluted, might be worth it to fix later
   int start_idx = static_cast<int>(prev_closest_idx_.value_or(0));
   int closest_idx = start_idx;
   frc::Translation2d start2d(points[start_idx].X(), points[start_idx].Y());

@@ -22,10 +22,9 @@ namespace pathing {
 
 int CELL_SIZE = 20;
 
-auto generateExpectedPath(Point start, Point end, double nodeSizeMeters)
+auto generateExpectedPath(const std::vector<std::vector<Node>>& grid,
+                          Point start, Point end, double nodeSizeMeters)
     -> std::vector<std::pair<double, double>> {
-  auto navgrid = GetGrid("/root/bos/constants/navgrid.json");
-  const auto& grid = navgrid.grid
   SplineResult result = CreateSpline(grid, start, end, nodeSizeMeters, 200);
 
   std::vector<std::pair<double, double>> positions;
@@ -37,10 +36,9 @@ auto generateExpectedPath(Point start, Point end, double nodeSizeMeters)
   return positions;
 }
 
-auto simulateRobotPath(Point start, Point end, double nodeSizeMeters)
+auto simulateRobotPath(const std::vector<std::vector<Node>>& grid, Point start,
+                       Point end, double nodeSizeMeters)
     -> std::vector<std::pair<double, double>> {
-  auto navgrid = GetGrid("/root/bos/constants/navgrid.json");
-  const auto& grid = navgrid.grid
   PathFollower follower(grid, nodeSizeMeters, 10.0, 0.4, 200);
 
   const double dt = 0.02;     // 20 ms
@@ -118,8 +116,9 @@ auto main() -> int {
   pathing::Point start = {.x = 10, .y = 6};
   pathing::Point end = {.x = 46, .y = 12};
 
-  auto expectedPath = pathing::generateExpectedPath(start, end, nodeSizeMeters);
-  auto noisyPath = pathing::simulateRobotPath(start, end, nodeSizeMeters);
+  auto expectedPath =
+      pathing::generateExpectedPath(grid, start, end, nodeSizeMeters);
+  auto noisyPath = pathing::simulateRobotPath(grid, start, end, nodeSizeMeters);
 
   pathing::drawObstacles(canvas, grid);
   pathing::drawPath(canvas, expectedPath, cv::Scalar(0, 0, 255));

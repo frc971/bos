@@ -29,10 +29,10 @@ class PathFollower {
 
   auto reset() -> void;
 
+ private:
   auto plan(const frc::Pose2d& current_pose, const frc::Pose2d& target_pose)
       -> void;
 
- private:
   const GridType& grid_;
   double nodeSizeMeters_;
   double kp_;
@@ -41,7 +41,7 @@ class PathFollower {
   auto resetPath() -> void;
 
   std::optional<SplineResult> spline_;
-  std::optional<std::vector<std::pair<double, double>>> velocity_profile_;
+  ProfileType velocity_profile_;
   std::optional<uint> prev_closest_idx_;
   double last_vx_ = 0.0;
   double last_vy_ = 0.0;
