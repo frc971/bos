@@ -4,6 +4,7 @@ target_sources(pathing PRIVATE
   splines.cc
   controller.cc
   velocity_profile.cc
+  path_follower.cc
 )
 target_link_libraries(pathing PRIVATE
   utils

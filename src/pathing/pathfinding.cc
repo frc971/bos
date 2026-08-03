@@ -2,12 +2,40 @@
 #include <algorithm>
 #include <cmath>
 #include <deque>
+#include <fstream>
 #include <iostream>
 #include <utility>
 #include <vector>
+#include "nlohmann/json.hpp"
 #include "src/utils/log.h"
 
 namespace pathing {
+
+auto GetGrid(const std::string& navgrid_path) -> NavGrid {
+  std::ifstream file(navgrid_path);
+  if (!file.is_open()) {
+    LOG(FATAL) << "Failed to open navgrid: " << navgrid_path;
+    return {};
+  }
+
+  nlohmann::json data = nlohmann::json::parse(file);
+  file.close();
+
+  const int GRID_H = data["grid"].size();
+  const int GRID_W = data["grid"][0].size();
+  double nodeSizeMeters = data["nodeSizeMeters"];
+
+  std::vector<std::vector<pathing::Node>> grid(
+      GRID_H, std::vector<pathing::Node>(GRID_W));
+  for (int y = 0; y < GRID_H; ++y) {
+    for (int x = 0; x < GRID_W; ++x) {
+      grid[y][x].x = x;
+      grid[y][x].y = y;
+      grid[y][x].obstacle = data["grid"][y][x];
+    }
+  }
+  return {.grid = std::move(grid), .nodeSizeMeters = nodeSizeMeters};
+}
 
 auto BFSFirstFreeCell(std::vector<std::vector<Node>>& field, Point start_point)
     -> Node {
