@@ -93,7 +93,7 @@ target_link_libraries(NetworktableSender PRIVATE
 )
 
 add_library(localization)
-target_sources(localization 
+target_sources(localization
   PRIVATE
     run_localization.cc
     multi_camera_detector.cc
