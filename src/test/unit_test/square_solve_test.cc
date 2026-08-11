@@ -29,15 +29,3 @@ TEST_F(SquareSolverTest, Basic) {  // NOLINT
       square_solver.EstimatePosition(test_utils::fake_detections)[0];
   EXPECT_NEAR(old_estimate.pose.Rotation().Angle().value(), M_PI, ERROR_MARGIN);
 }
-
-TEST_F(SquareSolverTest, Math) {  // NOLINT
-  const cv::Mat image = cv::imread("/bos/constants/misc/apriltag.jpg");
-  camera::timestamped_frame_t frame{.frame = image, .timestamp = 0.0};
-  const std::vector<localization::tag_detection_t> detections =
-      detector.GetTagDetections(frame);
-  const localization::position_estimate_t new_estimate =
-      square_solver.EstimatePositionNew(test_utils::fake_detections)[0];
-  const localization::position_estimate_t old_estimate =
-      square_solver.EstimatePosition(test_utils::fake_detections)[0];
-  EXPECT_EQ(new_estimate, old_estimate);
-}

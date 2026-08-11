@@ -34,6 +34,7 @@ inline auto Variance(const int num_tags_detected, const double distance,
   return distance * scalar / (num_tags_detected * num_tags_detected) +
          min_variance;
 }
+static constexpr double kmax_tag_distance = 5.0;
 
 // Interface for a class when given a apriltag detections, uses the detections to get the position of the robot
 class IPositionSolver {
@@ -42,6 +43,14 @@ class IPositionSolver {
                                 bool reject_far_tags = true)
       -> std::vector<position_estimate_t> = 0;
   virtual ~IPositionSolver() = default;
+};
+
+class IJointPositionSolver {
+ public:
+  virtual auto EstimatePosition(
+      std::vector<std::vector<tag_detection_t>>& detection_batches,
+      bool reject_far_tags = true) -> std::optional<position_estimate_t> = 0;
+  virtual ~IJointPositionSolver() = default;
 };
 
 }  // namespace localization

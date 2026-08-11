@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FRC_ORIN_POINTS_H_
+#define FRC_ORIN_POINTS_H_
 
 #include <stdint.h>
 
@@ -6,10 +7,10 @@
 #include <iomanip>
 #include <ostream>
 
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
-namespace frc971::apriltag {
+namespace frc::apriltag {
 
 // Class to hold the 2 adjacent blob IDs, a point in decimated image space, the
 // half pixel offset, and the gradient.
@@ -166,7 +167,7 @@ std::ostream& operator<<(std::ostream& os, const QuadBoundaryPoint& point);
 // The blob index is 12 bits, the angle is 28 bits, and the point is 24 bits.
 struct IndexPoint {
   // Max number of blob IDs we can hold.
-  static constexpr size_t kMaxBlobs = 4096;  //2048; RJS
+  static constexpr size_t kMaxBlobs = 2048;
 
   static constexpr size_t kRepEndBit = 24;
   static constexpr size_t kBitsInKey = 64;
@@ -294,4 +295,6 @@ struct QuadIndexPointDecomposer {
   }
 };
 
-}  // namespace frc971::apriltag
+}  // namespace frc::apriltag
+
+#endif  // FRC_ORIN_POINTS_H_

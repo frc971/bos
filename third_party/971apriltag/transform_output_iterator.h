@@ -1,6 +1,7 @@
-#pragma once
+#ifndef FRC_TRANSFORM_OUTPUT_ITERATOR_
+#define FRC_TRANSFORM_OUTPUT_ITERATOR_
 
-namespace frc971::apriltag {
+namespace frc::apriltag {
 
 // template class that allows conversions at the output of a cub algorithm
 template <typename InputType, typename OutputType, typename ConversionOp,
@@ -84,4 +85,6 @@ class TransformOutputIterator {
   OutputType* ptr;
 };
 
-}  // namespace frc971::apriltag
+}  // namespace frc::apriltag
+
+#endif  // FRC_TRANSFORM_OUTPUT_ITERATOR_

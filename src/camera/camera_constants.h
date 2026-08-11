@@ -5,18 +5,29 @@
 #include "src/utils/pch.h"
 namespace camera {
 
+enum class DetectorType { OPENCV_CPU, AUSTIN_GPU, INVALID };
+enum class CameraType { UVC, MIPI, OPENCV, INVALID };
+
 using camera_constant_t = struct CameraConstant {
   std::string name;
   std::optional<std::string> pipeline = std::nullopt;
   std::optional<std::string> intrinsics_path = std::nullopt;
   std::optional<std::string> extrinsics_path = std::nullopt;
   std::optional<double> backlight = std::nullopt;
-  std::optional<double> frame_width = std::nullopt;
-  std::optional<double> frame_height = std::nullopt;
-  std::optional<double> fps = std::nullopt;
+  std::optional<uint> frame_width = std::nullopt;
+  std::optional<uint> frame_height = std::nullopt;
+  std::optional<uint> fps = std::nullopt;
   std::optional<double> exposure = std::nullopt;  // Nullopt = auto exposure
   std::optional<double> brightness = std::nullopt;
   std::optional<double> sharpness = std::nullopt;
+  std::optional<uint32_t> max_frame_size = std::nullopt;    // uvc only
+  std::optional<uint32_t> max_payload_size = std::nullopt;  // uvc only
+  std::optional<std::string> serial_id = std::nullopt;      // uvc only
+  std::optional<double> stream_ratio = std::nullopt;
+  std::optional<uint> port = std::nullopt;
+  std::optional<uint> streamer_fps = std::nullopt;
+  DetectorType detector_type = DetectorType::INVALID;
+  CameraType camera_type = CameraType::INVALID;
 
   friend auto operator<<(std::ostream& os, const CameraConstant& c)
       -> std::ostream& {

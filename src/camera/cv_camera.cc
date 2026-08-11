@@ -33,8 +33,13 @@ CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
   LOG(INFO) << c.pipeline.value();
 
   backup_image_ = cv::imread("/bos/constants/dont_worry_about_it.jpg");
-  LOG(INFO) << "Backup image empty: " << backup_image_.empty();
-  if (c.frame_height.has_value() && c.frame_width.has_value()) {
+  if (backup_image_.empty()) {
+    LOG(WARNING) << "Backup image /bos/constants/dont_worry_about_it.jpg not "
+                    "found; using black placeholder";
+    int w = c.frame_width.value_or(640);
+    int h = c.frame_height.value_or(480);
+    backup_image_ = cv::Mat::zeros(h, w, CV_8UC3);
+  } else if (c.frame_height.has_value() && c.frame_width.has_value()) {
     cv::resize(backup_image_, backup_image_,
                cv::Size(c.frame_width.value(), c.frame_height.value()));
   }
@@ -67,7 +72,7 @@ CVCamera::CVCamera(const CameraConstant& c, std::optional<std::string> log_path)
 auto CVCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t timestamped_frame;
   cv::Mat raw_image;
-  if (!cap_.grab()) {
+  while (!cap_.grab()) {
     Restart();
     LOG(WARNING) << "Restarting camera";
   }
@@ -77,7 +82,7 @@ auto CVCamera::GetFrame() -> timestamped_frame_t {
   raw_image.copyTo(timestamped_frame.frame);
 
   if (timestamped_frame.frame.empty()) {
-    timestamped_frame.frame = backup_image_;
+    timestamped_frame.invalid = true;
   }
   if (timestamped_frame.frame.channels() == 4) {
     cv::cvtColor(timestamped_frame.frame, timestamped_frame.frame,

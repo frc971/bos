@@ -1,7 +1,7 @@
-cd log44/left
+cd "$1"
 for f in *.jpg; do
-  timestamp=${f%%.*} # strip extension
-  if (($(echo "$timestamp < 348" | bc -l))); then
+  timestamp=${f%%.*}
+  if (($(echo "$timestamp < $2" | bc -l))) | (($(echo "$timestamp > $3" | bc -l))); then
     rm "$f"
   fi
 done

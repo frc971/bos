@@ -1,3 +1,4 @@
+include(GoogleTest)
 enable_testing()
 
 add_executable(joint_solve_test joint_solve_test.cc)
@@ -15,6 +16,11 @@ target_link_libraries(general_solver_test PRIVATE localization utils GTest::gtes
 add_executable(matrix  matrix.cc)
 target_link_libraries(matrix PRIVATE localization utils GTest::gtest_main)
 
-include(GoogleTest)
+add_executable(pathing_test pathing_test.cc)
+target_link_libraries(pathing_test PRIVATE pathing utils nlohmann_json::nlohmann_json GTest::gtest_main)
+
+gtest_discover_tests(joint_solve_test)
 gtest_discover_tests(multi_tag_test)
 gtest_discover_tests(square_solve_test)
+gtest_discover_tests(general_solver_test)
+# gtest_discover_tests(pathing_test)

@@ -17,7 +17,7 @@ class CscoreStreamer {
                  const cv::Mat& frame, float ratio = 1.0f,
                  bool verbose = false);
 
-  void WriteFrame(cv::Mat& mat);
+  void WriteFrame(const cv::Mat& mat);
 
  private:
   uint width_;

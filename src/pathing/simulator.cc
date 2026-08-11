@@ -1,149 +1,129 @@
 #include <frc/geometry/Pose2d.h>
-#include <wpi/DataLogBackgroundWriter.h>
-#include <algorithm>
+#include <units/length.h>
 #include <cmath>
-#include <cstdint>
-#include <fstream>
+#include <cstdlib>
 #include <nlohmann/json.hpp>
-#include <system_error>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/opencv.hpp>
+#include <queue>
+#include <random>
+#include <utility>
 #include <vector>
-#include "src/pathing/pathing.h"
+#include "src/pathing/path_follower.h"
+#include "src/pathing/pathfinding.h"
+#include "src/pathing/splines.h"
+#include "src/pathing/velocity_profile.h"
+#include "src/utils/log.h"
+#include "src/utils/pch.h"
 
-auto main() -> int {
-  wpi::log::DataLogBackgroundWriter log{"/root/bos/logs", "sim.wpilog"};
+namespace pathing {
 
-  wpi::log::StructLogEntry<frc::Pose2d> poseLog(log, "/sim/Pose2d");
-  wpi::log::DoubleLogEntry accelXLog(log, "/sim/AccelX");
-  wpi::log::DoubleLogEntry accelYLog(log, "/sim/AccelY");
-  wpi::log::DoubleLogEntry accelMagLog(log, "/sim/AccelMagnitude");
-  wpi::log::DoubleLogEntry velXLog(log, "/sim/VelX");
-  wpi::log::DoubleLogEntry velYLog(log, "/sim/VelY");
+int CELL_SIZE = 20;
 
-  std::ifstream file("/root/bos/constants/navgrid.json");
-  if (!file.is_open()) {
-    return 1;
+auto generateExpectedPath(const std::vector<std::vector<Node>>& grid,
+                          Point start, Point end, double nodeSizeMeters)
+    -> std::vector<std::pair<double, double>> {
+  SplineResult result = CreateSpline(grid, start, end, nodeSizeMeters, 200);
+
+  std::vector<std::pair<double, double>> positions;
+  for (const auto& pt : result.points) {
+    double px = (pt.X().value() / nodeSizeMeters) * CELL_SIZE;
+    double py = (pt.Y().value() / nodeSizeMeters) * CELL_SIZE;
+    positions.emplace_back(px, py);
   }
+  return positions;
+}
 
-  nlohmann::json data = nlohmann::json::parse(file);
-  file.close();
+auto simulateRobotPath(const std::vector<std::vector<Node>>& grid, Point start,
+                       Point end, double nodeSizeMeters)
+    -> std::vector<std::pair<double, double>> {
+  PathFollower follower(grid, nodeSizeMeters, 10.0, 0.4, 200);
 
-  const int GRID_W = data["grid"][0].size();
-  const int GRID_H = data["grid"].size();
-  double nodeSizeMeters = data["nodeSizeMeters"];
+  const double dt = 0.02;     // 20 ms
+  const double k = 0.15;      // noise fraction
+  const int maxTicks = 2000;  // don't go infinite loop
 
-  std::vector<std::vector<bool>> gridData(GRID_H, std::vector<bool>(GRID_W));
-  for (int y = 0; y < GRID_H; ++y) {
-    for (int x = 0; x < GRID_W; ++x) {
-      gridData[y][x] = data["grid"][y][x];
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<> distr(-1.0, 1);
+
+  double x = start.x * nodeSizeMeters;
+  double y = start.y * nodeSizeMeters;
+
+  frc::Pose2d target_pose(units::meter_t{end.x * nodeSizeMeters},
+                          units::meter_t{end.y * nodeSizeMeters},
+                          frc::Rotation2d{});
+
+  std::vector<std::pair<double, double>> trajectory;
+  double currentSpeed = 0.0;  // robot starts at rest
+  for (int tick = 0; tick < maxTicks; ++tick) {
+    trajectory.emplace_back((x / nodeSizeMeters) * CELL_SIZE,
+                            (y / nodeSizeMeters) * CELL_SIZE);
+
+    frc::Pose2d current_pose(units::meter_t{x}, units::meter_t{y},
+                             frc::Rotation2d{});
+    FollowerOutput out = follower.update(current_pose, target_pose);
+    if (out.done) {
+      break;
     }
+
+    double vx = out.vx + (distr(gen) * k * currentSpeed);
+    double vy = out.vy + (distr(gen) * k * currentSpeed);
+    currentSpeed = std::hypot(vx, vy);
+
+    x += vx * dt;
+    y += vy * dt;
   }
+  return trajectory;
+}
 
-  cv::Mat grid = initializeGrid(gridData);
-
-  auto poses = createSpline(grid, 10, 5, 45, 22, nodeSizeMeters);
-  if (poses.empty()) {
-    return 1;
-  }
-
-  constexpr int64_t kDtUs = 20'000;
-  constexpr double kDtSec = kDtUs / 1'000'000.0;
-  constexpr double kMaxAccel = 3.0;
-  constexpr double kMaxDecel = 3.0;
-  constexpr double kMaxModuleSpeed = 5.0;
-  int64_t t = 0;
-
-  std::vector<double> pathDist(poses.size(), 0.0);
-  for (size_t i = 1; i < poses.size(); ++i) {
-    double dx = poses[i].X().value() - poses[i - 1].X().value();
-    double dy = poses[i].Y().value() - poses[i - 1].Y().value();
-    pathDist[i] = pathDist[i - 1] + std::sqrt(dx * dx + dy * dy);
-  }
-
-  double totalDist = pathDist.back();
-
-  std::vector<double> targetSpeed(poses.size());
-
-  for (size_t i = 0; i < poses.size(); ++i) {
-    double distFromStart = pathDist[i];
-    double distToEnd = totalDist - pathDist[i];
-
-    double accelLimitedSpeed = std::sqrt(2.0 * kMaxAccel * distFromStart);
-    double decelLimitedSpeed = std::sqrt(2.0 * kMaxDecel * distToEnd);
-
-    double maxVelThisPose = kMaxModuleSpeed;
-    if (i > 0) {
-      double dx = poses[i].X().value() - poses[i - 1].X().value();
-      double dy = poses[i].Y().value() - poses[i - 1].Y().value();
-      double vx = dx / kDtSec;
-      double vy = dy / kDtSec;
-      double maxComponentSpeed = std::max(std::abs(vx), std::abs(vy));
-      if (maxComponentSpeed > 0.001) {
-        double speedRatio = std::sqrt(vx * vx + vy * vy) / maxComponentSpeed;
-        maxVelThisPose = kMaxModuleSpeed / speedRatio;
+auto drawObstacles(cv::Mat& canvas,
+                   const std::vector<std::vector<Node>>& grid) {
+  for (int y = 0; y < static_cast<int>(grid.size()); ++y) {
+    for (int x = 0; x < static_cast<int>(grid[0].size()); ++x) {
+      if (grid[y][x].obstacle) {
+        cv::rectangle(
+            canvas,
+            cv::Rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE),
+            cv::Scalar(0, 0, 0), cv::FILLED);
       }
     }
-
-    targetSpeed[i] =
-        std::min({accelLimitedSpeed, decelLimitedSpeed, maxVelThisPose});
   }
+}
 
-  double currentVx = 0.0;
-  double currentVy = 0.0;
-  double currentX = poses[0].X().value();
-  double currentY = poses[0].Y().value();
-  double currentSpeed = 0.0;
+auto drawPath(cv::Mat& canvas, std::vector<std::pair<double, double>> path,
+              const cv::Scalar& color) {
 
-  for (size_t i = 0; i < poses.size(); ++i) {
-    frc::Pose2d actualPose{units::meter_t{currentX}, units::meter_t{currentY},
-                           poses[i].Rotation()};
-    poseLog.Append(actualPose, t);
-
-    double desiredSpeed = targetSpeed[i];
-
-    double dvMag = desiredSpeed - currentSpeed;
-    double accelMag = 0.0;
-
-    if (dvMag > 0) {
-      accelMag = std::min(dvMag / kDtSec, kMaxAccel);
-    } else {
-      accelMag = std::max(dvMag / kDtSec, -kMaxDecel);
-    }
-
-    currentSpeed += accelMag * kDtSec;
-    currentSpeed = std::max(0.0, currentSpeed);
-
-    if (i > 0) {
-      double dx = poses[i].X().value() - poses[i - 1].X().value();
-      double dy = poses[i].Y().value() - poses[i - 1].Y().value();
-      double segDist = std::sqrt(dx * dx + dy * dy);
-
-      double dirX = segDist > 0.001 ? dx / segDist : 0.0;
-      double dirY = segDist > 0.001 ? dy / segDist : 0.0;
-
-      double newVx = dirX * currentSpeed;
-      double newVy = dirY * currentSpeed;
-
-      double ax = (newVx - currentVx) / kDtSec;
-      double ay = (newVy - currentVy) / kDtSec;
-
-      currentVx = newVx;
-      currentVy = newVy;
-
-      currentX += currentVx * kDtSec;
-      currentY += currentVy * kDtSec;
-
-      double accelMagTotal = std::sqrt(ax * ax + ay * ay);
-
-      accelXLog.Append(ax, t);
-      accelYLog.Append(ay, t);
-      accelMagLog.Append(accelMagTotal, t);
-      velXLog.Append(currentVx, t);
-      velYLog.Append(currentVy, t);
-    }
-
-    t += kDtUs;
+  for (size_t i = 1; i < path.size(); ++i) {
+    cv::line(canvas, cv::Point(path[i - 1].first, path[i - 1].second),
+             cv::Point(path[i].first, path[i].second), color, 2);
   }
+}
 
-  log.Flush();
+}  // namespace pathing
+
+auto main() -> int {
+  const auto& navgrid = pathing::GetGrid("/root/bos/constants/navgrid.json");
+  const auto& grid = navgrid.grid;
+  const auto& nodeSizeMeters = navgrid.nodeSizeMeters;
+  cv::Mat canvas(static_cast<int>(grid.size()) * pathing::CELL_SIZE,
+                 static_cast<int>(grid[0].size()) * pathing::CELL_SIZE,
+                 CV_8UC3);
+  canvas.setTo(cv::Scalar(255, 255, 255));
+
+  pathing::Point start = {.x = 10, .y = 6};
+  pathing::Point end = {.x = 46, .y = 12};
+
+  auto expectedPath =
+      pathing::generateExpectedPath(grid, start, end, nodeSizeMeters);
+  auto noisyPath = pathing::simulateRobotPath(grid, start, end, nodeSizeMeters);
+
+  pathing::drawObstacles(canvas, grid);
+  pathing::drawPath(canvas, expectedPath, cv::Scalar(0, 0, 255));
+  pathing::drawPath(canvas, noisyPath, cv::Scalar(255, 0, 0));
+
+  cv::imwrite("/tmp/xlo.png", canvas);
   return 0;
 }

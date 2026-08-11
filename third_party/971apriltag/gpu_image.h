@@ -1,5 +1,7 @@
-#pragma once
+#ifndef FRC_ORIN_GPU_IMAGE_H_
+#define FRC_ORIN_GPU_IMAGE_H_
 
+#include <cstddef>
 template <typename T>
 struct GpuImage {
   typedef T type;
@@ -9,3 +11,5 @@ struct GpuImage {
   // Step is in elements, not bytes.
   size_t step;
 };
+
+#endif  // FRC_ORIN_GPU_IMAGE_H_

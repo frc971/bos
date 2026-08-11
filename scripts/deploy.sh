@@ -5,11 +5,16 @@ cmake --build build
 HOST="$1"
 
 if [ -z "$HOST" ]; then
-  echo "Usage: $0 <host>"
+  echo "Usage: $0 <host> <restart>"
   exit 1
 fi
 
-./scripts/copy_to_bin.sh
+RESTART="$2"
+if [ "$RESTART" == "true" ]; then
+  RESTART=true
+else
+  RESTART=false
+fi
 
 target=$(echo "$HOST" | sed 's/nvidia@//g')
 
@@ -25,6 +30,9 @@ while true; do
   sleep 1
 done
 
-rsync -avz --delete bin "$HOST":/bos
-rsync -avz constants "$HOST":/bos
-ssh $HOST 'sudo systemctl restart bos.service'
+rsync -avh --delete build/bin "$HOST":/bos
+rsync -avh --delete build/lib "$HOST":/bos
+rsync -avh --delete constants "$HOST":/bos
+if [ "$RESTART" = true ]; then
+  ssh "$HOST" 'sudo systemctl restart bos.service'
+fi

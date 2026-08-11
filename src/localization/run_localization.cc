@@ -6,30 +6,34 @@
 #include <wpi/DataLogWriter.h>
 #include <utility>
 #include "src/camera/cscore_streamer.h"
+#include "src/camera/cv_camera.h"
 #include "src/localization/gpu_apriltag_detector.h"
+#include "src/localization/networktable_sender.h"
+#include "src/localization/opencv_apriltag_detector.h"
 #include "src/localization/position_sender.h"
 #include "src/localization/position_solver.h"
+#include "src/localization/square_solver.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/timer.h"
 
 namespace localization {
 
-// TODO remove extrinsics
-void RunLocalization(camera::CameraSource& source,
-                     std::unique_ptr<localization::IAprilTagDetector> detector,
-                     std::unique_ptr<localization::IPositionSolver> solver,
-                     const std::string& extrinsics, std::optional<uint> port,
-                     bool verbose) {
-  localization::PositionSender position_sender(source.GetName(), verbose);
+void RunLocalization(
+    const std::stop_token& stop_token,
+    std::unique_ptr<camera::CameraSource> source,
+    std::unique_ptr<localization::IAprilTagDetector> detector,
+    std::unique_ptr<localization::IPositionSolver> solver,
+    std::vector<std::unique_ptr<localization::IPositionSender>> senders,
+    std::optional<uint> port, bool verbose) {
 
   std::optional<camera::CscoreStreamer> streamer =
       port.has_value() ? std::make_optional(camera::CscoreStreamer(
-                             source.GetName(), port.value(), 30, 1080, 1080))
+                             source->GetName(), port.value(), 30, 1080, 1080))
                        : std::nullopt;
 
-  while (true) {
-    utils::Timer timer(source.GetName(), verbose);
-    camera::timestamped_frame_t timestamped_frame = source.Get();
+  while (!stop_token.stop_requested()) {
+    utils::Timer timer(source->GetName(), verbose);
+    camera::timestamped_frame_t timestamped_frame = source->Get();
     if (streamer.has_value()) {
       streamer->WriteFrame(timestamped_frame.frame);
     }
@@ -37,44 +41,28 @@ void RunLocalization(camera::CameraSource& source,
         detector->GetTagDetections(timestamped_frame);
     std::vector<position_estimate_t> position_estimates =
         solver->EstimatePosition(tag_detections, false);
-    position_sender.Send(position_estimates, timer.Stop());
+    const double latency = timer.Stop();
+    for (auto& position_estimate : position_estimates) {
+      position_estimate.latency = latency;
+    }
+    for (auto& s : senders) {
+      s->Send(position_estimates);
+    }
   }
 }
 
-void RunLocalizationSimulation(
-    camera::CameraSource& source,
-    std::unique_ptr<localization::IAprilTagDetector> detector,
-    std::unique_ptr<localization::IPositionSolver> solver,
-    const std::string& extrinsics, std::optional<uint> port, bool verbose) {
-  std::error_code ec;
-  auto log =
-      std::make_unique<wpi::log::DataLogWriter>("localization_log.wpilog", ec);
-  if (ec) {
-    std::cerr << "Failed to open log: " << ec.message() << std::endl;
-    return;
-  }
-  log->AddStructSchema<frc::Translation3d>(0);
-  log->AddStructSchema<frc::Rotation3d>(0);
-  log->AddStructSchema<frc::Pose3d>(0);
-  wpi::log::StructLogEntry<frc::Pose3d> pose_log(*log, "/localization/pose");
-  while (true) {
-    camera::timestamped_frame_t timestamped_frame = source.Get();
-    double timestamp = timestamped_frame.timestamp;
-    if (timestamped_frame.invalid) {
-      std::cout << "Stopping log" << std::endl;
-      log->Stop();
-      std::cout << "Stopped log" << std::endl;
-      return;
+void RunJointLocalization(
+    const std::stop_token& stop_token, MultiCameraDetector& detector_source,
+    std::unique_ptr<localization::IJointPositionSolver> solver,
+    std::unique_ptr<localization::IPositionSender> sender, bool verbose) {
+  while (!stop_token.stop_requested()) {
+    auto detections = detector_source.GetTagDetections();
+    std::optional<position_estimate_t> estimated_pose =
+        solver->EstimatePosition(detections);
+    if (!estimated_pose.has_value()) {
+      continue;
     }
-    std::cout << "Reading from timestamp: " << timestamp << std::endl;
-    std::vector<localization::tag_detection_t> tag_detections =
-        detector->GetTagDetections(timestamped_frame);
-    std::vector<position_estimate_t> position_estimates =
-        solver->EstimatePosition(tag_detections, false);
-    auto log_time = static_cast<int64_t>(timestamp * 1e6);
-    for (const auto& estimate : position_estimates) {
-      pose_log.Append(estimate.pose, log_time);
-    }
+    sender->Send(estimated_pose.value());
   }
 }
 

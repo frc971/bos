@@ -3,12 +3,18 @@
 #include "nlohmann/json.hpp"
 #include "src/camera/camera_constants.h"
 #include "src/localization/position_solver.h"
+#include "src/localization/square_solver.h"
 
 static const uint kmax_tags = 50;
 
 using json = nlohmann::json;
 
 namespace localization {
+
+using ambiguous_estimate_t = struct AmbiguousEstimate {
+  position_estimate_t pos1;
+  std::optional<position_estimate_t> pos2;
+};
 
 class MultiTagSolver : public IPositionSolver {
  public:
@@ -23,12 +29,16 @@ class MultiTagSolver : public IPositionSolver {
   auto EstimatePosition(const std::vector<tag_detection_t>& detections,
                         bool reject_far_tags = true)
       -> std::vector<position_estimate_t> override;
+  auto EstimatePositionAmbiguous(const std::vector<tag_detection_t>& detections,
+                                 bool reject_far_tags = true)
+      -> std::optional<ambiguous_estimate_t>;
 
  private:
   cv::Mat camera_matrix_;
   cv::Mat distortion_coefficients_;
   cv::Mat camera_to_robot_;
   std::array<std::optional<std::array<cv::Point3d, 4>>, kmax_tags> tag_corners_;
+  SquareSolver single_tag_solver;
   static constexpr double kvariance_scalar_ = 0.7;
   static constexpr double kvariance_min_ = 1.0;
 };

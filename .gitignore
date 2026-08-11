@@ -16,4 +16,7 @@ build
 logs/
 *.wpilog
 bos_logs/
+wpilib-install
+*.jpg
+interesting_frames/
 *build*/
