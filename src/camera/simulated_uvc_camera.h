@@ -5,12 +5,42 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include "absl/status/status.h"
+#include "libuvc/libuvc.h"
 #include "src/camera/camera.h"
 #include "src/camera/camera_constants.h"
 
 namespace camera {
+
+enum class SimulatedUVCFrameFault {
+  kNone,
+  kEmpty,
+  kCorruptJpeg,
+  kUnsupportedFormat,
+};
+
+class SimulatedUVCFrameSource {
+ public:
+  explicit SimulatedUVCFrameSource(std::filesystem::path image_directory,
+                                   absl::Status& status);
+  [[nodiscard]] auto empty() const -> bool;
+  [[nodiscard]] auto size() const -> std::size_t;
+  void Rewind();
+  auto NextFrame(SimulatedUVCFrameFault fault = SimulatedUVCFrameFault::kNone)
+      -> uvc_frame_t;
+  auto EmptyFrame() -> uvc_frame_t;
+  void DeliverNext(uvc_frame_callback_t* callback, void* callback_user,
+                   SimulatedUVCFrameFault fault =
+                       SimulatedUVCFrameFault::kNone);
+
+ private:
+  std::vector<std::filesystem::path> image_paths_;
+  std::vector<unsigned char> encoded_frame_;
+  std::size_t cursor_ = 0;
+  std::uint32_t sequence_ = 0;
+};
 
 struct SimulatedUVCInitializationFaults {
   double context = 0.0;

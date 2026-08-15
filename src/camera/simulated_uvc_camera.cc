@@ -1,7 +1,9 @@
 #include "src/camera/simulated_uvc_camera.h"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cctype>
 #include <cmath>
 #include <condition_variable>
 #include <cstdlib>
@@ -18,6 +20,125 @@
 #include <opencv2/imgcodecs.hpp>
 
 namespace camera {
+namespace {
+
+auto NumericTimestamp(const std::filesystem::path& path) -> double {
+  const std::string stem = path.stem().string();
+  std::size_t consumed = 0;
+  try {
+    const double value = std::stod(stem, &consumed);
+    return consumed == stem.size() ? value
+                                   : std::numeric_limits<double>::infinity();
+  } catch (const std::exception&) {
+    return std::numeric_limits<double>::infinity();
+  }
+}
+
+auto IsJpeg(const std::filesystem::path& path) -> bool {
+  std::string extension = path.extension().string();
+  std::transform(extension.begin(), extension.end(), extension.begin(),
+                 [](unsigned char character) {
+                   return static_cast<char>(std::tolower(character));
+                 });
+  return extension == ".jpg" || extension == ".jpeg";
+}
+
+auto ReadBytes(const std::filesystem::path& path,
+               std::vector<unsigned char>* bytes) -> bool {
+  std::ifstream input(path, std::ios::binary | std::ios::ate);
+  if (!input) return false;
+  const auto length = input.tellg();
+  if (length < 0) return false;
+  bytes->resize(static_cast<std::size_t>(length));
+  input.seekg(0);
+  return bytes->empty() || static_cast<bool>(input.read(
+                               reinterpret_cast<char*>(bytes->data()),
+                               static_cast<std::streamsize>(bytes->size())));
+}
+
+}  // namespace
+
+SimulatedUVCFrameSource::SimulatedUVCFrameSource(
+    std::filesystem::path image_directory, absl::Status& status) {
+  try {
+    for (const auto& entry :
+         std::filesystem::directory_iterator(image_directory)) {
+      if (entry.is_regular_file() &&
+          std::isfinite(NumericTimestamp(entry.path()))) {
+        image_paths_.push_back(entry.path());
+      }
+    }
+  } catch (const std::filesystem::filesystem_error& error) {
+    status = absl::InvalidArgumentError(error.what());
+    return;
+  }
+  std::sort(image_paths_.begin(), image_paths_.end(),
+            [](const auto& left, const auto& right) {
+              return NumericTimestamp(left) < NumericTimestamp(right);
+            });
+  if (image_paths_.empty()) {
+    status = absl::NotFoundError("image directory contains no files");
+    return;
+  }
+  status = absl::OkStatus();
+}
+
+auto SimulatedUVCFrameSource::empty() const -> bool {
+  return cursor_ >= image_paths_.size();
+}
+
+auto SimulatedUVCFrameSource::size() const -> std::size_t {
+  return image_paths_.size();
+}
+
+void SimulatedUVCFrameSource::Rewind() { cursor_ = 0; }
+
+auto SimulatedUVCFrameSource::NextFrame(SimulatedUVCFrameFault fault)
+    -> uvc_frame_t {
+  if (empty()) return EmptyFrame();
+  const auto path = image_paths_[cursor_++];
+  const cv::Mat image = cv::imread(path.string(), cv::IMREAD_COLOR);
+  encoded_frame_.clear();
+  if (IsJpeg(path)) {
+    (void)ReadBytes(path, &encoded_frame_);
+  } else if (!image.empty()) {
+    cv::imencode(".jpg", image, encoded_frame_);
+  }
+  if (fault == SimulatedUVCFrameFault::kEmpty) return EmptyFrame();
+  if (fault == SimulatedUVCFrameFault::kCorruptJpeg &&
+      encoded_frame_.size() > 3U) {
+    encoded_frame_.resize(3U);
+  }
+  uvc_frame_t frame{};
+  frame.data = encoded_frame_.data();
+  frame.data_bytes = encoded_frame_.size();
+  frame.width = image.cols;
+  frame.height = image.rows;
+  frame.frame_format =
+      fault == SimulatedUVCFrameFault::kUnsupportedFormat
+          ? static_cast<decltype(frame.frame_format)>(255)
+          : UVC_COLOR_FORMAT_MJPEG;
+  frame.sequence = sequence_++;
+  return frame;
+}
+
+void SimulatedUVCFrameSource::DeliverNext(uvc_frame_callback_t* callback,
+                                          void* callback_user,
+                                          SimulatedUVCFrameFault fault) {
+  uvc_frame_t frame = NextFrame(fault);
+  callback(&frame, callback_user);
+}
+
+auto SimulatedUVCFrameSource::EmptyFrame() -> uvc_frame_t {
+  encoded_frame_ = {0xff, 0xd8, 0xff};
+  uvc_frame_t frame{};
+  frame.data = encoded_frame_.data();
+  frame.data_bytes = encoded_frame_.size();
+  frame.frame_format = UVC_COLOR_FORMAT_MJPEG;
+  frame.sequence = sequence_++;
+  return frame;
+}
+
 namespace {
 
 constexpr std::size_t kTransferBufferCount = 100;

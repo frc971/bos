@@ -28,9 +28,25 @@ target_link_libraries(simulated_uvc_camera_test PRIVATE
   GTest::gtest_main
 )
 
+add_executable(uvc_camera_mock_test
+  uvc_camera_mock_test.cc
+  ${CMAKE_SOURCE_DIR}/src/camera/uvc_camera.cc
+)
+target_compile_definitions(uvc_camera_mock_test PRIVATE
+  BOS_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+)
+target_link_libraries(uvc_camera_mock_test PRIVATE
+  SimulatedUVCCamera
+  GTest::gmock
+  GTest::gtest_main
+  absl::status
+  utils
+)
+
 gtest_discover_tests(joint_solve_test)
 gtest_discover_tests(multi_tag_test)
 gtest_discover_tests(square_solve_test)
 gtest_discover_tests(general_solver_test)
 gtest_discover_tests(simulated_uvc_camera_test)
+gtest_discover_tests(uvc_camera_mock_test)
 # gtest_discover_tests(pathing_test)
