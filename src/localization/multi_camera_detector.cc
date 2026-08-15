@@ -39,8 +39,8 @@ MultiCameraDetector::MultiCameraDetector(
         case camera::CameraType::UVC: {
           absl::Status status;
           cameras_.push_back(std::make_unique<camera::UVCCamera>(
-              camera_constants_[i], status, camera_log_dest,
-              camera_constants_[i].log_frequency.value_or(0)));
+              camera_constants_[i], status, camera_constants_[i].rgb,
+              camera_log_dest, camera_constants_[i].log_frequency.value_or(0)));
           if (!status.ok()) {
             LOG(WARNING) << "Unable to create uvc camera: " << status.message();
           }

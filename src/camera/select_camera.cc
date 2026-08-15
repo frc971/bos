@@ -52,7 +52,8 @@ auto SelectCameraConfig(const std::string& choice,
         LOG(INFO) << "Initializing via uvc";
         absl::Status status;
         auto camera =
-            std::make_unique<UVCCamera>(camera_constants.at(choice), status);
+            std::make_unique<UVCCamera>(camera_constants.at(choice), status,
+                                        camera_constants.at(choice).rgb);
         if (!status.ok()) {
           LOG(FATAL) << "Failed to select camera via uvc: " << status.message();
         }

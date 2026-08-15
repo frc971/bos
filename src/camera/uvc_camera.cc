@@ -1,5 +1,4 @@
 #include "src/camera/uvc_camera.h"
-#include <opencv2/highgui/highgui_c.h>
 #include <filesystem>
 #include <fstream>
 #include <opencv2/opencv.hpp>
@@ -31,28 +30,53 @@ void callback(uvc_frame_t* frame, void* ptr) {
             file.write(data, frame->data_bytes);
           }
         }
-        std::vector<uchar> buffer(data, data + frame->data_bytes);
-        ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
+
+        // Kept purely because this was done during season. prob suboptimal but it's proven
+        if (!ptr_->rgb_) {
+          std::vector<uchar> buffer(data, data + frame->data_bytes);
+          ptr_->frame_buffer.frame = cv::imdecode(buffer, cv::IMREAD_GRAYSCALE);
+        } else {
+          ptr_->frame_buffer.frame.create(frame->height, frame->width, CV_8UC3);
+
+          uvc_frame_t decoded{};
+          decoded.data = ptr_->frame_buffer.frame.data;
+          decoded.data_bytes = ptr_->frame_buffer.frame.total() *
+                               ptr_->frame_buffer.frame.elemSize();
+          decoded.library_owns_data = 0;
+
+          const uvc_error_t ret = uvc_mjpeg2rgb(frame, &decoded);
+          if (ret != 0) {
+            LOG(WARNING) << "Failed to decode RGB from camera "
+                         << ptr_->camera_constant_.name << " with error code "
+                         << ret;
+          }
+        }
         break;
       }
       case UVC_COLOR_FORMAT_YUYV: {
-        uvc_frame_t* bgr = uvc_allocate_frame(frame->width * frame->height * 3);
-        if (!bgr) {
+        const size_t bytes_per_pixel = ptr_->rgb_ ? 3 : 1;
+        uvc_frame_t* decoded =
+            uvc_allocate_frame(frame->width * frame->height * bytes_per_pixel);
+        if (!decoded) {
           LOG(WARNING) << "Camera " << ptr_->camera_constant_.name
                        << " failed to allocate ";
           ptr_->mutex_.unlock();
           return;
         }
-        uvc_error_t ret = uvc_yuyv2bgr(frame, bgr);
-        if (ret != 0) {
-          LOG(WARNING) << "YUYV failed to convert to BGR";
+        const uvc_error_t ret = ptr_->rgb_ ? uvc_yuyv2rgb(frame, decoded)
+                                           : uvc_yuyv2y(frame, decoded);
+        if (ret != UVC_SUCCESS) {
+          LOG(WARNING) << "YUYV failed to convert to "
+                       << (ptr_->rgb_ ? "RGB" : "grayscale") << ": "
+                       << uvc_strerror(ret);
+          ptr_->frame_buffer.frame.release();
+        } else {
+          const int mat_type = ptr_->rgb_ ? CV_8UC3 : CV_8UC1;
+          cv::Mat decoded_image(decoded->height, decoded->width, mat_type,
+                                decoded->data, decoded->step);
+          decoded_image.copyTo(ptr_->frame_buffer.frame);
         }
-        IplImage* ipl_image;
-        ipl_image = cvCreateImageHeader(cvSize(bgr->width, bgr->height),
-                                        IPL_DEPTH_8U, 3);
-        cvSetData(ipl_image, bgr->data, bgr->width * 3);
-        ptr_->frame_buffer.frame = cv::cvarrToMat(ipl_image, true);
-        uvc_free_frame(bgr);
+        uvc_free_frame(decoded);
         break;
       }
       default:
@@ -75,10 +99,11 @@ void callback(uvc_frame_t* frame, void* ptr) {
 }
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
-                     absl::Status& status, std::optional<std::string> log_path,
-                     int log_frequency)
+                     absl::Status& status, bool rgb,
+                     std::optional<std::string> log_path, int log_frequency)
     : camera_constant_(camera_constant),
       log_path_(std::move(log_path)),
+      rgb_(rgb),
       log_frequency_(log_frequency) {
 
   if (log_path_.has_value()) {
