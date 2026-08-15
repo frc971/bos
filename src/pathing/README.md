@@ -24,7 +24,7 @@ BFS(grid, start, goal):
 ```
 
 Notes:
-- we use a secondary bfs for finding the first reachable free cell near start
+- We use a secondary BFS to find the first reachable free cell near the start.
 
 ## Spline
 ### Knot Vector
@@ -50,12 +50,12 @@ Where:
 - $C(t)$ is the point on the spline at parameter $t$
 - $t$ is the position along the spline parameter range
 - $n$ is the number of control points
-- $i$ is the control piont index
-- $N_{\I,p}(t)$ is the basis value for control point $i$ at $t$
+- $i$ is the control point index
+- $N_{i,p}(t)$ is the basis value for control point $i$ at $t$
 - $p$ is the spline degree
 - $P_i$ is control point $i$
 	- this is coming from bfs
-The basis functions determine how strongly each control point influences the spline at a given parameter value. Each basis value is multipleid by its coresponding control point, and the results are added to get the final point on the spline.
+The basis functions determine how strongly each control point influences the spline at a given parameter value. Each basis value is multiplied by its corresponding control point, and the results are added to get the final point on the spline.
 
 ### Finite differences
 $$
@@ -72,7 +72,7 @@ Where:
 - $u_i$ is knot at index $i$
 - $p$ is the spline degree
 - $k$ is the derivative order
-Finite differences are used to find how the control points change relative to the knot parameter. We take the diffrence between two neighboring control points and divide it by the distance between their knots. This creates new control points that describe the splines direction and rate of change, rather then its position. The parameter isnt physical time, but it can later be used to calculate the tangent, velocity, or acceleration.
+Finite differences are used to find how the control points change relative to the knot parameter. We take the difference between two neighboring control points and divide it by the distance between their knots. This creates new control points that describe the spline’s direction and rate of change, rather than its position. The parameter isn't physical time, but it can later be used to calculate the tangent, velocity, or acceleration.
 
 ### Evaluate positioin
 $$
@@ -107,7 +107,7 @@ This evaluates the spline’s derivative with respect to its parameter, giving t
 
 1. Find the closest velocity profile point to the current position of the robot
 2. Take that feedforward velocity from the profile point and drive along it
-3. P controller (from PID) keep the robot more on track so it doens't drift too far off the path
-4. if the robot is too far off the path then we replan to make sure that we don't get permanently offset and crash
-5. stop when the robot is within target radius
+3. A P controller (from PID) keeps the robot more on track so it doesn't drift too far off the path
+4. If the robot is too far off the path, we replan to make sure we don't get permanently offset and crash
+5. Stop when the robot is within the target radius
 	- if this isn't accurate enough, we can also linearly approach the target point when we get into a circle around it
