@@ -3,6 +3,7 @@
 #include "src/camera/camera.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
+#include "src/camera/simulated_uvc_camera.h"
 #include "src/camera/uvc_camera.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/opencv_apriltag_detector.h"
@@ -32,8 +33,9 @@ MultiCameraDetector::MultiCameraDetector(
     const std::string camera_log_dest =
         fmt::format("{}/{}", log_path, camera_constants_[i].name);
     if (image_paths.has_value()) {
-      cameras_.push_back(std::make_unique<camera::DiskCamera>(
-          image_paths.value()[i], camera_constants_[i], disk_replay_speed));
+      absl::Status status;
+      cameras_.push_back(std::make_unique<camera::test::SimulatedUvcCamera>(
+          image_paths.value()[i], camera_constants_[i], status));
     } else {
       switch (camera_constants_[i].camera_type) {
         case camera::CameraType::UVC: {

@@ -96,4 +96,5 @@ target_link_libraries(camera INTERFACE
   CameraConstants
   MultiCameraSource
   UVCCamera
+  SimulatedUVCCamera
 )

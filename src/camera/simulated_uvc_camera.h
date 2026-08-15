@@ -26,8 +26,7 @@ class MockUvcApi {
   MOCK_METHOD(void, UnrefDevice, (uvc_device_t*));
   MOCK_METHOD(uvc_error_t, GetStreamControl,
               (uvc_stream_ctrl_t*, int width, int height, int fps));
-  MOCK_METHOD(uvc_error_t, StartStreaming,
-              (uvc_frame_callback_t*, void* user));
+  MOCK_METHOD(uvc_error_t, StartStreaming, (uvc_frame_callback_t*, void* user));
   MOCK_METHOD(void, StopStreaming, (uvc_device_handle_t*));
 
   auto DeliverJpeg(std::vector<unsigned char>& bytes) -> bool;
