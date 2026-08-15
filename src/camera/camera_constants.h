@@ -26,7 +26,6 @@ using camera_constant_t = struct CameraConstant {
   std::optional<double> stream_ratio = std::nullopt;
   std::optional<uint> port = std::nullopt;
   std::optional<uint> streamer_fps = std::nullopt;
-  std::optional<uint> log_frequency = std::nullopt;
   DetectorType detector_type = DetectorType::INVALID;
   CameraType camera_type = CameraType::INVALID;
 
@@ -49,7 +48,6 @@ using camera_constant_t = struct CameraConstant {
     print("Exposure", c.exposure);
     print("Brightness", c.brightness);
     print("Sharpness", c.sharpness);
-    print("Log Frequency", c.log_frequency);
     os << std::endl;
 
     return os;

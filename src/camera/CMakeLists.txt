@@ -76,17 +76,6 @@ target_link_libraries(UVCCamera PRIVATE
   utils
 )
 
-add_library(SimulatedUVCCamera)
-target_sources(SimulatedUVCCamera
-  PRIVATE
-    simulated_uvc_camera.cc
-)
-target_link_libraries(SimulatedUVCCamera
-  PUBLIC
-    absl::status
-    utils
-)
-
 add_library(camera INTERFACE)
 target_link_libraries(camera INTERFACE
   CscoreStreamer
@@ -97,5 +86,4 @@ target_link_libraries(camera INTERFACE
   CameraConstants
   MultiCameraSource
   UVCCamera
-  SimulatedUVCCamera
 )
