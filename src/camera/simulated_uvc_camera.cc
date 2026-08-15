@@ -1,4 +1,5 @@
 #include "src/camera/simulated_uvc_camera.h"
+#include "src/camera/uvc_frame_callback.h"
 
 #include <atomic>
 #include <chrono>
@@ -39,8 +40,6 @@ enum class FaultKind : std::uint64_t {
   kEmpty,
   kOversized,
   kUnsupported,
-  kSyntheticInvalid,
-  kDeliveryException,
   kFatalAbort,
   kStallDuration,
   kProcessingDuration,
@@ -111,23 +110,11 @@ auto ValidateConfig(const camera_constant_t& camera,
   const auto& init = config.initialization_faults;
   const auto& frame = config.frame_faults;
   const double probabilities[] = {
-      init.context,
-      init.discovery,
-      init.open,
-      init.negotiation,
-      init.streaming_start,
-      frame.timeout,
-      frame.temporary_stall,
-      frame.permanent_stall,
-      frame.overflow,
-      frame.transfer_error,
-      frame.no_device,
-      frame.corruption,
-      frame.empty_frame,
-      frame.oversized_frame,
-      frame.unsupported_format,
-      frame.synthetic_invalid_delivery,
-      frame.delivery_exception,
+      init.context,          init.discovery,        init.open,
+      init.negotiation,      init.streaming_start,  frame.timeout,
+      frame.temporary_stall, frame.permanent_stall, frame.overflow,
+      frame.transfer_error,  frame.no_device,       frame.corruption,
+      frame.empty_frame,     frame.oversized_frame, frame.unsupported_format,
       frame.fatal_abort,
   };
   for (double probability : probabilities) {
@@ -227,7 +214,8 @@ class SimulatedUVCCamera::State {
         std::vector<SourceFrame> frames)
       : camera_(std::move(camera)),
         config_(std::move(config)),
-        frames_(std::move(frames)) {}
+        frames_(std::move(frames)),
+        frame_receiver_(camera_) {}
 
   ~State() { Stop(); }
 
@@ -317,10 +305,6 @@ class SimulatedUVCCamera::State {
       stats_.sequence_gaps += sequence - consumed - 1U;
     }
     consumed_sequence_.store(sequence);
-    if (delivered_exception_) {
-      delivered_exception_ = false;
-      throw std::runtime_error("simulated UVC frame delivery exception");
-    }
     timestamped_frame_t result;
     delivered_frame_.frame.copyTo(result.frame);
     result.timestamp = delivered_frame_.timestamp;
@@ -346,8 +330,6 @@ class SimulatedUVCCamera::State {
     bool fid = false;
     bool eof = false;
     bool unsupported = false;
-    bool synthetic_invalid = false;
-    bool delivery_exception = false;
     double processing_delay_seconds = 0.0;
   };
 
@@ -356,8 +338,6 @@ class SimulatedUVCCamera::State {
     std::uint64_t sequence = 0;
     std::uint64_t source_index = 0;
     bool unsupported = false;
-    bool synthetic_invalid = false;
-    bool delivery_exception = false;
     double processing_delay_seconds = 0.0;
   };
 
@@ -372,8 +352,6 @@ class SimulatedUVCCamera::State {
     bool empty = false;
     bool oversized = false;
     bool unsupported = false;
-    bool synthetic_invalid = false;
-    bool delivery_exception = false;
     bool fatal_abort = false;
     std::chrono::duration<double> stall_duration{0.0};
     std::chrono::duration<double> processing_duration{0.0};
@@ -418,12 +396,6 @@ class SimulatedUVCCamera::State {
                                 faults.oversized_frame),
           .unsupported = Decision(frame.index, FaultKind::kUnsupported,
                                   faults.unsupported_format),
-          .synthetic_invalid =
-              Decision(frame.index, FaultKind::kSyntheticInvalid,
-                       faults.synthetic_invalid_delivery),
-          .delivery_exception =
-              Decision(frame.index, FaultKind::kDeliveryException,
-                       faults.delivery_exception),
           .fatal_abort =
               Decision(frame.index, FaultKind::kFatalAbort, faults.fatal_abort),
           .stall_duration = Duration(frame.index, FaultKind::kStallDuration,
@@ -512,17 +484,17 @@ class SimulatedUVCCamera::State {
       const bool corrupt = decisions.corruption;
       const bool oversized = decisions.oversized;
       const bool unsupported = decisions.unsupported;
-      const bool synthetic = decisions.synthetic_invalid;
-      const bool delivery_exception = decisions.delivery_exception;
-      for (bool injected : {empty, corrupt, oversized, unsupported, synthetic,
-                            delivery_exception}) {
+      for (bool injected : {empty, corrupt, oversized, unsupported}) {
         if (injected)
           AddFault();
       }
       if (empty)
         bytes.clear();
-      if (corrupt && !bytes.empty())
-        bytes.resize(bytes.size() / 3U);
+      // Preserve the transfer's shape while destroying the encoded payload.
+      // This reaches the production decoder as a normal MJPEG frame and is
+      // intentionally malformed in a way OpenCV rejects safely.
+      if (corrupt)
+        std::fill(bytes.begin(), bytes.end(), 0xa5U);
       if (oversized)
         bytes.resize(static_cast<std::size_t>(*camera_.max_frame_size) + 1U,
                      0xa5U);
@@ -545,8 +517,6 @@ class SimulatedUVCCamera::State {
         transfer.fid = fid;
         transfer.eof = packet + 1U == packet_count;
         transfer.unsupported = unsupported;
-        transfer.synthetic_invalid = synthetic;
-        transfer.delivery_exception = delivery_exception;
         transfer.processing_delay_seconds =
             decisions.processing_duration.count();
         std::unique_lock lock(pipeline_mutex_);
@@ -604,12 +574,8 @@ class SimulatedUVCCamera::State {
       if (!transfer.eof)
         continue;
       if (!oversized) {
-        CompletedFrame completed{assembly,
-                                 ++assembled_sequence_,
-                                 transfer.source_index,
-                                 transfer.unsupported,
-                                 transfer.synthetic_invalid,
-                                 transfer.delivery_exception,
+        CompletedFrame completed{assembly, ++assembled_sequence_,
+                                 transfer.source_index, transfer.unsupported,
                                  transfer.processing_delay_seconds};
         std::lock_guard lock(pipeline_mutex_);
         if (completed_ || callback_busy_) {
@@ -664,16 +630,35 @@ class SimulatedUVCCamera::State {
         std::lock_guard stats_lock(stats_mutex_);
         ++stats_.callback_drops;
       } else {
-        timestamped_frame_t decoded;
-        decoded.timestamp = Now();
-        decoded.invalid = completed.synthetic_invalid;
-        if (!completed.synthetic_invalid && !completed.unsupported &&
-            !completed.bytes.empty()) {
-          decoded.frame = cv::imdecode(completed.bytes, cv::IMREAD_GRAYSCALE);
+        uvc_frame_t frame{};
+        frame.data = completed.bytes.empty() ? nullptr : completed.bytes.data();
+        frame.data_bytes = completed.bytes.size();
+        frame.width = *camera_.frame_width;
+        frame.height = *camera_.frame_height;
+        frame.frame_format = completed.unsupported ? UVC_FRAME_FORMAT_UNKNOWN
+                                                   : UVC_FRAME_FORMAT_MJPEG;
+        frame.sequence = static_cast<std::uint32_t>(completed.sequence);
+        frame.library_owns_data = 0;
+
+        const auto before = frame_receiver_.Statistics();
+        UVCFrameCallback(&frame, &frame_receiver_);
+        const auto after = frame_receiver_.Statistics();
+        if (after.drops != before.drops) {
+          std::lock_guard stats_lock(stats_mutex_);
+          ++stats_.callback_drops;
+          frame_lock.unlock();
+          FinishCallback();
+          continue;
         }
-        if (completed.synthetic_invalid) {
-          decoded.frame.release();
-        } else if (completed.unsupported || decoded.frame.empty()) {
+        if (after.decode_failures != before.decode_failures) {
+          std::lock_guard stats_lock(stats_mutex_);
+          ++stats_.decode_failures;
+          frame_lock.unlock();
+          FinishCallback();
+          continue;
+        }
+        timestamped_frame_t decoded;
+        if (!frame_receiver_.CopyLatest(&decoded)) {
           std::lock_guard stats_lock(stats_mutex_);
           ++stats_.decode_failures;
           frame_lock.unlock();
@@ -681,7 +666,6 @@ class SimulatedUVCCamera::State {
           continue;
         }
         delivered_frame_ = std::move(decoded);
-        delivered_exception_ = completed.delivery_exception;
         delivered_sequence_.store(completed.sequence);
         frame_lock.unlock();
         delivered_cv_.notify_all();
@@ -718,6 +702,7 @@ class SimulatedUVCCamera::State {
   const camera_constant_t camera_;
   const SimulatedUVCCameraConfig config_;
   const std::vector<SourceFrame> frames_;
+  UVCFrameCallbackReceiver frame_receiver_;
   std::vector<FrameDecisions> frame_decisions_;
   std::size_t cursor_ = 0;
   std::uint64_t generation_ = 0;
@@ -738,7 +723,6 @@ class SimulatedUVCCamera::State {
 
   std::mutex frame_mutex_;
   timestamped_frame_t delivered_frame_;
-  bool delivered_exception_ = false;
   std::atomic<std::uint64_t> delivered_sequence_{0};
   std::atomic<std::uint64_t> consumed_sequence_{0};
 

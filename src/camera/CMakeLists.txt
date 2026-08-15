@@ -65,13 +65,23 @@ target_link_libraries(MultiCameraSource PRIVATE
   utils
 )
 
+add_library(UVCFrameCallback)
+target_sources(UVCFrameCallback
+  PRIVATE
+    uvc_frame_callback.cc
+)
+target_link_libraries(UVCFrameCallback PRIVATE
+  uvc
+  utils
+)
+
 add_library(UVCCamera)
 target_sources(UVCCamera
   PRIVATE
     uvc_camera.cc
 )
 target_link_libraries(UVCCamera PRIVATE
-  uvc
+  UVCFrameCallback
   absl::status
   utils
 )
@@ -84,6 +94,7 @@ target_sources(SimulatedUVCCamera
 target_link_libraries(SimulatedUVCCamera
   PUBLIC
     absl::status
+    UVCFrameCallback
     utils
 )
 

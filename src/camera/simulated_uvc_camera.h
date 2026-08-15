@@ -31,8 +31,6 @@ struct SimulatedUVCFrameFaults {
   double empty_frame = 0.0;
   double oversized_frame = 0.0;
   double unsupported_format = 0.0;
-  double synthetic_invalid_delivery = 0.0;
-  double delivery_exception = 0.0;
   double fatal_abort = 0.0;
 };
 

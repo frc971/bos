@@ -1,7 +1,5 @@
 #include "src/camera/uvc_camera.h"
-#include <opencv2/highgui/highgui_c.h>
 #include <filesystem>
-#include <fstream>
 #include <opencv2/opencv.hpp>
 #include "absl/status/status.h"
 #include "src/utils/pch.h"
@@ -11,75 +9,12 @@ namespace camera {
 const cv::Mat UVCCamera::backup_image_ =
     cv::imread("/bos/constants/dont_worry_about_it.jpg");
 
-void callback(uvc_frame_t* frame, void* ptr) {
-  auto ptr_ = static_cast<UVCCamera*>(ptr);
-  if (ptr_->mutex_.try_lock()) {
-    switch (frame->frame_format) {
-      case UVC_COLOR_FORMAT_MJPEG: {
-        char* data = static_cast<char*>(frame->data);
-        int frame_index = frame->sequence;
-        if (ptr_->log_path_.has_value() && ptr_->log_frequency_ > 0 &&
-            frame_index % ptr_->log_frequency_ == 0) {
-          const std::filesystem::path file_path =
-              std::filesystem::path(*ptr_->log_path_) /
-              (ptr_->camera_constant_.name + "_frame_" +
-               std::to_string(frame_index) + ".jpg");
-          std::ofstream file(file_path, std::ios::binary);
-          if (!file) {
-            LOG(WARNING) << "Failed to open camera frame log " << file_path;
-          } else {
-            file.write(data, frame->data_bytes);
-          }
-        }
-        std::vector<uchar> buffer(data, data + frame->data_bytes);
-        ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
-        break;
-      }
-      case UVC_COLOR_FORMAT_YUYV: {
-        uvc_frame_t* bgr = uvc_allocate_frame(frame->width * frame->height * 3);
-        if (!bgr) {
-          LOG(WARNING) << "Camera " << ptr_->camera_constant_.name
-                       << " failed to allocate ";
-          ptr_->mutex_.unlock();
-          return;
-        }
-        uvc_error_t ret = uvc_yuyv2bgr(frame, bgr);
-        if (ret != 0) {
-          LOG(WARNING) << "YUYV failed to convert to BGR";
-        }
-        IplImage* ipl_image;
-        ipl_image = cvCreateImageHeader(cvSize(bgr->width, bgr->height),
-                                        IPL_DEPTH_8U, 3);
-        cvSetData(ipl_image, bgr->data, bgr->width * 3);
-        ptr_->frame_buffer.frame = cv::cvarrToMat(ipl_image, true);
-        uvc_free_frame(bgr);
-        break;
-      }
-      default:
-        LOG(WARNING) << "Unknown frame format";
-        break;
-    }
-    if (ptr_->frame_buffer.frame.empty()) {
-      LOG(WARNING) << "Failed to decode frame from camera "
-                   << ptr_->camera_constant_.name;
-      ptr_->mutex_.unlock();
-      return;
-    }
-    ptr_->frame_buffer.invalid = false;
-    ptr_->frame_buffer.timestamp =
-        frc::Timer::GetFPGATimestamp()
-            .to<double>();  // TODO: Use more accurate timestamp
-    ptr_->frame_index_ = frame->sequence;
-    ptr_->mutex_.unlock();
-  }
-}
-
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
                      absl::Status& status, std::optional<std::string> log_path,
                      int log_frequency)
     : camera_constant_(camera_constant),
       log_path_(std::move(log_path)),
-      log_frequency_(log_frequency) {
+      frame_receiver_(camera_constant_, log_path_, log_frequency) {
 
   if (log_path_.has_value()) {
     std::error_code error;
@@ -135,57 +70,76 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
       camera_constant.max_payload_size.value_or(ctrl_.dwMaxPayloadTransferSize);
   ctrl_.dwMaxVideoFrameSize =
       camera_constant.max_frame_size.value_or(ctrl_.dwMaxVideoFrameSize);
-  res = uvc_start_streaming(device_handle_, &ctrl_, callback, this, 0);
+  res = uvc_start_streaming(device_handle_, &ctrl_, UVCFrameCallback,
+                            &frame_receiver_, 0);
   if (res != 0) {
     status = absl::AbortedError("Unable to start streaming for camera: " +
                                 camera_constant.name);
     return;
   }
+  streaming_ = true;
 }
 
 auto UVCCamera::GetFrame() -> timestamped_frame_t {
   timestamped_frame_t copied_timestamped_frame;
-  while (frame_index_ == previous_frame_index_) {
-    std::this_thread::yield();
-  }
-  mutex_.lock();
-  if (frame_buffer.frame.empty()) {
+  frame_receiver_.WaitForFrameAfter(previous_publication_);
+  if (!frame_receiver_.CopyLatest(&copied_timestamped_frame,
+                                  &previous_publication_)) {
     backup_image_.copyTo(copied_timestamped_frame.frame);
     copied_timestamped_frame.invalid = true;
     copied_timestamped_frame.timestamp =
         frc::Timer::GetFPGATimestamp().to<double>();
-  } else {
-    frame_buffer.frame.copyTo(copied_timestamped_frame.frame);
-    copied_timestamped_frame.invalid = frame_buffer.invalid;
-    copied_timestamped_frame.timestamp = frame_buffer.timestamp;
   }
-  mutex_.unlock();
-  previous_frame_index_ = frame_index_;
   return copied_timestamped_frame;
 }
 
 auto UVCCamera::Restart() -> void {
-  uvc_stop_streaming(device_handle_);
-  uvc_close(device_handle_);
-  uvc_unref_device(device_);
+  if (streaming_) {
+    uvc_stop_streaming(device_handle_);
+    streaming_ = false;
+  }
+  if (device_handle_ != nullptr) {
+    uvc_close(device_handle_);
+    device_handle_ = nullptr;
+  }
+  if (device_ != nullptr) {
+    uvc_unref_device(device_);
+    device_ = nullptr;
+  }
 
   const char* serial_id = camera_constant_.serial_id.has_value()
                               ? camera_constant_.serial_id.value().c_str()
                               : nullptr;
-  uvc_find_device(context_, &device_, 0, 0, serial_id);
-  uvc_open(device_, &device_handle_);
+  if (context_ == nullptr ||
+      uvc_find_device(context_, &device_, 0, 0, serial_id) != UVC_SUCCESS) {
+    LOG(WARNING) << "Unable to find camera " << camera_constant_.name
+                 << " while restarting";
+    return;
+  }
+  if (uvc_open(device_, &device_handle_) != UVC_SUCCESS) {
+    LOG(WARNING) << "Unable to open camera " << camera_constant_.name
+                 << " while restarting";
+    return;
+  }
 
   LOG(INFO) << "Restarting device UVC Camera. Device ctrl: ";
   uvc_print_stream_ctrl(&ctrl_, stderr);
   LOG(INFO) << "-----------------------------------";
-  uvc_start_streaming(device_handle_, &ctrl_, callback, this, 0);
+  if (uvc_start_streaming(device_handle_, &ctrl_, UVCFrameCallback,
+                          &frame_receiver_, 0) == UVC_SUCCESS) {
+    streaming_ = true;
+  }
 }
 
 UVCCamera::~UVCCamera() {
-  uvc_stop_streaming(device_handle_);
-  uvc_close(device_handle_);
-  uvc_unref_device(device_);
-  uvc_exit(context_);
+  if (streaming_)
+    uvc_stop_streaming(device_handle_);
+  if (device_handle_ != nullptr)
+    uvc_close(device_handle_);
+  if (device_ != nullptr)
+    uvc_unref_device(device_);
+  if (context_ != nullptr)
+    uvc_exit(context_);
   LOG(INFO) << camera_constant_.name << " has been destructed";
 }
 

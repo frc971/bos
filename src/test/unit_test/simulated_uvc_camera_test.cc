@@ -78,31 +78,9 @@ TEST(SimulatedUVCCameraTest, FixedSeedFaultFrequencyAcrossFullLog) {  // NOLINT
 }
 
 TEST(SimulatedUVCCameraTest, InjectedFaultsExposeExpectedSymptoms) {  // NOLINT
-  {
-    auto config = Config(true);
-    config.frame_faults.synthetic_invalid_delivery = 1.0;
-    absl::Status status;
-    camera::SimulatedUVCCamera simulated(CameraConstants(), std::move(config),
-                                         status);
-    ASSERT_TRUE(status.ok()) << status;
-    WaitUntilDone(simulated);
-    const auto frame = simulated.GetFrame();
-    EXPECT_TRUE(frame.invalid);
-    EXPECT_TRUE(frame.frame.empty());
-  }
-  {
-    auto config = Config(true);
-    config.frame_faults.delivery_exception = 1.0;
-    absl::Status status;
-    camera::SimulatedUVCCamera simulated(CameraConstants(), std::move(config),
-                                         status);
-    ASSERT_TRUE(status.ok()) << status;
-    WaitUntilDone(simulated);
-    EXPECT_THROW((void)simulated.GetFrame(), std::runtime_error);
-  }
-  for (const auto fault :
-       {&camera::SimulatedUVCFrameFaults::empty_frame,
-        &camera::SimulatedUVCFrameFaults::unsupported_format}) {
+  for (const auto fault : {&camera::SimulatedUVCFrameFaults::empty_frame,
+                           &camera::SimulatedUVCFrameFaults::unsupported_format,
+                           &camera::SimulatedUVCFrameFaults::corruption}) {
     auto config = Config(true);
     config.frame_faults.*fault = 1.0;
     absl::Status status;
@@ -132,10 +110,9 @@ TEST(SimulatedUVCCameraTest, InjectedFaultsExposeExpectedSymptoms) {  // NOLINT
     const auto corrupt_frame = corrupt.GetFrame();
 
     ASSERT_FALSE(clean_frame.invalid);
-    ASSERT_FALSE(corrupt_frame.invalid);
-    ASSERT_EQ(clean_frame.frame.size(), corrupt_frame.frame.size());
-    EXPECT_GT(cv::norm(clean_frame.frame, corrupt_frame.frame, cv::NORM_INF),
-              0.0);
+    ASSERT_TRUE(corrupt_frame.invalid);
+    ASSERT_TRUE(corrupt_frame.frame.empty());
+    EXPECT_EQ(corrupt.GetStatistics().decode_failures, 1U);
     EXPECT_EQ(corrupt.GetStatistics().injected_faults, 1U);
   }
   {
