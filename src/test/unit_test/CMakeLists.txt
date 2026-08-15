@@ -19,8 +19,13 @@ target_link_libraries(matrix PRIVATE localization utils GTest::gtest_main)
 add_executable(pathing_test pathing_test.cc)
 target_link_libraries(pathing_test PRIVATE pathing utils nlohmann_json::nlohmann_json GTest::gtest_main)
 
+add_executable(uvc_camera_test uvc_camera_test.cc)
+target_link_libraries(uvc_camera_test PRIVATE SimulatedUVCCamera GTest::gtest_main)
+target_compile_definitions(uvc_camera_test PRIVATE BOS_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+
 gtest_discover_tests(joint_solve_test)
 gtest_discover_tests(multi_tag_test)
 gtest_discover_tests(square_solve_test)
 gtest_discover_tests(general_solver_test)
+gtest_discover_tests(uvc_camera_test PROPERTIES TIMEOUT 10)
 # gtest_discover_tests(pathing_test)
