@@ -1,5 +1,6 @@
 #include "src/camera/uvc_camera.h"
 #include <opencv2/highgui/highgui_c.h>
+#include <fstream>
 #include <opencv2/opencv.hpp>
 #include "absl/status/status.h"
 #include "src/utils/pch.h"
@@ -15,6 +16,14 @@ void callback(uvc_frame_t* frame, void* ptr) {
     switch (frame->frame_format) {
       case UVC_COLOR_FORMAT_MJPEG: {
         char* data = static_cast<char*>(frame->data);
+        int frame_index = frame->sequence;
+        if (ptr_->log_frequency_ != 0 &&
+            frame_index % ptr_->log_frequency_ == 0) {
+          std::ofstream file(ptr_->camera_constant_.name + "_frame_" +
+                                 std::to_string(frame_index),
+                             std::ios::binary);
+          file.write(data, frame->data_bytes);
+        }
         std::vector<uchar> buffer(data, data + frame->data_bytes);
         ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
         break;
@@ -59,8 +68,11 @@ void callback(uvc_frame_t* frame, void* ptr) {
 }
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
-                     absl::Status& status, std::optional<std::string> log_path)
-    : camera_constant_(camera_constant), log_path_(std::move(log_path)) {
+                     absl::Status& status, std::optional<std::string> log_path,
+                     int log_frequency)
+    : camera_constant_(camera_constant),
+      log_path_(std::move(log_path)),
+      log_frequency_(log_frequency) {
 
   int res = uvc_init(&context_, nullptr);
   if (res != 0) {
