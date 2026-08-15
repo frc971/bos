@@ -1,6 +1,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <limits>
+
 #include "src/camera/simulated_uvc_camera.h"
 
 namespace camera::test {
@@ -53,8 +55,8 @@ TEST(UvcCameraTest, SupportsMultipleIndependentCameras) {
   absl::Status left_status;
   absl::Status right_status;
   SimulatedUvcCamera left(LogFolder(), Constants(), left_status);
-  SimulatedUvcCamera right(BOS_SOURCE_DIR "/bos-logs/log181/right",
-                           Constants(), right_status);
+  SimulatedUvcCamera right(BOS_SOURCE_DIR "/bos-logs/log181/right", Constants(),
+                           right_status);
 
   ASSERT_TRUE(left_status.ok()) << left_status;
   ASSERT_TRUE(right_status.ok()) << right_status;
@@ -91,6 +93,68 @@ TEST(UvcCameraTest, RecoversAfterTruncatedJpeg) {
 
   EXPECT_TRUE(camera.InjectCorruptFrame());
   EXPECT_FALSE(camera.GetFrame().invalid);
+}
+
+TEST(UvcCameraTest, ReplaysAtRecordedTimestampRate) {
+  absl::Status status;
+  SimulatedUvcCamera camera(LogFolder(), Constants(), status);
+  ASSERT_TRUE(status.ok()) << status;
+
+  const auto start = std::chrono::steady_clock::now();
+  const auto frame = camera.GetFrame();
+
+  EXPECT_GE(std::chrono::steady_clock::now() - start,
+            std::chrono::milliseconds(80));
+  EXPECT_FALSE(frame.invalid);
+}
+
+TEST(UvcCameraTest, AutomaticallyDelaysFramesUsingProbabilityTable) {
+  absl::Status status;
+  SimulatedUvcCamera camera(LogFolder(), Constants(), status);
+  ASSERT_TRUE(status.ok()) << status;
+  camera.SetFailureProbabilities(
+      {.frame_delay = 1.0, .delay = std::chrono::milliseconds(20)}, 1234);
+
+  const auto start = std::chrono::steady_clock::now();
+  const auto frame = camera.GetFrame();
+
+  EXPECT_GE(std::chrono::steady_clock::now() - start,
+            std::chrono::milliseconds(20));
+  EXPECT_FALSE(frame.invalid);
+}
+
+TEST(UvcCameraTest, AutomaticallyInjectsEmptyFramesUsingProbabilityTable) {
+  absl::Status status;
+  SimulatedUvcCamera camera(LogFolder(), Constants(), status);
+  ASSERT_TRUE(status.ok()) << status;
+  camera.SetFailureProbabilities({.empty = 1.0}, 1234);
+
+  EXPECT_THROW(camera.GetFrame(), cv::Exception);
+}
+
+TEST(UvcCameraTest, AutomaticallyInjectsCorruptFramesUsingProbabilityTable) {
+  absl::Status status;
+  SimulatedUvcCamera camera(LogFolder(), Constants(), status);
+  ASSERT_TRUE(status.ok()) << status;
+  camera.SetFailureProbabilities({.corrupt = 1.0}, 1234);
+
+  EXPECT_FALSE(camera.GetFrame().invalid);
+  EXPECT_FALSE(camera.GetFrame().invalid);
+}
+
+TEST(UvcCameraTest, RejectsInvalidFailureProbabilityTable) {
+  absl::Status status;
+  SimulatedUvcCamera camera(LogFolder(), Constants(), status);
+  ASSERT_TRUE(status.ok()) << status;
+
+  EXPECT_THROW(camera.SetFailureProbabilities(
+                   {.frame_delay = 0.5, .empty = 0.5, .corrupt = 0.5}),
+               std::invalid_argument);
+  EXPECT_THROW(camera.SetFailureProbabilities({.empty = -0.1}),
+               std::invalid_argument);
+  EXPECT_THROW(camera.SetFailureProbabilities(
+                   {.corrupt = std::numeric_limits<double>::quiet_NaN()}),
+               std::invalid_argument);
 }
 
 TEST(UvcCameraTest, CallbackDropsFrameRatherThanDeadlockingOnBusyMutex) {
