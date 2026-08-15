@@ -101,6 +101,7 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
                       camera_config);
     SetConstant<uint>("log_frequency", camera_constant.log_frequency,
                       camera_config);
+    camera_constant.run_gamepiece = camera_config.value("run_gamepiece", false);
 
     if (camera_config.contains("detector_type") &&
         !camera_config["detector_type"].is_null()) {

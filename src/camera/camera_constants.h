@@ -27,6 +27,7 @@ using camera_constant_t = struct CameraConstant {
   std::optional<uint> port = std::nullopt;
   std::optional<uint> streamer_fps = std::nullopt;
   std::optional<uint> log_frequency = std::nullopt;
+  bool run_gamepiece = false;
   DetectorType detector_type = DetectorType::INVALID;
   CameraType camera_type = CameraType::INVALID;
 
@@ -50,6 +51,7 @@ using camera_constant_t = struct CameraConstant {
     print("Brightness", c.brightness);
     print("Sharpness", c.sharpness);
     print("Log Frequency", c.log_frequency);
+    os << '\t' << "Run Gamepiece: " << std::boolalpha << c.run_gamepiece;
     os << std::endl;
 
     return os;
