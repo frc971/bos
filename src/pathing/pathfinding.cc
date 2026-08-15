@@ -2,20 +2,94 @@
 #include <algorithm>
 #include <cmath>
 #include <deque>
+#include <fstream>
 #include <iostream>
 #include <utility>
 #include <vector>
+#include "nlohmann/json.hpp"
 #include "src/utils/log.h"
 
 namespace pathing {
+
+auto GetGrid(const std::string& navgrid_path) -> NavGrid {
+  std::ifstream file(navgrid_path);
+  if (!file.is_open()) {
+    LOG(FATAL) << "Failed to open navgrid: " << navgrid_path;
+    return {};
+  }
+
+  nlohmann::json data = nlohmann::json::parse(file);
+  file.close();
+
+  const int GRID_H = data["grid"].size();
+  const int GRID_W = data["grid"][0].size();
+  double nodeSizeMeters = data["nodeSizeMeters"];
+
+  std::vector<std::vector<pathing::Node>> grid(
+      GRID_H, std::vector<pathing::Node>(GRID_W));
+  for (int y = 0; y < GRID_H; ++y) {
+    for (int x = 0; x < GRID_W; ++x) {
+      grid[y][x].x = x;
+      grid[y][x].y = y;
+      grid[y][x].obstacle = data["grid"][y][x];
+    }
+  }
+  return {.grid = std::move(grid), .nodeSizeMeters = nodeSizeMeters};
+}
+
+auto BFSFirstFreeCell(std::vector<std::vector<Node>>& field, Point start_point)
+    -> Node {
+  int sx = start_point.x;
+  int sy = start_point.y;
+
+  field[sy][sx].visited = true;
+
+  std::deque<Point> queue;
+  queue.push_back(start_point);
+
+  std::vector<std::pair<int, int>> dirs = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1},
+                                           {0, 1},   {1, -1}, {1, 0},  {1, 1}};
+
+  while (!queue.empty()) {
+    const Point current_point = queue.front();
+    queue.pop_front();
+
+    Node& current = field[current_point.y][current_point.x];
+
+    for (auto [dy, dx] : dirs) {
+      int nx = current.x + dx;
+      int ny = current.y + dy;
+
+      if (nx >= 0 && nx < (int)field[0].size() && ny >= 0 &&
+          ny < (int)field.size()) {
+        if (!field[ny][nx].visited) {
+          field[ny][nx].visited = true;
+          if (!field[ny][nx].obstacle) {
+            return field[ny][nx];
+          }
+          queue.push_back({.x = (uint)nx, .y = (uint)ny});
+        }
+      }
+    }
+  }
+
+  return field[sy][sx];
+}
 
 auto BFS(std::vector<std::vector<Node>>& field, Point start_point,
          Point end_point) -> std::vector<Node> {
 
   int sx = start_point.x;
   int sy = start_point.y;
+  if (field[sy][sx].obstacle) {
+    Node adjusted = BFSFirstFreeCell(field, start_point);
+    sx = adjusted.x;
+    sy = adjusted.y;
+  }
 
   Node* start = &field[sy][sx];
+  start_point.x = sx;
+  start_point.y = sy;
   start->visited = true;
   start->cost = 0;
 
@@ -84,6 +158,9 @@ auto BFS(std::vector<std::vector<Node>>& field, Point start_point,
     if (rcurrent != nullptr) {
       field[rcurrent->y][rcurrent->x].path = true;
     }
+  }
+  if (rcurrent != nullptr) {
+    rpath.push_back(*rcurrent);
   }
   std::reverse(rpath.begin(), rpath.end());
 
