@@ -11,7 +11,8 @@ namespace camera {
 class UVCCamera : public ICamera {
  public:
   UVCCamera(const CameraConstant& camera_constant, absl::Status& status,
-            std::optional<std::string> log_path = std::nullopt);
+            std::optional<std::string> log_path = std::nullopt,
+            int log_frequency = 0);
   auto GetFrame() -> timestamped_frame_t override;
   auto Restart() -> void override;
   ~UVCCamera() override;
@@ -29,6 +30,7 @@ class UVCCamera : public ICamera {
   std::mutex mutex_;
   int frame_index_;
   int previous_frame_index_;
+  const int log_frequency_;
   static constexpr cv::ImreadModes read_type = cv::IMREAD_GRAYSCALE;
 
  private:

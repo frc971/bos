@@ -1,5 +1,7 @@
 #include "src/camera/uvc_camera.h"
 #include <opencv2/highgui/highgui_c.h>
+#include <filesystem>
+#include <fstream>
 #include <opencv2/opencv.hpp>
 #include "absl/status/status.h"
 #include "src/utils/pch.h"
@@ -15,6 +17,20 @@ void callback(uvc_frame_t* frame, void* ptr) {
     switch (frame->frame_format) {
       case UVC_COLOR_FORMAT_MJPEG: {
         char* data = static_cast<char*>(frame->data);
+        int frame_index = frame->sequence;
+        if (ptr_->log_path_.has_value() && ptr_->log_frequency_ > 0 &&
+            frame_index % ptr_->log_frequency_ == 0) {
+          const std::filesystem::path file_path =
+              std::filesystem::path(*ptr_->log_path_) /
+              (ptr_->camera_constant_.name + "_frame_" +
+               std::to_string(frame_index) + ".jpg");
+          std::ofstream file(file_path, std::ios::binary);
+          if (!file) {
+            LOG(WARNING) << "Failed to open camera frame log " << file_path;
+          } else {
+            file.write(data, frame->data_bytes);
+          }
+        }
         std::vector<uchar> buffer(data, data + frame->data_bytes);
         ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
         break;
@@ -59,8 +75,20 @@ void callback(uvc_frame_t* frame, void* ptr) {
 }
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
-                     absl::Status& status, std::optional<std::string> log_path)
-    : camera_constant_(camera_constant), log_path_(std::move(log_path)) {
+                     absl::Status& status, std::optional<std::string> log_path,
+                     int log_frequency)
+    : camera_constant_(camera_constant),
+      log_path_(std::move(log_path)),
+      log_frequency_(log_frequency) {
+
+  if (log_path_.has_value()) {
+    std::error_code error;
+    std::filesystem::create_directories(*log_path_, error);
+    if (error) {
+      LOG(WARNING) << "Failed to create camera log folder " << *log_path_
+                   << ": " << error.message();
+    }
+  }
 
   int res = uvc_init(&context_, nullptr);
   if (res != 0) {
