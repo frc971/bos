@@ -50,11 +50,10 @@ Where:
 - $C(t)$ is the point on the spline at parameter $t$
 - $t$ is the position along the spline parameter range
 - $n$ is the number of control points
-- $i$ is the control piont index
+- $i$ is the control point index
 - $N_{\I,p}(t)$ is the basis value for control point $i$ at $t$
 - $p$ is the spline degree
-- $P_i$ is control point $i$
-	- this is coming from bfs
+- $P_i$ is control point $i$ from the BFS-generated path
 The basis functions determine how strongly each control point influences the spline at a given parameter value. Each basis value is multipleid by its coresponding control point, and the results are added to get the final point on the spline.
 
 ### Finite differences
@@ -68,13 +67,13 @@ D_i^{(k)}=
 $$
 Where:
 - $D_i^{(k)}$ is the finite difference of order $k$
-- $P_i$ is control piont at index $i$
+- $P_i$ is the control point at index $i$
 - $u_i$ is knot at index $i$
 - $p$ is the spline degree
 - $k$ is the derivative order
 Finite differences are used to find how the control points change relative to the knot parameter. We take the diffrence between two neighboring control points and divide it by the distance between their knots. This creates new control points that describe the splines direction and rate of change, rather then its position. The parameter isnt physical time, but it can later be used to calculate the tangent, velocity, or acceleration.
 
-### Evaluate positioin
+### Evaluate position
 $$
 \operatorname{EvaluatePosition}(t,\ controls,\ knots,\ p)
 =
