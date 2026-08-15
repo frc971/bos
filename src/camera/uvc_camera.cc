@@ -17,7 +17,8 @@ void callback(uvc_frame_t* frame, void* ptr) {
       case UVC_COLOR_FORMAT_MJPEG: {
         char* data = static_cast<char*>(frame->data);
         int frame_index = frame->sequence;
-        if (frame_index % ptr_->log_frequency_ == 0) {
+        if (ptr_->log_frequency_ != 0 &&
+            frame_index % ptr_->log_frequency_ == 0) {
           std::ofstream file(ptr_->camera_constant_.name + "_frame_" +
                                  std::to_string(frame_index),
                              std::ios::binary);
