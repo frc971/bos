@@ -1,19 +1,113 @@
 # Pathing
+## Algorithms
 
-This directory contains grid pathfinding, spline generation, and a NetworkTables-driven path controller.
+### BFS
 
-## Files
 
-- `CMakeLists.txt` builds the `pathing` library.
-- `pathfinding.h` / `pathfinding.cc` define grid `Node` and `Point` structures and implement `pathing::BFS`, which searches an obstacle grid and returns a node path.
-- `splines.h` / `splines.cc` provide B-spline helpers (`KnotVector`, `basis`, `evaluate`) and `createSpline`, which converts a BFS path into smooth `frc::Pose2d` waypoints.
-- `controller.h` / `controller.cc` implement `RunController`, which reads a navigation grid, receives current and target poses through NetworkTables, generates a spline path, and publishes velocity commands plus the next path pose.
-- `simulator.cc` is a standalone path-following simulation experiment that logs pose, velocity, and acceleration data. It is not currently part of the `pathing` library target in this directory's CMake file.
+Pseudocode:
+```
+BFS(grid, start, goal):
+    if start is an obstacle:
+        start = first reachable free cell near start
+    mark start as visited
+    enqueue start to end of queue
+    while queue is not empty:
+        current = dequeue front
+        for each of the 8 neighboring cells:
+            if neighbor is inside grid and neighbor is not visited and neighbor is not an obstacle:
+                mark neighbor as visited
+                neighbor.parent = current
+                enqueue neighbor to end of queue 
+                if neighbor is goal:
+                    return path reconstructed through parent pointers
+    return no path
+```
 
-## Main Types And Functions
+Notes:
+- we use a secondary bfs for finding the first reachable free cell near start
 
-- `pathing::Node` represents one grid cell, including traversal state, obstacle status, parent link, and path markers.
-- `pathing::Point` is the integer grid coordinate used as BFS input.
-- `pathing::BFS` finds a grid path between two points.
-- `pathing::createSpline` turns that grid path into meter-space poses for motion.
-- `pathing::RunController` connects path generation to robot pose and target topics.
+## Spline
+### Knot Vector
+$$
+u_i =
+\begin{cases}
+0, & 0 \le i \le p, \\[4pt]
+\dfrac{i-p}{n-p}, & p < i < n \\[4pt]
+1, & n \le i \le n+p.
+\end{cases}
+$$
+Where:
+- $u_i$ is the knot at index $i$.
+- $i$ is the knot index.
+- $n$ is the number of control points.
+- $p$ is the spline degree.
+The knot vector divides the spline parameter into polynomial segments. It determines which control points affect each segment and the smoothness at segment boundaries. For a cubic spline, the first and last four knots are repeated, clamping the spline to its endpoint control points, while uniformly spaced interior knots produce smooth transitions.
+### Basis Function
+$$
+C(t)=\sum_{i=0}^{n-1}N_{i,p}(t)P_i
+$$
+Where:
+- $C(t)$ is the point on the spline at parameter $t$
+- $t$ is the position along the spline parameter range
+- $n$ is the number of control points
+- $i$ is the control piont index
+- $N_{\I,p}(t)$ is the basis value for control point $i$ at $t$
+- $p$ is the spline degree
+- $P_i$ is control point $i$
+	- this is coming from bfs
+The basis functions determine how strongly each control point influences the spline at a given parameter value. Each basis value is multipleid by its coresponding control point, and the results are added to get the final point on the spline.
+
+### Finite differences
+$$
+D_i^{(0)}=P_i
+$$
+$$
+D_i^{(k)}=
+\frac{D_{i+1}^{(k-1)}-D_i^{(k-1)}}
+{u_{i+p+1}-u_{i+k}}
+$$
+Where:
+- $D_i^{(k)}$ is the finite difference of order $k$
+- $P_i$ is control piont at index $i$
+- $u_i$ is knot at index $i$
+- $p$ is the spline degree
+- $k$ is the derivative order
+Finite differences are used to find how the control points change relative to the knot parameter. We take the diffrence between two neighboring control points and divide it by the distance between their knots. This creates new control points that describe the splines direction and rate of change, rather then its position. The parameter isnt physical time, but it can later be used to calculate the tangent, velocity, or acceleration.
+
+### Evaluate positioin
+$$
+\operatorname{EvaluatePosition}(t,\ controls,\ knots,\ p)
+=
+\sum_{i=0}^{n-1}
+\operatorname{Basis}(i,\ p,\ t,\ knots)\cdot controls_i
+$$
+Evaluates the spline's $x$ and $y$ at given parameter $t$
+### Evaluate derivative
+$$
+\operatorname{EvaluateDerivative}(t,\ controls,\ knots,\ p,\ k)
+=
+\frac{p!}{(p-k)!}
+\operatorname{EvaluatePosition}
+\left(
+t,\ 
+\operatorname{FiniteDifferences}(controls,\ knots,\ p,\ k),\
+knots,\
+p-k
+\right)
+$$
+Where:
+- $k$ is the derivative order
+- $t$ is position along the spline parameter range
+- $p$ is the spline degree
+- $knots$ is the knot vector from the function above
+This evaluates the spline’s derivative with respect to its parameter, giving the tangent and relative rate of change along the path. We use this as a direction and not a raw velocity, so we can feed that direction along with robot max accel and max velo (constants were stolen from team pathplanner config) to the velocity profile which will generate our velocities.
+
+
+## Path following
+
+1. Find the closest velocity profile point to the current position of the robot
+2. Take that feedforward velocity from the profile point and drive along it
+3. P controller (from PID) keep the robot more on track so it doens't drift too far off the path
+4. if the robot is too far off the path then we replan to make sure that we don't get permanently offset and crash
+5. stop when the robot is within target radius
+	- if this isn't accurate enough, we can also linearly approach the target point when we get into a circle around it
