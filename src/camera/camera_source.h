@@ -13,6 +13,7 @@ class CameraSource {
   [[nodiscard]] auto Get() -> timestamped_frame_t;
   [[nodiscard]] auto GetFrame() -> cv::Mat;
   [[nodiscard]] auto GetName() const -> std::string { return name_; }
+  [[nodiscard]] auto IsDone() const -> bool { return done_; }
 
  private:
   std::string name_;
@@ -20,6 +21,7 @@ class CameraSource {
   timestamped_frame_t timestamped_frame_;
   std::mutex mutex_;
   std::jthread thread_;
+  std::atomic<bool> done_{false};
   const bool simulation_;
 };
 

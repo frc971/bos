@@ -18,7 +18,8 @@ MultiCameraDetector::MultiCameraDetector(
     : camera_constants_(std::move(camera_constants)),
       last_write_times_(camera_constants_.size()),
       timestamped_frames_(camera_constants_.size()),
-      tag_detections_(camera_constants_.size()) {
+      tag_detections_(camera_constants_.size()),
+      active_cameras_(camera_constants_.size()) {
   std::string log_path = frc::DataLogManager::GetLogDir();
   cameras_.reserve(camera_constants_.size());
   camera_threads_.reserve(camera_constants_.size());
@@ -85,9 +86,18 @@ MultiCameraDetector::MultiCameraDetector(
         timestamped_frame = cameras_[i]->GetFrame();
         if (timestamped_frame.invalid) {
           if (image_paths.has_value()) {
-            frc::DataLogManager::Stop();
-            LOG(INFO) << "Reached the end of the file list";
-            std::exit(0);
+            {
+              std::lock_guard<std::mutex> lock(mutex_);
+              tag_detections_[i].clear();
+            }
+            LOG(INFO) << "Reached the end of the file list for "
+                      << camera_constants_[i].name;
+            if (active_cameras_.fetch_sub(1) == 1) {
+              finished_ = true;
+              has_new_detections_.store(true, std::memory_order_release);
+              has_new_detections_.notify_one();
+            }
+            return;
           }
           continue;  // this is ok because GetFrame is blocking
         }

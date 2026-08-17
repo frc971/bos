@@ -53,7 +53,7 @@ class SimulatedUvcCamera final : public ICamera {
  public:
   SimulatedUvcCamera(const std::filesystem::path& image_folder,
                      const camera_constant_t& constants, absl::Status& status,
-                     double replay_speed = 1.0);
+                     double replay_speed = 1.0, bool fail_to_init = false);
   ~SimulatedUvcCamera() override;
 
   auto GetFrame() -> timestamped_frame_t override;

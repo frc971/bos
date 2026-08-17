@@ -18,6 +18,7 @@ class MultiCameraDetector {
       -> std::vector<std::vector<tag_detection_t>>;
   [[nodiscard]] auto GetCVFrames() -> std::vector<cv::Mat>;
   [[nodiscard]] inline auto NumCameras() -> double { return cameras_.size(); }
+  [[nodiscard]] auto IsDone() const -> bool { return finished_; }
   ~MultiCameraDetector();
 
  private:
@@ -32,6 +33,8 @@ class MultiCameraDetector {
   std::mutex mutex_;
   std::atomic<bool> run_cameras_{true};
   std::atomic<bool> has_new_detections_{false};
+  std::atomic<size_t> active_cameras_;
+  std::atomic<bool> finished_{false};
   static constexpr int kdefault_stream_fps = 30;
 };
 

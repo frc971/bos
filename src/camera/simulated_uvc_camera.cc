@@ -76,7 +76,7 @@ auto MockUvcApi::Deliver(void* data, std::size_t size) -> bool {
 SimulatedUvcCamera::SimulatedUvcCamera(
     const std::filesystem::path& image_folder,
     const camera_constant_t& constants, absl::Status& status,
-    double replay_speed)
+    double replay_speed, bool fail_to_init)
     : replay_speed_(replay_speed) {
   if (replay_speed_ <= 0.0)
     throw std::invalid_argument("Replay speed must be positive");
@@ -91,7 +91,9 @@ SimulatedUvcCamera::SimulatedUvcCamera(
                      std::stod(rhs.stem().string());
             });
 
-  constructing_mock = &mock_uvc_;
+  if (!fail_to_init) {
+    constructing_mock = &mock_uvc_;
+  }
   camera_ = std::make_unique<UVCCamera>(constants, status);
   constructing_mock = nullptr;
   camera_->frame_index_ = 0;
@@ -156,7 +158,8 @@ auto SimulatedUvcCamera::InjectEmptyFrame() -> bool {
 }
 
 auto SimulatedUvcCamera::InjectCorruptFrame() -> bool {
-  if (IsDone()) return false;
+  if (IsDone())
+    return false;
   auto bytes = ReadNextJpeg();
   bytes.resize(bytes.size() / 2);
   return mock_uvc_.DeliverJpeg(bytes);
@@ -167,8 +170,8 @@ auto SimulatedUvcCamera::SetFailureProbabilities(
   const double failure_probability =
       probabilities.frame_delay + probabilities.empty + probabilities.corrupt;
   const std::array outcome_probabilities = {
-      1.0 - failure_probability, probabilities.frame_delay,
-      probabilities.empty, probabilities.corrupt};
+      1.0 - failure_probability, probabilities.frame_delay, probabilities.empty,
+      probabilities.corrupt};
   const auto is_valid = [](double probability) {
     return std::isfinite(probability) && probability >= 0.0;
   };

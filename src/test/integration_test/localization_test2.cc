@@ -139,5 +139,6 @@ auto main(int argc, char** argv) -> int {
                << image_folder_root;
   }
 
-  stop::WaitUntilStop();
+  thread.join();
+  frc::DataLogManager::Stop();
 }
