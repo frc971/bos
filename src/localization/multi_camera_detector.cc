@@ -3,6 +3,7 @@
 #include "src/camera/camera.h"
 #include "src/camera/cv_camera.h"
 #include "src/camera/select_camera.h"
+#include "src/camera/simulated_uvc_camera.h"
 #include "src/camera/uvc_camera.h"
 #include "src/localization/gpu_apriltag_detector.h"
 #include "src/localization/opencv_apriltag_detector.h"
@@ -13,11 +14,14 @@ namespace localization {
 MultiCameraDetector::MultiCameraDetector(
     std::vector<camera::camera_constant_t> camera_constants,
     std::optional<std::vector<std::filesystem::path>> image_paths,
-    double disk_replay_speed)
+    double disk_replay_speed,
+    std::optional<camera::test::FrameFailureProbabilities>
+        uvc_failure_probabilities)
     : camera_constants_(std::move(camera_constants)),
       last_write_times_(camera_constants_.size()),
       timestamped_frames_(camera_constants_.size()),
-      tag_detections_(camera_constants_.size()) {
+      tag_detections_(camera_constants_.size()),
+      active_cameras_(camera_constants_.size()) {
   std::string log_path = frc::DataLogManager::GetLogDir();
   cameras_.reserve(camera_constants_.size());
   camera_threads_.reserve(camera_constants_.size());
@@ -32,8 +36,14 @@ MultiCameraDetector::MultiCameraDetector(
     const std::string camera_log_dest =
         fmt::format("{}/{}", log_path, camera_constants_[i].name);
     if (image_paths.has_value()) {
-      cameras_.push_back(std::make_unique<camera::DiskCamera>(
-          image_paths.value()[i], camera_constants_[i], disk_replay_speed));
+      absl::Status status;
+      auto camera = std::make_unique<camera::test::SimulatedUvcCamera>(
+          image_paths.value()[i], camera_constants_[i], status,
+          disk_replay_speed);
+      if (uvc_failure_probabilities.has_value()) {
+        camera->SetFailureProbabilities(uvc_failure_probabilities.value());
+      }
+      cameras_.push_back(std::move(camera));
     } else {
       switch (camera_constants_[i].camera_type) {
         case camera::CameraType::UVC: {
@@ -83,9 +93,18 @@ MultiCameraDetector::MultiCameraDetector(
         timestamped_frame = cameras_[i]->GetFrame();
         if (timestamped_frame.invalid) {
           if (image_paths.has_value()) {
-            frc::DataLogManager::Stop();
-            LOG(INFO) << "Reached the end of the file list";
-            std::exit(0);
+            {
+              std::lock_guard<std::mutex> lock(mutex_);
+              tag_detections_[i].clear();
+            }
+            LOG(INFO) << "Reached the end of the file list for "
+                      << camera_constants_[i].name;
+            if (active_cameras_.fetch_sub(1) == 1) {
+              finished_ = true;
+              has_new_detections_.store(true, std::memory_order_release);
+              has_new_detections_.notify_one();
+            }
+            return;
           }
           continue;  // this is ok because GetFrame is blocking
         }
