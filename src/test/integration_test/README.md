@@ -10,7 +10,13 @@ This directory contains executable diagnostics and end-to-end tests for camera, 
 - `gamepiece_test.cc` opens a camera, constructs the color YOLO model, and starts the gamepiece detection loop publishing coral and algae poses.
 - `intrinsics_test.cc` loads camera intrinsics, streams raw and undistorted camera frames side by side, and validates calibration files visually.
 - `localization_test.cc` replays logged camera images from one or more folders, resolves camera constants, runs localization, and streams/publishes simulation outputs.
-- `localization_test2.cc` runs the multi-camera `UnambiguousEstimator` against left/right replay folders.
+- `localization_test2.cc` runs the multi-camera `UnambiguousEstimator` against left/right replay folders. Pass `--uvc_probability_table=/path/to/table.json` to inject UVC simulator failures; the JSON fields are `frame_delay`, `empty`, `corrupt`, and `delay` (milliseconds). A replay fixture is provided at `uvc_probability_table.json`; for example:
+
+  ```bash
+  build/bin/localization_test2 \
+      --image_folder=/bos/bos-logs/log181 \
+      --uvc_probability_table=/bos/src/test/integration_test/uvc_probability_table.json
+  ```
 - `networktable_performance_test.cc` subscribes to the drive pose topic and prints observed NetworkTables update frequency and period.
 - `path_plan_test.cc` is a standalone visual path-planning playground with its own grid node class and drawing helpers.
 - `pva_test.cc` is an NVIDIA VPI AprilTag sample-style test for PVA/CPU AprilTag detection and visualization.

@@ -14,7 +14,9 @@ namespace localization {
 MultiCameraDetector::MultiCameraDetector(
     std::vector<camera::camera_constant_t> camera_constants,
     std::optional<std::vector<std::filesystem::path>> image_paths,
-    double disk_replay_speed)
+    double disk_replay_speed,
+    std::optional<camera::test::FrameFailureProbabilities>
+        uvc_failure_probabilities)
     : camera_constants_(std::move(camera_constants)),
       last_write_times_(camera_constants_.size()),
       timestamped_frames_(camera_constants_.size()),
@@ -35,8 +37,13 @@ MultiCameraDetector::MultiCameraDetector(
         fmt::format("{}/{}", log_path, camera_constants_[i].name);
     if (image_paths.has_value()) {
       absl::Status status;
-      cameras_.push_back(std::make_unique<camera::test::SimulatedUvcCamera>(
-          image_paths.value()[i], camera_constants_[i], status));
+      auto camera = std::make_unique<camera::test::SimulatedUvcCamera>(
+          image_paths.value()[i], camera_constants_[i], status,
+          disk_replay_speed);
+      if (uvc_failure_probabilities.has_value()) {
+        camera->SetFailureProbabilities(uvc_failure_probabilities.value());
+      }
+      cameras_.push_back(std::move(camera));
     } else {
       switch (camera_constants_[i].camera_type) {
         case camera::CameraType::UVC: {

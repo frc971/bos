@@ -1,9 +1,18 @@
 #include <frc/DataLogManager.h>
 #include <algorithm>
+#include <array>
 #include <cctype>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
 #include <filesystem>
+#include <fstream>
+#include <limits>
 #include <memory>
+#include <nlohmann/json.hpp>
+#include <numeric>
 #include <optional>
+#include <stdexcept>
 #include <thread>
 #include <vector>
 #include "absl/flags/flag.h"
@@ -14,6 +23,7 @@
 #include "src/camera/camera_constants.h"
 #include "src/camera/camera_source.h"
 #include "src/camera/disk_camera.h"
+#include "src/camera/simulated_uvc_camera.h"
 #include "src/localization/multi_tag_solver.h"
 #include "src/localization/networktable_sender.h"
 #include "src/localization/opencv_apriltag_detector.h"
@@ -28,8 +38,57 @@ ABSL_FLAG(std::string, image_folder, "",  //NOLINT
           "Path to folder of test images");
 ABSL_FLAG(std::optional<std::string>, camera_name, std::nullopt,  //NOLINT
           "Camera name");
+ABSL_FLAG(std::optional<std::string>, uvc_probability_table, std::nullopt,
+          "Path to a JSON UVC camera failure probability table");
 ABSL_FLAG(int, port, 5801, "Port");                                   //NOLINT
 ABSL_FLAG(double, speed, 10, "Disk camera replay speed multiplier");  //NOLINT
+
+auto ReadUvcFailureProbabilities(const std::filesystem::path& path)
+    -> camera::test::FrameFailureProbabilities {
+  std::ifstream file(path);
+  if (!file) {
+    throw std::runtime_error("Unable to open UVC probability table: " +
+                             path.string());
+  }
+
+  nlohmann::json table;
+  file >> table;
+  if (!table.is_object()) {
+    throw std::runtime_error("UVC probability table must be a JSON object");
+  }
+
+  const auto get_probability = [&table](const char* name) {
+    return table.value(name, 0.0);
+  };
+  const std::array probabilities = {get_probability("frame_delay"),
+                                    get_probability("empty"),
+                                    get_probability("corrupt")};
+  const double failure_probability =
+      std::accumulate(probabilities.begin(), probabilities.end(), 0.0);
+  const auto is_valid_probability = [](double probability) {
+    return std::isfinite(probability) && probability >= 0.0;
+  };
+  if (!std::all_of(probabilities.begin(), probabilities.end(),
+                   is_valid_probability) ||
+      failure_probability > 1.0) {
+    throw std::runtime_error(
+        "UVC probability table probabilities must be non-negative and sum "
+        "to at most 1");
+  }
+
+  const auto delay_ms = table.value("delay", std::int64_t{0});
+  if (delay_ms < 0 ||
+      delay_ms > std::numeric_limits<std::chrono::milliseconds::rep>::max()) {
+    throw std::runtime_error(
+        "UVC probability table delay must be a non-negative millisecond "
+        "value");
+  }
+
+  return {.frame_delay = get_probability("frame_delay"),
+          .empty = get_probability("empty"),
+          .corrupt = get_probability("corrupt"),
+          .delay = std::chrono::milliseconds(delay_ms)};
+}
 
 auto HasRegularFiles(const std::filesystem::path& path) -> bool {
   for (const auto& entry : std::filesystem::directory_iterator(path)) {
@@ -89,6 +148,17 @@ auto main(int argc, char** argv) -> int {
 
   const std::string image_folder_root = absl::GetFlag(FLAGS_image_folder);
   const double speed = absl::GetFlag(FLAGS_speed);
+  std::optional<camera::test::FrameFailureProbabilities>
+      uvc_failure_probabilities;
+  if (const auto probability_table = absl::GetFlag(FLAGS_uvc_probability_table);
+      probability_table.has_value()) {
+    try {
+      uvc_failure_probabilities =
+          ReadUvcFailureProbabilities(probability_table.value());
+    } catch (const std::exception& error) {
+      LOG(FATAL) << error.what();
+    }
+  }
   const std::filesystem::path image_root_path(image_folder_root);
   if (image_folder_root.empty() || !std::filesystem::exists(image_root_path) ||
       !std::filesystem::is_directory(image_root_path)) {
@@ -122,10 +192,11 @@ auto main(int argc, char** argv) -> int {
 
     camera_constants.push_back(constants.at(camera_name));
   }
-  std::jthread thread([camera_constants, camera_folders,
-                       speed](const std::stop_token& stop_token) {
-    localization::MultiCameraDetector detector_source(camera_constants,
-                                                      camera_folders, speed);
+  std::jthread thread([camera_constants, camera_folders, speed,
+                       uvc_failure_probabilities](
+                          const std::stop_token& stop_token) {
+    localization::MultiCameraDetector detector_source(
+        camera_constants, camera_folders, speed, uvc_failure_probabilities);
     LOG(INFO) << "Created camera source";
     localization::RunJointLocalization(
         stop_token, detector_source,

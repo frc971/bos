@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include <thread>
 
+#include "absl/log/log.h"
+
 struct uvc_context {
   camera::test::MockUvcApi* mock;
 };
@@ -108,8 +110,13 @@ auto SimulatedUvcCamera::GetFrame() -> timestamped_frame_t {
 
   const auto outcome = SampleFrameOutcome();
 
-  if (outcome == FrameOutcome::kDelayed && !next_frame_delay_) {
-    PauseNextFrame(failure_delay_);
+  if (outcome == FrameOutcome::kDelayed) {
+    LOG(INFO) << "Simulated UVC camera " << camera_->GetCameraConstant().name
+              << " activated frame delay probability ("
+              << failure_delay_.count() << " ms)";
+    if (!next_frame_delay_) {
+      PauseNextFrame(failure_delay_);
+    }
   }
 
   if (next_frame_delay_) {
@@ -118,11 +125,15 @@ auto SimulatedUvcCamera::GetFrame() -> timestamped_frame_t {
   }
 
   if (outcome == FrameOutcome::kEmpty) {
+    LOG(INFO) << "Simulated UVC camera " << camera_->GetCameraConstant().name
+              << " activated empty-frame probability";
     if (!InjectEmptyFrame())
       return {.invalid = true};
     return camera_->GetFrame();
   }
   if (outcome == FrameOutcome::kCorrupt) {
+    LOG(INFO) << "Simulated UVC camera " << camera_->GetCameraConstant().name
+              << " activated corrupt-frame probability";
     if (!InjectCorruptFrame())
       return {.invalid = true};
     PaceReplay();
