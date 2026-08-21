@@ -7,7 +7,9 @@
 namespace gamepiece {
 void hsv_threshold(const cv::Mat& img, std::vector<cv::Point2d>& out,
                    const std::pair<int, int>& h_range,
-                   const std::pair<int, int>& s_range) {
+                   const std::pair<int, int>& s_range,
+                   const cv::Mat& camera_intrinsics,
+                   const cv::Mat& distortion_coeffs = cv::Mat()) {
   cv::Mat hsv;
   cv::cvtColor(img, hsv, cv::COLOR_BGR2HSV);
 
@@ -15,6 +17,7 @@ void hsv_threshold(const cv::Mat& img, std::vector<cv::Point2d>& out,
   cv::inRange(hsv, cv::Scalar(h_range.first, s_range.first, 0),
               cv::Scalar(h_range.second, s_range.second, 255), hsv_masked);
   cv::findNonZero(hsv_masked, out);
+  cv::undistortPoints(out, out, camera_intrinsics, distortion_coeffs);
 }
 
 auto kmeans(const std::vector<cv::Point2d>& data_points, int k,
@@ -111,5 +114,6 @@ auto eliminate_overlapping_clusters(
     const std::vector<frc::Translation2d>& world_relative_cluster_offsets)
     -> std::vector<kmeans_cluster_t> {
   static constexpr double max_cluster_merge_dist_m = 1;
+  std::vector<double> distances(unfiltered_clusters.);
 }
 }  // namespace gamepiece

@@ -11,7 +11,9 @@ using kmeans_cluster_t = struct KMeansCluster {
 
 void hsv_threshold(const cv::Mat& img, cv::Mat& out,
                    const std::pair<int, int>& h_range,
-                   const std::pair<int, int>& s_range);
+                   const std::pair<int, int>& s_range,
+                   const cv::Mat& camera_intrinsics,
+                   const cv::Mat& distortion_coeffs = cv::Mat());
 auto kmeans(const cv::Mat& hsv_img, int k, double x_weight = 1)
     -> std::vector<kmeans_cluster_t>;
 // expects the offsets to be in the format output by cluster_distance
