@@ -16,11 +16,11 @@ namespace {
 constexpr double kGeometryTolerance = 1e-8;
 
 struct EllipseData {
-  Eigen::Vector2d center;
-  Eigen::Vector2d semi_major_axis_vector;
-  Eigen::Vector2d semi_minor_axis_vector;
-  Eigen::Matrix2d test_on_ellipse;
-  Eigen::Matrix2d rotation;
+  cv::Vec2d center;
+  cv::Vec2d semi_major_axis_vector;
+  cv::Vec2d semi_minor_axis_vector;
+  cv::Matx22d test_on_ellipse;
+  cv::Matx22d rotation;
   double area, a, b;
 };
 
@@ -36,16 +36,15 @@ auto GetEllipseData(const Ellipse& ellipse) -> EllipseData {
 
   const double cosine = std::cos(ellipse.rotation);
   const double sine = std::sin(ellipse.rotation);
-  Eigen::Matrix2d rotation;
-  rotation << cosine, -sine, sine, cosine;
+  const cv::Matx22d rotation(cosine, -sine, sine, cosine);
 
   EllipseData result;
   result.center = {ellipse.center.x, ellipse.center.y};
-  result.semi_major_axis_vector = rotation.col(0) * a;
-  result.semi_minor_axis_vector = rotation.col(1) * b;
-  result.test_on_ellipse =
-      rotation * Eigen::Vector2d(1.0 / (a * a), 1.0 / (b * b)).asDiagonal() *
-      rotation.transpose();
+  result.semi_major_axis_vector = cv::Vec2d(cosine * a, sine * a);
+  result.semi_minor_axis_vector = cv::Vec2d(-sine * b, cosine * b);
+  result.test_on_ellipse = rotation *
+                           cv::Matx22d(1.0 / (a * a), 0.0, 0.0, 1.0 / (b * b)) *
+                           rotation.t();
   result.rotation = rotation;
   result.area = std::numbers::pi * a * b;
   result.a = a;
@@ -53,45 +52,45 @@ auto GetEllipseData(const Ellipse& ellipse) -> EllipseData {
   return result;
 }
 
-auto NormalizedDistanceSquared(const Eigen::Vector2d& point,
+auto NormalizedDistanceSquared(const cv::Vec2d& point,
                                const EllipseData& ellipse) -> double {
-  const Eigen::Vector2d offset = point - ellipse.center;
+  const cv::Vec2d offset = point - ellipse.center;
   return offset.dot(ellipse.test_on_ellipse * offset);
 }
 
 auto SameEllipse(const EllipseData& first, const EllipseData& second) -> bool {
-  const double center_scale = 1.0 + first.center.norm() + second.center.norm();
+  const double center_scale =
+      1.0 + cv::norm(first.center) + cv::norm(second.center);
   const double matrix_scale =
-      1.0 + first.test_on_ellipse.norm() + second.test_on_ellipse.norm();
-  return (first.center - second.center).norm() <=
+      1.0 + cv::norm(first.test_on_ellipse) + cv::norm(second.test_on_ellipse);
+  return cv::norm(first.center - second.center) <=
              kGeometryTolerance * center_scale &&
-         (first.test_on_ellipse - second.test_on_ellipse).norm() <=
+         cv::norm(first.test_on_ellipse - second.test_on_ellipse) <=
              kGeometryTolerance * matrix_scale;
 }
 
 auto QuarticCoefficients(const EllipseData& source_ellipse,
                          const EllipseData& constraint_ellipse,
-                         double source_rotation)
-    -> Eigen::Matrix<double, 5, 1> {
-  const Eigen::Vector2d phase_radial =
+                         double source_rotation) -> cv::Vec<double, 5> {
+  const cv::Vec2d phase_radial =
       source_ellipse.semi_major_axis_vector * std::cos(source_rotation) +
       source_ellipse.semi_minor_axis_vector * std::sin(source_rotation);
 
-  const Eigen::Vector2d phase_tangent =
+  const cv::Vec2d phase_tangent =
       -source_ellipse.semi_major_axis_vector * std::sin(source_rotation) +
       source_ellipse.semi_minor_axis_vector * std::cos(source_rotation);
 
-  const Eigen::Vector2d center_offset =
+  const cv::Vec2d center_offset =
       source_ellipse.center - constraint_ellipse.center;
 
   // polynomial a bu cu^2 order
-  const std::array<Eigen::Vector2d, 3> numerator_coefficients{
+  const std::array<cv::Vec2d, 3> numerator_coefficients{
       center_offset + phase_radial,
       2.0 * phase_tangent,
       center_offset - phase_radial,
   };
 
-  Eigen::Matrix<double, 5, 1> quartic = Eigen::Matrix<double, 5, 1>::Zero();
+  cv::Vec<double, 5> quartic = cv::Vec<double, 5>::all(0.0);
 
   for (int i = 0; i <= 2; ++i) {
     for (int j = 0; j <= 2; ++j) {
@@ -108,17 +107,17 @@ auto QuarticCoefficients(const EllipseData& source_ellipse,
   return quartic;
 }
 
-auto PointAt(const EllipseData& ellipse, double theta) -> Eigen::Vector2d {
+auto PointAt(const EllipseData& ellipse, double theta) -> cv::Vec2d {
   return ellipse.center + ellipse.semi_major_axis_vector * std::cos(theta) +
          ellipse.semi_minor_axis_vector * std::sin(theta);
 }
 
-auto ThetaFromPoint(const EllipseData& ellipse, const Eigen::Vector2d& point)
+auto ThetaFromPoint(const EllipseData& ellipse, const cv::Point2d& point)
     -> double {
-  const Eigen::Vector2d centered =
-      ellipse.rotation.transpose() * (point - ellipse.center);
+  const cv::Vec2d centered =
+      ellipse.rotation.t() * (cv::Vec2d(point.x, point.y) - ellipse.center);
 
-  return std::atan2(centered.y() / ellipse.b, centered.x() / ellipse.a);
+  return std::atan2(centered[1] / ellipse.b, centered[0] / ellipse.a);
 }
 
 auto SectorArea(const EllipseData& ellipse, double angle) -> double {
@@ -165,13 +164,14 @@ auto ellipse_intersections(const Ellipse& first, const Ellipse& second)
   // Eigen solver. Maximizing the leading term also improves conditioning.
   constexpr std::array<double, 8> phases{0.0,  0.37, 0.79, 1.21,
                                          1.63, 2.05, 2.47, 2.89};
-  Eigen::Matrix<double, 5, 1> coefficients;
+  cv::Vec<double, 5> coefficients;
   double phase = 0.0;
   double best_leading_ratio = -1.0;
   for (const double candidate_phase : phases) {
     const auto candidate =
         QuarticCoefficients(first_data, second_data, candidate_phase);
-    const double ratio = std::abs(candidate[4]) / (candidate.norm() + 1e-300);
+    const double ratio =
+        std::abs(candidate[4]) / (cv::norm(candidate) + 1e-300);
     if (ratio > best_leading_ratio) {
       best_leading_ratio = ratio;
       coefficients = candidate;
@@ -182,24 +182,39 @@ auto ellipse_intersections(const Ellipse& first, const Ellipse& second)
   if (best_leading_ratio <= 1e-12) {
     return {};
   }
-  coefficients /= coefficients.cwiseAbs().maxCoeff();
-  Eigen::PolynomialSolver<double, 4> solver(coefficients);
+  double largest_coefficient = 0.0;
+  for (const double coefficient : coefficients.val) {
+    largest_coefficient = std::max(largest_coefficient, std::abs(coefficient));
+  }
+  coefficients /= largest_coefficient;
+
+  const std::array<std::complex<double>, 4> roots = [&coefficients] {
+    Eigen::Matrix<double, 5, 1> eigen_coefficients;
+    for (int i = 0; i < 5; ++i) {
+      eigen_coefficients[i] = coefficients[i];
+    }
+    const Eigen::PolynomialSolver<double, 4> solver(eigen_coefficients);
+    std::array<std::complex<double>, 4> result;
+    const auto& eigen_roots = solver.roots();
+    std::copy(eigen_roots.begin(), eigen_roots.end(), result.begin());
+    return result;
+  }();
 
   std::vector<cv::Point2d> intersections;
-  for (const std::complex<double>& root : solver.roots()) {
+  for (const std::complex<double>& root : roots) {
     if (std::abs(root.imag()) > 1e-6 * (1.0 + std::abs(root.real()))) {
       continue;
     }
     const double theta = phase + 2.0 * std::atan(root.real());
-    const Eigen::Vector2d point = PointAt(first_data, theta);
+    const cv::Vec2d point = PointAt(first_data, theta);
     const double residual =
         std::abs(NormalizedDistanceSquared(point, second_data) - 1.0);
     if (residual > 1e-6) {
       continue;
     }
 
-    const cv::Point2d result(point.x(), point.y());
-    const double scale = 1.0 + point.norm();
+    const cv::Point2d result(point[0], point[1]);
+    const double scale = 1.0 + cv::norm(point);
     const bool duplicate =
         std::any_of(intersections.begin(), intersections.end(),
                     [&](const cv::Point2d& old) {
