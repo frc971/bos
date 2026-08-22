@@ -1,6 +1,7 @@
 #include "src/gamepiece/ellipse.h"
 
 #include <absl/log/check.h>
+#include <absl/log/log.h>
 #include <Eigen/Core>
 #include <algorithm>
 #include <array>
@@ -126,12 +127,24 @@ auto SectorArea(const EllipseData& ellipse, double angle) -> double {
 
 auto CurvedArea(const EllipseData& ellipse_1, const EllipseData& ellipse_2,
                 const std::vector<cv::Point2d>& intersections) -> double {
-  double ellipse_1_lower_bound = ThetaFromPoint(ellipse_1, intersections[0]);
-  double ellipse_1_upper_bound = ThetaFromPoint(ellipse_1, intersections[1]);
-  double angle_1 = ellipse_1_upper_bound - ellipse_1_lower_bound;
+  constexpr double kTwoPi = 2.0 * std::numbers::pi;
+  const double lower_bound = ThetaFromPoint(ellipse_1, intersections[0]);
+  const double upper_bound = ThetaFromPoint(ellipse_1, intersections[1]);
+  double counterclockwise_angle = upper_bound - lower_bound;
+  if (counterclockwise_angle < 0.0) {
+    counterclockwise_angle += kTwoPi;
+  }
+
+  const double midpoint_angle = lower_bound + 0.5 * counterclockwise_angle;
+  const bool counterclockwise_arc_is_inside =
+      NormalizedDistanceSquared(PointAt(ellipse_1, midpoint_angle),
+                                ellipse_2) <= 1.0 + kGeometryTolerance;
+  const double angle = counterclockwise_arc_is_inside
+                           ? counterclockwise_angle
+                           : kTwoPi - counterclockwise_angle;
   double ellipse_1_curved_area =
-      SectorArea(ellipse_1, angle_1) -
-      0.5 * ellipse_1.a * ellipse_1.b * std::sin(angle_1);
+      SectorArea(ellipse_1, angle) -
+      0.5 * ellipse_1.a * ellipse_1.b * std::sin(angle);
   return ellipse_1_curved_area;
 }
 
@@ -152,15 +165,14 @@ auto ellipse_intersections(const Ellipse& first, const Ellipse& second)
                                          1.63, 2.05, 2.47, 2.89};
   cv::Vec<double, 5> coefficients;
   double accepted_phase = -1;
-  cv::Vec<double, 5> accepted_polynomial;
   for (const double candidate_phase : phases) {
     const cv::Vec<double, 5> candidate =
         QuarticCoefficients(first_data, second_data, candidate_phase);
     const bool well_conditioned =
-        std::abs(coefficients[4]) / cv::norm(candidate) > 1e-8;
+        std::abs(candidate[4]) / cv::norm(candidate) > 1e-8;
     if (well_conditioned) {
       accepted_phase = candidate_phase;
-      accepted_polynomial = candidate;
+      coefficients = candidate;
     }
   }
 
