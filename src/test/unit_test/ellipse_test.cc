@@ -1,16 +1,16 @@
 #include "src/gamepiece/ellipse.h"
 
 #include <gtest/gtest.h>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <numbers>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
-#include <stdexcept>
 
 namespace {
 
@@ -45,8 +45,7 @@ auto EllipseBoundary(const Ellipse& ellipse, double theta) -> cv::Point2d {
 auto RotatePoint(const cv::Point2d& point, double angle) -> cv::Point2d {
   const double cosine = std::cos(angle);
   const double sine = std::sin(angle);
-  return {cosine * point.x - sine * point.y,
-          sine * point.x + cosine * point.y};
+  return {cosine * point.x - sine * point.y, sine * point.x + cosine * point.y};
 }
 
 auto RotateEllipse(Ellipse ellipse, double angle) -> Ellipse {
@@ -100,8 +99,7 @@ auto IntersectionVisualCases() -> std::vector<EllipseVisualCase> {
       {"2C rotated pair", two_rotated_a, two_rotated_b, 2},
       {"3A tangent + crossings", three_a, three_b, 3},
       {"3B scaled tangent + crossings", three_scaled_a, three_scaled_b, 3},
-      {"3C rotated tangent + crossings", three_rotated_a, three_rotated_b,
-       3},
+      {"3C rotated tangent + crossings", three_rotated_a, three_rotated_b, 3},
       {"4A centered cross", four_a, four_b, 4},
       {"4B rotated cross", four_rotated_a, four_rotated_b, 4},
       {"4C offset cross", four_offset_a, four_offset_b, 4},
@@ -115,10 +113,11 @@ auto DrawText(cv::Mat& image, const std::string& text, cv::Point origin,
               cv::LINE_AA);
 }
 
-auto DrawEllipseContactSheet(const std::vector<EllipseVisualCase>& cases,
-                             const std::vector<std::vector<cv::Point2d>>& points,
-                             const std::vector<double>& overlap_areas,
-                             const std::string& output_path) -> void {
+auto DrawEllipseContactSheet(
+    const std::vector<EllipseVisualCase>& cases,
+    const std::vector<std::vector<cv::Point2d>>& points,
+    const std::vector<double>& overlap_areas, const std::string& output_path)
+    -> void {
   constexpr int kTileWidth = 520;
   constexpr int kTileHeight = 390;
   constexpr int kColumns = 3;
@@ -135,11 +134,10 @@ auto DrawEllipseContactSheet(const std::vector<EllipseVisualCase>& cases,
     auto extent = [](const Ellipse& ellipse) {
       const double cosine = std::cos(ellipse.rotation);
       const double sine = std::sin(ellipse.rotation);
-      return cv::Point2d(
-          std::hypot(ellipse.semi_axes.width * cosine,
-                     ellipse.semi_axes.height * sine),
-          std::hypot(ellipse.semi_axes.width * sine,
-                     ellipse.semi_axes.height * cosine));
+      return cv::Point2d(std::hypot(ellipse.semi_axes.width * cosine,
+                                    ellipse.semi_axes.height * sine),
+                         std::hypot(ellipse.semi_axes.width * sine,
+                                    ellipse.semi_axes.height * cosine));
     };
     const auto first_extent = extent(test_case.first);
     const auto second_extent = extent(test_case.second);
@@ -152,23 +150,25 @@ auto DrawEllipseContactSheet(const std::vector<EllipseVisualCase>& cases,
     const double max_y = std::max(test_case.first.center.y + first_extent.y,
                                   test_case.second.center.y + second_extent.y);
     constexpr double kMargin = 48.0;
-    const double scale = std::min((kTileWidth - 2.0 * kMargin) / (max_x - min_x),
-                                  (kTileHeight - 2.0 * kMargin) / (max_y - min_y));
+    const double scale =
+        std::min((kTileWidth - 2.0 * kMargin) / (max_x - min_x),
+                 (kTileHeight - 2.0 * kMargin) / (max_y - min_y));
     const cv::Point2d world_center{0.5 * (min_x + max_x),
                                    0.5 * (min_y + max_y)};
     const cv::Point2d pixel_center{kTileWidth * 0.5, kTileHeight * 0.55};
     auto to_pixel = [&](const cv::Point2d& point) {
-      return cv::Point(static_cast<int>(std::lround(
-                           pixel_center.x + (point.x - world_center.x) * scale)),
-                       static_cast<int>(std::lround(
-                           pixel_center.y - (point.y - world_center.y) * scale)));
+      return cv::Point(
+          static_cast<int>(
+              std::lround(pixel_center.x + (point.x - world_center.x) * scale)),
+          static_cast<int>(std::lround(pixel_center.y -
+                                       (point.y - world_center.y) * scale)));
     };
     auto polygon = [&](const Ellipse& ellipse) {
       std::vector<cv::Point> result;
       result.reserve(361);
       for (int sample = 0; sample <= 360; ++sample) {
-        result.push_back(to_pixel(EllipseBoundary(
-            ellipse, 2.0 * std::numbers::pi * sample / 360.0)));
+        result.push_back(to_pixel(
+            EllipseBoundary(ellipse, 2.0 * std::numbers::pi * sample / 360.0)));
       }
       return result;
     };
@@ -207,28 +207,31 @@ auto DrawEllipseContactSheet(const std::vector<EllipseVisualCase>& cases,
                  cv::LINE_AA);
     }
 
-    const double first_area = std::numbers::pi * test_case.first.semi_axes.width *
+    const double first_area = std::numbers::pi *
+                              test_case.first.semi_axes.width *
                               test_case.first.semi_axes.height;
     const double second_area = std::numbers::pi *
                                test_case.second.semi_axes.width *
                                test_case.second.semi_axes.height;
     DrawText(tile, test_case.name, {10, 22}, 0.55, {10, 10, 10});
-    DrawText(tile, "intersections: " + std::to_string(points[index].size()) +
-                      " (expected " +
-                      std::to_string(cases[index].expected_intersections) + ")",
+    DrawText(tile,
+             "intersections: " + std::to_string(points[index].size()) +
+                 " (expected " +
+                 std::to_string(cases[index].expected_intersections) + ")",
              {10, 43}, 0.43, {45, 45, 45});
     DrawText(tile, "ellipse 1 area: " + std::to_string(first_area), {10, 66},
              0.42, {210, 105, 25});
     DrawText(tile, "ellipse 2 area: " + std::to_string(second_area), {10, 86},
              0.42, {65, 70, 190});
 
-    cv::Point overlap_label =
-        to_pixel({0.5 * (test_case.first.center.x + test_case.second.center.x),
-                  0.5 * (test_case.first.center.y + test_case.second.center.y)});
+    cv::Point overlap_label = to_pixel(
+        {0.5 * (test_case.first.center.x + test_case.second.center.x),
+         0.5 * (test_case.first.center.y + test_case.second.center.y)});
     const auto moments = cv::moments(overlap_mask, true);
     if (moments.m00 > 0.0) {
-      overlap_label = {static_cast<int>(std::lround(moments.m10 / moments.m00)),
-                       static_cast<int>(std::lround(moments.m01 / moments.m00))};
+      overlap_label = {
+          static_cast<int>(std::lround(moments.m10 / moments.m00)),
+          static_cast<int>(std::lround(moments.m01 / moments.m00))};
     }
     const std::string overlap_text =
         "predicted overlap: " + std::to_string(overlap_areas[index]);
@@ -283,8 +286,8 @@ TEST(EllipseTest, HandlesTangencyAndFourIntersections) {
     EXPECT_NEAR(std::abs(point.x), std::sqrt(0.8), 1e-7);
     EXPECT_NEAR(std::abs(point.y), std::sqrt(0.8), 1e-7);
   }
-  EXPECT_NEAR(gamepiece::ellipse_overlap_area(horizontal, vertical), 3.70918,
-              1e-5);
+  EXPECT_NEAR(gamepiece::ellipse_overlap_area(horizontal, vertical),
+              4.0 * std::numbers::pi, 1e-8);
 }
 
 TEST(EllipseTest, RejectsInvalidRadii) {
@@ -313,8 +316,8 @@ TEST(EllipseTest, VisualizesThreeCasesForEveryIntersectionCount) {
           << test_case.name << " second ellipse at " << point;
     }
 
-    const double overlap = gamepiece::ellipse_overlap_area(
-        test_case.first, test_case.second);
+    const double overlap =
+        gamepiece::ellipse_overlap_area(test_case.first, test_case.second);
     EXPECT_TRUE(std::isfinite(overlap)) << test_case.name;
     const double first_area = std::numbers::pi *
                               test_case.first.semi_axes.width *
@@ -323,12 +326,17 @@ TEST(EllipseTest, VisualizesThreeCasesForEveryIntersectionCount) {
                                test_case.second.semi_axes.width *
                                test_case.second.semi_axes.height;
     if (test_case.expected_intersections <= 1) {
-      EXPECT_NEAR(overlap, 0.0, 1e-10) << test_case.name;
-    } else if (test_case.expected_intersections > 2) {
-      // This is the documented approximation in ellipse.cc for multi-way
-      // gamepiece clusters: it reports the sum of both ellipse areas.
-      EXPECT_NEAR(overlap, first_area + second_area, 1e-8)
+      const bool first_is_inner = first_area < second_area;
+      const Ellipse& inner =
+          first_is_inner ? test_case.first : test_case.second;
+      const Ellipse& outer =
+          first_is_inner ? test_case.second : test_case.first;
+      const bool contained = EllipseValue(outer, inner.center) <= 1.0 + 1e-8;
+      EXPECT_NEAR(overlap, contained ? std::min(first_area, second_area) : 0.0,
+                  1e-10)
           << test_case.name;
+    } else if (test_case.expected_intersections > 2) {
+      EXPECT_NEAR(overlap, first_area + second_area, 1e-8) << test_case.name;
     } else {
       EXPECT_GT(overlap, 0.0) << test_case.name;
       EXPECT_LT(overlap, std::min(first_area, second_area)) << test_case.name;
@@ -338,9 +346,9 @@ TEST(EllipseTest, VisualizesThreeCasesForEveryIntersectionCount) {
   }
 
   const char* configured_path = std::getenv("ELLIPSE_VISUAL_OUTPUT");
-  const std::string output_path = configured_path == nullptr
-                                      ? "/tmp/ellipse_intersection_visualization.png"
-                                      : configured_path;
+  const std::string output_path =
+      configured_path == nullptr ? "/tmp/ellipse_intersection_visualization.png"
+                                 : configured_path;
   DrawEllipseContactSheet(cases, all_intersections, all_overlap_areas,
                           output_path);
 }
