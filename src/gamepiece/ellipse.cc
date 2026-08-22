@@ -124,29 +124,15 @@ auto SectorArea(const EllipseData& ellipse, double angle) -> double {
   return ellipse.a * ellipse.b * 0.5 * std::abs(angle);
 }
 
-auto OverlapArea(const EllipseData& ellipse_1, const EllipseData& ellipse_2,
-                 const std::vector<cv::Point2d>& intersections) -> double {
-  if (intersections.empty() && intersections.size() == 1) {
-    return 0;
-  } else if (intersections.size() > 2) {
-    // not meant to be accurate, if there are 2+ intersection points the clusters
-    // should be merged anyway
-    return ellipse_1.area + ellipse_2.area;
-  }
+auto CurvedArea(const EllipseData& ellipse_1, const EllipseData& ellipse_2,
+                const std::vector<cv::Point2d>& intersections) -> double {
   double ellipse_1_lower_bound = ThetaFromPoint(ellipse_1, intersections[0]);
   double ellipse_1_upper_bound = ThetaFromPoint(ellipse_1, intersections[1]);
   double angle_1 = ellipse_1_upper_bound - ellipse_1_lower_bound;
   double ellipse_1_curved_area =
       SectorArea(ellipse_1, angle_1) -
       0.5 * ellipse_1.a * ellipse_1.b * std::sin(angle_1);
-
-  double ellipse_2_lower_bound = ThetaFromPoint(ellipse_2, intersections[0]);
-  double ellipse_2_upper_bound = ThetaFromPoint(ellipse_2, intersections[1]);
-  double angle_2 = ellipse_2_upper_bound - ellipse_2_lower_bound;
-  double ellipse_2_curved_area =
-      SectorArea(ellipse_2, angle_2) -
-      0.5 * ellipse_2.a * ellipse_2.b * std::sin(angle_2);
-  return ellipse_1_curved_area + ellipse_2_curved_area;
+  return ellipse_1_curved_area;
 }
 
 }  // namespace
@@ -159,57 +145,57 @@ auto ellipse_intersections(const Ellipse& first, const Ellipse& second)
     return {};
   }
 
-  // Choosing a phase whose opposite point is not an intersection keeps the
-  // tan-half-angle polynomial genuinely quartic, as required by the fixed-size
-  // Eigen solver. Maximizing the leading term also improves conditioning.
+  // try different phases because there is a singularity at phi - theta = pi which makes
+  // the polynomial unsolvable. Indication that the result is solvable is that the
+  // u4 coefficient is reasonably large instead of collapsing to 0
   constexpr std::array<double, 8> phases{0.0,  0.37, 0.79, 1.21,
                                          1.63, 2.05, 2.47, 2.89};
   cv::Vec<double, 5> coefficients;
-  double phase = 0.0;
-  double best_leading_ratio = -1.0;
+  double accepted_phase = -1;
+  cv::Vec<double, 5> accepted_polynomial;
   for (const double candidate_phase : phases) {
-    const auto candidate =
+    const cv::Vec<double, 5> candidate =
         QuarticCoefficients(first_data, second_data, candidate_phase);
-    const double ratio =
-        std::abs(candidate[4]) / (cv::norm(candidate) + 1e-300);
-    if (ratio > best_leading_ratio) {
-      best_leading_ratio = ratio;
-      coefficients = candidate;
-      phase = candidate_phase;
+    const bool well_conditioned =
+        std::abs(coefficients[4]) / cv::norm(candidate) > 1e-8;
+    if (well_conditioned) {
+      accepted_phase = candidate_phase;
+      accepted_polynomial = candidate;
     }
   }
 
-  if (best_leading_ratio <= 1e-12) {
+  if (accepted_phase == -1) {
+    LOG(WARNING)
+        << "All 8 phase attempts failed to produce a solvable polynomial";
     return {};
   }
+
   double largest_coefficient = 0.0;
   for (const double coefficient : coefficients.val) {
     largest_coefficient = std::max(largest_coefficient, std::abs(coefficient));
   }
   coefficients /= largest_coefficient;
 
-  const std::array<std::complex<double>, 4> roots = [&coefficients] {
-    Eigen::Matrix<double, 5, 1> eigen_coefficients;
-    for (int i = 0; i < 5; ++i) {
-      eigen_coefficients[i] = coefficients[i];
-    }
-    const Eigen::PolynomialSolver<double, 4> solver(eigen_coefficients);
-    std::array<std::complex<double>, 4> result;
-    const auto& eigen_roots = solver.roots();
-    std::copy(eigen_roots.begin(), eigen_roots.end(), result.begin());
-    return result;
-  }();
+  std::array<std::complex<double>, 4> roots;
+  Eigen::Matrix<double, 5, 1> eigen_coefficients;
+  for (int i = 0; i < 5; ++i) {
+    eigen_coefficients[i] = coefficients[i];
+  }
+  const Eigen::PolynomialSolver<double, 4> solver(eigen_coefficients);
+  const auto& eigen_roots = solver.roots();
+  std::copy(eigen_roots.begin(), eigen_roots.end(), roots.begin());
 
   std::vector<cv::Point2d> intersections;
   for (const std::complex<double>& root : roots) {
     if (std::abs(root.imag()) > 1e-6 * (1.0 + std::abs(root.real()))) {
       continue;
     }
-    const double theta = phase + 2.0 * std::atan(root.real());
+    const double theta = accepted_phase + 2.0 * std::atan(root.real());
     const cv::Vec2d point = PointAt(first_data, theta);
     const double residual =
         std::abs(NormalizedDistanceSquared(point, second_data) - 1.0);
     if (residual > 1e-6) {
+      LOG(WARNING) << "Real eigen root didn't actually lie on the ellipse";
       continue;
     }
 
@@ -229,40 +215,25 @@ auto ellipse_intersections(const Ellipse& first, const Ellipse& second)
 
 auto ellipse_overlap_area(const Ellipse& first, const Ellipse& second)
     -> double {
-  const EllipseData first_data = GetEllipseData(first);
-  const EllipseData second_data = GetEllipseData(second);
-  if (SameEllipse(first_data, second_data)) {
-    return first_data.area;
+  const EllipseData ellipse_1 = GetEllipseData(first);
+  const EllipseData ellipse_2 = GetEllipseData(second);
+  if (SameEllipse(ellipse_1, ellipse_2)) {
+    return ellipse_1.area;
   }
 
   const std::vector<cv::Point2d> intersections =
       ellipse_intersections(first, second);
-  // With zero or one distinct boundary intersection the ellipses are disjoint,
-  // tangent, or one contains the other.
-  if (intersections.size() <= 1) {
-    const bool first_center_inside =
-        NormalizedDistanceSquared(first_data.center, second_data) <= 1.0;
-    const bool second_center_inside =
-        NormalizedDistanceSquared(second_data.center, first_data) <= 1.0;
-    if (first_center_inside && second_center_inside) {
-      return std::min(first_data.area, second_data.area);
-    }
-    if (first_center_inside) {
-      return first_data.area;
-    }
-    if (second_center_inside) {
-      return second_data.area;
-    }
-    return 0.0;
+  if (intersections.empty() || intersections.size() == 1) {
+    return 0;
+  } else if (intersections.size() > 2) {
+    // not meant to be accurate, if there are 2+ intersection points the clusters
+    // should be merged anyway
+    return ellipse_1.area + ellipse_2.area;
   }
 
-  // Green's theorem integrates the inside arcs of both boundaries. For two
-  // intersections this is exactly the two ellipse-sector integrals minus the
-  // two center-to-chord triangles; it also handles four intersections.
-  double area = OverlapArea(first_data, second_data, intersections) +
-                OverlapArea(second_data, first_data, intersections);
-  area = std::abs(area);
-  return std::clamp(area, 0.0, std::min(first_data.area, second_data.area));
+  double area = CurvedArea(ellipse_1, ellipse_2, intersections) +
+                CurvedArea(ellipse_2, ellipse_1, intersections);
+  return area;
 }
 
 }  // namespace gamepiece

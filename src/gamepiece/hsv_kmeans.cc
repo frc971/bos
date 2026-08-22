@@ -90,30 +90,11 @@ auto cluster_distance(const std::vector<kmeans_cluster_t>& clusters,
       units::meter_t{floor_relative_offset.at<double>(1)}};
 }
 
-auto clusters_overlap(const kmeans_cluster_t& k1, const kmeans_cluster_t& k2)
-    -> bool {
-  const cv::Vec2d offset{k2.centroid.x - k1.centroid.x,
-                         k2.centroid.y - k1.centroid.y};
-
-  const double distance = cv::norm(offset);
-  if (distance == 0.0) {
-    return true;
-  }
-  const cv::Vec2d u = offset / distance;
-  const double k1_variance = u.dot(k1.covar * u);
-  const double k2_variance = u.dot(k2.covar * u);
-
-  const double k1_radius = 2.0 * std::sqrt(std::max(0.0, k1_variance));
-  const double k2_radius = 2.0 * std::sqrt(std::max(0.0, k2_variance));
-
-  return distance <= k1_radius + k2_radius;
-}
-
 auto eliminate_overlapping_clusters(
     const std::vector<kmeans_cluster_t>& unfiltered_clusters,
     const std::vector<frc::Translation2d>& world_relative_cluster_offsets)
     -> std::vector<kmeans_cluster_t> {
   static constexpr double max_cluster_merge_dist_m = 1;
-  std::vector<double> distances(unfiltered_clusters.);
+  std::vector<double> distances(unfiltered_clusters.size());
 }
 }  // namespace gamepiece
