@@ -1,4 +1,5 @@
-add_library(gamepiece gamepiece.cc ellipse.cc)
+add_library(gamepiece gamepiece.cc ellipse.cc
+            hsv_cluster_tracker.cc)
 target_link_libraries(gamepiece camera yolo utils Eigen3::Eigen)
 # Eigen's unsupported polynomial solver currently fails to compile with its
 # ARM NEON packet path; this target only operates on tiny fixed-size matrices.

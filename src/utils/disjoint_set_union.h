@@ -21,13 +21,22 @@ class DisjointSetUnion {
 
   DisjointSetUnion() : DisjointSetUnion(0) {}
 
+  // Removes all elements while retaining the allocated storage for reuse.
+  auto Clear() -> void {
+    parent_.clear();
+    component_size_.clear();
+    component_count_ = 0;
+  }
+
   // Adds a new singleton component and returns its element index.
-  auto MakeSet() -> element_type {
-    const element_type element = parent_.size();
-    parent_.push_back(element);
-    component_size_.push_back(1);
-    ++component_count_;
-    return element;
+  auto FillSets(std::size_t num_elements) -> std::vector<element_type> {
+    for (size_t i = 0; i < num_elements; i++) {
+      const element_type element = parent_.size();
+      parent_.push_back(element);
+      component_size_.push_back(1);
+      ++component_count_;
+    }
+    return parent_;
   }
 
   auto Find(element_type element) -> element_type {
