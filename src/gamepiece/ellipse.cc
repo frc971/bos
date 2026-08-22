@@ -235,8 +235,21 @@ auto ellipse_overlap_area(const Ellipse& first, const Ellipse& second)
 
   const std::vector<cv::Point2d> intersections =
       ellipse_intersections(first, second);
-  if (intersections.empty() || intersections.size() == 1) {
+  if (intersections.empty()) {
     return 0;
+  } else if (intersections.size() == 1) {
+    bool ellipse_1_inner = ellipse_1.area < ellipse_2.area;
+    const EllipseData& possibly_inner_ellipse =
+        ellipse_1_inner ? ellipse_1 : ellipse_2;
+    const EllipseData& possibly_outer_ellipse =
+        ellipse_1_inner ? ellipse_2 : ellipse_1;
+    double intersection_theta =
+        ThetaFromPoint(possibly_inner_ellipse, intersections[0]);
+    bool overlapping = NormalizedDistanceSquared(
+                           PointAt(possibly_inner_ellipse,
+                                   intersection_theta + 0.5 * std::numbers::pi),
+                           possibly_outer_ellipse) <= 1 + kGeometryTolerance;
+    return overlapping ? possibly_inner_ellipse.area : 0.0;
   } else if (intersections.size() > 2) {
     // not meant to be accurate, if there are 2+ intersection points the clusters
     // should be merged anyway
