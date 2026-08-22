@@ -24,14 +24,18 @@ class HSVClusterTracker {
   void HSVThreshold(const cv::Mat& img);
 
  private:
-  auto KMeans(const std::vector<cv::Point2d>& data_points, int k,
-              double x_weight,
-              const std::vector<kmeans_cluster_t>& initial_clusters) const
+  [[nodiscard]] auto KMeans(
+      const std::vector<cv::Point2d>& data_points, int k,
+      const std::vector<kmeans_cluster_t>& initial_clusters) const
       -> std::vector<kmeans_cluster_t>;
-  auto ClusterDistance(const kmeans_cluster_t& cluster) const
+  [[nodiscard]] auto ClusterDistance(const kmeans_cluster_t& cluster) const
       -> frc::Translation2d;
-  auto ClustersOverlap(const kmeans_cluster_t& first,
-                       const kmeans_cluster_t& second) const -> bool;
+  [[nodiscard]] auto PointDistance(const cv::Point2f& point,
+                                   double world_relative_vertical = 0) const
+      -> float;
+  [[nodiscard]] auto ClustersOverlap(const kmeans_cluster_t& first,
+                                     const kmeans_cluster_t& second) const
+      -> bool;
   auto MergeOverlappingClusters(
       const std::vector<kmeans_cluster_t>& unfiltered_clusters)
       -> std::vector<kmeans_cluster_t>;
@@ -49,6 +53,10 @@ class HSVClusterTracker {
   static constexpr std::pair<int, int> hsv_color_range{18, 30};
   static constexpr int minimum_saturation{180};
   static constexpr double max_merge_distance_m{0.5};
+  const size_t min_pixels_per_cluster;
+  const double horizon_distance_tolerance;
+  static constexpr double min_pixels_per_cluster_image_px_ratio{0.01};
+  static constexpr double horizon_distance_tolerance_image_height_ratio{0.01};
 };
 
 }  // namespace gamepiece
