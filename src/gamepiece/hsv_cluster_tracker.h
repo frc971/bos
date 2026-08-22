@@ -25,7 +25,9 @@ class HSVClusterTracker {
 
  private:
   auto KMeans(const std::vector<cv::Point2d>& data_points, int k,
-              double x_weight = 1.0) const -> std::vector<kmeans_cluster_t>;
+              double x_weight,
+              const std::vector<kmeans_cluster_t>& initial_clusters) const
+      -> std::vector<kmeans_cluster_t>;
   auto ClusterDistance(const kmeans_cluster_t& cluster) const
       -> frc::Translation2d;
   auto ClustersOverlap(const kmeans_cluster_t& first,

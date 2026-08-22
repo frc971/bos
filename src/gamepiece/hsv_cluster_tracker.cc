@@ -15,6 +15,37 @@
 
 namespace gamepiece {
 
+namespace {
+
+constexpr int kAdditionalClusters = 3;
+
+auto SquaredDistance(const cv::Point2f& first, const cv::Point2f& second)
+    -> double {
+  const double x = first.x - second.x;
+  const double y = first.y - second.y;
+  return x * x + y * y;
+}
+
+auto Covariance(const std::vector<cv::Point2d>& points) -> cv::Mat {
+  cv::Point2d mean{0.0, 0.0};
+  for (const cv::Point2d& point : points) {
+    mean += point;
+  }
+  mean /= static_cast<double>(points.size());
+
+  cv::Mat covariance = cv::Mat::zeros(2, 2, CV_64F);
+  for (const cv::Point2d& point : points) {
+    const cv::Point2d offset = point - mean;
+    covariance.at<double>(0, 0) += offset.x * offset.x;
+    covariance.at<double>(0, 1) += offset.x * offset.y;
+    covariance.at<double>(1, 0) += offset.y * offset.x;
+    covariance.at<double>(1, 1) += offset.y * offset.y;
+  }
+  return covariance / static_cast<double>(points.size());
+}
+
+}  // namespace
+
 HSVClusterTracker::HSVClusterTracker(const camera::camera_constant_t& camera)
     : camera_constant_(camera) {
   if (camera_constant_.intrinsics_path.has_value()) {
@@ -34,6 +65,7 @@ HSVClusterTracker::HSVClusterTracker(const camera::camera_constant_t& camera)
 }
 
 void HSVClusterTracker::ProcessFrame(const cv::Mat& frame) {
+  const std::vector<kmeans_cluster_t> previous_clusters = clusters_;
   clusters_.clear();
   thresholded_points_.clear();
 
@@ -47,9 +79,10 @@ void HSVClusterTracker::ProcessFrame(const cv::Mat& frame) {
   }
 
   const int cluster_count = std::min(
-      active_cluster_count_, static_cast<int>(thresholded_points_.size()));
-  clusters_ =
-      MergeOverlappingClusters(KMeans(thresholded_points_, cluster_count));
+      {active_cluster_count_, static_cast<int>(thresholded_points_.size()),
+       static_cast<int>(previous_clusters.size() + kAdditionalClusters)});
+  clusters_ = MergeOverlappingClusters(
+      KMeans(thresholded_points_, cluster_count, 1.0, previous_clusters));
 }
 
 void HSVClusterTracker::HSVThreshold(const cv::Mat& img) {
@@ -68,8 +101,10 @@ void HSVClusterTracker::HSVThreshold(const cv::Mat& img) {
   }
 }
 
-auto HSVClusterTracker::KMeans(const std::vector<cv::Point2d>& data_points,
-                               const int k, const double x_weight) const
+auto HSVClusterTracker::KMeans(
+    const std::vector<cv::Point2d>& data_points, const int k,
+    const double x_weight,
+    const std::vector<kmeans_cluster_t>& initial_clusters) const
     -> std::vector<kmeans_cluster_t> {
   if (data_points.empty() || k <= 0 ||
       k > static_cast<int>(data_points.size()) || !(x_weight > 0.0) ||
@@ -77,17 +112,107 @@ auto HSVClusterTracker::KMeans(const std::vector<cv::Point2d>& data_points,
     throw std::invalid_argument("Invalid HSV KMeans configuration");
   }
 
-  std::vector<cv::Point2d> scaled_points = data_points;
-  for (cv::Point2d& point : scaled_points) {
-    point.x *= x_weight;
+  std::vector<cv::Point2f> scaled_points;
+  scaled_points.reserve(data_points.size());
+  for (const cv::Point2d& point : data_points) {
+    scaled_points.emplace_back(static_cast<float>(point.x * x_weight),
+                               static_cast<float>(point.y));
   }
 
   cv::Mat labels;
   cv::Mat centers;
   const cv::TermCriteria criteria(
       cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 1e-4);
-  cv::kmeans(scaled_points, k, labels, criteria, 10, cv::KMEANS_PP_CENTERS,
-             centers);
+
+  std::vector<cv::Point2f> initial_centers;
+  initial_centers.reserve(k);
+  for (const kmeans_cluster_t& cluster : initial_clusters) {
+    if (static_cast<int>(initial_centers.size()) == k) {
+      break;
+    }
+    if (std::isfinite(cluster.centroid.x) &&
+        std::isfinite(cluster.centroid.y)) {
+      initial_centers.emplace_back(
+          static_cast<float>(cluster.centroid.x * x_weight),
+          static_cast<float>(cluster.centroid.y));
+    }
+  }
+
+  std::vector<bool> selected_points(scaled_points.size(), false);
+  while (static_cast<int>(initial_centers.size()) < k) {
+    std::size_t farthest_point = scaled_points.size();
+    double farthest_distance = -1.0;
+    for (std::size_t point_index = 0; point_index < scaled_points.size();
+         ++point_index) {
+      if (selected_points[point_index]) {
+        continue;
+      }
+
+      double distance_to_nearest_center = std::numeric_limits<double>::max();
+      for (const cv::Point2f& center : initial_centers) {
+        distance_to_nearest_center =
+            std::min(distance_to_nearest_center,
+                     SquaredDistance(scaled_points[point_index], center));
+      }
+      if (initial_centers.empty() ||
+          distance_to_nearest_center > farthest_distance) {
+        farthest_point = point_index;
+        farthest_distance = distance_to_nearest_center;
+      }
+    }
+
+    selected_points[farthest_point] = true;
+    initial_centers.push_back(scaled_points[farthest_point]);
+  }
+
+  labels = cv::Mat(static_cast<int>(scaled_points.size()), 1, CV_32S);
+  std::vector<int> label_counts(k, 0);
+  for (int point_index = 0; point_index < labels.rows; ++point_index) {
+    int nearest_center = 0;
+    double nearest_distance =
+        SquaredDistance(scaled_points[point_index], initial_centers.front());
+    for (int center_index = 1; center_index < k; ++center_index) {
+      const double distance = SquaredDistance(scaled_points[point_index],
+                                              initial_centers[center_index]);
+      if (distance < nearest_distance) {
+        nearest_center = center_index;
+        nearest_distance = distance;
+      }
+    }
+    labels.at<int>(point_index, 0) = nearest_center;
+    ++label_counts[nearest_center];
+  }
+
+  for (int empty_cluster = 0; empty_cluster < k; ++empty_cluster) {
+    if (label_counts[empty_cluster] != 0) {
+      continue;
+    }
+
+    int point_to_reassign = -1;
+    double closest_distance = std::numeric_limits<double>::max();
+    for (int point_index = 0; point_index < labels.rows; ++point_index) {
+      const int current_cluster = labels.at<int>(point_index, 0);
+      if (label_counts[current_cluster] <= 1) {
+        continue;
+      }
+      const double distance = SquaredDistance(scaled_points[point_index],
+                                              initial_centers[empty_cluster]);
+      if (distance < closest_distance) {
+        point_to_reassign = point_index;
+        closest_distance = distance;
+      }
+    }
+
+    if (point_to_reassign >= 0) {
+      const int old_cluster = labels.at<int>(point_to_reassign, 0);
+      labels.at<int>(point_to_reassign, 0) = empty_cluster;
+      --label_counts[old_cluster];
+      ++label_counts[empty_cluster];
+    }
+  }
+
+  cv::kmeans(scaled_points, k, labels, criteria, 1,
+             cv::KMEANS_USE_INITIAL_LABELS, centers);
 
   std::vector<std::vector<cv::Point2d>> cluster_points(k);
   for (int i = 0; i < labels.rows; ++i) {
@@ -99,13 +224,12 @@ auto HSVClusterTracker::KMeans(const std::vector<cv::Point2d>& data_points,
   clusters.reserve(k);
   for (int i = 0; i < k; ++i) {
     kmeans_cluster_t cluster;
-    cluster.centroid = {centers.at<double>(i, 0) / x_weight,
-                        centers.at<double>(i, 1)};
+    cluster.centroid = {static_cast<double>(centers.at<float>(i, 0)) / x_weight,
+                        static_cast<double>(centers.at<float>(i, 1))};
     cluster.img_points = std::move(cluster_points.at(i));
 
     if (cluster.img_points.size() > 1) {
-      cv::calcCovarMatrix(cluster.img_points, cluster.covar, cv::noArray(),
-                          cv::COVAR_NORMAL | cv::COVAR_ROWS | cv::COVAR_SCALE);
+      cluster.covar = Covariance(cluster.img_points);
     } else {
       cluster.covar = cv::Mat::eye(2, 2, CV_64F);
     }
@@ -230,8 +354,7 @@ auto HSVClusterTracker::MergeOverlappingClusters(
     merged.centroid = point_sum / static_cast<double>(merged.img_points.size());
 
     if (merged.img_points.size() > 1) {
-      cv::calcCovarMatrix(merged.img_points, merged.covar, cv::noArray(),
-                          cv::COVAR_NORMAL | cv::COVAR_ROWS | cv::COVAR_SCALE);
+      merged.covar = Covariance(merged.img_points);
     } else {
       merged.covar = cv::Mat::eye(2, 2, CV_64F);
     }
