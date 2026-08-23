@@ -1,4 +1,6 @@
 #include "src/gamepiece/hsv_cluster_tracker.h"
+#include "src/utils/camera_utils.h"
+#include "src/utils/constants_from_json.h"
 
 #include <gtest/gtest.h>
 
@@ -70,6 +72,30 @@ auto DrawClusterIndex(cv::Mat& image, const std::size_t cluster_index,
               cv::Scalar{255, 255, 255}, kTextThickness, cv::LINE_AA);
 }
 
+auto NormalizedToPixel(const cv::Point2f& point, const cv::Mat& camera_matrix)
+    -> cv::Point2f {
+  return {static_cast<float>(camera_matrix.at<double>(0, 0) * point.x +
+                             camera_matrix.at<double>(0, 2)),
+          static_cast<float>(camera_matrix.at<double>(1, 1) * point.y +
+                             camera_matrix.at<double>(1, 2))};
+}
+
+auto PixelCluster(const gamepiece::kmeans_cluster_t& cluster,
+                  const cv::Mat& camera_matrix) -> gamepiece::kmeans_cluster_t {
+  gamepiece::kmeans_cluster_t pixel_cluster = cluster;
+  for (cv::Point2f& point : pixel_cluster.img_points) {
+    point = NormalizedToPixel(point, camera_matrix);
+  }
+  pixel_cluster.centroid = NormalizedToPixel(cluster.centroid, camera_matrix);
+
+  const cv::Mat scale =
+      (cv::Mat_<float>(2, 2)
+           << static_cast<float>(camera_matrix.at<double>(0, 0)),
+       0.0f, 0.0f, static_cast<float>(camera_matrix.at<double>(1, 1)));
+  pixel_cluster.covar = scale * cluster.covar * scale.t();
+  return pixel_cluster;
+}
+
 auto InputFramePath() -> std::filesystem::path {
   if (const char* configured_path = std::getenv("HSV_KMEANS_INPUT_FRAME");
       configured_path != nullptr && configured_path[0] != '\0') {
@@ -95,10 +121,14 @@ TEST(HSVClusterVisualizationTest, DrawsClustersFromRealCameraFrame) {
   const cv::Mat frame = cv::imread(input_path.string(), cv::IMREAD_COLOR);
   ASSERT_FALSE(frame.empty()) << "Could not decode test frame: " << input_path;
 
-  camera::camera_constant_t camera{
-      .name = "real_hsv_visualization",
-      .frame_width = static_cast<uint>(frame.cols),
-      .frame_height = static_cast<uint>(frame.rows)};
+  const std::filesystem::path camera_constants_path =
+      std::filesystem::path(BOS_SOURCE_DIR) / "constants" /
+      "camera_constants.json";
+  const camera::camera_constant_t camera =
+      camera::GetCameraConstants(camera_constants_path.string())
+          .at("gamepiece_camera");
+  const cv::Mat camera_matrix = utils::CameraMatrixFromJson<cv::Mat>(
+      utils::ReadIntrinsics(camera.intrinsics_path.value()));
   gamepiece::HSVClusterTracker tracker(camera);
   // Prime the tracker with the same captured frame so the visualization shows
   // the post-merge state after its temporal cluster count has grown.
@@ -115,12 +145,14 @@ TEST(HSVClusterVisualizationTest, DrawsClustersFromRealCameraFrame) {
   for (std::size_t cluster_index = 0; cluster_index < clusters->size();
        ++cluster_index) {
     const gamepiece::kmeans_cluster_t& cluster = clusters->at(cluster_index);
+    const gamepiece::kmeans_cluster_t pixel_cluster =
+        PixelCluster(cluster, camera_matrix);
     const cv::Scalar color = RandomClusterColor(random_generator);
     const cv::Vec3b pixel_color{static_cast<uchar>(color[0]),
                                 static_cast<uchar>(color[1]),
                                 static_cast<uchar>(color[2])};
 
-    for (const cv::Point2d& point : cluster.img_points) {
+    for (const cv::Point2f& point : pixel_cluster.img_points) {
       const cv::Point pixel{static_cast<int>(std::lround(point.x)),
                             static_cast<int>(std::lround(point.y))};
       if (pixel.x >= 0 && pixel.x < visualization.cols && pixel.y >= 0 &&
@@ -129,12 +161,13 @@ TEST(HSVClusterVisualizationTest, DrawsClustersFromRealCameraFrame) {
       }
     }
 
-    const cv::RotatedRect ellipse = ClusterEllipse(cluster);
+    const cv::RotatedRect ellipse = ClusterEllipse(pixel_cluster);
     cv::ellipse(visualization, ellipse, cv::Scalar{0, 0, 0}, 6, cv::LINE_AA);
     cv::ellipse(visualization, ellipse, color, 2, cv::LINE_AA);
 
-    const cv::Point centroid{static_cast<int>(std::lround(cluster.centroid.x)),
-                             static_cast<int>(std::lround(cluster.centroid.y))};
+    const cv::Point centroid{
+        static_cast<int>(std::lround(pixel_cluster.centroid.x)),
+        static_cast<int>(std::lround(pixel_cluster.centroid.y))};
     DrawClusterIndex(visualization, cluster_index, centroid);
   }
 
