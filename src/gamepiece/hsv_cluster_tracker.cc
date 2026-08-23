@@ -95,8 +95,12 @@ void HSVClusterTracker::ProcessFrame(const cv::Mat& frame) {
   const int cluster_count = std::min(
       {active_cluster_count_, static_cast<int>(thresholded_points_.size()),
        static_cast<int>(previous_clusters.size() + kAdditionalClusters)});
-  clusters_ = MergeOverlappingClusters(
-      KMeans(thresholded_points_, cluster_count, previous_clusters));
+  LOG(INFO) << "Input cluster count: " << cluster_count;
+  const std::vector<kmeans_cluster_t> unmerged_clusters =
+      KMeans(thresholded_points_, cluster_count, previous_clusters);
+  LOG(INFO) << "Unmerged cluster count: " << cluster_count;
+  clusters_ = MergeOverlappingClusters(unmerged_clusters);
+  LOG(INFO) << "Merged cluster count: " << cluster_count;
   for (auto& cluster : clusters_) {
     cluster.camera_relative_translation.emplace(ClusterDistance(cluster));
   }
@@ -121,18 +125,15 @@ void HSVClusterTracker::HSVThreshold(const cv::Mat& img) {
 auto HSVClusterTracker::UndistortedPointOffset(
     const cv::Point2f& point, float world_relative_vertical) const
     -> std::optional<frc::Translation2d> {
-  if (point.y < 0) {
-    return std::nullopt;
-  }
   cv::Mat camera_ray = (cv::Mat_<float>(4, 1) << point.x, point.y, 1.0f, 0.0f);
   camera_ray = camera_extrinsics_cv_ * camera_ray;
 
   const float ray_y = camera_ray.at<float>(1, 0);
-  if (std::abs(ray_y) <= std::numeric_limits<float>::epsilon()) {
-    return {};
+  if (ray_y <= std::numeric_limits<float>::epsilon()) {
+    return std::nullopt;
   }
   const float scale =
-       (world_relative_vertical - camera_origin_.at<float>(1, 0)) / ray_y;
+      (world_relative_vertical - camera_origin_.at<float>(1, 0)) / ray_y;
   const cv::Mat floor_relative_offset = scale * camera_ray;
   return std::make_optional<frc::Translation2d>(
       {units::meter_t{floor_relative_offset.at<float>(2, 0)},
@@ -151,6 +152,7 @@ auto HSVClusterTracker::KMeans(
   std::vector<cv::Point2f> scaled_points;
   std::vector<size_t> used_point_indices;
   scaled_points.reserve(data_points.size());
+  float average_point_depth = 0;
   for (size_t i = 0; i < data_points.size(); i++) {
     // inaccurate for most points because this assumes they're on the floor, may change later
     const std::optional<frc::Translation2d> point_offset =
@@ -158,15 +160,17 @@ auto HSVClusterTracker::KMeans(
     if (!point_offset.has_value()) {
       continue;  // to avoid yellow in the stands, which is above the field hoizon line
     }
-    scaled_points.emplace_back(
-        data_points[i].x,
-        data_points[i].y * point_offset.value().Norm().value());
+    const float depth = point_offset.value().Norm().value();
+    average_point_depth += depth;
+    scaled_points.emplace_back(data_points[i].x, data_points[i].y * depth);
     used_point_indices.push_back(i);
   }
-
   if (scaled_points.empty()) {
     return {};
   }
+  average_point_depth /= used_point_indices.size();
+  LOG(INFO) << "Avg point depth: " << average_point_depth;
+
   cv::Mat labels;
   cv::Mat centers;
   const cv::TermCriteria criteria(
@@ -178,15 +182,12 @@ auto HSVClusterTracker::KMeans(
     if (static_cast<int>(initial_centers.size()) == k) {
       break;
     }
-    if (std::isfinite(cluster.centroid.x) &&
-        std::isfinite(cluster.centroid.y)) {
-      const std::optional<frc::Translation2d> point_offset =
-          UndistortedPointOffset(cluster.centroid, 0);
-      if (point_offset.has_value()) {
-        initial_centers.emplace_back(
-            cluster.centroid.x,
-            cluster.centroid.y * point_offset.value().Norm().value());
-      }
+    const std::optional<frc::Translation2d> point_offset =
+        UndistortedPointOffset(cluster.centroid, 0);
+    if (point_offset.has_value()) {
+      initial_centers.emplace_back(
+          cluster.centroid.x,
+          cluster.centroid.y * point_offset.value().Norm().value());
     }
   }
 
