@@ -69,8 +69,6 @@ HSVClusterTracker::HSVClusterTracker(const camera::camera_constant_t& camera)
   const cv::Mat camera_extrinsics = utils::EigenToCvMat(
       utils::ExtrinsicsJsonToCameraToRobot(extrinsics).ToMatrix());
   camera_extrinsics.convertTo(camera_extrinsics_wpi_, CV_32F);
-  // ChangeBasis uses the CV_64F basis matrices from transform.h, so perform
-  // the basis conversion before narrowing the extrinsics to float.
   camera_extrinsics_cv_ = camera_extrinsics.clone();
   utils::ChangeBasis(camera_extrinsics_cv_, utils::WPI_TO_CV);
   camera_extrinsics_cv_.convertTo(camera_extrinsics_cv_, CV_32F);
@@ -95,12 +93,9 @@ void HSVClusterTracker::ProcessFrame(const cv::Mat& frame) {
   const int cluster_count = std::min(
       {active_cluster_count_, static_cast<int>(thresholded_points_.size()),
        static_cast<int>(previous_clusters.size() + kAdditionalClusters)});
-  LOG(INFO) << "Input cluster count: " << cluster_count;
   const std::vector<kmeans_cluster_t> unmerged_clusters =
       KMeans(thresholded_points_, cluster_count, previous_clusters);
-  LOG(INFO) << "Unmerged cluster count: " << cluster_count;
   clusters_ = MergeOverlappingClusters(unmerged_clusters);
-  LOG(INFO) << "Merged cluster count: " << cluster_count;
   for (auto& cluster : clusters_) {
     cluster.camera_relative_translation.emplace(ClusterDistance(cluster));
   }
@@ -122,8 +117,9 @@ void HSVClusterTracker::HSVThreshold(const cv::Mat& img) {
   }
 }
 
-auto HSVClusterTracker::UndistortedPointOffset(
-    const cv::Point2f& point, float world_relative_vertical) const
+auto HSVClusterTracker::UndistortedPointOffset(const cv::Point2f& point,
+                                               float world_relative_vertical,
+                                               bool verbose) const
     -> std::optional<frc::Translation2d> {
   cv::Mat camera_ray = (cv::Mat_<float>(4, 1) << point.x, point.y, 1.0f, 0.0f);
   camera_ray = camera_extrinsics_cv_ * camera_ray;
@@ -135,6 +131,12 @@ auto HSVClusterTracker::UndistortedPointOffset(
   const float scale =
       (world_relative_vertical - camera_origin_.at<float>(1, 0)) / ray_y;
   const cv::Mat floor_relative_offset = scale * camera_ray;
+  if (cv::norm(floor_relative_offset) > 16) {  // TODO get from field constants
+    return std::nullopt;
+  }
+  if (verbose) {
+    LOG(INFO) << "Scale: " << scale << " ray_y " << ray_y;
+  }
   return std::make_optional<frc::Translation2d>(
       {units::meter_t{floor_relative_offset.at<float>(2, 0)},
        units::meter_t{-floor_relative_offset.at<float>(0, 0)}});
@@ -169,7 +171,6 @@ auto HSVClusterTracker::KMeans(
     return {};
   }
   average_point_depth /= used_point_indices.size();
-  LOG(INFO) << "Avg point depth: " << average_point_depth;
 
   cv::Mat labels;
   cv::Mat centers;
@@ -318,7 +319,8 @@ auto HSVClusterTracker::ClusterDistance(const kmeans_cluster_t& cluster) const
                        [](const cv::Point2f& first, const cv::Point2f& second) {
                          return first.y < second.y;
                        });
-  return UndistortedPointOffset(*lowest_point, 0).value();
+  const auto offset = UndistortedPointOffset(*lowest_point, 0).value();
+  return offset;
 }
 
 auto HSVClusterTracker::ClustersOverlap(const kmeans_cluster_t& first,

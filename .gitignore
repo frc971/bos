@@ -20,3 +20,5 @@ wpilib-install
 *.jpg
 interesting_frames/
 *build*/
+**/__pycache__/
+visualizations/

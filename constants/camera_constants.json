@@ -32,6 +32,15 @@
       "camera_type": "uvc"
     },
     {
+      "name": "gamepiece_camera",
+      "intrinsics_path": "/bos/constants/gamepiece/intrinsics.json",
+      "extrinsics_path": "/bos/constants/gamepiece/extrinsics.json",
+      "frame_width": 1920,
+      "frame_height": 1080,
+      "fps": 30.0,
+      "detector_type": "opencv_cpu"
+    },
+    {
       "name": "second_bot_front",
       "intrinsics_path": "/bos/constants/second_bot/front_intrinsics.json",
       "extrinsics_path": "/bos/constants/second_bot/front_extrinsics.json",

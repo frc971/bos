@@ -31,7 +31,8 @@ class HSVClusterTracker {
       -> frc::Translation2d;
   // must be passed in undistorted convention (normalized and centered)
   [[nodiscard]] auto UndistortedPointOffset(const cv::Point2f& point,
-                                            float world_relative_vertical) const
+                                            float world_relative_vertical,
+                                            bool verbose = false) const
       -> std::optional<frc::Translation2d>;
   [[nodiscard]] auto ClustersOverlap(const kmeans_cluster_t& first,
                                      const kmeans_cluster_t& second) const
