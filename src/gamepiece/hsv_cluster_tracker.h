@@ -7,13 +7,12 @@
 
 namespace gamepiece {
 
-struct KMeansCluster {
+using kmeans_cluster_t = struct KMeansCluster {
   cv::Point2f centroid;
   cv::Mat covar;
   std::vector<cv::Point2f> img_points;
+  std::optional<frc::Translation2d> camera_relative_translation = std::nullopt;
 };
-
-using kmeans_cluster_t = KMeansCluster;
 
 class HSVClusterTracker {
  public:
@@ -30,9 +29,10 @@ class HSVClusterTracker {
       -> std::vector<kmeans_cluster_t>;
   [[nodiscard]] auto ClusterDistance(const kmeans_cluster_t& cluster) const
       -> frc::Translation2d;
-  [[nodiscard]] auto PointDistance(const cv::Point2f& point,
-                                   float world_relative_vertical = 0.0f) const
-      -> float;
+  // must be passed in undistorted convention (normalized and centered)
+  [[nodiscard]] auto UndistortedPointOffset(const cv::Point2f& point,
+                                            float world_relative_vertical) const
+      -> std::optional<frc::Translation2d>;
   [[nodiscard]] auto ClustersOverlap(const kmeans_cluster_t& first,
                                      const kmeans_cluster_t& second) const
       -> bool;
@@ -49,14 +49,15 @@ class HSVClusterTracker {
   cv::Mat hsv_masked_;
   cv::Mat camera_intrinsics_;
   cv::Mat distortion_coeffs_;
-  cv::Mat camera_extrinsics_;
+  cv::Mat camera_extrinsics_wpi_;
+  cv::Mat camera_extrinsics_cv_;
   static constexpr std::pair<int, int> hsv_color_range{18, 30};
   static constexpr int minimum_saturation{180};
   static constexpr float max_merge_distance_m{0.5f};
-  const size_t min_pixels_per_cluster;
-  const float horizon_distance_tolerance;
+  const size_t min_pixels_per_cluster_;
   static constexpr float min_pixels_per_cluster_image_px_ratio{0.01f};
-  static constexpr float horizon_distance_tolerance_image_height_ratio{0.01f};
+  static constexpr float horizon_distance_tolerance{0.01f};
+  cv::Mat camera_origin_;
 };
 
 }  // namespace gamepiece

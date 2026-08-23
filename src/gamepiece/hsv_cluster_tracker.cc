@@ -48,31 +48,34 @@ auto Covariance(const std::vector<cv::Point2f>& points) -> cv::Mat {
 
 HSVClusterTracker::HSVClusterTracker(const camera::camera_constant_t& camera)
     : camera_constant_(camera),
-      min_pixels_per_cluster(
+      min_pixels_per_cluster_(
           static_cast<int>(camera.frame_height.value_or(800) *
                            camera.frame_width.value_or(1280) *
-                           min_pixels_per_cluster_image_px_ratio)),
-      horizon_distance_tolerance(
-          camera.frame_height.value_or(800) *
-          horizon_distance_tolerance_image_height_ratio) {
-  if (camera_constant_.intrinsics_path.has_value()) {
-    const nlohmann::json intrinsics =
-        utils::ReadIntrinsics(*camera_constant_.intrinsics_path);
-    const cv::Mat camera_intrinsics =
-        utils::CameraMatrixFromJson<cv::Mat>(intrinsics);
-    const cv::Mat distortion_coeffs =
-        utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics);
-    camera_intrinsics.convertTo(camera_intrinsics_, CV_32F);
-    distortion_coeffs.convertTo(distortion_coeffs_, CV_32F);
+                           min_pixels_per_cluster_image_px_ratio)) {
+  if (!camera_constant_.intrinsics_path.has_value()) {
+    LOG(FATAL) << "Cannot run gamepiece without intrinsics";
   }
+  if (!camera_constant_.extrinsics_path.has_value()) {
+    LOG(FATAL) << "Cannot run gamepiece without extrinsics";
+  }
+  const nlohmann::json intrinsics =
+      utils::ReadIntrinsics(*camera_constant_.intrinsics_path);
+  camera_intrinsics_ = utils::CameraMatrixFromJson<cv::Mat>(intrinsics);
+  distortion_coeffs_ =
+      utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics);
 
-  if (camera_constant_.extrinsics_path.has_value()) {
-    const cv::Mat camera_extrinsics = utils::EigenToCvMat(
-        utils::ExtrinsicsJsonToCameraToRobot(
-            utils::ReadExtrinsics(*camera_constant_.extrinsics_path))
-            .ToMatrix());
-    camera_extrinsics.convertTo(camera_extrinsics_, CV_32F);
-  }
+  const nlohmann::json extrinsics =
+      utils::ReadExtrinsics(*camera_constant_.extrinsics_path);
+  const cv::Mat camera_extrinsics = utils::EigenToCvMat(
+      utils::ExtrinsicsJsonToCameraToRobot(extrinsics).ToMatrix());
+  camera_extrinsics.convertTo(camera_extrinsics_wpi_, CV_32F);
+  // ChangeBasis uses the CV_64F basis matrices from transform.h, so perform
+  // the basis conversion before narrowing the extrinsics to float.
+  camera_extrinsics_cv_ = camera_extrinsics.clone();
+  utils::ChangeBasis(camera_extrinsics_cv_, utils::WPI_TO_CV);
+  camera_extrinsics_cv_.convertTo(camera_extrinsics_cv_, CV_32F);
+  camera_origin_ =
+      camera_extrinsics_cv_ * (cv::Mat_<float>(4, 1) << 0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void HSVClusterTracker::ProcessFrame(const cv::Mat& frame) {
@@ -94,6 +97,9 @@ void HSVClusterTracker::ProcessFrame(const cv::Mat& frame) {
        static_cast<int>(previous_clusters.size() + kAdditionalClusters)});
   clusters_ = MergeOverlappingClusters(
       KMeans(thresholded_points_, cluster_count, previous_clusters));
+  for (auto& cluster : clusters_) {
+    cluster.camera_relative_translation.emplace(ClusterDistance(cluster));
+  }
 }
 
 void HSVClusterTracker::HSVThreshold(const cv::Mat& img) {
@@ -106,22 +112,31 @@ void HSVClusterTracker::HSVThreshold(const cv::Mat& img) {
               cv::Scalar(hsv_color_range.second, 255, 255), hsv_masked_);
   cv::findNonZero(hsv_masked_, thresholded_points_);
 
-  if (!thresholded_points_.empty() && !camera_intrinsics_.empty()) {
+  if (!thresholded_points_.empty()) {
     cv::undistortPoints(thresholded_points_, thresholded_points_,
                         camera_intrinsics_, distortion_coeffs_);
   }
 }
 
-auto HSVClusterTracker::PointDistance(const cv::Point2f& point,
-                                      float world_relative_vertical) const
-    -> float {
-  const float distance_from_horizon =
-      camera_intrinsics_.at<float>(1, 2) - point.y;
-  if (distance_from_horizon < horizon_distance_tolerance) {
-    return -1.0f;
+auto HSVClusterTracker::UndistortedPointOffset(
+    const cv::Point2f& point, float world_relative_vertical) const
+    -> std::optional<frc::Translation2d> {
+  if (point.y < 0) {
+    return std::nullopt;
   }
-  return camera_intrinsics_.at<float>(1, 1) / distance_from_horizon *
-         world_relative_vertical;
+  cv::Mat camera_ray = (cv::Mat_<float>(4, 1) << point.x, point.y, 1.0f, 0.0f);
+  camera_ray = camera_extrinsics_cv_ * camera_ray;
+
+  const float ray_y = camera_ray.at<float>(1, 0);
+  if (std::abs(ray_y) <= std::numeric_limits<float>::epsilon()) {
+    return {};
+  }
+  const float scale =
+       (world_relative_vertical - camera_origin_.at<float>(1, 0)) / ray_y;
+  const cv::Mat floor_relative_offset = scale * camera_ray;
+  return std::make_optional<frc::Translation2d>(
+      {units::meter_t{floor_relative_offset.at<float>(2, 0)},
+       units::meter_t{-floor_relative_offset.at<float>(0, 0)}});
 }
 
 auto HSVClusterTracker::KMeans(
@@ -137,16 +152,21 @@ auto HSVClusterTracker::KMeans(
   std::vector<size_t> used_point_indices;
   scaled_points.reserve(data_points.size());
   for (size_t i = 0; i < data_points.size(); i++) {
-    // providing vertical = 0, might change later because this is inaccurate for most points
-    const float point_distance = PointDistance(data_points[i]);
-    if (point_distance < 0) {
+    // inaccurate for most points because this assumes they're on the floor, may change later
+    const std::optional<frc::Translation2d> point_offset =
+        UndistortedPointOffset(data_points[i], 0);
+    if (!point_offset.has_value()) {
       continue;  // to avoid yellow in the stands, which is above the field hoizon line
     }
-    scaled_points.emplace_back(data_points[i].x,
-                               data_points[i].y * point_distance);
+    scaled_points.emplace_back(
+        data_points[i].x,
+        data_points[i].y * point_offset.value().Norm().value());
     used_point_indices.push_back(i);
   }
 
+  if (scaled_points.empty()) {
+    return {};
+  }
   cv::Mat labels;
   cv::Mat centers;
   const cv::TermCriteria criteria(
@@ -160,7 +180,13 @@ auto HSVClusterTracker::KMeans(
     }
     if (std::isfinite(cluster.centroid.x) &&
         std::isfinite(cluster.centroid.y)) {
-      initial_centers.push_back(cluster.centroid);
+      const std::optional<frc::Translation2d> point_offset =
+          UndistortedPointOffset(cluster.centroid, 0);
+      if (point_offset.has_value()) {
+        initial_centers.emplace_back(
+            cluster.centroid.x,
+            cluster.centroid.y * point_offset.value().Norm().value());
+      }
     }
   }
 
@@ -212,6 +238,34 @@ auto HSVClusterTracker::KMeans(
     ++label_counts[nearest_center];
   }
 
+  for (int empty_cluster = 0; empty_cluster < k; ++empty_cluster) {
+    if (label_counts[empty_cluster] != 0) {
+      continue;
+    }
+
+    int point_to_reassign = -1;
+    float closest_distance = std::numeric_limits<float>::max();
+    for (int point_index = 0; point_index < labels.rows; ++point_index) {
+      const int current_cluster = labels.at<int>(point_index, 0);
+      if (label_counts[current_cluster] <= 1) {
+        continue;
+      }
+      const float distance = SquaredDistance(scaled_points[point_index],
+                                             initial_centers[empty_cluster]);
+      if (distance < closest_distance) {
+        point_to_reassign = point_index;
+        closest_distance = distance;
+      }
+    }
+
+    if (point_to_reassign >= 0) {
+      const int old_cluster = labels.at<int>(point_to_reassign, 0);
+      labels.at<int>(point_to_reassign, 0) = empty_cluster;
+      --label_counts[old_cluster];
+      ++label_counts[empty_cluster];
+    }
+  }
+
   cv::kmeans(scaled_points, k, labels, criteria, 1,
              cv::KMEANS_USE_INITIAL_LABELS, centers);
 
@@ -254,32 +308,16 @@ auto HSVClusterTracker::KMeans(
 
 auto HSVClusterTracker::ClusterDistance(const kmeans_cluster_t& cluster) const
     -> frc::Translation2d {
-  if (cluster.img_points.empty() || camera_intrinsics_.empty() ||
-      camera_extrinsics_.empty()) {
+  if (cluster.img_points.empty()) {
     return {};
   }
 
   const auto lowest_point =
-      std::min_element(cluster.img_points.begin(), cluster.img_points.end(),
+      std::max_element(cluster.img_points.begin(), cluster.img_points.end(),
                        [](const cv::Point2f& first, const cv::Point2f& second) {
                          return first.y < second.y;
                        });
-  const cv::Point2f& normalized_point = *lowest_point;
-
-  cv::Mat camera_origin = (cv::Mat_<float>(4, 1) << 0.0f, 0.0f, 0.0f, 1.0f);
-  cv::Mat camera_ray = (cv::Mat_<float>(4, 1) << normalized_point.x,
-                        normalized_point.y, 1.0f, 0.0f);
-  camera_origin = camera_extrinsics_ * camera_origin;
-  camera_ray = camera_extrinsics_ * camera_ray;
-
-  const float ray_y = camera_ray.at<float>(1, 0);
-  if (std::abs(ray_y) <= std::numeric_limits<float>::epsilon()) {
-    return {};
-  }
-  const float scale = -camera_origin.at<float>(1, 0) / ray_y;
-  const cv::Mat floor_relative_offset = scale * camera_ray;
-  return {units::meter_t{floor_relative_offset.at<float>(0, 0)},
-          units::meter_t{floor_relative_offset.at<float>(1, 0)}};
+  return UndistortedPointOffset(*lowest_point, 0).value();
 }
 
 auto HSVClusterTracker::ClustersOverlap(const kmeans_cluster_t& first,
