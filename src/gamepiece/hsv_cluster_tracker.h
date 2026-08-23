@@ -8,9 +8,9 @@
 namespace gamepiece {
 
 struct KMeansCluster {
-  cv::Point2d centroid;
+  cv::Point2f centroid;
   cv::Mat covar;
-  std::vector<cv::Point2d> img_points;
+  std::vector<cv::Point2f> img_points;
 };
 
 using kmeans_cluster_t = KMeansCluster;
@@ -25,13 +25,13 @@ class HSVClusterTracker {
 
  private:
   [[nodiscard]] auto KMeans(
-      const std::vector<cv::Point2d>& data_points, int k,
+      const std::vector<cv::Point2f>& data_points, int k,
       const std::vector<kmeans_cluster_t>& initial_clusters) const
       -> std::vector<kmeans_cluster_t>;
   [[nodiscard]] auto ClusterDistance(const kmeans_cluster_t& cluster) const
       -> frc::Translation2d;
   [[nodiscard]] auto PointDistance(const cv::Point2f& point,
-                                   double world_relative_vertical = 0) const
+                                   float world_relative_vertical = 0.0f) const
       -> float;
   [[nodiscard]] auto ClustersOverlap(const kmeans_cluster_t& first,
                                      const kmeans_cluster_t& second) const
@@ -41,7 +41,7 @@ class HSVClusterTracker {
       -> std::vector<kmeans_cluster_t>;
 
   int active_cluster_count_ = 20;
-  std::vector<cv::Point2d> thresholded_points_;
+  std::vector<cv::Point2f> thresholded_points_;
   std::vector<kmeans_cluster_t> clusters_;
   utils::DisjointSetUnion cluster_dsu_;
   const camera::camera_constant_t camera_constant_;
@@ -52,11 +52,11 @@ class HSVClusterTracker {
   cv::Mat camera_extrinsics_;
   static constexpr std::pair<int, int> hsv_color_range{18, 30};
   static constexpr int minimum_saturation{180};
-  static constexpr double max_merge_distance_m{0.5};
+  static constexpr float max_merge_distance_m{0.5f};
   const size_t min_pixels_per_cluster;
-  const double horizon_distance_tolerance;
-  static constexpr double min_pixels_per_cluster_image_px_ratio{0.01};
-  static constexpr double horizon_distance_tolerance_image_height_ratio{0.01};
+  const float horizon_distance_tolerance;
+  static constexpr float min_pixels_per_cluster_image_px_ratio{0.01f};
+  static constexpr float horizon_distance_tolerance_image_height_ratio{0.01f};
 };
 
 }  // namespace gamepiece

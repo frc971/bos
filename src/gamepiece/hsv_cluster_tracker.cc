@@ -20,28 +20,28 @@ namespace {
 constexpr int kAdditionalClusters = 3;
 
 auto SquaredDistance(const cv::Point2f& first, const cv::Point2f& second)
-    -> double {
-  const double x = first.x - second.x;
-  const double y = first.y - second.y;
+    -> float {
+  const float x = first.x - second.x;
+  const float y = first.y - second.y;
   return x * x + y * y;
 }
 
-auto Covariance(const std::vector<cv::Point2d>& points) -> cv::Mat {
-  cv::Point2d mean{0.0, 0.0};
-  for (const cv::Point2d& point : points) {
+auto Covariance(const std::vector<cv::Point2f>& points) -> cv::Mat {
+  cv::Point2f mean{0.0f, 0.0f};
+  for (const cv::Point2f& point : points) {
     mean += point;
   }
-  mean /= static_cast<double>(points.size());
+  mean /= static_cast<float>(points.size());
 
-  cv::Mat covariance = cv::Mat::zeros(2, 2, CV_64F);
-  for (const cv::Point2d& point : points) {
-    const cv::Point2d offset = point - mean;
-    covariance.at<double>(0, 0) += offset.x * offset.x;
-    covariance.at<double>(0, 1) += offset.x * offset.y;
-    covariance.at<double>(1, 0) += offset.y * offset.x;
-    covariance.at<double>(1, 1) += offset.y * offset.y;
+  cv::Mat covariance = cv::Mat::zeros(2, 2, CV_32F);
+  for (const cv::Point2f& point : points) {
+    const cv::Point2f offset = point - mean;
+    covariance.at<float>(0, 0) += offset.x * offset.x;
+    covariance.at<float>(0, 1) += offset.x * offset.y;
+    covariance.at<float>(1, 0) += offset.y * offset.x;
+    covariance.at<float>(1, 1) += offset.y * offset.y;
   }
-  return covariance / static_cast<double>(points.size());
+  return covariance / static_cast<float>(points.size());
 }
 
 }  // namespace
@@ -58,16 +58,20 @@ HSVClusterTracker::HSVClusterTracker(const camera::camera_constant_t& camera)
   if (camera_constant_.intrinsics_path.has_value()) {
     const nlohmann::json intrinsics =
         utils::ReadIntrinsics(*camera_constant_.intrinsics_path);
-    camera_intrinsics_ = utils::CameraMatrixFromJson<cv::Mat>(intrinsics);
-    distortion_coeffs_ =
+    const cv::Mat camera_intrinsics =
+        utils::CameraMatrixFromJson<cv::Mat>(intrinsics);
+    const cv::Mat distortion_coeffs =
         utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics);
+    camera_intrinsics.convertTo(camera_intrinsics_, CV_32F);
+    distortion_coeffs.convertTo(distortion_coeffs_, CV_32F);
   }
 
   if (camera_constant_.extrinsics_path.has_value()) {
-    camera_extrinsics_ = utils::EigenToCvMat(
+    const cv::Mat camera_extrinsics = utils::EigenToCvMat(
         utils::ExtrinsicsJsonToCameraToRobot(
             utils::ReadExtrinsics(*camera_constant_.extrinsics_path))
             .ToMatrix());
+    camera_extrinsics.convertTo(camera_extrinsics_, CV_32F);
   }
 }
 
@@ -109,19 +113,19 @@ void HSVClusterTracker::HSVThreshold(const cv::Mat& img) {
 }
 
 auto HSVClusterTracker::PointDistance(const cv::Point2f& point,
-                                      double world_relative_vertical) const
+                                      float world_relative_vertical) const
     -> float {
-  const double distance_from_horizon =
+  const float distance_from_horizon =
       camera_intrinsics_.at<float>(1, 2) - point.y;
   if (distance_from_horizon < horizon_distance_tolerance) {
-    return -1;
+    return -1.0f;
   }
   return camera_intrinsics_.at<float>(1, 1) / distance_from_horizon *
          world_relative_vertical;
 }
 
 auto HSVClusterTracker::KMeans(
-    const std::vector<cv::Point2d>& data_points, const int k,
+    const std::vector<cv::Point2f>& data_points, const int k,
     const std::vector<kmeans_cluster_t>& initial_clusters) const
     -> std::vector<kmeans_cluster_t> {
   if (data_points.empty() || k <= 0 ||
@@ -132,17 +136,14 @@ auto HSVClusterTracker::KMeans(
   std::vector<cv::Point2f> scaled_points;
   std::vector<size_t> used_point_indices;
   scaled_points.reserve(data_points.size());
-  std::vector<float> y_scalars;
   for (size_t i = 0; i < data_points.size(); i++) {
     // providing vertical = 0, might change later because this is inaccurate for most points
     const float point_distance = PointDistance(data_points[i]);
     if (point_distance < 0) {
       continue;  // to avoid yellow in the stands, which is above the field hoizon line
     }
-    scaled_points.emplace_back(
-        static_cast<float>(data_points[i].x),
-        static_cast<float>(data_points[i].y * point_distance));
-    y_scalars.push_back(point_distance);
+    scaled_points.emplace_back(data_points[i].x,
+                               data_points[i].y * point_distance);
     used_point_indices.push_back(i);
   }
 
@@ -159,22 +160,21 @@ auto HSVClusterTracker::KMeans(
     }
     if (std::isfinite(cluster.centroid.x) &&
         std::isfinite(cluster.centroid.y)) {
-      initial_centers.emplace_back(static_cast<float>(cluster.centroid.x),
-                                   static_cast<float>(cluster.centroid.y));
+      initial_centers.push_back(cluster.centroid);
     }
   }
 
   std::vector<bool> new_centroids(scaled_points.size(), false);
   while (static_cast<int>(initial_centers.size()) < k) {
     std::size_t farthest_point = scaled_points.size();
-    double farthest_distance = -1.0;
+    float farthest_distance = -1.0f;
     for (std::size_t point_index = 0; point_index < scaled_points.size();
          ++point_index) {
       if (new_centroids[point_index]) {
         continue;
       }
 
-      double distance_to_nearest_center = std::numeric_limits<double>::max();
+      float distance_to_nearest_center = std::numeric_limits<float>::max();
       for (const cv::Point2f& center : initial_centers) {
         distance_to_nearest_center =
             std::min(distance_to_nearest_center,
@@ -198,11 +198,11 @@ auto HSVClusterTracker::KMeans(
   std::vector<int> label_counts(k, 0);
   for (int point_index = 0; point_index < labels.rows; ++point_index) {
     int nearest_center = 0;
-    double nearest_distance =
+    float nearest_distance =
         SquaredDistance(scaled_points[point_index], initial_centers.front());
     for (int center_index = 1; center_index < k; ++center_index) {
-      const double distance = SquaredDistance(scaled_points[point_index],
-                                              initial_centers[center_index]);
+      const float distance = SquaredDistance(scaled_points[point_index],
+                                             initial_centers[center_index]);
       if (distance < nearest_distance) {
         nearest_center = center_index;
         nearest_distance = distance;
@@ -215,7 +215,7 @@ auto HSVClusterTracker::KMeans(
   cv::kmeans(scaled_points, k, labels, criteria, 1,
              cv::KMEANS_USE_INITIAL_LABELS, centers);
 
-  std::vector<cv::Point2d> centroid_sums(k, {0.0, 0.0});
+  std::vector<cv::Point2f> centroid_sums(k, {0.0f, 0.0f});
   std::vector<int> centroid_counts(k, 0);
 
   for (int i = 0; i < labels.rows; ++i) {
@@ -224,12 +224,12 @@ auto HSVClusterTracker::KMeans(
     ++centroid_counts[cluster];
   }
 
-  std::vector<cv::Point2d> centroids(k);
+  std::vector<cv::Point2f> centroids(k);
   for (int i = 0; i < k; ++i) {
-    centroids[i] = centroid_sums[i] / static_cast<double>(centroid_counts[i]);
+    centroids[i] = centroid_sums[i] / static_cast<float>(centroid_counts[i]);
   }
 
-  std::vector<std::vector<cv::Point2d>> cluster_points(k);
+  std::vector<std::vector<cv::Point2f>> cluster_points(k);
   for (int i = 0; i < labels.rows; ++i) {
     const int cluster = labels.at<int>(i, 0);
     cluster_points.at(cluster).push_back(data_points.at(used_point_indices[i]));
@@ -237,7 +237,7 @@ auto HSVClusterTracker::KMeans(
 
   std::vector<kmeans_cluster_t> clusters;
   clusters.reserve(k);
-  for (size_t i = 0; i < k; ++i) {
+  for (int i = 0; i < k; ++i) {
     kmeans_cluster_t cluster;
     cluster.centroid = centroids[i];
     cluster.img_points = std::move(cluster_points.at(i));
@@ -245,7 +245,7 @@ auto HSVClusterTracker::KMeans(
     if (cluster.img_points.size() > 1) {
       cluster.covar = Covariance(cluster.img_points);
     } else {
-      cluster.covar = cv::Mat::eye(2, 2, CV_64F);
+      cluster.covar = cv::Mat::eye(2, 2, CV_32F);
     }
     clusters.push_back(std::move(cluster));
   }
@@ -261,35 +261,32 @@ auto HSVClusterTracker::ClusterDistance(const kmeans_cluster_t& cluster) const
 
   const auto lowest_point =
       std::min_element(cluster.img_points.begin(), cluster.img_points.end(),
-                       [](const cv::Point2d& first, const cv::Point2d& second) {
+                       [](const cv::Point2f& first, const cv::Point2f& second) {
                          return first.y < second.y;
                        });
-  const cv::Point2d& normalized_point = *lowest_point;
+  const cv::Point2f& normalized_point = *lowest_point;
 
-  cv::Mat extrinsics;
-  camera_extrinsics_.convertTo(extrinsics, CV_64F);
-  cv::Mat camera_origin = (cv::Mat_<double>(4, 1) << 0.0, 0.0, 0.0, 1.0);
-  cv::Mat camera_ray = (cv::Mat_<double>(4, 1) << normalized_point.x,
-                        normalized_point.y, 1.0, 0.0);
-  camera_origin = extrinsics * camera_origin;
-  camera_ray = extrinsics * camera_ray;
+  cv::Mat camera_origin = (cv::Mat_<float>(4, 1) << 0.0f, 0.0f, 0.0f, 1.0f);
+  cv::Mat camera_ray = (cv::Mat_<float>(4, 1) << normalized_point.x,
+                        normalized_point.y, 1.0f, 0.0f);
+  camera_origin = camera_extrinsics_ * camera_origin;
+  camera_ray = camera_extrinsics_ * camera_ray;
 
-  const double ray_y = camera_ray.at<double>(1, 0);
-  if (std::abs(ray_y) <= std::numeric_limits<double>::epsilon()) {
+  const float ray_y = camera_ray.at<float>(1, 0);
+  if (std::abs(ray_y) <= std::numeric_limits<float>::epsilon()) {
     return {};
   }
-  const double scale = -camera_origin.at<double>(1, 0) / ray_y;
+  const float scale = -camera_origin.at<float>(1, 0) / ray_y;
   const cv::Mat floor_relative_offset = scale * camera_ray;
-  return {units::meter_t{floor_relative_offset.at<double>(0, 0)},
-          units::meter_t{floor_relative_offset.at<double>(1, 0)}};
+  return {units::meter_t{floor_relative_offset.at<float>(0, 0)},
+          units::meter_t{floor_relative_offset.at<float>(1, 0)}};
 }
 
 auto HSVClusterTracker::ClustersOverlap(const kmeans_cluster_t& first,
                                         const kmeans_cluster_t& second) const
     -> bool {
   const auto make_ellipse = [](const kmeans_cluster_t& cluster) -> Ellipse {
-    cv::Mat covariance;
-    cluster.covar.convertTo(covariance, CV_64F);
+    const cv::Mat& covariance = cluster.covar;
     if (covariance.rows != 2 || covariance.cols != 2) {
       throw std::invalid_argument("KMeans covariance must be 2 by 2");
     }
@@ -297,19 +294,19 @@ auto HSVClusterTracker::ClustersOverlap(const kmeans_cluster_t& first,
     cv::Mat eigenvalues;
     cv::Mat eigenvectors;
     cv::eigen(covariance, eigenvalues, eigenvectors);
-    constexpr double kMinimumRadius = 1e-6;
-    const double major =
-        std::sqrt(std::max(eigenvalues.at<double>(0, 0), 0.0)) + kMinimumRadius;
-    const double minor =
-        std::sqrt(std::max(eigenvalues.at<double>(1, 0), 0.0)) + kMinimumRadius;
-    const cv::Vec2d major_axis(eigenvectors.at<double>(0, 0),
-                               eigenvectors.at<double>(0, 1));
-    return {.center = cluster.centroid,
+    constexpr float kMinimumRadius = 1e-6f;
+    const float major =
+        std::sqrt(std::max(eigenvalues.at<float>(0, 0), 0.0f)) + kMinimumRadius;
+    const float minor =
+        std::sqrt(std::max(eigenvalues.at<float>(1, 0), 0.0f)) + kMinimumRadius;
+    const cv::Vec2f major_axis(eigenvectors.at<float>(0, 0),
+                               eigenvectors.at<float>(0, 1));
+    return {.center = {cluster.centroid.x, cluster.centroid.y},
             .semi_axes = {major, minor},
             .rotation = std::atan2(major_axis[1], major_axis[0])};
   };
 
-  return ellipse_overlap_area(make_ellipse(first), make_ellipse(second)) > 0.0;
+  return ellipse_overlap_area(make_ellipse(first), make_ellipse(second)) > 0.0f;
 }
 
 auto HSVClusterTracker::MergeOverlappingClusters(
@@ -361,16 +358,16 @@ auto HSVClusterTracker::MergeOverlappingClusters(
       continue;
     }
 
-    cv::Point2d point_sum{0.0, 0.0};
-    for (const cv::Point2d& point : merged.img_points) {
+    cv::Point2f point_sum{0.0f, 0.0f};
+    for (const cv::Point2f& point : merged.img_points) {
       point_sum += point;
     }
-    merged.centroid = point_sum / static_cast<double>(merged.img_points.size());
+    merged.centroid = point_sum / static_cast<float>(merged.img_points.size());
 
     if (merged.img_points.size() > 1) {
       merged.covar = Covariance(merged.img_points);
     } else {
-      merged.covar = cv::Mat::eye(2, 2, CV_64F);
+      merged.covar = cv::Mat::eye(2, 2, CV_32F);
     }
   }
 
