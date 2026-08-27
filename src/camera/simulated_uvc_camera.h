@@ -49,6 +49,15 @@ class MockUvcApi {
   uint32_t sequence_ = 0;
 };
 
+namespace internal {
+
+// Set only while a SimulatedUvcCamera is constructing its production camera.
+// The fake libuvc entry points are compiled into a test-only shim and use this
+// pointer to route calls to the appropriate mock instance.
+extern thread_local MockUvcApi* constructing_mock;
+
+}  // namespace internal
+
 class SimulatedUvcCamera final : public ICamera {
  public:
   SimulatedUvcCamera(const std::filesystem::path& image_folder,

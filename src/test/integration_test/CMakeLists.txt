@@ -20,7 +20,12 @@ add_executable(localization_test localization_test.cc)
 target_link_libraries(localization_test PRIVATE camera localization utils)
 
 add_executable(localization_test2 localization_test2.cc)
-target_link_libraries(localization_test2 PRIVATE camera localization utils)
+target_link_libraries(localization_test2 PRIVATE
+  camera
+  localization
+  SimulatedUVCShim
+  utils
+)
 
 add_executable(networktable_performance_test networktable_performance_test.cc)
 target_link_libraries(networktable_performance_test PRIVATE utils localization)
