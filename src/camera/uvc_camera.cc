@@ -65,7 +65,6 @@ void callback(uvc_frame_t* frame, void* ptr) {
   if (ptr_->frame_buffer.frame.empty()) {
     LOG(WARNING) << "Failed to decode frame from camera "
                  << ptr_->camera_constant_.name;
-    ptr_->mutex_.unlock();
     return;
   }
   ptr_->frame_buffer.invalid = false;
