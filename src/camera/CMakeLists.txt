@@ -86,6 +86,15 @@ target_link_libraries(SimulatedUVCCamera PUBLIC
   utils
 )
 
+add_library(SimulatedUVCShim OBJECT)
+target_sources(SimulatedUVCShim PRIVATE
+  simulated_uvc_shim.cc
+)
+target_link_libraries(SimulatedUVCShim PRIVATE
+  GTest::gmock
+  utils
+)
+
 add_library(camera INTERFACE)
 target_link_libraries(camera INTERFACE
   CscoreStreamer
@@ -96,5 +105,4 @@ target_link_libraries(camera INTERFACE
   CameraConstants
   MultiCameraSource
   UVCCamera
-  SimulatedUVCCamera
 )
