@@ -9,7 +9,13 @@
 #include <stdexcept>
 #include <thread>
 
+#include "absl/flags/flag.h"
 #include "absl/log/log.h"
+
+ABSL_FLAG(std::optional<double>, simulated_uvc_start, std::nullopt,
+          "Start timestamp relative to the first simulated UVC frame");
+ABSL_FLAG(std::optional<double>, simulated_uvc_end, std::nullopt,
+          "End timestamp relative to the first simulated UVC frame");
 
 struct uvc_context {
   camera::test::MockUvcApi* mock;
@@ -80,8 +86,13 @@ SimulatedUvcCamera::SimulatedUvcCamera(
     const camera_constant_t& constants, absl::Status& status,
     double replay_speed, bool fail_to_init)
     : replay_speed_(replay_speed) {
+  const auto start = absl::GetFlag(FLAGS_simulated_uvc_start);
+  const auto end = absl::GetFlag(FLAGS_simulated_uvc_end);
   if (replay_speed_ <= 0.0)
     throw std::invalid_argument("Replay speed must be positive");
+  if (start.has_value() && end.has_value() && end.value() <= start.value())
+    throw std::invalid_argument(
+        "Replay end time must be greater than start time");
   for (const auto& entry : std::filesystem::directory_iterator(image_folder)) {
     if (entry.is_regular_file() && entry.path().extension() == ".jpg") {
       image_paths_.push_back(entry.path());
@@ -92,6 +103,15 @@ SimulatedUvcCamera::SimulatedUvcCamera(
               return std::stod(lhs.stem().string()) <
                      std::stod(rhs.stem().string());
             });
+
+  if (!image_paths_.empty() && (start.has_value() || end.has_value())) {
+    const double offset = std::stod(image_paths_.front().stem().string());
+    std::erase_if(image_paths_, [&](const auto& path) {
+      const double timestamp = std::stod(path.stem().string()) - offset;
+      return (start.has_value() && timestamp < start.value()) ||
+             (end.has_value() && timestamp > end.value());
+    });
+  }
 
   if (!fail_to_init) {
     constructing_mock = &mock_uvc_;
