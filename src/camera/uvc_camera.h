@@ -7,6 +7,13 @@
 
 namespace camera {
 
+struct JpegBuffer {
+  JpegBuffer(char* ptr, size_t size_) : data(ptr, ptr + size_), size(size_) {}
+  std::vector<char> data;
+  size_t size;
+  double timestamp = 0;
+};
+
 // Wrap opencv's camera into the ICamera interface
 class UVCCamera : public ICamera {
  public:
@@ -29,6 +36,7 @@ class UVCCamera : public ICamera {
   std::mutex mutex_;
   int frame_index_;
   int previous_frame_index_;
+  std::unique_ptr<JpegBuffer> buffer_;
   static constexpr cv::ImreadModes read_type = cv::IMREAD_GRAYSCALE;
 
  private:

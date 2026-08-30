@@ -11,49 +11,15 @@ const cv::Mat UVCCamera::backup_image_ =
 
 void callback(uvc_frame_t* frame, void* ptr) {
   auto ptr_ = static_cast<UVCCamera*>(ptr);
+  CHECK(frame->frame_format == UVC_COLOR_FORMAT_MJPEG);
+  auto jpeg_buffer = std::make_unique<JpegBuffer>(
+      static_cast<char*>(frame->data), frame->data_bytes);
+  jpeg_buffer->timestamp = frc::Timer::GetFPGATimestamp().to<double>();
   std::unique_lock<std::mutex> lock_(ptr_->mutex_, std::try_to_lock);
   if (!lock_.owns_lock()) {
     return;
   }
-  switch (frame->frame_format) {
-    case UVC_COLOR_FORMAT_MJPEG: {
-      char* data = static_cast<char*>(frame->data);
-      std::vector<uchar> buffer(data, data + frame->data_bytes);
-      ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
-      break;
-    }
-    case UVC_COLOR_FORMAT_YUYV: {
-      uvc_frame_t* bgr = uvc_allocate_frame(frame->width * frame->height * 3);
-      if (!bgr) {
-        LOG(WARNING) << "Camera " << ptr_->camera_constant_.name
-                     << " failed to allocate ";
-      }
-      uvc_error_t ret = uvc_yuyv2bgr(frame, bgr);
-      if (ret != 0) {
-        LOG(WARNING) << "YUYV failed to convert to BGR";
-      }
-      IplImage* ipl_image;
-      ipl_image =
-          cvCreateImageHeader(cvSize(bgr->width, bgr->height), IPL_DEPTH_8U, 3);
-      cvSetData(ipl_image, bgr->data, bgr->width * 3);
-      ptr_->frame_buffer.frame = cv::cvarrToMat(ipl_image, true);
-      uvc_free_frame(bgr);
-      break;
-    }
-    default:
-      LOG(WARNING) << "Unknown frame format";
-      break;
-  }
-  if (ptr_->frame_buffer.frame.empty()) {
-    LOG(WARNING) << "Failed to decode frame from camera "
-                 << ptr_->camera_constant_.name;
-    return;
-  }
-  ptr_->frame_buffer.invalid = false;
-  ptr_->frame_buffer.timestamp =
-      frc::Timer::GetFPGATimestamp()
-          .to<double>();  // TODO: Use more accurate timestamp
-  ptr_->frame_index_ = frame->sequence;
+  ptr_->buffer_ = std::move(jpeg_buffer);
 }
 
 UVCCamera::UVCCamera(const CameraConstant& camera_constant,
@@ -112,24 +78,23 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
 }
 
 auto UVCCamera::GetFrame() -> timestamped_frame_t {
-  timestamped_frame_t copied_timestamped_frame;
-  while (frame_index_ == previous_frame_index_) {
-    std::this_thread::yield();
+  std::lock_guard<std::mutex> lock_guard(mutex_);
+  if (!buffer_) {
+    return {.frame = backup_image_,
+            .timestamp = frc::Timer::GetFPGATimestamp().to<double>(),
+            .invalid = true};
   }
-  mutex_.lock();
-  if (frame_buffer.frame.empty()) {
-    backup_image_.copyTo(copied_timestamped_frame.frame);
-    copied_timestamped_frame.invalid = true;
-    copied_timestamped_frame.timestamp =
-        frc::Timer::GetFPGATimestamp().to<double>();
-  } else {
-    frame_buffer.frame.copyTo(copied_timestamped_frame.frame);
-    copied_timestamped_frame.invalid = frame_buffer.invalid;
-    copied_timestamped_frame.timestamp = frame_buffer.timestamp;
+
+  timestamped_frame_t timestamped_frame;
+  cv::Mat frame = cv::imdecode(buffer_->data, UVCCamera::read_type);
+  if (frame.empty()) {
+    backup_image_.copyTo(frame);
+    timestamped_frame.invalid = true;
   }
-  mutex_.unlock();
-  previous_frame_index_ = frame_index_;
-  return copied_timestamped_frame;
+  timestamped_frame.frame = frame;
+  timestamped_frame.timestamp = buffer_->timestamp;
+
+  return timestamped_frame;
 }
 
 auto UVCCamera::Restart() -> void {
