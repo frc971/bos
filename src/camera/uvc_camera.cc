@@ -11,14 +11,26 @@ const cv::Mat UVCCamera::backup_image_ =
 
 void callback(uvc_frame_t* frame, void* ptr) {
   auto ptr_ = static_cast<UVCCamera*>(ptr);
+  char* data = static_cast<char*>(frame->data);
+  std::vector<uchar> buffer(data, data + frame->data_bytes);
+  if (ptr_->log_path_.has_value() &&
+      frame->sequence % UVCCamera::log_frequency == 0) {
+    const std::filesystem::path file_path =
+        std::filesystem::path(*ptr_->log_path_) /
+        (std::to_string(frc::Timer::GetFPGATimestamp().to<double>()) + ".jpg");
+    std::ofstream file(file_path, std::ios::binary);
+    if (!file) {
+      LOG(WARNING) << "Failed to open camera frame log " << file_path;
+    } else {
+      file.write(data, frame->data_bytes);
+    }
+  }
   std::unique_lock<std::mutex> lock_(ptr_->mutex_, std::try_to_lock);
   if (!lock_.owns_lock()) {
     return;
   }
   switch (frame->frame_format) {
     case UVC_COLOR_FORMAT_MJPEG: {
-      char* data = static_cast<char*>(frame->data);
-      std::vector<uchar> buffer(data, data + frame->data_bytes);
       ptr_->frame_buffer.frame = cv::imdecode(buffer, UVCCamera::read_type);
       break;
     }
@@ -63,6 +75,10 @@ UVCCamera::UVCCamera(const CameraConstant& camera_constant,
     status = absl::InvalidArgumentError(fmt::format(
         "Must provide a serial id for uvc camera {}", camera_constant.name));
     return;
+  }
+  if (log_path_.has_value()) {
+    LOG(INFO) << "Making camera log folder: "
+              << std::filesystem::create_directory(log_path_.value());
   }
   int res = uvc_init(&context_, nullptr);
   if (res != 0) {

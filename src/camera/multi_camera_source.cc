@@ -15,13 +15,7 @@ MultiCameraSource::MultiCameraSource(
             << std::filesystem::create_directory(log_path);
   for (size_t i = 0; i < cameras_.size(); i++) {
     camera_threads_.emplace_back([this, i, log_path]() -> void {
-      const std::string camera_log_dest =
-          fmt::format("{}/{}", log_path, cameras_[i]->GetCameraConstant().name);
-      LOG(INFO) << "Making camera log folder: "
-                << std::filesystem::create_directory(camera_log_dest);
-      int counter = 0;
       while (true) {
-        counter++;
         if (use_all_frames_) {
           mutex_.lock();
           bool frames_used = frames_used_;
@@ -37,9 +31,6 @@ MultiCameraSource::MultiCameraSource(
         timestamped_frames_[i] = timestamped_frame;
         frames_used_ = false;
         mutex_.unlock();
-        if (counter % log_frequency == 0 && !timestamped_frame.frame.empty()) {
-          WriteFrame(camera_log_dest, timestamped_frame);
-        }
       }
     });
   }

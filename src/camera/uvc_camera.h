@@ -30,6 +30,7 @@ class UVCCamera : public ICamera {
   int frame_index_;
   int previous_frame_index_;
   static constexpr cv::ImreadModes read_type = cv::IMREAD_GRAYSCALE;
+  static constexpr int log_frequency = 1;
 
  private:
   auto StartCamera(uvc_stream_ctrl_t ctrl) -> void;
