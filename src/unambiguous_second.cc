@@ -40,4 +40,7 @@ auto main() -> int {
   });
 
   stop::WaitUntilStop();
+  thread.request_stop();
+  thread.join();
+  frc::DataLogManager::Stop();
 }

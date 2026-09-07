@@ -109,6 +109,7 @@ target_link_libraries(localization PRIVATE
   UnambiguousEstimator
   SimulationSender
   NetworktableSender
+  SimulatedUVCCamera
   utils
   camera
 )

@@ -37,7 +37,7 @@ class NetworkTableSender : public IPositionSender {
   nt::DoubleArrayPublisher tag_estimation_publisher_;
   nt::BooleanArrayPublisher tag_ids_publisher_;
   nt::BooleanArrayPublisher rejected_tag_ids_publisher_;
-  std::optional<wpi::log::DataLogWriter> log_;
+  std::shared_ptr<wpi::log::DataLogWriter> log_;
   std::optional<wpi::log::StructLogEntry<frc::Pose3d>> pose3d_log_;
   std::optional<wpi::log::StructArrayLogEntry<frc::Pose3d>> all_estimates_log_;
   std::optional<wpi::log::DoubleLogEntry> latency_log_;

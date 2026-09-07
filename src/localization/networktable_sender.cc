@@ -4,6 +4,11 @@
 
 namespace localization {
 
+namespace {
+std::mutex sim_log_mutex;
+std::shared_ptr<wpi::log::DataLogWriter> sim_log;
+}  // namespace
+
 constexpr auto RadianToDegree(double radian) -> double {
   return radian * (180 / M_PI);
 }
@@ -55,25 +60,32 @@ NetworkTableSender::NetworkTableSender(const std::string& camera_name,
   rejected_tag_ids_publisher_ = rejected_tag_ids_topic.Publish();
 
   if (sim) {
-    std::error_code ec;
-    log_.emplace("/bos/logs/sim.wpilog", ec);
-    if (ec) {
-      std::cerr << "Failed to open log: " << ec.message() << '\n';
-      std::exit(0);
+    const std::lock_guard<std::mutex> lock(sim_log_mutex);
+    if (!sim_log) {
+      std::error_code ec;
+      sim_log =
+          std::make_shared<wpi::log::DataLogWriter>("/bos/logs/sim.wpilog", ec);
+      if (ec) {
+        std::cerr << "Failed to open log: " << ec.message() << '\n';
+        std::exit(0);
+      }
     }
-    pose3d_log_.emplace(*log_, "Pose3d");
-    all_estimates_log_.emplace(*log_, "AllEstimates");
+    log_ = sim_log;
 
-    latency_log_.emplace(*log_, "Latency");
-    timestamp_log_.emplace(*log_, "Timestamp");
-    num_tags_log_.emplace(*log_, "NumTags");
+    const std::string entry_prefix = camera_name + "/";
+    pose3d_log_.emplace(*log_, entry_prefix + "Pose3d");
+    all_estimates_log_.emplace(*log_, entry_prefix + "AllEstimates");
 
-    varience_log_.emplace(*log_, "Varience");
-    loss_log_.emplace(*log_, "Loss");
+    latency_log_.emplace(*log_, entry_prefix + "Latency");
+    timestamp_log_.emplace(*log_, entry_prefix + "Timestamp");
+    num_tags_log_.emplace(*log_, entry_prefix + "NumTags");
 
-    tag_estimation_log_.emplace(*log_, "TagEstimation");
-    tag_ids_log_.emplace(*log_, "TagIds");
-    rejected_tag_ids_log_.emplace(*log_, "RejectedTagIds");
+    varience_log_.emplace(*log_, entry_prefix + "Varience");
+    loss_log_.emplace(*log_, entry_prefix + "Loss");
+
+    tag_estimation_log_.emplace(*log_, entry_prefix + "TagEstimation");
+    tag_ids_log_.emplace(*log_, entry_prefix + "TagIds");
+    rejected_tag_ids_log_.emplace(*log_, entry_prefix + "RejectedTagIds");
   }
 }
 
@@ -119,6 +131,7 @@ void NetworkTableSender::Send(
   loss_publisher_.Set(detection.loss);
 
   if (log_) {
+    const std::lock_guard<std::mutex> log_lock(sim_log_mutex);
     double adjusted_timestamp =
         detection.timestamp + instance_.GetServerTimeOffset().value_or(0) / 1e6;
     auto log_time = static_cast<int64_t>(adjusted_timestamp * 1e6);

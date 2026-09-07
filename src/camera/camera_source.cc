@@ -11,7 +11,7 @@ CameraSource::CameraSource(std::string name, std::unique_ptr<ICamera> camera,
   thread_ = std::jthread([this](const std::stop_token& stop_token) {
     while (!stop_token.stop_requested()) {
       if (camera_->IsDone()) {
-        exit(0);
+        done_ = true;
         return;
       }
       timestamped_frame_t timestamped_frame;
