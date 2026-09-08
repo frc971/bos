@@ -5,6 +5,7 @@ target_sources(pathing PRIVATE
   controller.cc
   velocity_profile.cc
   path_follower.cc
+  cluster_follower.cc
 )
 target_link_libraries(pathing PRIVATE
   utils
@@ -13,3 +14,6 @@ target_link_libraries(pathing PRIVATE
 
 add_executable(simulator simulator.cc)
 target_link_libraries(simulator PRIVATE pathing utils)
+
+add_executable(ellipse_simulator ellipse_simulator.cc)
+target_link_libraries(ellipse_simulator PRIVATE pathing utils)

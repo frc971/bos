@@ -1,0 +1,5 @@
+#!/bin/bash
+cd /bos/build
+# Compile ellipse simulator explicitly bypassing make dependency graph checking for camera errors
+g++ -I/usr/local/cuda/include -I/bos -I/bos/third_party/json/include -I/bos/third_party/abseil-cpp -isystem /usr/local/include/wpilibc -isystem /usr/local/include/cameraserver -isystem /usr/local/include/ntcore -isystem /usr/local/include/wpinet -isystem /usr/local/include/wpiutil -isystem /usr/local/include/cscore -isystem /usr/local/include/opencv4 -isystem /usr/local/include/hal -isystem /usr/local/include/wpimath -isystem /usr/local/include/apriltag -isystem /opt/nvidia/vpi3/include -std=c++20 -O2 /bos/src/pathing/ellipse_simulator.cc /bos/src/pathing/pathfinding.cc /bos/src/pathing/splines.cc /bos/src/pathing/controller.cc /bos/src/pathing/velocity_profile.cc /bos/src/pathing/path_follower.cc /bos/src/pathing/cluster_follower.cc /bos/src/utils/log.cc /bos/src/utils/timer.cc /bos/src/utils/nt_utils.cc /bos/src/utils/camera_utils.cc /bos/src/utils/constants_from_json.cc /bos/src/utils/transform.cc -L/usr/local/lib -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_imgcodecs -lntcore -lwpimath -lwpiutil -o sim_bin
+./sim_bin

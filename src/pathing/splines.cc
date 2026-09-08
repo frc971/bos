@@ -164,3 +164,28 @@ auto CreateSpline(const std::vector<std::vector<pathing::Node>>& grid,
           knots,         spline_params,  p};
 }
 }  // namespace pathing
+
+auto CreateSplineFromControls(const std::vector<std::pair<double, double>>& control_points, int samples) -> SplineResult {
+  if (control_points.size() < 4) {
+    return {};
+  }
+  uint numControls = control_points.size();
+  uint p = 3;
+  if (numControls <= p) {
+    p = numControls - 1;
+  }
+
+  std::vector<double> knots = KnotVector(numControls, p);
+  std::vector<frc::Pose2d> spline_points;
+  std::vector<double> spline_params;
+
+  for (int t = 0; t <= samples; t += 1) {
+    double t_real = t / static_cast<double>(samples);
+    auto [x, y] = EvaluatePosition(t_real, control_points, knots, p);
+    spline_points.emplace_back(units::meter_t{x}, units::meter_t{y}, 0_rad);
+    spline_params.emplace_back(t_real);
+  }
+  
+  auto first_deriv_controls = FiniteDifferences(control_points, knots, p, 1);
+  return {spline_points, control_points, first_deriv_controls, knots, spline_params, p};
+}

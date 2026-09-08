@@ -12,9 +12,9 @@
 #include "absl/flags/flag.h"
 #include "absl/log/log.h"
 
-// ABSL_FLAG(std::optional<double>, simulated_uvc_start, std::nullopt,
+ABSL_FLAG(std::optional<double>, simulated_uvc_start, std::nullopt,
           "Start timestamp relative to the first simulated UVC frame");
-// ABSL_FLAG(std::optional<double>, simulated_uvc_end, std::nullopt,
+ABSL_FLAG(std::optional<double>, simulated_uvc_end, std::nullopt,
           "End timestamp relative to the first simulated UVC frame");
 
 struct uvc_context {
@@ -90,8 +90,8 @@ SimulatedUvcCamera::SimulatedUvcCamera(
     const camera_constant_t& constants, absl::Status& status,
     double replay_speed, bool fail_to_init)
     : replay_speed_(replay_speed) {
-  const auto start = std::nullopt;
-  const auto end = std::nullopt;
+  const auto start = absl::GetFlag(FLAGS_simulated_uvc_start);
+  const auto end = absl::GetFlag(FLAGS_simulated_uvc_end);
   if (replay_speed_ <= 0.0)
     throw std::invalid_argument("Replay speed must be positive");
   if (start.has_value() && end.has_value() && end.value() <= start.value())

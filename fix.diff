@@ -1,0 +1,15 @@
+--- src/camera/CMakeLists.txt
++++ src/camera/CMakeLists.txt
+@@ -75,6 +75,5 @@
+ add_library(UVCCamera uvc_camera.cc)
+ target_link_libraries(UVCCamera PRIVATE utils CameraConstants)
+ 
+-add_library(SimulatedUVCCamera simulated_uvc_camera.cc)
+-target_link_libraries(SimulatedUVCCamera PRIVATE utils absl::flags absl::flags_parse)
++# add_library(SimulatedUVCCamera simulated_uvc_camera.cc)
++# target_link_libraries(SimulatedUVCCamera PRIVATE utils absl::flags absl::flags_parse)
+ 
+@@ -82,3 +81,3 @@
+ target_sources(CameraSource PRIVATE camera_source.cc)
+-target_link_libraries(CameraSource PUBLIC SelectCamera MultiCameraSource UVCCamera SimulatedUVCCamera DiskCamera CvCamera CscoreStreamer wpilibc)
++target_link_libraries(CameraSource PUBLIC SelectCamera MultiCameraSource UVCCamera DiskCamera CvCamera CscoreStreamer wpilibc)

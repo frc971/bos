@@ -34,6 +34,7 @@ auto EvaluateDerivative(double t,
                         const std::vector<double>& knots, int p, int k)
     -> std::pair<double, double>;
 
+auto CreateSplineFromControls(const std::vector<std::pair<double, double>>& control_points, int samples) -> SplineResult;
 auto CreateSpline(const std::vector<std::vector<Node>>& grid, Point start_point,
                   Point target_point, double nodeSizeMeters, int samples)
     -> SplineResult;

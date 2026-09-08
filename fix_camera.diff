@@ -1,0 +1,13 @@
+--- src/camera/simulated_uvc_camera.cc
++++ src/camera/simulated_uvc_camera.cc
+@@ -14,6 +14,6 @@
+ 
+-ABSL_FLAG(std::optional<double>, simulated_uvc_start, std::nullopt,
+-          "Start time for playing video.");
+-ABSL_FLAG(std::optional<double>, simulated_uvc_end, std::nullopt,
+-          "End time for playing video");
++// ABSL_FLAG(std::optional<double>, simulated_uvc_start, std::nullopt,
++//           "Start time for playing video.");
++// ABSL_FLAG(std::optional<double>, simulated_uvc_end, std::nullopt,
++//           "End time for playing video");
+ 
