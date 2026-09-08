@@ -1,7 +1,7 @@
 #include <frc/geometry/Pose2d.h>
 #include <frc/geometry/struct/Pose2dStruct.h>
-#include <units/length.h>
 #include <sys/stat.h>
+#include <units/length.h>
 #include <cmath>
 #include <cstdlib>
 #include <nlohmann/json.hpp>
@@ -32,13 +32,13 @@ int CELL_SIZE = 20;
 // continuous through the zig-zag instead of having a seam at each waypoint.
 auto buildAggregatedSpline(const std::vector<std::vector<Node>>& grid,
                            const std::vector<Point>& waypoints,
-                           double nodeSizeMeters, int samples)
-    -> SplineResult {
+                           double nodeSizeMeters, int samples) -> SplineResult {
   std::vector<std::pair<double, double>> control_points;
 
   for (size_t leg = 0; leg + 1 < waypoints.size(); ++leg) {
     std::vector<std::vector<Node>> gridCopy = grid;
-    std::vector<Node> legPath = BFS(gridCopy, waypoints[leg], waypoints[leg + 1]);
+    std::vector<Node> legPath =
+        BFS(gridCopy, waypoints[leg], waypoints[leg + 1]);
     if (legPath.empty()) {
       LOG(INFO) << "BFS returned no path for leg " << leg;
       return {};
@@ -93,8 +93,7 @@ struct FollowerSample {
 // controller.cc makes every loop iteration. As in production, the
 // follower's own internal reset()-on-done is what triggers replanning for
 // the next target; we don't recreate or reset it ourselves between legs.
-// `noiseFraction` is the fraction of current speed added as random
-// velocity noise each tick — 0 for a clean "expected" run, >0 (0.15) for
+// `noiseFraction` is the fraction of current speed added as random for
 // the noisy simulated-robot run.
 auto followLegs(const std::vector<std::vector<Node>>& grid,
                 double nodeSizeMeters, const std::vector<Point>& waypoints,
@@ -103,7 +102,7 @@ auto followLegs(const std::vector<std::vector<Node>>& grid,
     return {};
   }
 
-  const double dt = 0.02;      // 20 ms, matches controller.cc's loop period
+  const double dt = 0.02;          // 20 ms, matches controller.cc's loop period
   const int maxTotalTicks = 2000;  // batch-run safety cap only
 
   std::random_device rd;
@@ -204,9 +203,9 @@ auto drawPath(cv::Mat& canvas, std::vector<std::pair<double, double>> path,
 
 auto drawWaypoint(cv::Mat& canvas, Point p, const cv::Scalar& color,
                   int index) {
-  cv::rectangle(canvas,
-                cv::Rect(p.x * CELL_SIZE, p.y * CELL_SIZE, CELL_SIZE, CELL_SIZE),
-                color, cv::FILLED);
+  cv::rectangle(
+      canvas, cv::Rect(p.x * CELL_SIZE, p.y * CELL_SIZE, CELL_SIZE, CELL_SIZE),
+      color, cv::FILLED);
   cv::putText(canvas, std::to_string(index),
               cv::Point(p.x * CELL_SIZE + 2, p.y * CELL_SIZE + CELL_SIZE - 4),
               cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(0, 0, 0), 1,
@@ -221,10 +220,9 @@ auto drawWaypoint(cv::Mat& canvas, Point p, const cv::Scalar& color,
 // every pathfinding call after the first.
 auto randomFreePoint(const std::vector<std::vector<Node>>& grid,
                      std::mt19937& gen) -> Point {
-  std::uniform_int_distribution<uint> xd(
-      0, static_cast<uint>(grid[0].size()) - 1);
-  std::uniform_int_distribution<uint> yd(0,
-                                         static_cast<uint>(grid.size()) - 1);
+  std::uniform_int_distribution<uint> xd(0,
+                                         static_cast<uint>(grid[0].size()) - 1);
+  std::uniform_int_distribution<uint> yd(0, static_cast<uint>(grid.size()) - 1);
   Point raw = {.x = xd(gen), .y = yd(gen)};
   std::vector<std::vector<Node>> gridCopy = grid;
   Node free = BFSFirstFreeCell(gridCopy, raw);
@@ -234,7 +232,8 @@ auto randomFreePoint(const std::vector<std::vector<Node>>& grid,
 // Writes one trial's data to a .wpilog: the aggregated waypoints, and the
 // no-noise "expected" and noisy pursuit-follower runs (position + velocity
 // per tick).
-auto writeTrialLog(const std::string& path, const std::vector<Point>& waypoints,
+auto writeTrialLog(const std::string& path, double nodeSizeMeters,
+                   const std::vector<Point>& waypoints,
                    const std::vector<FollowerSample>& expected,
                    const std::vector<FollowerSample>& noisy) -> void {
   std::error_code ec;
@@ -244,19 +243,21 @@ auto writeTrialLog(const std::string& path, const std::vector<Point>& waypoints,
     return;
   }
 
-  std::vector<double> flatWaypoints;
-  flatWaypoints.reserve(waypoints.size() * 2);
+  std::vector<frc::Pose2d> waypointPoses;
+  waypointPoses.reserve(waypoints.size());
   for (const auto& wp : waypoints) {
-    flatWaypoints.push_back(wp.x);
-    flatWaypoints.push_back(wp.y);
+    waypointPoses.emplace_back(units::meter_t{wp.x * nodeSizeMeters},
+                               units::meter_t{wp.y * nodeSizeMeters},
+                               frc::Rotation2d{});
   }
-  wpi::log::DoubleArrayLogEntry waypointsEntry(log, "waypoints");
-  waypointsEntry.Append(flatWaypoints);
+  wpi::log::StructArrayLogEntry<frc::Pose2d> waypointsEntry(log, "waypoints");
+  waypointsEntry.Append(waypointPoses);
 
   wpi::log::DoubleLogEntry expectedX(log, "expected/x");
   wpi::log::DoubleLogEntry expectedY(log, "expected/y");
   wpi::log::DoubleLogEntry expectedVx(log, "expected/vx");
   wpi::log::DoubleLogEntry expectedVy(log, "expected/vy");
+  wpi::log::DoubleLogEntry expectedSpeed(log, "expected/speed");
   wpi::log::StructLogEntry<frc::Pose2d> expectedPose(log, "expected/pose");
   int64_t timestamp = 0;
   for (const auto& s : expected) {
@@ -264,6 +265,7 @@ auto writeTrialLog(const std::string& path, const std::vector<Point>& waypoints,
     expectedY.Append(s.y, timestamp);
     expectedVx.Append(s.vx, timestamp);
     expectedVy.Append(s.vy, timestamp);
+    expectedSpeed.Append(std::hypot(s.vx, s.vy), timestamp);
     expectedPose.Append(frc::Pose2d(units::meter_t{s.x}, units::meter_t{s.y},
                                     frc::Rotation2d{}),
                         timestamp);
@@ -274,6 +276,7 @@ auto writeTrialLog(const std::string& path, const std::vector<Point>& waypoints,
   wpi::log::DoubleLogEntry noisyY(log, "noisy/y");
   wpi::log::DoubleLogEntry noisyVx(log, "noisy/vx");
   wpi::log::DoubleLogEntry noisyVy(log, "noisy/vy");
+  wpi::log::DoubleLogEntry noisySpeed(log, "noisy/speed");
   wpi::log::StructLogEntry<frc::Pose2d> noisyPose(log, "noisy/pose");
   timestamp = 0;
   for (const auto& s : noisy) {
@@ -281,6 +284,7 @@ auto writeTrialLog(const std::string& path, const std::vector<Point>& waypoints,
     noisyY.Append(s.y, timestamp);
     noisyVx.Append(s.vx, timestamp);
     noisyVy.Append(s.vy, timestamp);
+    noisySpeed.Append(std::hypot(s.vx, s.vy), timestamp);
     noisyPose.Append(frc::Pose2d(units::meter_t{s.x}, units::meter_t{s.y},
                                  frc::Rotation2d{}),
                      timestamp);
@@ -320,19 +324,20 @@ auto runTrial(std::vector<std::vector<Node>>& grid, double nodeSizeMeters,
   if (!spline.points.empty()) {
     // grey: the raw BFS poly-line the aggregated spline was fit to
     drawPath(canvas, controlsToPixels(spline.controls, nodeSizeMeters),
-            cv::Scalar(160, 160, 160));
+             cv::Scalar(160, 160, 160));
     // red: the aggregated spline curve itself (the ideal reference path)
     drawPath(canvas, splinePointsToPixels(spline, nodeSizeMeters),
-            cv::Scalar(0, 0, 255));
+             cv::Scalar(0, 0, 255));
 
     // blue: the real PathFollower controller driving the robot, leg by
     // leg, with noise. `expected` is the same controller with no noise,
     // logged for comparison but not drawn (it tracks the red curve).
-    expected = followLegs(grid, nodeSizeMeters, waypoints, /*noiseFraction=*/0.0);
+    expected =
+        followLegs(grid, nodeSizeMeters, waypoints, /*noiseFraction=*/0.0);
     noisy = followLegs(grid, nodeSizeMeters, waypoints, /*noiseFraction=*/0.15);
 
     drawPath(canvas, samplesToPixels(noisy, nodeSizeMeters),
-            cv::Scalar(255, 0, 0));
+             cv::Scalar(255, 0, 0));
   }
 
   for (size_t i = 0; i < waypoints.size(); ++i) {
@@ -355,7 +360,8 @@ auto main() -> int {
   auto grid = navgrid.grid;
   const auto& nodeSizeMeters = navgrid.nodeSizeMeters;
 
-  const std::string outDir = std::string(getenv("HOME")) + "/pathing-simulator/";
+  const std::string outDir =
+      std::string(getenv("HOME")) + "/pathing-simulator/";
   mkdir(outDir.c_str(), 0755);
 
   std::random_device rd;
@@ -375,7 +381,8 @@ auto main() -> int {
         pathing::runTrial(grid, nodeSizeMeters, legs, gen);
     cv::imwrite(outDir + std::to_string(trialNum) + ".png", result.canvas);
     pathing::writeTrialLog(outDir + std::to_string(trialNum) + ".wpilog",
-                          result.waypoints, result.expected, result.noisy);
+                           nodeSizeMeters, result.waypoints, result.expected,
+                           result.noisy);
   }
   return 0;
 }
