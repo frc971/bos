@@ -35,7 +35,7 @@ auto EvaluateDerivative(double t,
     -> std::pair<double, double>;
 
 auto CreateSpline(const std::vector<std::vector<Node>>& grid, Point start_point,
-                  Point target_point, double nodeSizeMeters, int samples)
+                   Point target_point, double nodeSizeMeters, int samples)
     -> SplineResult;
 
 }  // namespace pathing

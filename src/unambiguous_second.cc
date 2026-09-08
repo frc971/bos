@@ -7,6 +7,7 @@
 #include "src/localization/run_localization.h"
 #include "src/localization/square_solver.h"
 #include "src/localization/unambiguous_estimator.h"
+#include "src/pathing/controller.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/nt_utils.h"
 #include "src/utils/stop.h"
@@ -24,6 +25,9 @@ auto main() -> int {
       camera_constants.at("second_bot_right"),
       camera_constants.at("second_bot_front"),
   };
+
+  std::jthread pathing_thread(pathing::RunController,
+                              "/bos/constants/navgrid.json", false);
 
   std::jthread thread([cameras](const std::stop_token& stop_token) {
     localization::MultiCameraDetector detector_source(cameras);

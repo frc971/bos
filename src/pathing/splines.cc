@@ -1,6 +1,7 @@
 #include "splines.h"
 #include <frc/geometry/Pose2d.h>
 #include <units/length.h>
+#include <cmath>
 #include <vector>
 #include "pathfinding.h"
 #include "src/utils/log.h"
@@ -146,7 +147,7 @@ auto CreateSpline(const std::vector<std::vector<pathing::Node>>& grid,
     return {};
   }
 
-  p = 3;
+  p = 6;
   if (numControls <= p) {
     p = numControls - 1;
   }
@@ -154,7 +155,13 @@ auto CreateSpline(const std::vector<std::vector<pathing::Node>>& grid,
   knots = KnotVector(numControls, p);
 
   for (int t = 0; t <= samples; t += 1) {
-    double t_real = t / static_cast<double>(samples);
+    double normalized_t = t / static_cast<double>(samples);
+    // space the points farther apart at the ends of the spline
+    // - need: the robot is slower at the start and the end so odometry error makes the robot jump around
+    double t_real =
+        normalized_t <= 0.5
+            ? 0.5 * std::pow(2.0 * normalized_t, 0.75)
+            : 1.0 - 0.5 * std::pow(2.0 * (1.0 - normalized_t), 0.75);
     auto [x, y] = EvaluatePosition(t_real, control_points, knots, p);
     spline_points.emplace_back(units::meter_t{x}, units::meter_t{y}, 0_rad);
     spline_params.emplace_back(t_real);
