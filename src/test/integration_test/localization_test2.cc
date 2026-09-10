@@ -67,9 +67,11 @@ auto FindCameraFolders(const std::filesystem::path& path)
 auto ResolveCameraName(const std::string& directory_name,
                        const camera::camera_constants_t& constants)
     -> std::string {
-  std::string resolved_name = directory_name.rfind("main_bot_", 0) == 0
+  std::string resolved_name = constants.contains(directory_name)
                                   ? directory_name
-                                  : "main_bot_" + directory_name;
+                                  : directory_name.rfind("main_bot_", 0) == 0
+                                        ? directory_name
+                                        : "main_bot_" + directory_name;
 
   if (!constants.contains(resolved_name)) {
     LOG(FATAL) << "Could not resolve camera constants name for directory: "

@@ -5,13 +5,19 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
+#include <iomanip>
+#include <limits>
 #include <numbers>
 #include <opencv2/calib3d.hpp>
 #include <random>
+#include <sstream>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
@@ -97,12 +103,85 @@ auto PixelCluster(const gamepiece::kmeans_cluster_t& cluster,
   return pixel_cluster;
 }
 
-auto InputFramePath() -> std::filesystem::path {
+auto InputFrameStartPath() -> std::filesystem::path {
   if (const char* configured_path = std::getenv("HSV_KMEANS_INPUT_FRAME");
       configured_path != nullptr && configured_path[0] != '\0') {
     return configured_path;
   }
-  return std::filesystem::path(BOS_SOURCE_DIR) / "frames" / "frame_007888.jpg";
+  return std::filesystem::path(BOS_SOURCE_DIR) / "frames" / "gamepiece_camera" /
+         "frame_007880.jpg";
+}
+
+struct NumberedFramePath {
+  std::filesystem::path parent;
+  std::string prefix;
+  std::string suffix;
+  std::size_t number;
+  std::size_t number_width;
+};
+
+auto ParseNumberedFramePath(const std::filesystem::path& path)
+    -> NumberedFramePath {
+  const std::string stem = path.stem().string();
+  const std::size_t number_start = stem.find_last_not_of("0123456789") + 1;
+  if (number_start == 0 || number_start == std::string::npos) {
+    throw std::invalid_argument(
+        "Frame path must end in a number before its extension: " +
+        path.string());
+  }
+
+  const std::string number_string = stem.substr(number_start);
+  std::size_t number = 0;
+  const auto [end, error] =
+      std::from_chars(number_string.data(),
+                      number_string.data() + number_string.size(), number);
+  if (error != std::errc{} ||
+      end != number_string.data() + number_string.size()) {
+    throw std::invalid_argument("Could not parse frame number from: " +
+                                path.string());
+  }
+
+  return {path.parent_path(), stem.substr(0, number_start), path.extension(),
+          number, number_string.size()};
+}
+
+// HSV_KMEANS_INPUT_FRAME selects one frame, as before. If
+// HSV_KMEANS_INPUT_FRAME_END is also set, both values must be numbered files
+// with the same prefix, extension, padding, and directory; the inclusive
+// range between them is processed in capture order.
+auto InputFramePaths() -> std::vector<std::filesystem::path> {
+  const std::filesystem::path start_path = InputFrameStartPath();
+  const char* configured_end = std::getenv("HSV_KMEANS_INPUT_FRAME_END");
+  if (configured_end == nullptr || configured_end[0] == '\0') {
+    return {start_path};
+  }
+
+  const std::filesystem::path end_path = configured_end;
+  const NumberedFramePath start = ParseNumberedFramePath(start_path);
+  const NumberedFramePath end = ParseNumberedFramePath(end_path);
+  if (start.parent != end.parent || start.prefix != end.prefix ||
+      start.suffix != end.suffix || start.number_width != end.number_width) {
+    throw std::invalid_argument(
+        "HSV_KMEANS_INPUT_FRAME and HSV_KMEANS_INPUT_FRAME_END must use "
+        "matching numbered filenames in the same directory");
+  }
+  if (end.number < start.number) {
+    throw std::invalid_argument(
+        "HSV_KMEANS_INPUT_FRAME_END must not precede HSV_KMEANS_INPUT_FRAME");
+  }
+
+  std::vector<std::filesystem::path> paths;
+  paths.reserve(end.number - start.number + 1);
+  for (std::size_t number = start.number; number <= end.number; ++number) {
+    std::ostringstream filename;
+    filename << start.prefix << std::setw(static_cast<int>(start.number_width))
+             << std::setfill('0') << number << start.suffix;
+    paths.push_back(start.parent / filename.str());
+    if (number == std::numeric_limits<std::size_t>::max()) {
+      break;
+    }
+  }
+  return paths;
 }
 
 auto OutputPath() -> std::filesystem::path {
@@ -114,36 +193,19 @@ auto OutputPath() -> std::filesystem::path {
          "hsv_cluster_tracker_post_merge_test.jpg";
 }
 
-TEST(HSVClusterVisualizationTest, DrawsClustersFromRealCameraFrame) {
-  const std::filesystem::path input_path = InputFramePath();
-  ASSERT_TRUE(std::filesystem::is_regular_file(input_path))
-      << "Real HSV test frame does not exist: " << input_path;
+auto SequenceOutputDirectory() -> std::filesystem::path {
+  if (const char* configured_path = std::getenv("HSV_KMEANS_VISUAL_OUTPUT_DIR");
+      configured_path != nullptr && configured_path[0] != '\0') {
+    return configured_path;
+  }
+  return std::filesystem::path(BOS_SOURCE_DIR) / "visualizations" /
+         "hsv_cluster_tracker_sequence";
+}
 
-  const cv::Mat frame = cv::imread(input_path.string(), cv::IMREAD_COLOR);
-  ASSERT_FALSE(frame.empty()) << "Could not decode test frame: " << input_path;
-
-  const std::filesystem::path camera_constants_path =
-      std::filesystem::path(BOS_SOURCE_DIR) / "constants" /
-      "camera_constants.json";
-  const camera::camera_constant_t camera =
-      camera::GetCameraConstants(camera_constants_path.string())
-          .at("gamepiece_camera");
-  const nlohmann::json intrinsics =
-      utils::ReadIntrinsics(camera.intrinsics_path.value());
-  const cv::Mat camera_matrix =
-      utils::CameraMatrixFromJson<cv::Mat>(intrinsics);
-  const cv::Mat distortion_coeffs =
-      utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics);
-  gamepiece::HSVClusterTracker tracker(camera);
-  // Prime the tracker with the same captured frame so the visualization shows
-  // the post-merge state after its temporal cluster count has grown.
-  tracker.ProcessFrame(frame);
-  tracker.ProcessFrame(frame);
-
-  const auto* clusters = tracker.GetClusters();
-  ASSERT_FALSE(clusters->empty())
-      << "The real frame produced no HSV clusters: " << input_path;
-
+auto AnnotateFrame(const cv::Mat& frame,
+                   const std::vector<gamepiece::kmeans_cluster_t>& clusters,
+                   const cv::Mat& camera_matrix,
+                   const cv::Mat& distortion_coeffs) -> cv::Mat {
   cv::Mat visualization;
   cv::undistort(frame, visualization, camera_matrix, distortion_coeffs,
                 camera_matrix);
@@ -157,9 +219,9 @@ TEST(HSVClusterVisualizationTest, DrawsClustersFromRealCameraFrame) {
 
   constexpr std::mt19937::result_type kClusterColorSeed = 0x4B4D4541;
   std::mt19937 random_generator(kClusterColorSeed);
-  for (std::size_t cluster_index = 0; cluster_index < clusters->size();
+  for (std::size_t cluster_index = 0; cluster_index < clusters.size();
        ++cluster_index) {
-    const gamepiece::kmeans_cluster_t& cluster = clusters->at(cluster_index);
+    const gamepiece::kmeans_cluster_t& cluster = clusters.at(cluster_index);
     const gamepiece::kmeans_cluster_t pixel_cluster =
         PixelCluster(cluster, camera_matrix);
     const cv::Scalar color = RandomClusterColor(random_generator);
@@ -188,12 +250,117 @@ TEST(HSVClusterVisualizationTest, DrawsClustersFromRealCameraFrame) {
         visualization,
         std::to_string(
             pixel_cluster.camera_relative_translation.value().Norm().value()),
-        centroid, cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 0));
+        centroid, cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 3);
+  }
+  return visualization;
+}
+
+TEST(HSVClusterVisualizationTest, DrawsClustersFromRealCameraFrame) {
+  std::vector<std::filesystem::path> input_paths;
+  try {
+    input_paths = InputFramePaths();
+  } catch (const std::exception& exception) {
+    FAIL() << exception.what();
   }
 
-  const std::filesystem::path output_path = OutputPath();
-  ASSERT_TRUE(cv::imwrite(output_path.string(), visualization))
-      << "Could not write HSV cluster visualization to " << output_path;
+  const std::filesystem::path camera_constants_path =
+      std::filesystem::path(BOS_SOURCE_DIR) / "constants" /
+      "camera_constants.json";
+  const camera::camera_constant_t camera =
+      camera::GetCameraConstants(camera_constants_path.string())
+          .at("gamepiece_camera");
+  const nlohmann::json intrinsics =
+      utils::ReadIntrinsics(camera.intrinsics_path.value());
+  const cv::Mat camera_matrix =
+      utils::CameraMatrixFromJson<cv::Mat>(intrinsics);
+  const cv::Mat distortion_coeffs =
+      utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics);
+  gamepiece::HSVClusterTracker tracker(camera);
+
+  const bool is_sequence = input_paths.size() > 1;
+  const std::filesystem::path output_directory = SequenceOutputDirectory();
+  if (is_sequence) {
+    std::error_code error;
+    std::filesystem::create_directories(output_directory, error);
+    ASSERT_FALSE(error)
+        << "Could not create HSV cluster visualization directory: "
+        << output_directory << ": " << error.message();
+  }
+
+  cv::Mat frame;
+  for (const std::filesystem::path& input_path : input_paths) {
+    ASSERT_TRUE(std::filesystem::is_regular_file(input_path))
+        << "Real HSV test frame does not exist: " << input_path;
+    frame = cv::imread(input_path.string(), cv::IMREAD_COLOR);
+    ASSERT_FALSE(frame.empty())
+        << "Could not decode test frame: " << input_path;
+    tracker.ProcessFrame(frame);
+
+    if (is_sequence) {
+      const auto* clusters = tracker.GetClusters();
+      ASSERT_FALSE(clusters->empty())
+          << "The real frame produced no HSV clusters: " << input_path;
+      const cv::Mat visualization =
+          AnnotateFrame(frame, *clusters, camera_matrix, distortion_coeffs);
+      const std::filesystem::path output_path =
+          output_directory / input_path.filename();
+      ASSERT_TRUE(cv::imwrite(output_path.string(), visualization))
+          << "Could not write HSV cluster visualization to " << output_path;
+    }
+  }
+
+  // Preserve the original single-frame behavior, which primes the tracker by
+  // processing the captured frame twice. Sequences already provide temporal
+  // history, so their frames are each processed exactly once.
+  if (!is_sequence) {
+    tracker.ProcessFrame(frame);
+    const auto* clusters = tracker.GetClusters();
+    ASSERT_FALSE(clusters->empty())
+        << "The real frame produced no HSV clusters: " << input_paths.back();
+    const cv::Mat visualization =
+        AnnotateFrame(frame, *clusters, camera_matrix, distortion_coeffs);
+    const std::filesystem::path output_path = OutputPath();
+    ASSERT_TRUE(cv::imwrite(output_path.string(), visualization))
+        << "Could not write HSV cluster visualization to " << output_path;
+  }
+}
+
+TEST(HSVClusterVisualizationTest, AddsOneClusterForNewPointsEnteringFrame) {
+  const std::filesystem::path input_path =
+      std::filesystem::path(BOS_SOURCE_DIR) / "frames" / "gamepiece_camera" /
+      "frame_007860.jpg";
+  ASSERT_TRUE(std::filesystem::is_regular_file(input_path));
+  const cv::Mat full_frame = cv::imread(input_path.string(), cv::IMREAD_COLOR);
+  ASSERT_FALSE(full_frame.empty());
+
+  cv::Mat initial_frame = full_frame.clone();
+  const int withheld_width = initial_frame.cols / 8;
+  initial_frame(cv::Rect(0, 0, withheld_width, initial_frame.rows)) =
+      cv::Scalar::all(0);
+
+  const std::filesystem::path camera_constants_path =
+      std::filesystem::path(BOS_SOURCE_DIR) / "constants" /
+      "camera_constants.json";
+  const camera::camera_constant_t camera =
+      camera::GetCameraConstants(camera_constants_path.string())
+          .at("gamepiece_camera");
+  gamepiece::HSVClusterTracker tracker(camera);
+
+  tracker.ProcessFrame(initial_frame);
+  const std::size_t initial_cluster_count = tracker.GetClusters()->size();
+  ASSERT_GT(initial_cluster_count, 0U);
+
+  tracker.ProcessFrame(full_frame);
+  EXPECT_EQ(tracker.GetClusters()->size(), initial_cluster_count + 1);
+
+  gamepiece::HSVClusterTracker unchanged_frame_tracker(camera);
+  unchanged_frame_tracker.ProcessFrame(initial_frame);
+  const std::size_t unchanged_initial_count =
+      unchanged_frame_tracker.GetClusters()->size();
+  unchanged_frame_tracker.ProcessFrame(initial_frame);
+  EXPECT_EQ(unchanged_frame_tracker.GetClusters()->size(),
+            unchanged_initial_count)
+      << "An unchanged frame must not add clusters without a covariance spike";
 }
 
 }  // namespace

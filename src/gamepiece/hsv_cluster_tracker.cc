@@ -17,7 +17,10 @@ namespace gamepiece {
 
 namespace {
 
-constexpr int kAdditionalClusters = 3;
+constexpr int kInitialClusterCount = 10;
+// Tuned so revealing the withheld left eighth of frame 007880 produces one
+// new centroid while an unchanged frame produces none.
+constexpr float kCovarianceSpikeRatio = 2.5f;
 
 auto SquaredDistance(const cv::Point2f& first, const cv::Point2f& second)
     -> float {
@@ -90,15 +93,119 @@ void HSVClusterTracker::ProcessFrame(const cv::Mat& frame) {
     return;
   }
 
-  const int cluster_count = std::min(
-      {active_cluster_count_, static_cast<int>(thresholded_points_.size()),
-       static_cast<int>(previous_clusters.size() + kAdditionalClusters)});
+  int cluster_count = kInitialClusterCount;
+  if (!previous_clusters.empty()) {
+    const std::vector<kmeans_cluster_t> assigned_clusters =
+        AssignToExistingClusters(thresholded_points_, previous_clusters);
+    cluster_count = static_cast<int>(previous_clusters.size()) +
+                    CovarianceSpikeCount(previous_clusters, assigned_clusters);
+  }
+  cluster_count =
+      std::min({active_cluster_count_,
+                static_cast<int>(thresholded_points_.size()), cluster_count});
   const std::vector<kmeans_cluster_t> unmerged_clusters =
       KMeans(thresholded_points_, cluster_count, previous_clusters);
   clusters_ = MergeOverlappingClusters(unmerged_clusters);
+  // clusters_ = unmerged_clusters;
   for (auto& cluster : clusters_) {
     cluster.camera_relative_translation.emplace(ClusterDistance(cluster));
   }
+}
+
+auto HSVClusterTracker::AssignToExistingClusters(
+    const std::vector<cv::Point2f>& data_points,
+    const std::vector<kmeans_cluster_t>& existing_clusters) const
+    -> std::vector<kmeans_cluster_t> {
+  if (existing_clusters.empty()) {
+    return {};
+  }
+
+  std::vector<cv::Point2f> scaled_centroids;
+  std::vector<std::size_t> existing_cluster_indices;
+  scaled_centroids.reserve(existing_clusters.size());
+  existing_cluster_indices.reserve(existing_clusters.size());
+  for (std::size_t cluster_index = 0; cluster_index < existing_clusters.size();
+       ++cluster_index) {
+    const kmeans_cluster_t& cluster = existing_clusters[cluster_index];
+    const std::optional<frc::Translation2d> point_offset =
+        UndistortedPointOffset(cluster.centroid, 0);
+    if (!point_offset.has_value()) {
+      continue;
+    }
+    scaled_centroids.emplace_back(
+        cluster.centroid.x,
+        cluster.centroid.y * point_offset.value().Norm().value());
+    existing_cluster_indices.push_back(cluster_index);
+  }
+
+  std::vector<kmeans_cluster_t> assigned_clusters(existing_clusters.size());
+  for (std::size_t cluster_index = 0; cluster_index < existing_clusters.size();
+       ++cluster_index) {
+    assigned_clusters[cluster_index].centroid =
+        existing_clusters[cluster_index].centroid;
+  }
+  if (scaled_centroids.empty()) {
+    return assigned_clusters;
+  }
+
+  for (const cv::Point2f& point : data_points) {
+    const std::optional<frc::Translation2d> point_offset =
+        UndistortedPointOffset(point, 0);
+    if (!point_offset.has_value()) {
+      continue;
+    }
+    const cv::Point2f scaled_point(
+        point.x, point.y * point_offset.value().Norm().value());
+    std::size_t nearest_center = 0;
+    float nearest_distance =
+        SquaredDistance(scaled_point, scaled_centroids.front());
+    for (std::size_t center_index = 1; center_index < scaled_centroids.size();
+         ++center_index) {
+      const float distance =
+          SquaredDistance(scaled_point, scaled_centroids[center_index]);
+      if (distance < nearest_distance) {
+        nearest_center = center_index;
+        nearest_distance = distance;
+      }
+    }
+    assigned_clusters[existing_cluster_indices[nearest_center]]
+        .img_points.push_back(point);
+  }
+
+  for (kmeans_cluster_t& cluster : assigned_clusters) {
+    if (cluster.img_points.size() > 1) {
+      cluster.covar = Covariance(cluster.img_points);
+    }
+  }
+  return assigned_clusters;
+}
+
+auto HSVClusterTracker::CovarianceSpikeCount(
+    const std::vector<kmeans_cluster_t>& previous_clusters,
+    const std::vector<kmeans_cluster_t>& assigned_clusters) const -> int {
+  int spike_count = 0;
+  const std::size_t cluster_count =
+      std::min(previous_clusters.size(), assigned_clusters.size());
+  for (std::size_t cluster_index = 0; cluster_index < cluster_count;
+       ++cluster_index) {
+    const kmeans_cluster_t& previous = previous_clusters[cluster_index];
+    const kmeans_cluster_t& assigned = assigned_clusters[cluster_index];
+    if (previous.covar.rows != 2 || previous.covar.cols != 2 ||
+        assigned.covar.rows != 2 || assigned.covar.cols != 2) {
+      continue;
+    }
+
+    // manual calculation of trace for covariance
+    const float previous_spread =
+        previous.covar.at<float>(0, 0) + previous.covar.at<float>(1, 1);
+    const float assigned_spread =
+        assigned.covar.at<float>(0, 0) + assigned.covar.at<float>(1, 1);
+    if (previous_spread > std::numeric_limits<float>::epsilon() &&
+        assigned_spread > previous_spread * kCovarianceSpikeRatio) {
+      ++spike_count;
+    }
+  }
+  return spike_count;
 }
 
 void HSVClusterTracker::HSVThreshold(const cv::Mat& img) {

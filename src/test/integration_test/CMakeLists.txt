@@ -13,6 +13,9 @@ target_link_libraries(path_plan_test PRIVATE utils)
 add_executable(gamepiece_test gamepiece_test.cc)
 target_link_libraries(gamepiece_test PRIVATE gamepiece yolo camera localization utils)
 
+add_executable(hsv_cluster_flicker_test hsv_cluster_flicker_test.cc)
+target_link_libraries(hsv_cluster_flicker_test PRIVATE gamepiece camera localization utils)
+
 add_executable(solver_test solver_test.cc)
 target_link_libraries(solver_test PRIVATE utils localization)
 

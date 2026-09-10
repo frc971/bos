@@ -27,6 +27,13 @@ class HSVClusterTracker {
       const std::vector<cv::Point2f>& data_points, int k,
       const std::vector<kmeans_cluster_t>& initial_clusters) const
       -> std::vector<kmeans_cluster_t>;
+  [[nodiscard]] auto AssignToExistingClusters(
+      const std::vector<cv::Point2f>& data_points,
+      const std::vector<kmeans_cluster_t>& existing_clusters) const
+      -> std::vector<kmeans_cluster_t>;
+  [[nodiscard]] auto CovarianceSpikeCount(
+      const std::vector<kmeans_cluster_t>& previous_clusters,
+      const std::vector<kmeans_cluster_t>& assigned_clusters) const -> int;
   [[nodiscard]] auto ClusterDistance(const kmeans_cluster_t& cluster) const
       -> frc::Translation2d;
   // must be passed in undistorted convention (normalized and centered)
@@ -53,7 +60,7 @@ class HSVClusterTracker {
   cv::Mat camera_extrinsics_wpi_;
   cv::Mat camera_extrinsics_cv_;
   static constexpr std::pair<int, int> hsv_color_range{18, 30};
-  static constexpr int minimum_saturation{180};
+  static constexpr int minimum_saturation{150};
   static constexpr float max_merge_distance_m{0.5f};
   const size_t min_pixels_per_cluster_;
   static constexpr float min_pixels_per_cluster_image_px_ratio{0.01f};
