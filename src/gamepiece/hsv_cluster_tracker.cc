@@ -11,6 +11,7 @@
 #include "src/gamepiece/ellipse.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/constants_from_json.h"
+#include "src/utils/image_utils.h"
 #include "src/utils/transform.h"
 
 namespace gamepiece {
@@ -72,11 +73,10 @@ HSVClusterTracker::HSVClusterTracker(const camera::camera_constant_t& camera)
   const cv::Mat camera_extrinsics = utils::EigenToCvMat(
       utils::ExtrinsicsJsonToCameraToRobot(extrinsics).ToMatrix());
   camera_extrinsics.convertTo(camera_extrinsics_wpi_, CV_32F);
-  camera_extrinsics_cv_ = camera_extrinsics.clone();
-  utils::ChangeBasis(camera_extrinsics_cv_, utils::WPI_TO_CV);
-  camera_extrinsics_cv_.convertTo(camera_extrinsics_cv_, CV_32F);
-  camera_origin_ =
-      camera_extrinsics_cv_ * (cv::Mat_<float>(4, 1) << 0.0f, 0.0f, 0.0f, 1.0f);
+  cv::Mat camera_extrinsics_cv = camera_extrinsics.clone();
+  utils::ChangeBasis(camera_extrinsics_cv, utils::WPI_TO_CV);
+  camera_extrinsics_cv.convertTo(camera_extrinsics_cv, CV_32F);
+  camera_extrinsics_cv_ = cv::Matx44f(camera_extrinsics_cv);
 }
 
 void HSVClusterTracker::ProcessFrame(const cv::Mat& frame) {
@@ -88,7 +88,10 @@ void HSVClusterTracker::ProcessFrame(const cv::Mat& frame) {
     return;
   }
 
-  HSVThreshold(frame);
+  utils::HSVThreshold(
+      frame, cv::Scalar(hsv_color_range.first, minimum_saturation, 0),
+      cv::Scalar(hsv_color_range.second, 255, 255), thresholded_points_,
+      hsv_image_, hsv_masked_, camera_intrinsics_, distortion_coeffs_);
   if (thresholded_points_.empty()) {
     return;
   }
@@ -128,7 +131,8 @@ auto HSVClusterTracker::AssignToExistingClusters(
        ++cluster_index) {
     const kmeans_cluster_t& cluster = existing_clusters[cluster_index];
     const std::optional<frc::Translation2d> point_offset =
-        UndistortedPointOffset(cluster.centroid, 0);
+        utils::UndistortedPointOffset(cluster.centroid, 0,
+                                      camera_extrinsics_cv_);
     if (!point_offset.has_value()) {
       continue;
     }
@@ -150,7 +154,7 @@ auto HSVClusterTracker::AssignToExistingClusters(
 
   for (const cv::Point2f& point : data_points) {
     const std::optional<frc::Translation2d> point_offset =
-        UndistortedPointOffset(point, 0);
+        utils::UndistortedPointOffset(point, 0, camera_extrinsics_cv_);
     if (!point_offset.has_value()) {
       continue;
     }
@@ -208,47 +212,6 @@ auto HSVClusterTracker::CovarianceSpikeCount(
   return spike_count;
 }
 
-void HSVClusterTracker::HSVThreshold(const cv::Mat& img) {
-  thresholded_points_.clear();
-
-  cv::cvtColor(img, hsv_image_, cv::COLOR_BGR2HSV);
-
-  cv::inRange(hsv_image_,
-              cv::Scalar(hsv_color_range.first, minimum_saturation, 0),
-              cv::Scalar(hsv_color_range.second, 255, 255), hsv_masked_);
-  cv::findNonZero(hsv_masked_, thresholded_points_);
-
-  if (!thresholded_points_.empty()) {
-    cv::undistortPoints(thresholded_points_, thresholded_points_,
-                        camera_intrinsics_, distortion_coeffs_);
-  }
-}
-
-auto HSVClusterTracker::UndistortedPointOffset(const cv::Point2f& point,
-                                               float world_relative_vertical,
-                                               bool verbose) const
-    -> std::optional<frc::Translation2d> {
-  cv::Mat camera_ray = (cv::Mat_<float>(4, 1) << point.x, point.y, 1.0f, 0.0f);
-  camera_ray = camera_extrinsics_cv_ * camera_ray;
-
-  const float ray_y = camera_ray.at<float>(1, 0);
-  if (ray_y <= std::numeric_limits<float>::epsilon()) {
-    return std::nullopt;
-  }
-  const float scale =
-      (world_relative_vertical - camera_origin_.at<float>(1, 0)) / ray_y;
-  const cv::Mat floor_relative_offset = scale * camera_ray;
-  if (cv::norm(floor_relative_offset) > 16) {  // TODO get from field constants
-    return std::nullopt;
-  }
-  if (verbose) {
-    LOG(INFO) << "Scale: " << scale << " ray_y " << ray_y;
-  }
-  return std::make_optional<frc::Translation2d>(
-      {units::meter_t{floor_relative_offset.at<float>(2, 0)},
-       units::meter_t{-floor_relative_offset.at<float>(0, 0)}});
-}
-
 auto HSVClusterTracker::KMeans(
     const std::vector<cv::Point2f>& data_points, const int k,
     const std::vector<kmeans_cluster_t>& initial_clusters) const
@@ -265,7 +228,7 @@ auto HSVClusterTracker::KMeans(
   for (size_t i = 0; i < data_points.size(); i++) {
     // inaccurate for most points because this assumes they're on the floor, may change later
     const std::optional<frc::Translation2d> point_offset =
-        UndistortedPointOffset(data_points[i], 0);
+        utils::UndistortedPointOffset(data_points[i], 0, camera_extrinsics_cv_);
     if (!point_offset.has_value()) {
       continue;  // to avoid yellow in the stands, which is above the field hoizon line
     }
@@ -291,7 +254,8 @@ auto HSVClusterTracker::KMeans(
       break;
     }
     const std::optional<frc::Translation2d> point_offset =
-        UndistortedPointOffset(cluster.centroid, 0);
+        utils::UndistortedPointOffset(cluster.centroid, 0,
+                                      camera_extrinsics_cv_);
     if (point_offset.has_value()) {
       initial_centers.emplace_back(
           cluster.centroid.x,
@@ -426,7 +390,9 @@ auto HSVClusterTracker::ClusterDistance(const kmeans_cluster_t& cluster) const
                        [](const cv::Point2f& first, const cv::Point2f& second) {
                          return first.y < second.y;
                        });
-  const auto offset = UndistortedPointOffset(*lowest_point, 0).value();
+  const auto offset =
+      utils::UndistortedPointOffset(*lowest_point, 0, camera_extrinsics_cv_)
+          .value();
   return offset;
 }
 
