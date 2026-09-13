@@ -20,3 +20,6 @@ wpilib-install
 *.jpg
 interesting_frames/
 *build*/
+sim-output/
+paths/
+field-cad/
