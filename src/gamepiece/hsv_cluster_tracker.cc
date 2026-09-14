@@ -9,6 +9,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "src/gamepiece/ellipse.h"
+#include "src/gamepiece/gamepiece.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/constants_from_json.h"
 #include "src/utils/image_utils.h"
@@ -88,13 +89,15 @@ void HSVClusterTracker::ProcessFrame(const cv::Mat& frame) {
     return;
   }
 
-  utils::HSVThreshold(
-      frame, cv::Scalar(hsv_color_range.first, minimum_saturation, 0),
-      cv::Scalar(hsv_color_range.second, 255, 255), thresholded_points_,
-      hsv_image_, hsv_masked_, camera_intrinsics_, distortion_coeffs_);
+  utils::HSVThreshold(frame, hsv_color_range.first, hsv_color_range.second,
+                      minimum_saturation, thresholded_points_, hsv_image_,
+                      hsv_masked_);
   if (thresholded_points_.empty()) {
     return;
   }
+  cv::undistortPoints(thresholded_points_, thresholded_points_,
+                      camera_intrinsics_, distortion_coeffs_, cv::noArray(),
+                      camera_intrinsics_);
 
   int cluster_count = kInitialClusterCount;
   if (!previous_clusters.empty()) {

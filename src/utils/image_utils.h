@@ -8,17 +8,10 @@
 
 namespace utils {
 
-// Converts a BGR image to HSV, selects pixels within the inclusive HSV range,
-// and optionally undistorts the selected pixel coordinates. All outputs are
-// supplied by the caller so their allocations can be reused between frames.
-// Without a camera matrix, the returned points remain in pixel coordinates.
-void HSVThreshold(
-    const cv::Mat3b& bgr_image, const cv::Scalar& lower_bound,
-    const cv::Scalar& upper_bound, std::vector<cv::Point2f>& thresholded_points,
-    cv::Mat3b& hsv_image, cv::Mat1b& threshold_mask,
-    const std::optional<cv::Matx33d>& camera_matrix = std::nullopt,
-    const std::optional<cv::Vec<double, 5>>& distortion_coefficients =
-        std::nullopt);
+void HSVThreshold(const cv::Mat& bgr_image, int minimum_hue, int maximum_hue,
+                  int minimum_saturation,
+                  std::vector<cv::Point2f>& thresholded_points,
+                  cv::Mat3b& hsv_image, cv::Mat1b& threshold_mask);
 
 [[nodiscard]] auto DistortedPinholePointOffset(
     const cv::Point2f& point, float world_relative_vertical,

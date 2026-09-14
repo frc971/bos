@@ -9,25 +9,14 @@
 
 namespace utils {
 
-void HSVThreshold(
-    const cv::Mat3b& bgr_image, const cv::Scalar& lower_bound,
-    const cv::Scalar& upper_bound, std::vector<cv::Point2f>& thresholded_points,
-    cv::Mat3b& hsv_image, cv::Mat1b& threshold_mask,
-    const std::optional<cv::Matx33d>& camera_matrix,
-    const std::optional<cv::Vec<double, 5>>& distortion_coefficients) {
+void HSVThreshold(const cv::Mat& bgr_image, const int minimum_hue,
+                  const int maximum_hue, const int minimum_saturation,
+                  std::vector<cv::Point2f>& thresholded_points,
+                  cv::Mat3b& hsv_image, cv::Mat1b& threshold_mask) {
   cv::cvtColor(bgr_image, hsv_image, cv::COLOR_BGR2HSV);
-  cv::inRange(hsv_image, lower_bound, upper_bound, threshold_mask);
+  cv::inRange(hsv_image, cv::Scalar(minimum_hue, minimum_saturation, 0),
+              cv::Scalar(maximum_hue, 255, 255), threshold_mask);
   cv::findNonZero(threshold_mask, thresholded_points);
-
-  if (!thresholded_points.empty() && camera_matrix.has_value()) {
-    if (distortion_coefficients.has_value()) {
-      cv::undistortPoints(thresholded_points, thresholded_points,
-                          *camera_matrix, *distortion_coefficients);
-    } else {
-      cv::undistortPoints(thresholded_points, thresholded_points,
-                          *camera_matrix, cv::noArray());
-    }
-  }
 }
 
 auto DistortedPointOffset(const cv::Point2f& point,
