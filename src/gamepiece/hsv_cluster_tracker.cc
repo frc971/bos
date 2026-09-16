@@ -134,8 +134,8 @@ auto HSVClusterTracker::AssignToExistingClusters(
        ++cluster_index) {
     const kmeans_cluster_t& cluster = existing_clusters[cluster_index];
     const std::optional<frc::Translation2d> point_offset =
-        utils::UndistortedPointOffset(cluster.centroid, 0,
-                                      camera_extrinsics_cv_);
+        utils::UndistortedPinholePointOffset(cluster.centroid, 0,
+                                             camera_extrinsics_cv_);
     if (!point_offset.has_value()) {
       continue;
     }
@@ -157,7 +157,7 @@ auto HSVClusterTracker::AssignToExistingClusters(
 
   for (const cv::Point2f& point : data_points) {
     const std::optional<frc::Translation2d> point_offset =
-        utils::UndistortedPointOffset(point, 0, camera_extrinsics_cv_);
+        utils::UndistortedPinholePointOffset(point, 0, camera_extrinsics_cv_);
     if (!point_offset.has_value()) {
       continue;
     }
@@ -231,7 +231,8 @@ auto HSVClusterTracker::KMeans(
   for (size_t i = 0; i < data_points.size(); i++) {
     // inaccurate for most points because this assumes they're on the floor, may change later
     const std::optional<frc::Translation2d> point_offset =
-        utils::UndistortedPointOffset(data_points[i], 0, camera_extrinsics_cv_);
+        utils::UndistortedPinholePointOffset(data_points[i], 0,
+                                             camera_extrinsics_cv_);
     if (!point_offset.has_value()) {
       continue;  // to avoid yellow in the stands, which is above the field hoizon line
     }
@@ -257,8 +258,8 @@ auto HSVClusterTracker::KMeans(
       break;
     }
     const std::optional<frc::Translation2d> point_offset =
-        utils::UndistortedPointOffset(cluster.centroid, 0,
-                                      camera_extrinsics_cv_);
+        utils::UndistortedPinholePointOffset(cluster.centroid, 0,
+                                             camera_extrinsics_cv_);
     if (point_offset.has_value()) {
       initial_centers.emplace_back(
           cluster.centroid.x,
@@ -393,9 +394,9 @@ auto HSVClusterTracker::ClusterDistance(const kmeans_cluster_t& cluster) const
                        [](const cv::Point2f& first, const cv::Point2f& second) {
                          return first.y < second.y;
                        });
-  const auto offset =
-      utils::UndistortedPointOffset(*lowest_point, 0, camera_extrinsics_cv_)
-          .value();
+  const auto offset = utils::UndistortedPinholePointOffset(
+                          *lowest_point, 0, camera_extrinsics_cv_)
+                          .value();
   return offset;
 }
 

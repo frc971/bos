@@ -31,9 +31,9 @@ auto DistortedPointOffset(const cv::Point2f& point,
                                        camera_extrinsics_cv);
 }
 
-auto UndistortedPointOffset(const cv::Point2f& point,
-                            const float world_relative_vertical,
-                            const cv::Matx44f& camera_extrinsics_cv)
+auto UndistortedPinholePointOffset(const cv::Point2f& point,
+                                   const float world_relative_vertical,
+                                   const cv::Matx44f& camera_extrinsics_cv)
     -> std::optional<frc::Translation2d> {
   const cv::Vec4f camera_ray =
       camera_extrinsics_cv * cv::Vec4f{point.x, point.y, 1.0f, 0.0f};
