@@ -1,4 +1,10 @@
 #include "src/gamepiece/lane_density.h"
+
+#include <cmath>
+#include <optional>
+
+#include <opencv2/imgproc.hpp>
+
 #include "src/gamepiece/gamepiece.h"
 #include "src/utils/camera_utils.h"
 #include "src/utils/constants_from_json.h"
@@ -91,31 +97,61 @@ auto LaneDensityTracker::GetLaneDensities(const cv::Mat& color_image,
     lane_widths = std::floor(lane_widths);
     per_lane_pixel_density[static_cast<int>(lane_widths) + num_lanes] += 1;
   }
-  std::pair<cv::Vec2f, cv::Vec2f> prev_transformed_lane;
+  std::optional<std::pair<cv::Vec2f, cv::Vec2f>> prev_transformed_lane;
   for (size_t i = 0; i < field_relative_lanes.size(); i++) {
+    const cv::Vec2f transformed_origin =
+        unhomogenize(composed_pnp_mat_ * field_relative_lanes[i].origin);
+    const cv::Vec2f transformed_end =
+        unhomogenize(composed_pnp_mat_ * field_relative_lanes[i].end);
+    cv::Point clipped_origin{cvRound(transformed_origin[0]),
+                             cvRound(transformed_origin[1])};
+    cv::Point clipped_end{cvRound(transformed_end[0]),
+                          cvRound(transformed_end[1])};
+    const bool lane_is_visible =
+        cv::clipLine(color_image.size(), clipped_origin, clipped_end);
     std::pair<cv::Vec2f, cv::Vec2f> curr_transformed_lane{
-        unhomogenize(composed_pnp_mat_ * field_relative_lanes[i].origin),
-        unhomogenize(composed_pnp_mat_ * field_relative_lanes[i].end)};
-    if (curr_transformed_lane[0] > color_image.cols) {}
+        cv::Vec2f{static_cast<float>(clipped_origin.x),
+                  static_cast<float>(clipped_origin.y)},
+        cv::Vec2f{static_cast<float>(clipped_end.x),
+                  static_cast<float>(clipped_end.y)}};
     if (i != 0) {
+      if (!lane_is_visible || !prev_transformed_lane.has_value()) {
+        per_lane_pixel_density[i - 1] = 0.0f;
+        prev_transformed_lane = lane_is_visible
+                                    ? std::make_optional(curr_transformed_lane)
+                                    : std::nullopt;
+        continue;
+      }
+
       cv::Vec2f diagonal =
-          curr_transformed_lane.second - prev_transformed_lane.first;
+          curr_transformed_lane.second - prev_transformed_lane->first;
       float diag_len = cv::norm(diagonal);
+      if (diag_len == 0.0f) {
+        per_lane_pixel_density[i - 1] = 0.0f;
+        prev_transformed_lane = std::move(curr_transformed_lane);
+        continue;
+      }
       diagonal /= diag_len;
       cv::Vec2f offset_1 =
-          curr_transformed_lane.first - prev_transformed_lane.first;
+          curr_transformed_lane.first - prev_transformed_lane->first;
       cv::Vec2f perpendicular_component_1 =
           offset_1 - diagonal.dot(offset_1) * diagonal;
       cv::Vec2f offset_2 =
-          prev_transformed_lane.second - prev_transformed_lane.first;
+          prev_transformed_lane->second - prev_transformed_lane->first;
       cv::Vec2f perpendicular_component_2 =
           offset_2 - diagonal.dot(offset_2) * diagonal;
       float quadrilateral_area = 0.5 * diag_len *
                                  (cv::norm(perpendicular_component_1) +
                                   cv::norm(perpendicular_component_2));
-      per_lane_pixel_density[i - 1] /= quadrilateral_area;
+      if (quadrilateral_area > 0.0f) {
+        per_lane_pixel_density[i - 1] /= quadrilateral_area;
+      } else {
+        per_lane_pixel_density[i - 1] = 0.0f;
+      }
     }
-    prev_transformed_lane = std::move(curr_transformed_lane);
+    prev_transformed_lane = lane_is_visible
+                                ? std::make_optional(curr_transformed_lane)
+                                : std::nullopt;
   }
   return per_lane_pixel_density;
 }
