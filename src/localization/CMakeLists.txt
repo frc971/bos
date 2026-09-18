@@ -92,6 +92,16 @@ target_link_libraries(NetworktableSender PRIVATE
   utils
 )
 
+add_library(TagVisibility)
+target_sources(TagVisibility
+  PRIVATE
+    tag_visibility.cc
+)
+target_link_libraries(TagVisibility PUBLIC
+  camera
+  utils
+)
+
 add_library(localization)
 target_sources(localization 
   PRIVATE
@@ -109,6 +119,7 @@ target_link_libraries(localization PRIVATE
   UnambiguousEstimator
   SimulationSender
   NetworktableSender
+  TagVisibility
   SimulatedUVCCamera
   utils
   camera

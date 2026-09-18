@@ -27,9 +27,16 @@ target_link_libraries(uvc_camera_test PRIVATE
 )
 target_compile_definitions(uvc_camera_test PRIVATE BOS_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
+add_executable(tag_visibility_test tag_visibility_test.cc)
+target_link_libraries(tag_visibility_test PRIVATE
+  TagVisibility
+  GTest::gtest_main
+)
+
 gtest_discover_tests(joint_solve_test)
 gtest_discover_tests(multi_tag_test)
 gtest_discover_tests(square_solve_test)
 gtest_discover_tests(general_solver_test)
 gtest_discover_tests(uvc_camera_test PROPERTIES TIMEOUT 10)
+gtest_discover_tests(tag_visibility_test)
 # gtest_discover_tests(pathing_test)

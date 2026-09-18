@@ -21,5 +21,6 @@ This directory contains executable diagnostics and end-to-end tests for camera, 
 - `path_plan_test.cc` is a standalone visual path-planning playground with its own grid node class and drawing helpers.
 - `pva_test.cc` is an NVIDIA VPI AprilTag sample-style test for PVA/CPU AprilTag detection and visualization.
 - `solver_test.cc` feeds synthetic tag-corner observations into `SquareSolver` and prints resulting pose estimates.
+- `tag_simulation.cc` predicts which 2026 field tags should be visible from each calibrated camera. It follows `/DriveState/Pose` by default and publishes the robot, camera, visible-tag, hidden-tag, ID, and expected-count topics under `/TagSimulation` for AdvantageScope. Use `--tag_sim_follow_drive_pose=false --tag_sim_x=... --tag_sim_y=... --tag_sim_heading_degrees=...` to test a fixed pose, and `--tag_sim_cameras=main_bot_left,main_bot_right` to select cameras.
 - `stress_test.cc` is an older multi-threaded localization stress harness for several camera/detector/solver pipelines.
 - `yolo_test.cc` opens a camera, runs YOLO inference, draws detections, estimates object angle, and streams the annotated result.

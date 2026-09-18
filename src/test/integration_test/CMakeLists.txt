@@ -10,6 +10,13 @@ target_link_libraries(yolo_test PRIVATE camera yolo utils)
 add_executable(path_plan_test path_plan_test.cc)
 target_link_libraries(path_plan_test PRIVATE utils)
 
+add_executable(tag_simulation tag_simulation.cc)
+target_link_libraries(tag_simulation PRIVATE
+  camera
+  TagVisibility
+  utils
+)
+
 add_executable(gamepiece_test gamepiece_test.cc)
 target_link_libraries(gamepiece_test PRIVATE gamepiece yolo camera localization utils)
 
