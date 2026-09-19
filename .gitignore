@@ -22,3 +22,6 @@ interesting_frames/
 *build*/
 **/__pycache__/
 visualizations/
+sim-output/
+paths/
+field-cad/

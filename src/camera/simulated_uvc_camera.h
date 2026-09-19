@@ -1,95 +1,100 @@
 #pragma once
 
-#include <cstddef>
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <random>
+#include <vector>
+
+#include <gmock/gmock.h>
 
 #include "absl/status/status.h"
-#include "src/camera/camera.h"
-#include "src/camera/camera_constants.h"
+#include "libuvc/libuvc.h"
+#include "src/camera/uvc_camera.h"
 
-namespace camera {
+namespace camera::test {
 
-struct SimulatedUVCInitializationFaults {
-  double context = 0.0;
-  double discovery = 0.0;
-  double open = 0.0;
-  double negotiation = 0.0;
-  double streaming_start = 0.0;
+struct FrameFailureProbabilities {
+  double frame_delay = 0.0;
+  double empty = 0.0;
+  double corrupt = 0.0;
+  std::chrono::milliseconds delay{0};
 };
 
-struct SimulatedUVCFrameFaults {
-  double timeout = 0.0;
-  double temporary_stall = 0.0;
-  double permanent_stall = 0.0;
-  double overflow = 0.0;
-  double transfer_error = 0.0;
-  double no_device = 0.0;
-  double corruption = 0.0;
-  double empty_frame = 0.0;
-  double oversized_frame = 0.0;
-  double unsupported_format = 0.0;
-  double synthetic_invalid_delivery = 0.0;
-  double delivery_exception = 0.0;
-  double fatal_abort = 0.0;
-};
-
-struct SimulatedUVCDurationRange {
-  double min_seconds = 0.0;
-  double max_seconds = 0.0;
-};
-
-struct SimulatedUVCCameraConfig {
-  std::filesystem::path image_directory;
-  double replay_speed = 1.0;
-  std::optional<double> start;
-  std::optional<double> end;
-  std::optional<std::uint64_t> random_seed;
-  SimulatedUVCInitializationFaults initialization_faults;
-  SimulatedUVCFrameFaults frame_faults;
-  SimulatedUVCDurationRange temporary_stall;
-  SimulatedUVCDurationRange processing_delay;
-};
-
-struct SimulatedUVCCameraStatistics {
-  std::uint64_t source_frames = 0;
-  std::uint64_t transfers = 0;
-  std::uint64_t retries = 0;
-  std::uint64_t retired_buffers = 0;
-  std::uint64_t assembled_frames = 0;
-  std::uint64_t hold_buffer_overwrites = 0;
-  std::uint64_t callback_drops = 0;
-  std::uint64_t decode_failures = 0;
-  std::uint64_t sequence_gaps = 0;
-  std::uint64_t deliveries = 0;
-  std::uint64_t injected_faults = 0;
-  std::uint64_t eof = 0;
-  std::uint64_t restarts = 0;
-};
-
-// A deterministic, disk-backed simulation of the libuvc/BOS MJPEG pipeline.
-class SimulatedUVCCamera final : public ICamera {
+class MockUvcApi {
  public:
-  SimulatedUVCCamera(const camera_constant_t& camera_constant,
-                     SimulatedUVCCameraConfig config, absl::Status& status);
-  ~SimulatedUVCCamera() override;
+  MockUvcApi();
 
-  SimulatedUVCCamera(const SimulatedUVCCamera&) = delete;
-  auto operator=(const SimulatedUVCCamera&) -> SimulatedUVCCamera& = delete;
+  MOCK_METHOD(uvc_error_t, Init, ());
+  MOCK_METHOD(void, Exit, (uvc_context_t*));
+  MOCK_METHOD(uvc_error_t, FindDevice, ());
+  MOCK_METHOD(uvc_error_t, Open, ());
+  MOCK_METHOD(void, Close, (uvc_device_handle_t*));
+  MOCK_METHOD(void, UnrefDevice, (uvc_device_t*));
+  MOCK_METHOD(uvc_error_t, GetStreamControl,
+              (uvc_stream_ctrl_t*, int width, int height, int fps));
+  MOCK_METHOD(uvc_error_t, StartStreaming, (uvc_frame_callback_t*, void* user));
+  MOCK_METHOD(void, StopStreaming, (uvc_device_handle_t*));
+
+  auto DeliverJpeg(std::vector<unsigned char>& bytes) -> bool;
+  auto DeliverEmptyFrame() -> bool;
+
+ private:
+  auto Deliver(void* data, std::size_t size) -> bool;
+
+  uvc_frame_callback_t* callback_ = nullptr;
+  void* callback_user_ = nullptr;
+  uint32_t sequence_ = 0;
+};
+
+namespace internal {
+
+// Set only while a SimulatedUvcCamera is constructing its production camera.
+// The fake libuvc entry points are compiled into a test-only shim and use this
+// pointer to route calls to the appropriate mock instance.
+extern thread_local MockUvcApi* constructing_mock;
+
+}  // namespace internal
+
+class SimulatedUvcCamera final : public ICamera {
+ public:
+  SimulatedUvcCamera(const std::filesystem::path& image_folder,
+                     const camera_constant_t& constants, absl::Status& status,
+                     double replay_speed = 1.0, bool fail_to_init = false);
+  ~SimulatedUvcCamera() override;
 
   auto GetFrame() -> timestamped_frame_t override;
   auto Restart() -> void override;
-  auto IsDone() -> bool override;
   [[nodiscard]] auto GetCameraConstant() const -> camera_constant_t override;
-  [[nodiscard]] auto GetStatistics() const -> SimulatedUVCCameraStatistics;
+  [[nodiscard]] auto IsDone() -> bool override;
+
+  auto PauseNextFrame(std::chrono::milliseconds delay) -> void;
+  auto InjectEmptyFrame() -> bool;
+  auto InjectCorruptFrame() -> bool;
+  auto SetFailureProbabilities(const FrameFailureProbabilities& probabilities,
+                               uint32_t seed = std::random_device{}()) -> void;
+
+  auto mock_uvc() -> MockUvcApi& { return mock_uvc_; }
+  auto production_camera() -> UVCCamera& { return *camera_; }
 
  private:
-  class State;
-  const camera_constant_t camera_constant_;
-  const SimulatedUVCCameraConfig config_;
-  std::unique_ptr<State> state_;
+  enum class FrameOutcome { kNormal, kDelayed, kEmpty, kCorrupt };
+
+  auto ReadNextJpeg() -> std::vector<unsigned char>;
+  auto PaceReplay() const -> void;
+  auto SampleFrameOutcome() -> FrameOutcome;
+
+  std::vector<std::filesystem::path> image_paths_;
+  std::size_t next_image_ = 0;
+  double replay_speed_;
+  std::optional<std::chrono::milliseconds> next_frame_delay_;
+  std::chrono::milliseconds failure_delay_{0};
+  std::discrete_distribution<std::size_t> frame_outcome_distribution_;
+  std::mt19937 random_engine_;
+  testing::NiceMock<MockUvcApi> mock_uvc_;
+  std::unique_ptr<UVCCamera> camera_;
 };
 
-}  // namespace camera
+}  // namespace camera::test

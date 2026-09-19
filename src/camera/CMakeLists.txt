@@ -77,14 +77,22 @@ target_link_libraries(UVCCamera PRIVATE
 )
 
 add_library(SimulatedUVCCamera)
-target_sources(SimulatedUVCCamera
-  PRIVATE
-    simulated_uvc_camera.cc
+target_sources(SimulatedUVCCamera PRIVATE
+  simulated_uvc_camera.cc
 )
-target_link_libraries(SimulatedUVCCamera
-  PUBLIC
-    absl::status
-    utils
+target_link_libraries(SimulatedUVCCamera PUBLIC
+  UVCCamera
+  GTest::gmock
+  utils
+)
+
+add_library(SimulatedUVCShim OBJECT)
+target_sources(SimulatedUVCShim PRIVATE
+  simulated_uvc_shim.cc
+)
+target_link_libraries(SimulatedUVCShim PRIVATE
+  GTest::gmock
+  utils
 )
 
 add_library(camera INTERFACE)
@@ -97,5 +105,4 @@ target_link_libraries(camera INTERFACE
   CameraConstants
   MultiCameraSource
   UVCCamera
-  SimulatedUVCCamera
 )

@@ -37,4 +37,9 @@ auto main() -> int {
   LOG(INFO) << "Started localization";
   stop::WaitUntilStop();
   LOG(INFO) << "Stopping";
+  thread.request_stop();
+  pathing.request_stop();
+  thread.join();
+  pathing.join();
+  frc::DataLogManager::Stop();
 }

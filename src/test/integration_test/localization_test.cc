@@ -158,4 +158,5 @@ auto main(int argc, char** argv) -> int {
   for (auto& thread : localization_threads) {
     thread.join();
   }
+  frc::DataLogManager::Stop();
 }

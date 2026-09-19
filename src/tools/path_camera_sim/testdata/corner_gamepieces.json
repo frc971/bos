@@ -1,0 +1,24 @@
+{
+  "gamepieces": [
+    {
+      "type": "Fuel",
+      "translation_m": [4.767, 2.803, 0.075],
+      "rotation_rpy_rad": [0.0, 0.0, 0.0]
+    },
+    {
+      "type": "Fuel",
+      "translation_m": [4.581, 4.529, 0.075],
+      "rotation_rpy_rad": [0.0, 0.0, 0.0]
+    },
+    {
+      "type": "Fuel",
+      "translation_m": [4.252, 7.574, 0.075],
+      "rotation_rpy_rad": [0.0, 0.0, 0.0]
+    },
+    {
+      "type": "Fuel",
+      "translation_m": [3.650, 7.950, 0.075],
+      "rotation_rpy_rad": [0.0, 0.0, 0.0]
+    }
+  ]
+}

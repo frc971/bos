@@ -75,4 +75,11 @@ auto main() -> int {
   LOG(INFO) << "Started estimators";
 
   stop::WaitUntilStop();
+  left_thread.request_stop();
+  right_thread.request_stop();
+  pathing_thread.request_stop();
+  left_thread.join();
+  right_thread.join();
+  pathing_thread.join();
+  frc::DataLogManager::Stop();
 }

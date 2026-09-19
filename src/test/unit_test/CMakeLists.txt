@@ -28,14 +28,13 @@ target_link_libraries(hsv_cluster_visualization_test PRIVATE gamepiece GTest::gt
 add_executable(pathing_test pathing_test.cc)
 target_link_libraries(pathing_test PRIVATE pathing utils nlohmann_json::nlohmann_json GTest::gtest_main)
 
-add_executable(simulated_uvc_camera_test simulated_uvc_camera_test.cc)
-target_compile_definitions(simulated_uvc_camera_test PRIVATE
-  BOS_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-)
-target_link_libraries(simulated_uvc_camera_test PRIVATE
+add_executable(uvc_camera_test uvc_camera_test.cc)
+target_link_libraries(uvc_camera_test PRIVATE
   SimulatedUVCCamera
+  SimulatedUVCShim
   GTest::gtest_main
 )
+target_compile_definitions(uvc_camera_test PRIVATE BOS_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
 gtest_discover_tests(joint_solve_test)
 gtest_discover_tests(multi_tag_test)
@@ -43,5 +42,4 @@ gtest_discover_tests(square_solve_test)
 gtest_discover_tests(general_solver_test)
 gtest_discover_tests(ellipse_test)
 gtest_discover_tests(hsv_cluster_visualization_test)
-gtest_discover_tests(simulated_uvc_camera_test)
 # gtest_discover_tests(pathing_test)

@@ -31,7 +31,7 @@ void RunLocalization(
                              source->GetName(), port.value(), 30, 1080, 1080))
                        : std::nullopt;
 
-  while (!stop_token.stop_requested()) {
+  while (!stop_token.stop_requested() && !source->IsDone()) {
     utils::Timer timer(source->GetName(), verbose);
     camera::timestamped_frame_t timestamped_frame = source->Get();
     if (streamer.has_value()) {
@@ -57,6 +57,9 @@ void RunJointLocalization(
     std::unique_ptr<localization::IPositionSender> sender, bool verbose) {
   while (!stop_token.stop_requested()) {
     auto detections = detector_source.GetTagDetections();
+    if (detector_source.IsDone()) {
+      break;
+    }
     std::optional<position_estimate_t> estimated_pose =
         solver->EstimatePosition(detections);
     if (!estimated_pose.has_value()) {
