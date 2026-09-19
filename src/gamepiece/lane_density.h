@@ -38,7 +38,7 @@ class LaneDensityTracker {
   inline static const cv::Vec4f field_relative_center_lane_origin{
       -lane_begin_y, 0, center_field_x, 1};
   inline static const std::array<lane_segment_t, 2 * num_lanes + 1>
-      field_relative_lanes = [] {
+      field_relative_lane_boundaries_ = [] {
         std::array<lane_segment_t, 2 * num_lanes + 1> lanes{};
 
         for (int offset = -num_lanes; offset <= num_lanes; ++offset) {

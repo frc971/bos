@@ -1,7 +1,8 @@
 #include "src/gamepiece/lane_density.h"
 
-#include <cmath>
 #include <optional>
+#include <utility>
+#include <vector>
 
 #include <opencv2/imgproc.hpp>
 
@@ -12,10 +13,6 @@
 #include "src/utils/transform.h"
 
 namespace gamepiece {
-auto signum(float val) -> int {
-  return (0 < val) - (val < 0);
-}
-
 static inline auto unhomogenize(const cv::Vec3f& v) -> cv::Vec2f {
   if (v[2] == 0) {
     return cv::Vec2f{v[0], v[1]};
@@ -63,46 +60,55 @@ auto LaneDensityTracker::GetLaneDensities(const cv::Mat& color_image,
   cv::Matx44f robot_pose_cv(_robot_pose);
   const cv::Matx34f composed_pnp_mat_ =
       camera_intrinsics_ * Pi * (robot_pose_cv * camera_extrinsics_cv_).inv();
-  const cv::Vec2f image_relative_lane_direction =
-      unhomogenize(composed_pnp_mat_ * field_relative_lane_direction);
-  const cv::Vec2f image_relative_lane_direction_uvec =
-      image_relative_lane_direction / cv::norm(image_relative_lane_direction);
-  const cv::Vec2f image_relative_center_line_origin = unhomogenize(
-      composed_pnp_mat_ * cv::Vec4f{-lane_begin_y, 0, center_field_x, 1});
-  std::vector<cv::Vec3f> image_relative_lane_origins;
-  std::array<float, 2 * num_lanes> per_lane_pixel_density{};
-  for (const cv::Point2f& image_point : thresholded_points) {
-    auto offset =
-        static_cast<cv::Vec2f>(image_point) - image_relative_center_line_origin;
-    if (std::abs(std::acos(offset.dot(image_relative_lane_direction) /
-                           cv::norm(offset))) > std::numbers::pi) {
-      continue;
-    }
-    const cv::Vec2f parallel_offset =
-        (image_relative_lane_direction_uvec.dot(offset)) *
-        image_relative_lane_direction_uvec;
-    if (cv::norm(parallel_offset) > field_width - lane_begin_y * 2) {
-      continue;
-    }
-    const cv::Vec2f perpendicular_offset =
-        static_cast<cv::Vec2f>(image_point) - parallel_offset;
-    int lane_widths = cv::norm(perpendicular_offset) / lane_width;
-    if (std::abs(lane_widths) > num_lanes) {
-      continue;
-    }
-    int direction_flipper =
-        signum(image_relative_lane_direction_uvec[0] * perpendicular_offset[1] -
-               image_relative_lane_direction_uvec[1] * perpendicular_offset[0]);
-    lane_widths *= direction_flipper;
-    lane_widths = std::floor(lane_widths);
-    per_lane_pixel_density[static_cast<int>(lane_widths) + num_lanes] += 1;
+
+  std::vector<std::pair<cv::Vec2f, cv::Vec2f>> image_relative_lanes;
+  std::vector<cv::Vec2f> image_relative_lane_boundary_midpoints;
+  image_relative_lanes.reserve(field_relative_lane_boundaries_.size());
+  image_relative_lane_boundary_midpoints.reserve(
+      field_relative_lane_boundaries_.size());
+  for (const lane_segment_t& lane : field_relative_lane_boundaries_) {
+    image_relative_lanes.emplace_back(
+        unhomogenize(composed_pnp_mat_ * lane.origin),
+        unhomogenize(composed_pnp_mat_ * lane.end));
+    image_relative_lane_boundary_midpoints.push_back(
+        unhomogenize(composed_pnp_mat_ * ((lane.origin + lane.end) * 0.5f)));
   }
+
+  std::array<float, 2 * num_lanes> per_lane_pixel_density{};
+  const cv::Vec2f across_lanes = image_relative_lane_boundary_midpoints[1] -
+                                 image_relative_lane_boundary_midpoints[0];
+  const float across_lanes_norm = cv::norm(across_lanes);
+  if (across_lanes_norm == std::numeric_limits<float>::epsilon()) {
+    LOG(FATAL) << "Impossible: no distance between the lane midpoints";
+  }
+  const cv::Vec2f across_lanes_uvec = across_lanes / across_lanes_norm;
+  const cv::Vec2f& signed_distance_origin =
+      image_relative_lane_boundary_midpoints.front();
+  std::vector<float> lane_boundary_distances;
+  lane_boundary_distances.reserve(
+      image_relative_lane_boundary_midpoints.size());
+  for (const cv::Vec2f& midpoint : image_relative_lane_boundary_midpoints) {
+    lane_boundary_distances.push_back(
+        (midpoint - signed_distance_origin).dot(across_lanes_uvec));
+  }
+
+  for (const cv::Point2f& image_point : thresholded_points) {
+    const float point_distance =
+        (static_cast<cv::Vec2f>(image_point) - signed_distance_origin)
+            .dot(across_lanes_uvec);
+    for (size_t lane_index = 0; lane_index + 1 < lane_boundary_distances.size();
+         ++lane_index) {
+      if (point_distance >= lane_boundary_distances[lane_index] &&
+          point_distance < lane_boundary_distances[lane_index + 1]) {
+        per_lane_pixel_density[lane_index] += 1.0f;
+        break;
+      }
+    }
+  }
+
   std::optional<std::pair<cv::Vec2f, cv::Vec2f>> prev_transformed_lane;
-  for (size_t i = 0; i < field_relative_lanes.size(); i++) {
-    const cv::Vec2f transformed_origin =
-        unhomogenize(composed_pnp_mat_ * field_relative_lanes[i].origin);
-    const cv::Vec2f transformed_end =
-        unhomogenize(composed_pnp_mat_ * field_relative_lanes[i].end);
+  for (size_t i = 0; i < image_relative_lanes.size(); i++) {
+    const auto& [transformed_origin, transformed_end] = image_relative_lanes[i];
     cv::Point clipped_origin{cvRound(transformed_origin[0]),
                              cvRound(transformed_origin[1])};
     cv::Point clipped_end{cvRound(transformed_end[0]),
