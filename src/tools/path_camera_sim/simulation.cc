@@ -289,27 +289,6 @@ auto PrepareFieldModel(const SimulationConfig& config,
 
 }  // namespace
 
-auto LoadGamepieces(const std::filesystem::path& path)
-    -> std::vector<GamepiecePose> {
-  const auto json = ReadJson(path);
-  std::vector<GamepiecePose> result;
-  for (const auto& item : json.at("gamepieces")) {
-    const auto& translation = item.at("translation_m");
-    const auto rotation =
-        item.value("rotation_rpy_rad", nlohmann::json::array({0.0, 0.0, 0.0}));
-    result.push_back(
-        {.type = item.at("type").get<std::string>(),
-         .pose = frc::Pose3d(
-             units::meter_t{translation.at(0).get<double>()},
-             units::meter_t{translation.at(1).get<double>()},
-             units::meter_t{translation.at(2).get<double>()},
-             frc::Rotation3d(units::radian_t{rotation.at(0).get<double>()},
-                             units::radian_t{rotation.at(1).get<double>()},
-                             units::radian_t{rotation.at(2).get<double>()}))});
-  }
-  return result;
-}
-
 auto LoadCameraCalibration(const std::filesystem::path& constants_path,
                            const std::string& camera_name,
                            const std::filesystem::path& repository_root)

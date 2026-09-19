@@ -1,7 +1,12 @@
+#include <unistd.h>
+#include <cerrno>
+#include <cstdlib>
+#include <cstring>
 #include <exception>
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <absl/flags/flag.h>
@@ -30,6 +35,37 @@ ABSL_FLAG(bool, apply_distortion, true,
 
 namespace {
 
+constexpr char kXvfbRetryEnvironment[] = "PATH_CAMERA_SIM_XVFB_RETRY";
+
+auto RetryUnderXvfb(const std::vector<std::string>& original_arguments) -> int {
+  if (std::getenv(kXvfbRetryEnvironment) != nullptr) {
+    return -1;
+  }
+
+  std::vector<std::string> command{"xvfb-run", "-a"};
+  command.insert(command.end(), original_arguments.begin(),
+                 original_arguments.end());
+  std::vector<char*> command_arguments;
+  command_arguments.reserve(command.size() + 1);
+  for (auto& argument : command) {
+    command_arguments.push_back(argument.data());
+  }
+  command_arguments.push_back(nullptr);
+
+  if (setenv(kXvfbRetryEnvironment, "1", 1) != 0) {
+    std::cerr << "path_camera_sim: unable to prepare Xvfb retry: "
+              << std::strerror(errno) << '\n';
+    return 1;
+  }
+  std::cerr << "path_camera_sim: no usable display; retrying under Xvfb\n";
+  std::cout.flush();
+  execvp(command.front().c_str(), command_arguments.data());
+  std::cerr << "path_camera_sim: could not launch xvfb-run: "
+            << std::strerror(errno)
+            << " (install Xvfb or configure a working display)\n";
+  return 1;
+}
+
 auto Resolve(const std::filesystem::path& root, const std::string& path)
     -> std::filesystem::path {
   const std::filesystem::path value(path);
@@ -39,6 +75,11 @@ auto Resolve(const std::filesystem::path& root, const std::string& path)
 }  // namespace
 
 auto main(int argc, char* argv[]) -> int {
+  std::vector<std::string> original_arguments;
+  original_arguments.reserve(argc);
+  for (int i = 0; i < argc; ++i) {
+    original_arguments.emplace_back(argv[i]);
+  }
   absl::ParseCommandLine(argc, argv);
   try {
     const std::filesystem::path root(BOS_SOURCE_DIR);
@@ -64,6 +105,14 @@ auto main(int argc, char* argv[]) -> int {
     std::cout << "Simulation complete: " << config.output_directory << '\n';
     return 0;
   } catch (const std::exception& error) {
+    constexpr std::string_view kDisplayError =
+        "Open3D could not create an OpenGL window";
+    if (std::string_view(error.what()).starts_with(kDisplayError)) {
+      const int retry_result = RetryUnderXvfb(original_arguments);
+      if (retry_result >= 0) {
+        return retry_result;
+      }
+    }
     std::cerr << "path_camera_sim: " << error.what() << '\n';
     return 1;
   }

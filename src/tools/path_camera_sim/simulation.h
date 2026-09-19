@@ -10,12 +10,9 @@
 #include <Eigen/Core>
 #include <opencv2/core/mat.hpp>
 
-namespace path_camera_sim {
+#include "src/tools/path_camera_sim/gamepiece_config.h"
 
-struct GamepiecePose {
-  std::string type;
-  frc::Pose3d pose;
-};
+namespace path_camera_sim {
 
 struct TrajectorySample {
   double time_seconds;
@@ -48,8 +45,6 @@ struct SimulationConfig {
   bool apply_distortion = true;
 };
 
-auto LoadGamepieces(const std::filesystem::path& path)
-    -> std::vector<GamepiecePose>;
 auto LoadCameraCalibration(const std::filesystem::path& constants_path,
                            const std::string& camera_name,
                            const std::filesystem::path& repository_root)

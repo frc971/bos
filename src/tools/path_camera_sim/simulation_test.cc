@@ -71,5 +71,73 @@ TEST(FieldAssets, RemovesDeclaredStagedGamepieceMeshes) {
   std::filesystem::remove(temp, error);
 }
 
+TEST(GamepieceConfig, ZeroEntropyReproducesEveryStagedFuel) {
+  const auto root = std::filesystem::path(BOS_SOURCE_DIR);
+  const auto first = GenerateFuelGamepieces(
+      root / "field-cad", FuelGenerationOptions{.entropy = 0.0, .seed = 1});
+  const auto second = GenerateFuelGamepieces(
+      root / "field-cad", FuelGenerationOptions{.entropy = 0.0, .seed = 99});
+  ASSERT_EQ(first.size(), 456U);
+  ASSERT_EQ(second.size(), first.size());
+  EXPECT_NEAR(first.front().pose.X().value(), 0.22856825, 1e-9);
+  EXPECT_NEAR(first.front().pose.Y().value(), 6.0410979, 1e-9);
+  EXPECT_NEAR(first.front().pose.Z().value(), 0.075, 1e-9);
+  for (size_t index = 0; index < first.size(); ++index) {
+    EXPECT_EQ(first[index].type, "Fuel");
+    EXPECT_TRUE(first[index].pose.ToMatrix().isApprox(
+        second[index].pose.ToMatrix(), 1e-12));
+  }
+}
+
+TEST(GamepieceConfig, EntropySpreadsAndRemovesFuelDeterministically) {
+  const auto root = std::filesystem::path(BOS_SOURCE_DIR);
+  const FuelGenerationOptions options{.entropy = 1.0, .seed = 42};
+  const auto staged = GenerateFuelGamepieces(
+      root / "field-cad", FuelGenerationOptions{.entropy = 0.0, .seed = 42});
+  const auto scattered = GenerateFuelGamepieces(root / "field-cad", options);
+  const auto repeated = GenerateFuelGamepieces(root / "field-cad", options);
+  EXPECT_LT(scattered.size(), staged.size());
+  EXPECT_GT(scattered.size(), staged.size() / 3);
+  ASSERT_EQ(repeated.size(), scattered.size());
+  for (size_t index = 0; index < scattered.size(); ++index) {
+    EXPECT_TRUE(scattered[index].pose.ToMatrix().isApprox(
+        repeated[index].pose.ToMatrix(), 1e-12));
+    EXPECT_GE(scattered[index].pose.X().value(), 0.075);
+    EXPECT_LE(scattered[index].pose.X().value(), 16.541);
+    EXPECT_GE(scattered[index].pose.Y().value(), 0.075);
+    EXPECT_LE(scattered[index].pose.Y().value(), 7.994);
+  }
+}
+
+TEST(GamepieceConfig, WrittenConfigRoundTripsThroughReader) {
+  const auto root = std::filesystem::path(BOS_SOURCE_DIR);
+  const FuelGenerationOptions options{.entropy = 0.4, .seed = 7};
+  const auto generated = GenerateFuelGamepieces(root / "field-cad", options);
+  const auto path = std::filesystem::temp_directory_path() /
+                    "fuel_gamepiece_config_round_trip.json";
+  WriteGamepieceConfig(path, generated, options);
+  const auto loaded = ReadGamepieceConfig(path);
+  ASSERT_EQ(loaded.size(), generated.size());
+  for (size_t index = 0; index < loaded.size(); ++index) {
+    EXPECT_EQ(loaded[index].type, generated[index].type);
+    EXPECT_TRUE(loaded[index].pose.ToMatrix().isApprox(
+        generated[index].pose.ToMatrix(), 1e-9));
+  }
+  std::error_code error;
+  std::filesystem::remove(path, error);
+}
+
+TEST(GamepieceConfig, RejectsEntropyOutsideNormalizedRange) {
+  const auto root = std::filesystem::path(BOS_SOURCE_DIR);
+  EXPECT_THROW(GenerateFuelGamepieces(
+                   root / "field-cad",
+                   FuelGenerationOptions{.entropy = -0.01, .seed = 0}),
+               std::runtime_error);
+  EXPECT_THROW(
+      GenerateFuelGamepieces(root / "field-cad",
+                             FuelGenerationOptions{.entropy = 1.01, .seed = 0}),
+      std::runtime_error);
+}
+
 }  // namespace
 }  // namespace path_camera_sim

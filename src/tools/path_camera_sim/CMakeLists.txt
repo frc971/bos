@@ -37,6 +37,7 @@ set_target_properties(PathplannerLib PROPERTIES
 )
 
 add_library(path_camera_sim_lib
+  gamepiece_config.cc
   glb_utils.cc
   simulation.cc
 )
@@ -56,6 +57,13 @@ target_compile_definitions(path_camera_sim_lib PUBLIC BOS_SOURCE_DIR="${CMAKE_SO
 
 add_executable(path_camera_sim main.cc)
 target_link_libraries(path_camera_sim PRIVATE
+  absl::flags
+  absl::flags_parse
+  path_camera_sim_lib
+)
+
+add_executable(generate_fuel_config generate_fuel_config.cc)
+target_link_libraries(generate_fuel_config PRIVATE
   absl::flags
   absl::flags_parse
   path_camera_sim_lib
