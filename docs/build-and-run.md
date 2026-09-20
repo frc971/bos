@@ -45,3 +45,20 @@ Built in `src/calibration`:
 - `intrinsics_calibrate`
 - `frame_shower`
 - `focus_calibrate`
+
+## Frame Analysis Tools
+
+`localization_stretch` scans one folder of frames with the 971 GPU AprilTag
+detector. Frames are ordered by a numeric filename stem when available (for
+example, `12.300000.jpg`). A stretch may contain up to `max_gap` consecutive
+frames without a tag; it starts and ends on frames where a tag was detected.
+
+```bash
+./build/bin/localization_stretch \
+  --image_folder=/bos/frames/gamepiece_camera \
+  --intrinsics=constants/gamepiece/intrinsics.json \
+  --max_gap=3
+```
+
+The result includes the start and end files, total span, frames with tags,
+internal gap frames, and elapsed time when filenames are numeric timestamps.

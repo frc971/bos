@@ -43,6 +43,19 @@ Usage:
 ./scripts/run_tests.sh
 ```
 
+### `scripts/serve_frame.sh`
+
+- Serves one image, read once at startup, as a frozen browser-viewable frame.
+- Listens on `localhost:5801` until interrupted with `Ctrl-C`.
+
+Usage:
+
+```bash
+./scripts/serve_frame.sh /path/to/frame.jpg
+```
+
+Open <http://localhost:5801/> in a browser.
+
 ## Deploy and Remote Sync
 
 ### `scripts/copy_to_bin.sh`
