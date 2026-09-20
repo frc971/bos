@@ -12,7 +12,16 @@ class LaneDensityTracker {
   static constexpr int num_lanes =
       2;  // actually 2x because this is reflected across center line
  public:
+  using image_lane_segment_t = struct ImageLaneSegment {
+    cv::Vec2f origin;
+    cv::Vec2f end;
+    cv::Vec2f midpoint;
+    bool valid = false;
+  };
+
   LaneDensityTracker(const camera::camera_constant_t& camera);
+  auto GetImageLaneBoundaries(const frc::Pose3d& robot_pose)
+      -> std::array<image_lane_segment_t, 2 * num_lanes + 1>;
   auto GetLaneDensities(const cv::Mat& color_image,
                         const frc::Pose3d& robot_pose)
       -> std::array<float, 2 * num_lanes>;
