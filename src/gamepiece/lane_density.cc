@@ -54,27 +54,29 @@ LaneDensityTracker::LaneDensityTracker(
   }
   const nlohmann::json intrinsics_json =
       utils::ReadIntrinsics(*camera_constant.intrinsics_path);
-  camera_intrinsics_ =
+  camera_to_image_ =
       cv::Matx33f(utils::CameraMatrixFromJson<cv::Mat>(intrinsics_json));
   const nlohmann::json json_extrinsics =
       utils::ReadExtrinsics(*camera_constant.extrinsics_path);
-  cv::Mat camera_extrinsics_cv = utils::EigenToCvMat(
-      utils::ExtrinsicsJsonToCameraToRobot(json_extrinsics).ToMatrix());
+  cv::Mat camera_extrinsics_cv =
+      utils::EigenToCvMat(
+          utils::ExtrinsicsJsonToCameraToRobot(json_extrinsics).ToMatrix())
+          .inv();
   utils::ChangeBasis(camera_extrinsics_cv, utils::WPI_TO_CV);
   camera_extrinsics_cv.convertTo(camera_extrinsics_cv, CV_32F);
-  camera_extrinsics_cv_ = cv::Matx44f(camera_extrinsics_cv);
+  camera_to_robot_cv_ = cv::Matx44f(camera_extrinsics_cv);
   distortion_coeffs_ =
       utils::DistortionCoefficientsFromJson<cv::Mat>(intrinsics_json);
 }
 
 auto LaneDensityTracker::GetImageLaneBoundaries(const frc::Pose3d& robot_pose)
     -> std::array<image_lane_segment_t, 2 * num_lanes + 1> {
-  cv::Mat robot_pose_cv = utils::EigenToCvMat(robot_pose.ToMatrix());
-  utils::ChangeBasis(robot_pose_cv, utils::WPI_TO_CV);
-  cv::Matx44f robot_pose_cv_mat(robot_pose_cv);
+  cv::Mat robot_to_field_cv = utils::EigenToCvMat(robot_pose.ToMatrix());
+  utils::ChangeBasis(robot_to_field_cv, utils::WPI_TO_CV);
+  cv::Matx44f robot_to_field_cv_mat(robot_to_field_cv);
   const cv::Matx44f field_to_camera =
-      (robot_pose_cv_mat * camera_extrinsics_cv_).inv();
-  const cv::Matx34f camera_to_image = camera_intrinsics_ * Pi;
+      (robot_to_field_cv_mat * camera_to_robot_cv_).inv();
+  const cv::Matx34f camera_to_image = camera_to_image_ * Pi;
 
   std::array<image_lane_segment_t, 2 * num_lanes + 1> image_relative_lanes{};
   for (size_t i = 0; i < field_relative_lane_boundaries_.size(); ++i) {
@@ -107,7 +109,7 @@ auto LaneDensityTracker::GetLaneDensities(const cv::Mat& color_image,
                       hsv_color_range.second, minimum_saturation,
                       thresholded_points, hsv_image, threshold_mask);
   cv::undistortImagePoints(thresholded_points, thresholded_points,
-                           camera_intrinsics_, distortion_coeffs_);
+                           camera_to_image_, distortion_coeffs_);
   const auto image_relative_lanes = GetImageLaneBoundaries(robot_pose);
   std::array<float, 2 * num_lanes> per_lane_pixel_density{};
   std::optional<size_t> first_valid_lane;

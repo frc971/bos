@@ -27,8 +27,8 @@ class LaneDensityTracker {
       -> std::array<float, 2 * num_lanes>;
 
  private:
-  cv::Matx44f camera_extrinsics_cv_;
-  cv::Matx33f camera_intrinsics_;
+  cv::Matx44f camera_to_robot_cv_;
+  cv::Matx33f camera_to_image_;
   cv::Vec<double, 5> distortion_coeffs_;
   // meters, wpilib coordinates
   static constexpr float lane_width = 1.0;
