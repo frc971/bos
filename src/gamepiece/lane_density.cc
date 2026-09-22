@@ -131,6 +131,7 @@ auto LaneDensityTracker::GetLaneDensities(const cv::Mat& color_image,
     LOG(FATAL) << "Impossible: no distance between the lane midpoints";
   }
   const cv::Vec2f across_lanes_uvec = across_lanes / across_lanes_norm;
+  const cv::Vec2f along_lanes_uvec{-across_lanes_uvec[1], across_lanes_uvec[0]};
   const cv::Vec2f& signed_distance_origin =
       image_relative_lanes[*first_valid_lane].midpoint;
   std::array<float, 2 * num_lanes + 1> lane_boundary_distances{};
@@ -139,6 +140,17 @@ auto LaneDensityTracker::GetLaneDensities(const cv::Mat& color_image,
       lane_boundary_distances[i] =
           (image_relative_lanes[i].midpoint - signed_distance_origin)
               .dot(across_lanes_uvec);
+    }
+  }
+  std::vector<std::pair<float, float>> along_lanes_interlane_endpoint_distance;
+  along_lanes_interlane_endpoint_distance.reserve(num_lanes * 2);
+  for (size_t i = 0; i < image_relative_lanes.size() - 1; ++i) {
+    if (image_relative_lanes[i].valid && image_relative_lanes[i + 1].valid) {
+      along_lanes_interlane_endpoint_distance.emplace_back(
+          (image_relative_lanes[i + 1].origin - image_relative_lanes[i].origin)
+              .dot(across_lanes_uvec),
+          (image_relative_lanes[i + 1].end - image_relative_lanes[i].end)
+              .dot(across_lanes_uvec));
     }
   }
 
@@ -152,8 +164,25 @@ auto LaneDensityTracker::GetLaneDensities(const cv::Mat& color_image,
           !image_relative_lanes[lane_index + 1].valid) {
         continue;
       }
+      const float interpolation_t =
+          (point_distance - lane_boundary_distances[lane_index]) /
+          (lane_boundary_distances[lane_index + 1] -
+           lane_boundary_distances[lane_index]);
+      const bool left_of_origin =
+          ((static_cast<cv::Vec2f>(image_point) -
+            image_relative_lanes[lane_index].origin)
+               .dot(along_lanes_uvec) -
+           interpolation_t *
+               along_lanes_interlane_endpoint_distance[lane_index].first) < 0;
+      const bool right_of_end =
+          ((static_cast<cv::Vec2f>(image_point) -
+            image_relative_lanes[lane_index].end)
+               .dot(along_lanes_uvec) -
+           interpolation_t *
+               along_lanes_interlane_endpoint_distance[lane_index].second) > 0;
       if (point_distance >= lane_boundary_distances[lane_index] &&
-          point_distance < lane_boundary_distances[lane_index + 1]) {
+          point_distance < lane_boundary_distances[lane_index + 1] &&
+          left_of_origin == right_of_end) {
         per_lane_pixel_density[lane_index] += 1.0f;
         break;
       }
@@ -169,25 +198,12 @@ auto LaneDensityTracker::GetLaneDensities(const cv::Mat& color_image,
       prev_transformed_lane = std::nullopt;
       continue;
     }
-    const auto& transformed_origin = image_relative_lanes[i].origin;
-    const auto& transformed_end = image_relative_lanes[i].end;
-    cv::Point clipped_origin{cvRound(transformed_origin[0]),
-                             cvRound(transformed_origin[1])};
-    cv::Point clipped_end{cvRound(transformed_end[0]),
-                          cvRound(transformed_end[1])};
-    const bool lane_is_visible =
-        cv::clipLine(color_image.size(), clipped_origin, clipped_end);
     std::pair<cv::Vec2f, cv::Vec2f> curr_transformed_lane{
-        cv::Vec2f{static_cast<float>(clipped_origin.x),
-                  static_cast<float>(clipped_origin.y)},
-        cv::Vec2f{static_cast<float>(clipped_end.x),
-                  static_cast<float>(clipped_end.y)}};
+        image_relative_lanes[i].origin, image_relative_lanes[i].end};
     if (i != 0) {
-      if (!lane_is_visible || !prev_transformed_lane.has_value()) {
+      if (!prev_transformed_lane.has_value()) {
         per_lane_pixel_density[i - 1] = 0.0f;
-        prev_transformed_lane = lane_is_visible
-                                    ? std::make_optional(curr_transformed_lane)
-                                    : std::nullopt;
+        prev_transformed_lane = curr_transformed_lane;
         continue;
       }
 
@@ -217,9 +233,7 @@ auto LaneDensityTracker::GetLaneDensities(const cv::Mat& color_image,
         per_lane_pixel_density[i - 1] = 0.0f;
       }
     }
-    prev_transformed_lane = lane_is_visible
-                                ? std::make_optional(curr_transformed_lane)
-                                : std::nullopt;
+    prev_transformed_lane = curr_transformed_lane;
   }
   return per_lane_pixel_density;
 }
