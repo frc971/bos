@@ -18,6 +18,13 @@ class LaneDensityTracker {
     cv::Vec2f midpoint;
     bool valid = false;
   };
+  using line_t = struct Line {
+    float a, b, c;
+    [[nodiscard]] auto pointInNormalDirection(const cv::Vec2f& point) const
+        -> bool {
+      return (a * point(0) + b * point(1) + c) > 0;
+    }
+  };
 
   LaneDensityTracker(const camera::camera_constant_t& camera);
   auto GetImageLaneBoundaries(const frc::Pose3d& robot_pose)

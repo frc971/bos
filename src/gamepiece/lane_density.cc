@@ -132,60 +132,46 @@ auto LaneDensityTracker::GetLaneDensities(const cv::Mat& color_image,
   }
   const cv::Vec2f across_lanes_uvec = across_lanes / across_lanes_norm;
   const cv::Vec2f along_lanes_uvec{-across_lanes_uvec[1], across_lanes_uvec[0]};
-  const cv::Vec2f& signed_distance_origin =
-      image_relative_lanes[*first_valid_lane].midpoint;
-  std::array<float, 2 * num_lanes + 1> lane_boundary_distances{};
+  std::array<line_t, 2 * num_lanes + 1> general_form_along_lane_boundaries{};
   for (size_t i = 0; i < image_relative_lanes.size(); ++i) {
     if (image_relative_lanes[i].valid) {
-      lane_boundary_distances[i] =
-          (image_relative_lanes[i].midpoint - signed_distance_origin)
-              .dot(across_lanes_uvec);
+      const image_lane_segment_t& lane = image_relative_lanes[i];
+      general_form_along_lane_boundaries[i] = {
+          .a = lane.origin(1) - lane.end(1),
+          .b = lane.end(0) - lane.origin(0),
+          .c = lane.origin(0) * lane.end(1) - lane.origin(1) * lane.end(0)};
     }
   }
-  std::vector<std::pair<float, float>> along_lanes_interlane_endpoint_distance;
-  along_lanes_interlane_endpoint_distance.reserve(num_lanes * 2);
-  for (size_t i = 0; i < image_relative_lanes.size() - 1; ++i) {
-    if (image_relative_lanes[i].valid && image_relative_lanes[i + 1].valid) {
-      along_lanes_interlane_endpoint_distance.emplace_back(
-          (image_relative_lanes[i + 1].origin - image_relative_lanes[i].origin)
-              .dot(across_lanes_uvec),
-          (image_relative_lanes[i + 1].end - image_relative_lanes[i].end)
-              .dot(across_lanes_uvec));
-    }
-  }
+  const image_lane_segment_t& first_lane = image_relative_lanes.front();
+  const image_lane_segment_t& last_lane = image_relative_lanes.back();
+  const std::pair<line_t, line_t> general_form_across_lane_boundaries = {
+      {.a = first_lane.origin(1) - last_lane.origin(1),
+       .b = last_lane.origin(0) - first_lane.origin(0),
+       .c = first_lane.origin(0) * last_lane.origin(1) -
+            first_lane.origin(1) * last_lane.origin(0)},
+      {.a = first_lane.end(1) - last_lane.end(1),
+       .b = last_lane.end(0) - first_lane.end(0),
+       .c = first_lane.end(0) * last_lane.end(1) -
+            first_lane.end(1) * last_lane.end(0)}};
 
   for (const cv::Point2f& image_point : thresholded_points) {
-    const float point_distance =
-        (static_cast<cv::Vec2f>(image_point) - signed_distance_origin)
-            .dot(across_lanes_uvec);
-    for (size_t lane_index = 0; lane_index + 1 < image_relative_lanes.size();
+    for (size_t lane_index = 0; lane_index < image_relative_lanes.size() - 1;
          ++lane_index) {
       if (!image_relative_lanes[lane_index].valid ||
           !image_relative_lanes[lane_index + 1].valid) {
         continue;
       }
-      const float interpolation_t =
-          (point_distance - lane_boundary_distances[lane_index]) /
-          (lane_boundary_distances[lane_index + 1] -
-           lane_boundary_distances[lane_index]);
-      const bool left_of_origin =
-          ((static_cast<cv::Vec2f>(image_point) -
-            image_relative_lanes[lane_index].origin)
-               .dot(along_lanes_uvec) -
-           interpolation_t *
-               along_lanes_interlane_endpoint_distance[lane_index].first) < 0;
-      const bool right_of_end =
-          ((static_cast<cv::Vec2f>(image_point) -
-            image_relative_lanes[lane_index].end)
-               .dot(along_lanes_uvec) -
-           interpolation_t *
-               along_lanes_interlane_endpoint_distance[lane_index].second) > 0;
-      if (point_distance >= lane_boundary_distances[lane_index] &&
-          point_distance < lane_boundary_distances[lane_index + 1] &&
-          left_of_origin == right_of_end) {
-        per_lane_pixel_density[lane_index] += 1.0f;
-        break;
+      const cv::Vec2f vec_point = static_cast<cv::Vec2f>(image_point);
+      if (general_form_along_lane_boundaries[lane_index].pointInNormalDirection(
+              vec_point) == general_form_along_lane_boundaries[lane_index + 1]
+                                .pointInNormalDirection(vec_point) ||
+          general_form_across_lane_boundaries.first.pointInNormalDirection(
+              vec_point) ==
+              general_form_across_lane_boundaries.second.pointInNormalDirection(
+                  vec_point)) {
+        continue;
       }
+      per_lane_pixel_density[lane_index]++;
     }
   }
 
@@ -236,5 +222,5 @@ auto LaneDensityTracker::GetLaneDensities(const cv::Mat& color_image,
     prev_transformed_lane = curr_transformed_lane;
   }
   return per_lane_pixel_density;
-}
+}  // namespace gamepiece
 }  // namespace gamepiece
