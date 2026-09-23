@@ -55,7 +55,17 @@
       "fps": 60.0,
       "exposure": null,
       "port": 5801,
-      "detector_type": "austin_gpu"
+      "detector_type": "austin_gpu",
+      "camera_type": "uvc"
+    },
+    {
+      "name": "gamepiece_camera",
+      "intrinsics_path": "constants/gamepiece/intrinsics.json",
+      "extrinsics_path": "constants/gamepiece/extrinsics.json",
+      "frame_width": 1920,
+      "frame_height": 1080,
+      "fps": 30.0,
+      "detector_type": "opencv_cpu"
     },
     {
       "name": "second_bot_front",
@@ -98,6 +108,15 @@
       "port": 5801,
       "detector_type": "austin_gpu",
       "camera_type": "uvc"
+    },
+    {
+      "name": "gamepiece_camera",
+      "intrinsics_path": "constants/gamepiece/intrinsics.json",
+      "extrinsics_path": "constants/gamepiece/extrinsics.json",
+      "frame_width": 1920,
+      "frame_height": 1080,
+      "fps": 30.0,
+      "detector_type": "opencv_cpu"
     }
   ]
 }

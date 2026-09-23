@@ -6,6 +6,7 @@ target_sources(utils
   camera_utils.cc
   log.cc
   constants_from_json.cc 
+  image_utils.cc
   transform.cc
 )
 target_link_libraries(utils PUBLIC 

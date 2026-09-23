@@ -3,7 +3,7 @@
 #include "absl/flags/flag.h"
 
 ABSL_FLAG(std::string, camera_constants_path,            // NOLINT
-          "/bos/constants/camera_constants.json",        // NOTLINT
+          "constants/camera_constants.json",              // NOTLINT
           "Path to the json file of camera constants");  //NOLINT
 
 namespace camera {
@@ -56,6 +56,7 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
 
   const nlohmann::json& camera_configs = json.at("cameras");
   for (const nlohmann::json& camera_config : camera_configs) {
+    LOG(INFO) << "Examining: " << camera_config.value("name", std::string{});
     if (camera_config.is_null()) {
       LOG(WARNING) << "Found a null camera config";
       continue;
@@ -101,6 +102,7 @@ auto GetCameraConstants(const std::string& path) -> camera_constants_t {
                       camera_config);
     SetConstant<uint>("log_frequency", camera_constant.log_frequency,
                       camera_config);
+    camera_constant.run_gamepiece = camera_config.value("run_gamepiece", false);
 
     if (camera_config.contains("detector_type") &&
         !camera_config["detector_type"].is_null()) {

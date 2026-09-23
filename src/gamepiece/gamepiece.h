@@ -16,4 +16,7 @@ void run_gamepiece_detect(yolo::Yolo& model,
 
 void run_gamepiece_detect_no_img(yolo::Yolo& model,
                                  const std::vector<std::string>& class_names);
+// CONSTANTS
+static constexpr std::pair<int, int> hsv_color_range{18, 30};
+static constexpr int minimum_saturation{150};
 }  // namespace gamepiece
