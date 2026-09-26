@@ -50,8 +50,8 @@ auto SelectCameraConfig(const std::string& choice,
     if (camera_constants.at(choice).serial_id.has_value()) {
       LOG(INFO) << "Initializing via uvc";
       absl::Status status;
-      auto camera =
-          std::make_unique<UVCCamera>(camera_constants.at(choice), status);
+      auto camera = std::make_unique<UVCCamera>(camera_constants.at(choice),
+                                                status, "frame_shower_camera");
       if (!status.ok()) {
         LOG(WARNING) << "Failed to select camera via uvc: " << status.message();
       }

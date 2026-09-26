@@ -2,6 +2,7 @@
 
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 #include <opencv2/objdetect/charuco_detector.hpp>
+#include "src/camera/camera_constants.h"
 #include "src/utils/pch.h"
 
 namespace calibration {
@@ -16,9 +17,9 @@ using detection_result_t = struct DetectionResult {
 
 constexpr static int ksquares_x = 12;
 constexpr static int ksquares_y = 9;
-constexpr static float ksquares_length = 0.025;
+constexpr static float ksquares_length = 0.06;
 constexpr static float kpixel_per_square = 128;
-constexpr static float kmarker_length = 0.020;
+constexpr static float kmarker_length = 0.045;
 constexpr static int kmargin_squares = 0;
 
 auto CreateDetector(const cv::aruco::Dictionary& dictionary,
@@ -42,7 +43,8 @@ auto DrawDetectionResult(cv::Mat& frame,
                          const detection_result_t& detection_result) -> cv::Mat;
 
 auto CalibrateCamera(const std::vector<detection_result_t>& detection_results,
-                     cv::Size image_size, cv::Mat& camera_matrix,
+                     const camera::camera_constant_t& camera_constant,
+                     cv::Mat& camera_matrix,
                      cv::Mat& distortion_coefficiants) -> double;
 
 }  // namespace calibration

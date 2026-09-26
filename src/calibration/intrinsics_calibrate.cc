@@ -69,16 +69,15 @@ auto WriteIntrinsicToFile(cv::Mat camera_matrix, cv::Mat dist_coeffs,
 auto main(int argc, char* argv[]) -> int {
   absl::ParseCommandLine(argc, argv);
 
-  std::unique_ptr<camera::ICamera> camera = camera::SelectCameraConfig(
+  std::unique_ptr<camera::ICamera> camera_device = camera::SelectCameraConfig(
       absl::GetFlag(FLAGS_camera_name), camera::GetCameraConstants());
+  camera::camera_constant_t camera_constant =
+      camera_device->GetCameraConstant();
 
-  camera::CameraSource source("camera", std::move(camera));
+  camera::CameraSource source("camera", std::move(camera_device));
   camera::CscoreStreamer streamer("intrinsics_calibrate",
                                   absl::GetFlag(FLAGS_port).value_or(5801), 30,
                                   source.GetFrame());
-
-  cv::Mat frame = source.GetFrame();
-  cv::Size frame_size = frame.size();
 
   cv::aruco::CharucoDetector detector = calibration::CreateDetector(
       cv::aruco::getPredefinedDictionary(cv::aruco::DICT_5X5_250));
@@ -111,8 +110,8 @@ auto main(int argc, char* argv[]) -> int {
   std::cout << "Calibrating cameras" << std::endl;
 
   cv::Mat cameraMatrix, distCoeffs;
-  calibration::CalibrateCamera(detection_results, frame_size, cameraMatrix,
-                               distCoeffs);
+  calibration::CalibrateCamera(detection_results, camera_constant,
+                               cameraMatrix, distCoeffs);
 
   WriteIntrinsicToFile(cameraMatrix, distCoeffs, "intrinsics.json", true);
 }

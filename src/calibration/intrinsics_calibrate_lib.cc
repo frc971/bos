@@ -80,8 +80,12 @@ auto DrawDetectionResult(cv::Mat& frame,
 }
 
 auto CalibrateCamera(const std::vector<detection_result_t>& detection_results,
-                     cv::Size image_size, cv::Mat& camera_matrix,
+                     const camera::camera_constant_t& camera_constant,
+                     cv::Mat& camera_matrix,
                      cv::Mat& distortion_coefficiants) -> double {
+  cv::Size image_size(camera_constant.frame_width.value(),
+                      camera_constant.frame_height.value());
+  std::cout << image_size.width << " " << image_size.height << std::endl;
 
   std::vector<cv::Mat> allCharucoCorners, allCharucoIds;
   std::vector<std::vector<cv::Point2f>> allImagePoints;
